@@ -14,7 +14,7 @@ import { BuildingsApiService } from '../../api/buildings-api.service';
 import { CompaniesApiService } from '../../api/companies-api.service';
 import { CondominiumsApiService } from '../../api/condominiums-api.service';
 import { UsersApiService } from '../../api/users-api.service';
-import { Building, Company, Condominium } from '../../api/models';
+import { Building, BuildingCapacityItem, Company, Condominium } from '../../api/models';
 import { AuthService } from '../../auth/auth.service';
 import { roleOptions } from '../../auth/role-labels';
 
@@ -251,31 +251,51 @@ const ALL_ROLE_CARDS: RoleCard[] = [
           <div class="field">
             <label>
               Edificios <span class="required">*</span>
-              <span class="field-count" *ngIf="form.buildingIds.length">
+              <span class="field-count" *ngIf="!singleBuildingLocked && form.buildingIds.length">
                 {{ form.buildingIds.length }} seleccionado{{ form.buildingIds.length !== 1 ? 's' : '' }}
               </span>
             </label>
-            <small class="field-hint">
+            <small class="field-hint" *ngIf="!singleBuildingLocked">
               Mínimo un edificio requerido. El usuario podrá ver y gestionar las unidades de los
               edificios seleccionados.
             </small>
 
-            <div class="building-grid" *ngIf="filteredBuildings.length; else noBuildings">
+            <!-- Edificio único bloqueado (CompanyAdmin con solo 1 edificio) -->
+            <div class="locked-badge" *ngIf="singleBuildingLocked">
+              <i class="pi pi-home"></i>
+              <span>{{ filteredBuildings[0]?.name }}</span>
+              <span class="locked-badge-sub">{{ filteredBuildings[0]?.code }}</span>
+              <span class="locked-tag">Asignado automáticamente</span>
+            </div>
+
+            <div class="building-grid" *ngIf="!singleBuildingLocked && filteredBuildings.length; else noBuildings">
               <label class="building-card"
                      *ngFor="let b of filteredBuildings"
-                     [class.selected]="form.buildingIds.includes(b.id)">
+                     [class.selected]="form.buildingIds.includes(b.id)"
+                     [class.at-capacity]="isBuildingAtCapacity(b.id)"
+                     [pTooltip]="isBuildingAtCapacity(b.id) ? capacityLimitLabel(b.id) : ''"
+                     tooltipPosition="top">
                 <input type="checkbox"
                        [checked]="form.buildingIds.includes(b.id)"
+                       [disabled]="isBuildingAtCapacity(b.id) && !form.buildingIds.includes(b.id)"
                        (change)="toggleBuilding(b.id, $any($event.target).checked)" />
                 <div class="building-card-info">
                   <span class="building-name">{{ b.name }}</span>
                   <span class="building-code">{{ b.code }}</span>
+                  <span class="capacity-badges" *ngIf="isCompanyAdmin && form.role">
+                    <span class="cap-badge" [class.cap-full]="getCapacity(b.id).buildingManagerCount >= 2">
+                      <i class="pi pi-user"></i>{{ getCapacity(b.id).buildingManagerCount }}/2
+                    </span>
+                    <span class="cap-badge" [class.cap-full]="getCapacity(b.id).companyOperatorCount >= 5">
+                      <i class="pi pi-users"></i>{{ getCapacity(b.id).companyOperatorCount }}/5
+                    </span>
+                  </span>
                 </div>
                 <i class="pi pi-check building-card-check" *ngIf="form.buildingIds.includes(b.id)"></i>
               </label>
             </div>
             <ng-template #noBuildings>
-              <p class="no-items-hint">
+              <p class="no-items-hint" *ngIf="!singleBuildingLocked">
                 No hay edificios disponibles.
               </p>
             </ng-template>
@@ -445,6 +465,27 @@ const ALL_ROLE_CARDS: RoleCard[] = [
     .building-code { font-size:0.75rem; color:var(--brand-muted); font-family:monospace; }
     .building-card-check { color:var(--brand-blue); font-size:0.9rem; margin-left:auto; }
     .no-items-hint { margin:0; color:var(--brand-muted); font-size:0.85rem; font-style:italic; }
+    .building-card.at-capacity { opacity:0.55; cursor:not-allowed; }
+    .building-card.at-capacity:hover { border-color:rgba(19,133,182,0.15); background:#fff; }
+    .capacity-badges { display:flex; gap:0.3rem; flex-wrap:wrap; margin-top:0.2rem; }
+    .cap-badge {
+      display:inline-flex; align-items:center; gap:0.25rem;
+      font-size:0.7rem; padding:0.1rem 0.4rem; border-radius:20px;
+      background:rgba(19,133,182,0.08); color:var(--brand-muted); font-weight:600;
+    }
+    .cap-badge i { font-size:0.65rem; }
+    .cap-badge.cap-full { background:rgba(231,76,60,0.1); color:#c0392b; }
+    .locked-badge {
+      display:inline-flex; align-items:center; gap:0.6rem; padding:0.7rem 1rem;
+      border:1.5px solid rgba(19,133,182,0.25); border-radius:12px; background:#f0f8ff;
+      font-size:0.9rem; color:var(--brand-ink); font-weight:600; width:fit-content;
+    }
+    .locked-badge i { color:var(--brand-blue); font-size:1rem; }
+    .locked-badge-sub { font-size:0.75rem; color:var(--brand-muted); font-family:monospace; font-weight:400; }
+    .locked-tag {
+      font-size:0.72rem; padding:0.15rem 0.5rem; border-radius:20px;
+      background:rgba(19,133,182,0.12); color:var(--brand-blue); font-weight:600;
+    }
 
     /* ── FORM ACTIONS ── */
     .form-actions {
@@ -503,6 +544,7 @@ export class UserCreatePageComponent implements OnInit {
   filteredCondominiumOptions:  { label: string; value: string }[] = [];
   allBuildings:                Building[]                         = [];
   filteredBuildings:           Building[]                         = [];
+  capacityMap = new Map<string, BuildingCapacityItem>();
 
   isEditing     = false;
   editingId     = '';
@@ -518,11 +560,35 @@ export class UserCreatePageComponent implements OnInit {
 
   form = this.emptyForm();
 
-  get isSuperAdmin() { return this.auth.hasRole('SuperAdmin'); }
+  get isSuperAdmin()   { return this.auth.hasRole('SuperAdmin'); }
+  get isCompanyAdmin() { return this.auth.hasRole('CompanyAdmin'); }
+
+  get singleBuildingLocked(): boolean {
+    return this.isCompanyAdmin && !this.isEditing && this.filteredBuildings.length === 1;
+  }
 
   get visibleRoleCards(): RoleCard[] {
     const allowed = roleOptions(this.isSuperAdmin).map(r => r.value);
     return ALL_ROLE_CARDS.filter(r => allowed.includes(r.value));
+  }
+
+  getCapacity(buildingId: string): BuildingCapacityItem {
+    return this.capacityMap.get(buildingId)
+      ?? { buildingId, buildingManagerCount: 0, companyOperatorCount: 0 };
+  }
+
+  isBuildingAtCapacity(buildingId: string): boolean {
+    const cap = this.getCapacity(buildingId);
+    if (this.form.role === 'BuildingManager')  return cap.buildingManagerCount  >= 2;
+    if (this.form.role === 'CompanyOperator') return cap.companyOperatorCount >= 5;
+    return false;
+  }
+
+  capacityLimitLabel(buildingId: string): string {
+    const cap = this.getCapacity(buildingId);
+    if (this.form.role === 'BuildingManager')  return `Máximo de encargados alcanzado (${cap.buildingManagerCount}/2)`;
+    if (this.form.role === 'CompanyOperator') return `Máximo de operadores alcanzado (${cap.companyOperatorCount}/5)`;
+    return '';
   }
 
   ngOnInit(): void {
@@ -533,16 +599,17 @@ export class UserCreatePageComponent implements OnInit {
       companies:    this.isSuperAdmin ? this.companiesApi.getAll() : of([] as Company[]),
       condominiums: this.condominiumsApi.getAll(),
       buildings:    this.buildingsApi.getAll(),
-      entity:       id
-        ? this.api.getById(id)
-        : of(null)
+      capacity:     this.isCompanyAdmin ? this.api.getCapacity() : of({ items: [] }),
+      entity:       id ? this.api.getById(id) : of(null)
     }).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-      next: ({ companies, condominiums, buildings, entity }) => {
+      next: ({ companies, condominiums, buildings, capacity, entity }) => {
         this.companyOptions = companies
           .sort((a, b) => a.name.localeCompare(b.name))
           .map(c => ({ label: c.name, value: c.id }));
         this.allCondominiums = condominiums;
         this.allBuildings    = buildings;
+
+        this.capacityMap = new Map(capacity.items.map(i => [i.buildingId, i]));
 
         if (id && !entity) {
           this.loadError = 'No se encontró el usuario solicitado.';
@@ -557,7 +624,6 @@ export class UserCreatePageComponent implements OnInit {
           this.editingFullName = entity.fullName
             || `${entity.firstName ?? ''} ${entity.lastName ?? ''}`.trim();
 
-          // Descomponer fullName si el backend aún no devuelve firstName/lastName por separado
           const nameParts = (entity.fullName ?? '').trim().split(/\s+/);
           const firstName = entity.firstName?.trim() || nameParts[0] || '';
           const lastName  = entity.lastName?.trim()  || nameParts.slice(1).join(' ') || '';
@@ -579,7 +645,13 @@ export class UserCreatePageComponent implements OnInit {
         }
 
         this.refreshCondominiumOptions();
-        this.refreshBuildings();   // llama DESPUÉS de setear el form para que incluya edificios asignados
+        this.refreshBuildings();
+
+        // Auto-assign single building for CompanyAdmin in create mode
+        if (this.isCompanyAdmin && !id && this.filteredBuildings.length === 1) {
+          this.form.buildingIds = [this.filteredBuildings[0].id];
+        }
+
         this.loading = false;
         this.cdr.markForCheck();
       },

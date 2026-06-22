@@ -96,7 +96,8 @@ export class AppMenu {
                       label: 'General',
                       items: [
                           { label: 'Edificios', icon: 'pi pi-fw pi-home', routerLink: ['/buildings'] },
-                          ...(isCompanyAdmin ? [{ label: 'Condominios', icon: 'pi pi-fw pi-map', routerLink: ['/condominiums'] }] : [])
+                          ...(isCompanyAdmin ? [{ label: 'Condominios', icon: 'pi pi-fw pi-map', routerLink: ['/condominiums'] }] : []),
+                          ...(isCompanyAdmin ? [{ label: 'Usuarios', icon: 'pi pi-fw pi-users', routerLink: ['/users'] }] : [])
                       ]
                   },
                   {

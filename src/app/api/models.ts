@@ -616,6 +616,16 @@ export interface ManagedUser {
   buildingIds: string[];
 }
 
+export interface BuildingCapacityItem {
+  buildingId: string;
+  buildingManagerCount: number;
+  companyOperatorCount: number;
+}
+
+export interface BuildingCapacityResponse {
+  items: BuildingCapacityItem[];
+}
+
 export interface CreateUserRequest {
   companyId?: string | null;
   condominiumId?: string | null;
