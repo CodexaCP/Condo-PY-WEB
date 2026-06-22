@@ -3,7 +3,7 @@ import { ChangeDetectorRef, Component, DestroyRef, inject, OnInit } from '@angul
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
-import { forkJoin, map, of } from 'rxjs';
+import { forkJoin, of } from 'rxjs';
 import { Button } from 'primeng/button';
 import { Card } from 'primeng/card';
 import { Message } from 'primeng/message';
@@ -534,7 +534,7 @@ export class UserCreatePageComponent implements OnInit {
       condominiums: this.condominiumsApi.getAll(),
       buildings:    this.buildingsApi.getAll(),
       entity:       id
-        ? this.api.getAll().pipe(map(list => list.find(u => u.id === id) ?? null))
+        ? this.api.getById(id)
         : of(null)
     }).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: ({ companies, condominiums, buildings, entity }) => {

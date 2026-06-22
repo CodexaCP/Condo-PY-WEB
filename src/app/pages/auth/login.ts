@@ -31,8 +31,8 @@ import { homeRoute } from '../../auth/auth.guard';
                         </div>
 
                         <div>
-                            <label for="email1" class="block text-surface-900 dark:text-surface-0 text-xl font-medium mb-2">Correo</label>
-                            <input pInputText id="email1" type="email" placeholder="correo@empresa.com" class="w-full md:w-120 mb-8" [(ngModel)]="email" (keyup.enter)="submit()" />
+                            <label for="email1" class="block text-surface-900 dark:text-surface-0 text-xl font-medium mb-2">Correo o nombre de usuario</label>
+                            <input pInputText id="email1" type="text" placeholder="correo@empresa.com o usuario" class="w-full md:w-120 mb-8" [(ngModel)]="email" (keyup.enter)="submit()" />
 
                             <label for="password1" class="block text-surface-900 dark:text-surface-0 font-medium text-xl mb-2">Contraseña</label>
                             <p-password id="password1" [(ngModel)]="password" placeholder="••••••••" [toggleMask]="true" styleClass="mb-4" [fluid]="true" [feedback]="false" (keyup.enter)="submit()"></p-password>
@@ -60,7 +60,7 @@ export class Login {
 
     submit(): void {
         if (!this.email || !this.password) {
-            this.errorMessage = 'Ingresa correo y contraseña.';
+            this.errorMessage = 'Ingresa tu correo o usuario, y tu contraseña.';
             return;
         }
 
