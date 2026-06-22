@@ -656,7 +656,9 @@ export class UserCreatePageComponent implements OnInit {
     if (buildingIds.length === 0) { this.formError = 'Debes asignar al menos un edificio.'; return; }
 
     const req = {
-      companyId, condominiumId, firstName, lastName, username, email,
+      companyId, condominiumId, firstName, lastName,
+      fullName: `${firstName} ${lastName}`,
+      username, email,
       phonePrefix: this.form.phonePrefix || null,
       phone:       this.form.phone.trim() || null,
       address:     this.form.address.trim() || null,
