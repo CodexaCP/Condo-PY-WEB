@@ -1,0 +1,135 @@
+/* You can add global styles to this file, and also import other style files */
+@use 'primeicons/primeicons.css';
+@use '@/assets/layout/layout.scss';
+@use '@/assets/demo/demo.scss';
+
+// Condo utility variables (mapped to Aura theme tokens)
+:root {
+  --brand-ink: var(--p-text-color, #11364a);
+  --brand-ink-soft: var(--p-text-muted-color, #214c60);
+  --brand-muted: var(--p-text-muted-color, #5f7b88);
+  --brand-border: var(--p-content-border-color, rgba(0,0,0,0.1));
+  --brand-gradient-soft: rgba(var(--p-primary-400-rgb, 99 163 210) / 0.1);
+  --app-muted: var(--p-text-muted-color, #5f7b88);
+  --app-primary: var(--primary-color);
+}
+
+// Condo page utility classes
+.app-page-card {
+  padding: 1.5rem;
+}
+
+.app-page-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.app-page-head h1 {
+  margin: 0;
+  font-size: 2rem;
+}
+
+.app-page-head p {
+  margin: 0.35rem 0 0;
+  color: var(--brand-muted);
+}
+
+.app-state {
+  margin: 0 0 1rem;
+  color: var(--brand-muted);
+  font-weight: 600;
+}
+
+.app-state.error {
+  color: var(--p-red-500, #c94d3f);
+}
+
+.app-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+
+.app-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  margin: 1rem 0 1.2rem;
+  padding: 1.2rem;
+  border-radius: 12px;
+  background: var(--p-content-background, rgba(0,0,0,0.02));
+  border: 1px solid var(--p-content-border-color, rgba(0,0,0,0.08));
+}
+
+.app-form-grid .wide {
+  grid-column: 1 / -1;
+}
+
+.app-form-grid label {
+  display: grid;
+  gap: 0.45rem;
+  font-weight: 600;
+}
+
+.app-form-grid input,
+.app-form-grid select {
+  width: 100%;
+}
+
+.app-form-grid .checkbox {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  align-self: end;
+}
+
+.app-list {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.app-row {
+  display: grid;
+  gap: 1rem;
+  align-items: center;
+  padding: 1rem;
+  border-radius: 10px;
+  background: var(--p-content-background, rgba(255,255,255,0.7));
+  border: 1px solid var(--p-content-border-color, rgba(0,0,0,0.08));
+}
+
+.app-row.header {
+  background: transparent;
+  padding: 0 1rem;
+  color: var(--brand-muted);
+  font-weight: 700;
+}
+
+.app-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  justify-content: flex-end;
+}
+
+.app-badge {
+  display: inline-flex;
+  justify-content: center;
+  padding: 0.4rem 0.7rem;
+  border-radius: 999px;
+  background: var(--p-primary-50, rgba(99,163,210,0.1));
+  color: var(--primary-color);
+  font-weight: 700;
+}
+
+@media (max-width: 900px) {
+  .app-form-grid {
+    grid-template-columns: 1fr;
+  }
+}
