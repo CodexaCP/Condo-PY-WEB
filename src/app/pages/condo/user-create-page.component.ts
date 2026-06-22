@@ -507,7 +507,7 @@ export class UserCreatePageComponent implements OnInit {
   isEditing     = false;
   editingId     = '';
   editingFullName = '';
-  loading       = false;
+  loading       = true;
   loadError     = '';
   isSaving      = false;
   isDeleting    = false;
@@ -544,28 +544,42 @@ export class UserCreatePageComponent implements OnInit {
         this.allCondominiums = condominiums;
         this.allBuildings    = buildings;
 
+        if (id && !entity) {
+          this.loadError = 'No se encontró el usuario solicitado.';
+          this.loading   = false;
+          this.cdr.markForCheck();
+          return;
+        }
+
         if (id && entity) {
-          this.isEditing      = true;
-          this.editingId      = id;
-          this.editingFullName = entity.fullName || `${entity.firstName} ${entity.lastName}`;
+          this.isEditing       = true;
+          this.editingId       = id;
+          this.editingFullName = entity.fullName
+            || `${entity.firstName ?? ''} ${entity.lastName ?? ''}`.trim();
+
+          // Descomponer fullName si el backend aún no devuelve firstName/lastName por separado
+          const nameParts = (entity.fullName ?? '').trim().split(/\s+/);
+          const firstName = entity.firstName?.trim() || nameParts[0] || '';
+          const lastName  = entity.lastName?.trim()  || nameParts.slice(1).join(' ') || '';
+
           this.form = {
             companyId:     entity.companyId     ?? '',
             condominiumId: entity.condominiumId ?? '',
-            firstName:     entity.firstName     ?? '',
-            lastName:      entity.lastName      ?? '',
-            username:      entity.username      ?? '',
-            email:         entity.email,
-            phonePrefix:   entity.phonePrefix   ?? '+595',
-            phone:         entity.phone         ?? '',
-            address:       entity.address       ?? '',
-            role:          entity.role,
-            isActive:      entity.isActive,
-            buildingIds:   [...(entity.buildingIds ?? [])]
+            firstName,
+            lastName,
+            username:    entity.username    ?? '',
+            email:       entity.email       ?? '',
+            phonePrefix: entity.phonePrefix ?? '+595',
+            phone:       entity.phone       ?? '',
+            address:     entity.address     ?? '',
+            role:        entity.role        || this.visibleRoleCards[0]?.value || '',
+            isActive:    entity.isActive    ?? true,
+            buildingIds: [...(entity.buildingIds ?? [])]
           };
         }
 
         this.refreshCondominiumOptions();
-        this.refreshBuildings();
+        this.refreshBuildings();   // llama DESPUÉS de setear el form para que incluya edificios asignados
         this.loading = false;
         this.cdr.markForCheck();
       },
@@ -579,14 +593,16 @@ export class UserCreatePageComponent implements OnInit {
 
   onCompanyChange(): void {
     this.form.condominiumId = '';
-    this.form.buildingIds   = [];
+    this.form.buildingIds   = [];     // el usuario cambió empresa → limpiar selección
     this.refreshCondominiumOptions();
     this.refreshBuildings();
+    this.cdr.markForCheck();
   }
 
   onCondominiumChange(): void {
-    this.form.buildingIds = [];
+    this.form.buildingIds = [];       // el usuario cambió condominio → limpiar selección
     this.refreshBuildings();
+    this.cdr.markForCheck();
   }
 
   private refreshCondominiumOptions(): void {
@@ -601,13 +617,20 @@ export class UserCreatePageComponent implements OnInit {
   }
 
   private refreshBuildings(): void {
-    // Filtrar por empresa y/o condominio si están seleccionados
     let list = this.allBuildings;
     if (this.form.companyId) {
       list = list.filter(b => b.companyId === this.form.companyId);
     }
     if (this.form.condominiumId) {
       list = list.filter(b => b.condominiumId === this.form.condominiumId);
+    }
+    // Siempre incluir los edificios ya asignados aunque no pasen el filtro actual
+    if (this.form.buildingIds.length) {
+      const inList = new Set(list.map(b => b.id));
+      const missing = this.allBuildings.filter(
+        b => this.form.buildingIds.includes(b.id) && !inList.has(b.id)
+      );
+      list = [...list, ...missing];
     }
     this.filteredBuildings = list.sort((a, b) => a.name.localeCompare(b.name));
   }
