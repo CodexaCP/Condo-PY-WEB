@@ -3,7 +3,7 @@ import { ChangeDetectorRef, Component, DestroyRef, inject, OnInit } from '@angul
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
-import { forkJoin, of } from 'rxjs';
+import { forkJoin, map, of } from 'rxjs';
 import { Button } from 'primeng/button';
 import { Card } from 'primeng/card';
 import { Message } from 'primeng/message';
@@ -240,12 +240,8 @@ const ALL_ROLE_CARDS: RoleCard[] = [
                       optionLabel="label" optionValue="value"
                       placeholder="Sin condominio asignado" [showClear]="true"
                       styleClass="full-select"
-                      [disabled]="isSuperAdmin && !form.companyId"
                       (onChange)="onCondominiumChange()">
             </p-select>
-            <small class="field-hint" *ngIf="isSuperAdmin && !form.companyId">
-              Selecciona primero una empresa para ver sus condominios.
-            </small>
             <small class="field-hint" *ngIf="form.condominiumId">
               El usuario podrá ver y editar todos los edificios de este condominio.
             </small>
@@ -280,9 +276,7 @@ const ALL_ROLE_CARDS: RoleCard[] = [
             </div>
             <ng-template #noBuildings>
               <p class="no-items-hint">
-                {{ (isSuperAdmin && !form.companyId)
-                   ? 'Selecciona primero una empresa para ver sus edificios.'
-                   : 'No hay edificios disponibles.' }}
+                No hay edificios disponibles.
               </p>
             </ng-template>
           </div>
@@ -539,7 +533,9 @@ export class UserCreatePageComponent implements OnInit {
       companies:    this.isSuperAdmin ? this.companiesApi.getAll() : of([] as Company[]),
       condominiums: this.condominiumsApi.getAll(),
       buildings:    this.buildingsApi.getAll(),
-      entity:       id ? this.api.getById(id) : of(null)
+      entity:       id
+        ? this.api.getAll().pipe(map(list => list.find(u => u.id === id) ?? null))
+        : of(null)
     }).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: ({ companies, condominiums, buildings, entity }) => {
         this.companyOptions = companies
@@ -594,8 +590,9 @@ export class UserCreatePageComponent implements OnInit {
   }
 
   private refreshCondominiumOptions(): void {
+    // Si hay empresa seleccionada: filtrar por ella; si no: mostrar todos
     let list = this.allCondominiums;
-    if (this.isSuperAdmin && this.form.companyId) {
+    if (this.form.companyId) {
       list = list.filter(c => c.companyId === this.form.companyId);
     }
     this.filteredCondominiumOptions = list
@@ -604,8 +601,9 @@ export class UserCreatePageComponent implements OnInit {
   }
 
   private refreshBuildings(): void {
+    // Filtrar por empresa y/o condominio si están seleccionados
     let list = this.allBuildings;
-    if (this.isSuperAdmin && this.form.companyId) {
+    if (this.form.companyId) {
       list = list.filter(b => b.companyId === this.form.companyId);
     }
     if (this.form.condominiumId) {

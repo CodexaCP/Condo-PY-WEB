@@ -2,12 +2,14 @@ import { CommonModule } from '@angular/common';
 import { ChangeDetectorRef, Component, DestroyRef, inject, OnInit } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
+import { forkJoin, of } from 'rxjs';
 import { Button } from 'primeng/button';
 import { Card } from 'primeng/card';
 import { Message } from 'primeng/message';
 import { Tag } from 'primeng/tag';
 import { UsersApiService } from '../../api/users-api.service';
-import { ManagedUser } from '../../api/models';
+import { CompaniesApiService } from '../../api/companies-api.service';
+import { Company, ManagedUser } from '../../api/models';
 import { AuthService } from '../../auth/auth.service';
 import { roleLabel } from '../../auth/role-labels';
 
@@ -41,7 +43,7 @@ import { roleLabel } from '../../auth/role-labels';
           <span>Estado</span>
         </div>
         <div class="app-row" [ngClass]="gridClass" *ngFor="let item of items">
-          <span *ngIf="isSuperAdmin" class="company-col">{{ item.companyId ?? '—' }}</span>
+          <span *ngIf="isSuperAdmin" class="company-col">{{ companyName(item.companyId) }}</span>
           <button class="row-link" (click)="goToEdit(item.id)">
             {{ item.fullName || (item.firstName + ' ' + item.lastName) }}
           </button>
@@ -68,13 +70,15 @@ import { roleLabel } from '../../auth/role-labels';
   `]
 })
 export class UsersPageComponent implements OnInit {
-  private readonly api        = inject(UsersApiService);
-  private readonly auth       = inject(AuthService);
-  private readonly router     = inject(Router);
-  private readonly destroyRef = inject(DestroyRef);
-  private readonly cdr        = inject(ChangeDetectorRef);
+  private readonly api          = inject(UsersApiService);
+  private readonly companiesApi = inject(CompaniesApiService);
+  private readonly auth         = inject(AuthService);
+  private readonly router       = inject(Router);
+  private readonly destroyRef   = inject(DestroyRef);
+  private readonly cdr          = inject(ChangeDetectorRef);
 
-  items:    ManagedUser[] = [];
+  items:     ManagedUser[] = [];
+  companies: Company[]     = [];
   loading   = true;
   pageError = '';
   readonly roleLabel = roleLabel;
@@ -82,12 +86,21 @@ export class UsersPageComponent implements OnInit {
   get isSuperAdmin(): boolean { return this.auth.hasRole('SuperAdmin'); }
   get gridClass(): string     { return this.isSuperAdmin ? 'grid-sa' : 'grid-nm'; }
 
+  companyName(id: string | null): string {
+    if (!id) return '—';
+    return this.companies.find(c => c.id === id)?.name ?? id;
+  }
+
   ngOnInit(): void {
-    this.api.getAll().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-      next: items => {
-        this.items   = items.sort((a, b) =>
+    forkJoin({
+      users:     this.api.getAll(),
+      companies: this.isSuperAdmin ? this.companiesApi.getAll() : of([] as Company[])
+    }).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: ({ users, companies }) => {
+        this.items     = users.sort((a, b) =>
           (a.fullName || a.firstName).localeCompare(b.fullName || b.firstName));
-        this.loading = false;
+        this.companies = companies;
+        this.loading   = false;
         this.cdr.markForCheck();
       },
       error: () => {
