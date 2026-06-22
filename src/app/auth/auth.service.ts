@@ -7,6 +7,8 @@ export type SessionUser = {
   userId: string;
   companyId: string | null;
   companyName: string | null;
+  condominiumId: string | null;
+  condominiumName: string | null;
   fullName: string;
   role: string;
   scopeLabel: string;
@@ -26,6 +28,8 @@ type LoginResponse = {
   userId: string;
   companyId: string | null;
   companyName: string | null;
+  condominiumId: string | null;
+  condominiumName: string | null;
   fullName: string;
   role: string;
   scopeLabel: string;
@@ -56,6 +60,8 @@ export class AuthService {
               userId: response.userId,
               companyId: response.companyId,
               companyName: response.companyName,
+              condominiumId: response.condominiumId,
+              condominiumName: response.condominiumName,
               fullName: response.fullName,
               role: response.role,
               scopeLabel: response.scopeLabel,

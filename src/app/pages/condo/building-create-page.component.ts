@@ -65,8 +65,15 @@ const PHONE_PREFIXES: PhonePrefix[] = [
             <small class="field-hint">La empresa no puede cambiarse tras la creación.</small>
           </div>
 
-          <!-- Condominio: siempre opcional, filtrado por empresa en create para SA -->
-          <div class="field">
+          <!-- Condominio bloqueado: admin asignado a un condominio específico -->
+          <div class="field" *ngIf="condominiumLocked">
+            <label>Condominio</label>
+            <div class="readonly-badge">{{ lockedCondominiumName }}</div>
+            <small class="field-hint">Tu cuenta está asignada a este condominio.</small>
+          </div>
+
+          <!-- Condominio: selector (SA o admin de empresa sin condominio fijo) -->
+          <div class="field" *ngIf="!condominiumLocked">
             <label for="condominium">Condominio <span class="optional">(opcional)</span></label>
             <p-select id="condominium" [options]="filteredCondominiumOptions" [(ngModel)]="form.condominiumId"
                       name="condominiumId" optionLabel="label" optionValue="value"
@@ -216,7 +223,13 @@ export class BuildingCreatePageComponent implements OnInit {
 
   form = { companyId:'', condominiumId:'', name:'', code:'', address:'', description:'', phonePrefix:'+595', phoneNumber:'', email:'', isActive:true };
 
-  get isSuperAdmin() { return this.auth.hasRole('SuperAdmin'); }
+  get isSuperAdmin()       { return this.auth.hasRole('SuperAdmin'); }
+  get isCompanyAdmin()     { return this.auth.hasRole('CompanyAdmin'); }
+  get condominiumLocked()  { return this.isCompanyAdmin && !!this.auth.currentUser()?.condominiumId; }
+  get lockedCondominiumName() {
+    const condId = this.auth.currentUser()?.condominiumId;
+    return condId ? (this.allCondominiums.find(c => c.id === condId)?.name ?? condId) : '';
+  }
   get selectedPrefix() { return PHONE_PREFIXES.find(p => p.value === this.form.phonePrefix); }
 
   ngOnInit(): void {
@@ -248,6 +261,12 @@ export class BuildingCreatePageComponent implements OnInit {
           };
         }
         this.refreshCondominiumOptions();
+
+        // Pre-fijar condominio para admin asignado a un condominio específico
+        if (!id && this.condominiumLocked) {
+          this.form.condominiumId = this.auth.currentUser()?.condominiumId ?? '';
+        }
+
         this.loading = false; this.cdr.markForCheck();
       },
       error: () => { this.loadError = 'No se pudieron cargar los datos.'; this.loading = false; this.cdr.markForCheck(); }
