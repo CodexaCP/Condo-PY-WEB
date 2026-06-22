@@ -603,10 +603,14 @@ export interface ManagedUser {
   id: string;
   companyId: string | null;
   condominiumId: string | null;
+  firstName: string;
+  lastName: string;
+  username: string;
   fullName: string;
   email: string;
   phonePrefix?: string | null;
   phone?: string | null;
+  address?: string | null;
   role: string;
   isActive: boolean;
   buildingIds: string[];
@@ -615,11 +619,14 @@ export interface ManagedUser {
 export interface CreateUserRequest {
   companyId?: string | null;
   condominiumId?: string | null;
-  fullName: string;
+  firstName: string;
+  lastName: string;
+  username: string;
   email: string;
   password?: string;
   phonePrefix?: string | null;
   phone?: string | null;
+  address?: string | null;
   role: string;
   isActive: boolean;
   buildingIds: string[];

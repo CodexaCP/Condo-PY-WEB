@@ -12,6 +12,10 @@ export class UsersApiService {
     return this.http.get<ManagedUser[]>(`${API_BASE_URL}/users`);
   }
 
+  getById(id: string): Observable<ManagedUser> {
+    return this.http.get<ManagedUser>(`${API_BASE_URL}/users/${id}`);
+  }
+
   create(request: CreateUserRequest): Observable<ManagedUser> {
     return this.http.post<ManagedUser>(`${API_BASE_URL}/users`, request);
   }

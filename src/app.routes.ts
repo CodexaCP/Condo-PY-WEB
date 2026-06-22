@@ -80,6 +80,14 @@ export const appRoutes: Routes = [
                 path: 'users',
                 loadComponent: () => import('./app/pages/condo/users-page.component').then(m => m.UsersPageComponent)
             },
+            {
+                path: 'users/create',
+                loadComponent: () => import('./app/pages/condo/user-create-page.component').then(m => m.UserCreatePageComponent)
+            },
+            {
+                path: 'users/:id',
+                loadComponent: () => import('./app/pages/condo/user-create-page.component').then(m => m.UserCreatePageComponent)
+            },
 
             // ── Condo: Admin/General ──────────────────────────────────────
             {
