@@ -546,6 +546,8 @@ export interface AccountStatementPeriod {
   totalCharges: number;
   totalPayments: number;
   balance: number;
+  previousBalance: number;
+  runningBalance: number;
 }
 
 export interface AccountStatementCharge {
@@ -607,12 +609,15 @@ export interface ExpenseReceipt {
   holderDocumentNumber: string;
   unitCoefficient: number;
   charges: ExpenseReceiptCharge[];
+  payments: AccountStatementPayment[];
   ordinaryAmount: number;
   reserveFundAmount: number;
   extraordinaryAmount: number;
   individualAmount: number;
   adjustmentAmount: number;
   totalAmount: number;
+  totalPayments: number;
+  balance: number;
 }
 
 export interface MorositySummary {

@@ -22,7 +22,7 @@ import { UnitsApiService } from '../../api/units-api.service';
         <div class="app-page-head">
           <div>
             <h1>Estado de cuenta</h1>
-            <p>Consulta de deuda, pagos y saldo por unidad y periodo.</p>
+            <p>Consulta de deuda, pagos y saldo acumulado por unidad.</p>
           </div>
         </div>
       </div>
@@ -39,14 +39,44 @@ import { UnitsApiService } from '../../api/units-api.service';
 
       <p class="app-state" *ngIf="loading">Cargando estado de cuenta...</p>
       <p class="app-state" *ngIf="!loading && !selectedUnitId">Selecciona una unidad para consultar.</p>
-      <p class="app-state" *ngIf="!loading && selectedUnitId && !statements.length">La unidad no tiene movimientos.</p>
+      <p class="app-state" *ngIf="!loading && selectedUnitId && !statements.length">La unidad no tiene movimientos registrados.</p>
+
+      <!-- Summary header -->
+      <section class="balance-header" *ngIf="statements.length">
+        <div class="balance-chip" [class.chip-debt]="totalRunningBalance > 0" [class.chip-credit]="totalRunningBalance <= 0">
+          <span>Saldo acumulado</span>
+          <strong>{{ formatCurrency(totalRunningBalance) }}</strong>
+        </div>
+        <div class="balance-chip">
+          <span>Total cargado</span>
+          <strong>{{ formatCurrency(totalCharged) }}</strong>
+        </div>
+        <div class="balance-chip">
+          <span>Total pagado</span>
+          <strong>{{ formatCurrency(totalPaid) }}</strong>
+        </div>
+        <div class="balance-actions">
+          <p-button label="Exportar CSV" icon="pi pi-download" severity="secondary" [outlined]="true" (onClick)="exportCsv()"></p-button>
+        </div>
+      </section>
 
       <div class="content-grid" *ngIf="statements.length">
         <section class="statement-list">
-          <button type="button" class="statement-card" *ngFor="let item of statements" [class.active]="item.expensePeriodId === selectedExpensePeriodId" (click)="selectPeriod(item)">
+          <button type="button" class="statement-card" *ngFor="let item of statements"
+            [class.active]="item.expensePeriodId === selectedExpensePeriodId"
+            [class.card-debt]="item.runningBalance > 0"
+            [class.card-ok]="item.runningBalance <= 0"
+            (click)="selectPeriod(item)">
             <strong>{{ item.expensePeriodName }}</strong>
             <span>{{ item.startDate }} al {{ item.endDate }}</span>
-            <small>Saldo {{ formatCurrency(item.balance) }}</small>
+            <div class="card-amounts">
+              <small [class.period-debt]="item.balance > 0" [class.period-ok]="item.balance <= 0">
+                Período {{ formatCurrency(item.balance) }}
+              </small>
+              <small class="running-label">
+                Acumulado {{ formatCurrency(item.runningBalance) }}
+              </small>
+            </div>
             <p-tag [value]="statusLabel(item.status)" [severity]="statusSeverity(item.status)"></p-tag>
           </button>
         </section>
@@ -61,7 +91,7 @@ import { UnitsApiService } from '../../api/units-api.service';
               <div class="detail-totals">
                 <span>Cargos {{ formatCurrency(detail.totalCharges) }}</span>
                 <span>Pagos {{ formatCurrency(detail.totalPayments) }}</span>
-                <strong>Saldo {{ formatCurrency(detail.balance) }}</strong>
+                <strong [class.debt-text]="detail.balance > 0">Saldo {{ formatCurrency(detail.balance) }}</strong>
               </div>
             </div>
 
@@ -77,9 +107,9 @@ import { UnitsApiService } from '../../api/units-api.service';
                     <div>
                       <strong>{{ charge.concept }}</strong>
                       <small class="charge-type">{{ chargeTypeLabel(charge.chargeType) }}</small>
-                      <span>{{ charge.notes || 'Sin notas' }}</span>
+                      <span *ngIf="charge.notes">{{ charge.notes }}</span>
                     </div>
-                    <strong>{{ formatCurrency(charge.amount) }}</strong>
+                    <strong [class.negative-amount]="charge.amount < 0">{{ formatCurrency(charge.amount) }}</strong>
                   </div>
                 </div>
                 <ng-template #noCharges>
@@ -93,9 +123,10 @@ import { UnitsApiService } from '../../api/units-api.service';
                   <div class="line-item" *ngFor="let payment of detail.payments">
                     <div>
                       <strong>{{ payment.paymentDate }} · {{ paymentMethodLabel(payment.method) }}</strong>
-                      <span>{{ payment.reference || 'Sin referencia' }} · {{ payment.notes || 'Sin notas' }}</span>
+                      <span *ngIf="payment.reference">{{ payment.reference }}</span>
+                      <span *ngIf="payment.notes">{{ payment.notes }}</span>
                     </div>
-                    <strong>{{ formatCurrency(payment.amount) }}</strong>
+                    <strong class="paid-text">{{ formatCurrency(payment.amount) }}</strong>
                   </div>
                 </div>
                 <ng-template #noPayments>
@@ -107,14 +138,15 @@ import { UnitsApiService } from '../../api/units-api.service';
         </section>
       </div>
 
+      <!-- Receipt sheet (visible on screen + print) -->
       <section class="receipt-sheet" *ngIf="receipt" id="expense-receipt-print">
         <div class="receipt-header">
           <div>
             <h2>Comprobante individual de expensas</h2>
-            <p>{{ receipt.buildingName }} - {{ receipt.expensePeriodName }}</p>
+            <p>{{ receipt.buildingName }} &mdash; {{ receipt.expensePeriodName }}</p>
           </div>
           <div class="receipt-total">
-            <span>Total</span>
+            <span>Total cargado</span>
             <strong>{{ formatCurrency(receipt.totalAmount) }}</strong>
           </div>
         </div>
@@ -137,7 +169,7 @@ import { UnitsApiService } from '../../api/units-api.service';
           <div class="receipt-line" *ngFor="let charge of receipt.charges">
             <span>{{ chargeTypeLabel(charge.chargeType) }}</span>
             <span>{{ charge.concept }}</span>
-            <strong>{{ formatCurrency(charge.amount) }}</strong>
+            <strong [class.negative-amount]="charge.amount < 0">{{ formatCurrency(charge.amount) }}</strong>
           </div>
         </div>
 
@@ -147,36 +179,80 @@ import { UnitsApiService } from '../../api/units-api.service';
           <div><span>Extraordinarios</span><strong>{{ formatCurrency(receipt.extraordinaryAmount) }}</strong></div>
           <div><span>Cargos individuales</span><strong>{{ formatCurrency(receipt.individualAmount) }}</strong></div>
           <div><span>Ajustes</span><strong>{{ formatCurrency(receipt.adjustmentAmount) }}</strong></div>
-          <div class="grand-total"><span>Total final</span><strong>{{ formatCurrency(receipt.totalAmount) }}</strong></div>
+          <div class="grand-total"><span>Total cargado</span><strong>{{ formatCurrency(receipt.totalAmount) }}</strong></div>
         </div>
+
+        <!-- Payments section in receipt -->
+        <ng-container *ngIf="receipt.payments.length">
+          <h3 class="receipt-section-title">Pagos registrados</h3>
+          <div class="receipt-lines">
+            <div class="receipt-line header">
+              <span>Fecha</span>
+              <span>Metodo / Referencia</span>
+              <span>Importe</span>
+            </div>
+            <div class="receipt-line" *ngFor="let p of receipt.payments">
+              <span>{{ p.paymentDate }}</span>
+              <span>{{ paymentMethodLabel(p.method) }}{{ p.reference ? ' — ' + p.reference : '' }}</span>
+              <strong class="paid-text">{{ formatCurrency(p.amount) }}</strong>
+            </div>
+          </div>
+          <div class="receipt-balance-row" [class.balance-debt]="receipt.balance > 0" [class.balance-ok]="receipt.balance <= 0">
+            <span>Total pagado</span>
+            <strong>{{ formatCurrency(receipt.totalPayments) }}</strong>
+            <span>Saldo del periodo</span>
+            <strong>{{ formatCurrency(receipt.balance) }}</strong>
+          </div>
+        </ng-container>
       </section>
     </p-card>
   `,
   styles: [`
     .compact { margin-bottom: 1rem; }
+    .balance-header { display:flex; gap:1rem; align-items:center; flex-wrap:wrap; margin-bottom:1.25rem; }
+    .balance-chip {
+      background:rgba(255,255,255,0.84);
+      border-radius:20px;
+      padding:0.9rem 1.1rem;
+      display:grid;
+      gap:0.25rem;
+      border:1px solid rgba(19,133,182,0.1);
+      min-width:160px;
+    }
+    .balance-chip span { color:var(--brand-muted); font-size:0.82rem; }
+    .balance-chip strong { color:var(--brand-ink); font-size:1.4rem; }
+    .chip-debt strong { color:#c94d3f; }
+    .chip-credit strong { color:#1a7f37; }
+    .balance-actions { margin-left:auto; }
     .content-grid { display:grid; grid-template-columns: 320px minmax(0, 1fr); gap:1rem; }
     .statement-list { display:grid; gap:0.75rem; align-content:start; }
     .statement-card {
       width:100%;
-      border:1px solid rgba(19, 133, 182, 0.12);
-      background:rgba(255, 255, 255, 0.82);
+      border:1px solid rgba(19,133,182,0.12);
+      background:rgba(255,255,255,0.82);
       border-radius:20px;
       padding:1rem;
       display:grid;
-      gap:0.45rem;
+      gap:0.4rem;
       text-align:left;
       cursor:pointer;
+      transition:box-shadow 0.12s;
     }
-    .statement-card.active { border-color:var(--brand-blue); box-shadow:0 10px 24px rgba(19, 133, 182, 0.16); background:var(--brand-gradient-soft); }
+    .statement-card.active { border-color:var(--brand-blue); box-shadow:0 10px 24px rgba(19,133,182,0.16); background:var(--brand-gradient-soft); }
     .statement-card strong { color:var(--brand-ink); }
-    .statement-card span, .statement-card small { color:var(--brand-muted); }
+    .statement-card > span { color:var(--brand-muted); font-size:0.85rem; }
+    .card-amounts { display:flex; justify-content:space-between; gap:0.5rem; font-size:0.82rem; }
+    .period-debt { color:#c94d3f; font-weight:700; }
+    .period-ok { color:#1a7f37; font-weight:700; }
+    .running-label { color:var(--brand-muted); }
     .detail-head { display:flex; justify-content:space-between; gap:1rem; align-items:start; margin-bottom:1rem; }
     .detail-head h2 { margin:0; color:var(--brand-ink); }
     .detail-head p { margin:0.3rem 0 0; color:var(--brand-muted); }
     .detail-totals { display:grid; gap:0.35rem; text-align:right; color:var(--brand-ink-soft); }
     .detail-totals strong { color:var(--brand-ink); font-size:1.2rem; }
+    .debt-text { color:#c94d3f !important; }
     .detail-grid { display:grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap:1rem; }
-    .receipt-actions { margin-bottom: 1rem; display:flex; justify-content:flex-end; }
+    .receipt-actions { margin-bottom:1rem; display:flex; justify-content:flex-end; }
     .detail-grid h3 { margin:0 0 0.8rem; color:var(--brand-ink); }
     .line-list { display:grid; gap:0.75rem; }
     .line-item {
@@ -184,28 +260,25 @@ import { UnitsApiService } from '../../api/units-api.service';
       justify-content:space-between;
       gap:1rem;
       align-items:start;
-      background:rgba(255, 255, 255, 0.82);
+      background:rgba(255,255,255,0.82);
       border-radius:18px;
       padding:0.9rem 1rem;
-      border:1px solid rgba(19, 133, 182, 0.08);
+      border:1px solid rgba(19,133,182,0.08);
     }
-    .line-item span { display:block; color:var(--brand-muted); margin-top:0.25rem; }
+    .line-item span { display:block; color:var(--brand-muted); margin-top:0.25rem; font-size:0.85rem; }
     .line-item .charge-type { display:block; color:var(--brand-blue); margin-top:0.2rem; font-weight:600; }
     .empty-copy { color:var(--brand-muted); margin:0; }
+    .negative-amount { color:#c94d3f; }
+    .paid-text { color:#1a7f37; }
+    /* Receipt */
     .receipt-sheet {
-      margin-top: 1.5rem;
-      padding: 1.5rem;
-      border: 1px solid rgba(19, 133, 182, 0.12);
-      border-radius: 24px;
-      background: linear-gradient(180deg, rgba(255,255,255,0.96) 0%, rgba(243,251,251,0.96) 100%);
+      margin-top:1.5rem;
+      padding:1.5rem;
+      border:1px solid rgba(19,133,182,0.12);
+      border-radius:24px;
+      background:linear-gradient(180deg,rgba(255,255,255,0.96) 0%,rgba(243,251,251,0.96) 100%);
     }
-    .receipt-header {
-      display:flex;
-      justify-content:space-between;
-      gap:1rem;
-      align-items:start;
-      margin-bottom:1rem;
-    }
+    .receipt-header { display:flex; justify-content:space-between; gap:1rem; align-items:start; margin-bottom:1rem; }
     .receipt-header h2 { margin:0; color:var(--brand-ink); }
     .receipt-header p { margin:0.35rem 0 0; color:var(--brand-muted); }
     .receipt-total { text-align:right; }
@@ -213,65 +286,69 @@ import { UnitsApiService } from '../../api/units-api.service';
     .receipt-total strong { font-size:1.5rem; color:var(--brand-ink); }
     .receipt-meta-grid {
       display:grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
+      grid-template-columns:repeat(3, minmax(0, 1fr));
       gap:0.9rem;
       margin-bottom:1rem;
     }
-    .receipt-meta-grid div,
-    .receipt-summary div {
+    .receipt-meta-grid div,.receipt-summary div {
       padding:0.8rem 0.9rem;
       border-radius:16px;
-      background:rgba(255, 255, 255, 0.92);
-      border:1px solid rgba(19, 133, 182, 0.12);
+      background:rgba(255,255,255,0.92);
+      border:1px solid rgba(19,133,182,0.12);
     }
-    .receipt-meta-grid span,
-    .receipt-summary span {
+    .receipt-meta-grid span,.receipt-summary span {
       display:block;
       color:var(--brand-muted);
       font-size:0.82rem;
       margin-bottom:0.25rem;
     }
+    .receipt-section-title { margin:1.25rem 0 0.75rem; color:var(--brand-ink); }
     .receipt-lines { display:grid; gap:0.5rem; margin-bottom:1rem; }
     .receipt-line {
       display:grid;
-      grid-template-columns: 0.9fr 1.6fr 0.7fr;
+      grid-template-columns:0.9fr 1.6fr 0.7fr;
       gap:1rem;
       align-items:center;
       padding:0.85rem 1rem;
       border-radius:16px;
-      background:rgba(255, 255, 255, 0.92);
-      border:1px solid rgba(19, 133, 182, 0.12);
+      background:rgba(255,255,255,0.92);
+      border:1px solid rgba(19,133,182,0.12);
     }
-    .receipt-line.header {
-      background:var(--brand-gradient-soft);
-      font-weight:700;
-      color:var(--brand-ink);
-    }
+    .receipt-line.header { background:var(--brand-gradient-soft); font-weight:700; color:var(--brand-ink); }
     .receipt-summary {
       display:grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
+      grid-template-columns:repeat(3, minmax(0, 1fr));
       gap:0.9rem;
+      margin-bottom:1rem;
     }
-    .receipt-summary .grand-total {
-      background:var(--brand-gradient);
-      color:white;
-      border-color:transparent;
+    .receipt-summary .grand-total { background:var(--brand-gradient); color:white; border-color:transparent; }
+    .receipt-summary .grand-total span,.receipt-summary .grand-total strong { color:white; }
+    .receipt-balance-row {
+      display:grid;
+      grid-template-columns:1fr 1fr 1fr 1fr;
+      gap:0.9rem;
+      padding:1rem;
+      border-radius:16px;
+      border:2px solid rgba(19,133,182,0.2);
+      background:rgba(255,255,255,0.92);
     }
-    .receipt-summary .grand-total span,
-    .receipt-summary .grand-total strong { color:white; }
+    .receipt-balance-row span { display:block; color:var(--brand-muted); font-size:0.82rem; margin-bottom:0.2rem; }
+    .receipt-balance-row strong { font-size:1.1rem; color:var(--brand-ink); }
+    .balance-debt { border-color:#fca5a5; }
+    .balance-debt strong:last-child { color:#c94d3f; }
+    .balance-ok { border-color:#86efac; }
+    .balance-ok strong:last-child { color:#1a7f37; }
     @media (max-width: 1080px) {
-      .content-grid { grid-template-columns: 1fr; }
-      .receipt-meta-grid,
-      .receipt-summary { grid-template-columns: 1fr 1fr; }
+      .content-grid { grid-template-columns:1fr; }
+      .receipt-meta-grid,.receipt-summary { grid-template-columns:1fr 1fr; }
     }
     @media (max-width: 720px) {
-      .detail-head, .detail-grid { grid-template-columns: 1fr; display:grid; }
+      .balance-header { flex-direction:column; }
+      .balance-actions { margin-left:0; }
+      .detail-head { flex-direction:column; }
       .detail-totals { text-align:left; }
-      .detail-grid { grid-template-columns: 1fr; }
-      .receipt-header,
-      .receipt-meta-grid,
-      .receipt-summary,
-      .receipt-line { grid-template-columns: 1fr; display:grid; }
+      .detail-grid { grid-template-columns:1fr; }
+      .receipt-header,.receipt-meta-grid,.receipt-summary,.receipt-line,.receipt-balance-row { grid-template-columns:1fr; display:grid; }
       .receipt-total { text-align:left; }
     }
     @media print {
@@ -295,6 +372,19 @@ export class AccountStatementsPageComponent implements OnInit {
   selectedExpensePeriodId = '';
   loading = true;
 
+  get totalRunningBalance(): number {
+    if (!this.statements.length) return 0;
+    return this.statements[0].runningBalance; // list is newest first
+  }
+
+  get totalCharged(): number {
+    return this.statements.reduce((s, x) => s + x.totalCharges, 0);
+  }
+
+  get totalPaid(): number {
+    return this.statements.reduce((s, x) => s + x.totalPayments, 0);
+  }
+
   ngOnInit(): void {
     this.unitsApi.getAll().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (units) => {
@@ -316,18 +406,14 @@ export class AccountStatementsPageComponent implements OnInit {
     this.statements = [];
     this.selectedExpensePeriodId = '';
 
-    if (!this.selectedUnitId) {
-      return;
-    }
+    if (!this.selectedUnitId) return;
 
     this.loading = true;
     this.accountStatementsApi.getUnitStatements(this.selectedUnitId).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (statements) => {
         this.statements = statements;
         this.loading = false;
-        if (statements.length) {
-          this.selectPeriod(statements[0]);
-        }
+        if (statements.length) this.selectPeriod(statements[0]);
         this.cdr.markForCheck();
       },
       error: (error) => {
@@ -344,21 +430,49 @@ export class AccountStatementsPageComponent implements OnInit {
     forkJoin({
       detail: this.accountStatementsApi.getUnitStatementDetail(this.selectedUnitId, item.expensePeriodId),
       receipt: this.accountStatementsApi.getExpenseReceipt(this.selectedUnitId, item.expensePeriodId)
-    })
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: ({ detail, receipt }) => {
-          this.detail = detail;
-          this.receipt = receipt;
-          this.loading = false;
-          this.cdr.markForCheck();
-        },
-        error: (error) => {
-          this.msg.add({ severity: 'error', summary: 'Error', detail: extractApiErrorMessage(error, 'No se pudo cargar el detalle del periodo.'), life: 5000 });
-          this.loading = false;
-          this.cdr.markForCheck();
-        }
-      });
+    }).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: ({ detail, receipt }) => {
+        this.detail = detail;
+        this.receipt = receipt;
+        this.loading = false;
+        this.cdr.markForCheck();
+      },
+      error: (error) => {
+        this.msg.add({ severity: 'error', summary: 'Error', detail: extractApiErrorMessage(error, 'No se pudo cargar el detalle del periodo.'), life: 5000 });
+        this.loading = false;
+        this.cdr.markForCheck();
+      }
+    });
+  }
+
+  exportCsv(): void {
+    if (!this.statements.length) return;
+    const unit = this.units.find(u => u.id === this.selectedUnitId);
+    const headers = ['Periodo', 'Año', 'Mes', 'Estado', 'Total cargado', 'Total pagado', 'Saldo periodo', 'Saldo anterior', 'Saldo acumulado'];
+    const rows = [...this.statements].reverse().map(s => [
+      s.expensePeriodName,
+      s.year,
+      s.month,
+      this.statusLabel(s.status),
+      s.totalCharges,
+      s.totalPayments,
+      s.balance,
+      s.previousBalance,
+      s.runningBalance
+    ]);
+
+    const csv = [headers, ...rows].map(r => r.map(v => `"${v}"`).join(',')).join('\n');
+    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `estado-cuenta-${unit?.code ?? 'unidad'}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  printReceipt(): void {
+    window.print();
   }
 
   statusLabel(status: string): string {
@@ -370,31 +484,19 @@ export class AccountStatementsPageComponent implements OnInit {
   }
 
   paymentMethodLabel(method: PaymentMethod): string {
-    return method === 'Cash'
-      ? 'Efectivo'
-      : method === 'BankTransfer'
-        ? 'Transferencia'
-        : method === 'Card'
-          ? 'Tarjeta'
-          : method === 'Check'
-            ? 'Cheque'
-            : 'Otro';
+    return method === 'Cash' ? 'Efectivo'
+      : method === 'BankTransfer' ? 'Transferencia'
+      : method === 'Card' ? 'Tarjeta'
+      : method === 'Check' ? 'Cheque'
+      : 'Otro';
   }
 
   chargeTypeLabel(type: ExpenseChargeType): string {
-    return type === 'Ordinary'
-      ? 'Expensa ordinaria'
-      : type === 'ReserveFund'
-        ? 'Fondo de reserva'
-        : type === 'Extraordinary'
-          ? 'Extraordinario'
-          : type === 'Individual'
-            ? 'Cargo individual'
-            : 'Ajuste';
-  }
-
-  printReceipt(): void {
-    window.print();
+    return type === 'Ordinary' ? 'Expensa ordinaria'
+      : type === 'ReserveFund' ? 'Fondo de reserva'
+      : type === 'Extraordinary' ? 'Extraordinario'
+      : type === 'Individual' ? 'Cargo individual'
+      : 'Ajuste';
   }
 
   formatCurrency(value: number): string {
