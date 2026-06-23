@@ -295,6 +295,22 @@ export interface CreateBuildingIncomeRequest {
   notes: string;
 }
 
+export interface RolloverIncomeRequest {
+  buildingId: string;
+  sourcePeriodId: string;
+  targetPeriodId: string;
+}
+
+export interface RolloverIncomeResult {
+  sourcePeriodName: string;
+  targetPeriodName: string;
+  totalIngresos: number;
+  totalGastos: number;
+  saldo: number;
+  rolloverCreated: boolean;
+  createdIncome: BuildingIncome | null;
+}
+
 export interface CreateExpensePeriodRequest {
   buildingId: string;
   year: number;

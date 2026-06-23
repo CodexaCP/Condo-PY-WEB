@@ -16,7 +16,8 @@ import {
   BuildingIncome,
   BuildingIncomeCategory,
   CreateBuildingIncomeRequest,
-  ExpensePeriod
+  ExpensePeriod,
+  RolloverIncomeResult
 } from '../../api/models';
 
 @Component({
@@ -33,14 +34,93 @@ import {
           </div>
         </div>
 
-        <p-button
-          *ngIf="!isReadOnly"
-          [label]="showForm ? 'Cerrar formulario' : 'Nuevo ingreso'"
-          [icon]="showForm ? 'pi pi-times' : 'pi pi-plus'"
-          (onClick)="toggleForm()">
-        </p-button>
+        <div style="display:flex;gap:0.5rem;" *ngIf="!isReadOnly">
+          <p-button
+            label="Rollover saldo anterior"
+            icon="pi pi-refresh"
+            severity="secondary"
+            (onClick)="toggleRolloverSection()">
+          </p-button>
+          <p-button
+            [label]="showForm ? 'Cerrar formulario' : 'Nuevo ingreso'"
+            [icon]="showForm ? 'pi pi-times' : 'pi pi-plus'"
+            (onClick)="toggleForm()">
+          </p-button>
+        </div>
       </div>
 
+      <!-- PANEL ROLLOVER -->
+      <div class="action-box" *ngIf="showRolloverSection">
+        <div class="action-head">
+          <div>
+            <strong>Rollover saldo anterior</strong>
+            <span>Calcula el saldo neto del periodo origen (Ingresos − Gastos) y lo registra como ingreso en el periodo destino.</span>
+          </div>
+          <p-button type="button" label="Cerrar" icon="pi pi-times" severity="secondary" [text]="true" (onClick)="toggleRolloverSection()"></p-button>
+        </div>
+
+        <form class="app-form-grid compact" (ngSubmit)="applyRollover()">
+          <label>
+            <span>Edificio</span>
+            <select [(ngModel)]="rollover.buildingId" name="rolloverBuilding" required (ngModelChange)="onRolloverBuildingChange()">
+              <option value="" disabled>Selecciona un edificio</option>
+              <option *ngFor="let b of buildings" [value]="b.id">{{ b.name }}</option>
+            </select>
+          </label>
+
+          <label>
+            <span>Periodo origen (cerrado)</span>
+            <select [(ngModel)]="rollover.sourcePeriodId" name="rolloverSource" required>
+              <option value="" disabled>Selecciona un periodo origen</option>
+              <option *ngFor="let p of rolloverSourcePeriods" [value]="p.id">{{ p.name }}</option>
+            </select>
+          </label>
+
+          <label>
+            <span>Periodo destino (borrador)</span>
+            <select [(ngModel)]="rollover.targetPeriodId" name="rolloverTarget" required>
+              <option value="" disabled>Selecciona un periodo destino</option>
+              <option *ngFor="let p of rolloverTargetPeriods" [value]="p.id">{{ p.name }}</option>
+            </select>
+          </label>
+
+          <div class="wide form-actions">
+            <p-button
+              type="submit"
+              label="Calcular y aplicar rollover"
+              icon="pi pi-play"
+              severity="success"
+              [loading]="isRollingOver"
+              [disabled]="!rollover.buildingId || !rollover.sourcePeriodId || !rollover.targetPeriodId">
+            </p-button>
+          </div>
+        </form>
+
+        <div class="rollover-result" *ngIf="rolloverResult">
+          <div class="result-row">
+            <span class="result-label">Ingresos del periodo origen</span>
+            <span class="result-value positive">{{ formatCurrency(rolloverResult.totalIngresos) }}</span>
+          </div>
+          <div class="result-row">
+            <span class="result-label">Gastos del periodo origen</span>
+            <span class="result-value negative">{{ formatCurrency(rolloverResult.totalGastos) }}</span>
+          </div>
+          <div class="result-row total">
+            <span class="result-label">Saldo neto</span>
+            <span class="result-value" [class.positive]="rolloverResult.saldo > 0" [class.negative]="rolloverResult.saldo < 0">
+              {{ formatCurrency(rolloverResult.saldo) }}
+            </span>
+          </div>
+          <p class="result-msg success" *ngIf="rolloverResult.rolloverCreated">
+            ✓ Se creó el ingreso "Saldo anterior período {{ rolloverResult.sourcePeriodName }}" en el periodo "{{ rolloverResult.targetPeriodName }}".
+          </p>
+          <p class="result-msg warning" *ngIf="!rolloverResult.rolloverCreated">
+            El periodo origen tiene déficit o saldo cero — no se generó ningún ingreso de rollover.
+          </p>
+        </div>
+      </div>
+
+      <!-- FILTROS -->
       <div class="filters-grid">
         <label>
           <span>Filtrar por edificio</span>
@@ -63,6 +143,7 @@ import {
         </div>
       </div>
 
+      <!-- FORMULARIO NUEVO INGRESO -->
       <form class="app-form-grid" *ngIf="showForm" (ngSubmit)="submitIncome()">
         <label>
           <span>Edificio</span>
@@ -121,6 +202,7 @@ import {
       <p class="app-state" *ngIf="loading">Cargando ingresos del edificio...</p>
       <p class="app-state" *ngIf="!loading && !items.length">No hay ingresos cargados.</p>
 
+      <!-- LISTA DE INGRESOS -->
       <div class="app-list" *ngIf="items.length">
         <div class="app-row header incomes-grid">
           <span>Fecha</span>
@@ -157,6 +239,48 @@ import {
     .form-actions { display:flex; gap:0.75rem; justify-content:flex-end; }
     .filter-actions { display:flex; justify-content:flex-end; }
     .actions-head { text-align:right; }
+    .compact { margin-top:0; }
+    .action-box {
+      margin-bottom: 1rem;
+      padding: 1.1rem;
+      border-radius: 22px;
+      background: #f5faf9;
+      border: 1px solid #dbe7e3;
+    }
+    .action-head {
+      display:flex;
+      justify-content:space-between;
+      gap:1rem;
+      align-items:start;
+      margin-bottom:0.75rem;
+    }
+    .action-head strong { display:block; color:#14363d; }
+    .action-head span { color:#6b878d; }
+    .rollover-result {
+      margin-top: 1rem;
+      padding: 0.9rem 1rem;
+      border-radius: 14px;
+      background: #fff;
+      border: 1px solid #dbe7e3;
+    }
+    .result-row {
+      display:flex;
+      justify-content:space-between;
+      padding: 0.3rem 0;
+      border-bottom: 1px solid #f0f4f3;
+    }
+    .result-row.total {
+      border-bottom: none;
+      padding-top: 0.6rem;
+      font-weight: 600;
+    }
+    .result-label { color:#4d6a6e; }
+    .result-value { font-weight:500; }
+    .result-value.positive { color:#1a8c5b; }
+    .result-value.negative { color:#c0392b; }
+    .result-msg { margin: 0.7rem 0 0; padding: 0.55rem 0.9rem; border-radius:10px; font-size:0.9rem; }
+    .result-msg.success { background:#d4f4e6; color:#0e5c3a; }
+    .result-msg.warning { background:#fef6e0; color:#7d5a00; }
     @media (max-width: 900px) {
       .filters-grid { grid-template-columns: 1fr; }
     }
@@ -178,8 +302,13 @@ export class BuildingIncomesPageComponent implements OnInit {
   periods: ExpensePeriod[] = [];
   loading = true;
   isSaving = false;
+  isRollingOver = false;
   showForm = false;
+  showRolloverSection = false;
   editingId: string | null = null;
+  rolloverResult: RolloverIncomeResult | null = null;
+  rollover = { buildingId: '', sourcePeriodId: '', targetPeriodId: '' };
+
   readonly categories: BuildingIncomeCategory[] = ['AccumulatedBalance', 'CommonAreaRental', 'Interest', 'OperationalFund', 'CreditAdjustment', 'Other'];
   filters = { buildingId: '', expensePeriodId: '' };
   form = this.createInitialForm();
@@ -196,6 +325,20 @@ export class BuildingIncomesPageComponent implements OnInit {
       : this.periods;
   }
 
+  get rolloverSourcePeriods(): ExpensePeriod[] {
+    if (!this.rollover.buildingId) return [];
+    return this.periods.filter(
+      (p) => p.buildingId === this.rollover.buildingId && p.id !== this.rollover.targetPeriodId
+    );
+  }
+
+  get rolloverTargetPeriods(): ExpensePeriod[] {
+    if (!this.rollover.buildingId) return [];
+    return this.periods.filter(
+      (p) => p.buildingId === this.rollover.buildingId && p.status === 'Draft' && p.id !== this.rollover.sourcePeriodId
+    );
+  }
+
   ngOnInit(): void {
     this.loadData();
   }
@@ -205,11 +348,24 @@ export class BuildingIncomesPageComponent implements OnInit {
       this.cancelEdit();
       return;
     }
-
     this.showForm = !this.showForm;
     if (!this.showForm) {
       this.form = this.createInitialForm();
     }
+  }
+
+  toggleRolloverSection(): void {
+    this.showRolloverSection = !this.showRolloverSection;
+    if (!this.showRolloverSection) {
+      this.rolloverResult = null;
+      this.rollover = { buildingId: '', sourcePeriodId: '', targetPeriodId: '' };
+    }
+  }
+
+  onRolloverBuildingChange(): void {
+    this.rollover.sourcePeriodId = '';
+    this.rollover.targetPeriodId = '';
+    this.rolloverResult = null;
   }
 
   startEdit(item: BuildingIncome): void {
@@ -244,31 +400,27 @@ export class BuildingIncomesPageComponent implements OnInit {
     if (!periodStillMatches) {
       this.filters.expensePeriodId = '';
     }
-
     this.applyFilters();
   }
 
   applyFilters(): void {
     this.loading = true;
-
     this.incomesApi.getAll({
       buildingId: this.filters.buildingId || undefined,
       expensePeriodId: this.filters.expensePeriodId || undefined
-    })
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: (items) => {
-          this.items = items;
-          this.sortItems();
-          this.loading = false;
-          this.cdr.markForCheck();
-        },
-        error: (error) => {
-          this.msg.add({ severity: 'error', summary: 'Error', detail: extractApiErrorMessage(error, 'No se pudo cargar el listado de ingresos del edificio.'), life: 5000 });
-          this.loading = false;
-          this.cdr.markForCheck();
-        }
-      });
+    }).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: (items) => {
+        this.items = items;
+        this.sortItems();
+        this.loading = false;
+        this.cdr.markForCheck();
+      },
+      error: (error) => {
+        this.msg.add({ severity: 'error', summary: 'Error', detail: extractApiErrorMessage(error, 'No se pudo cargar el listado de ingresos del edificio.'), life: 5000 });
+        this.loading = false;
+        this.cdr.markForCheck();
+      }
+    });
   }
 
   resetFilters(): void {
@@ -276,9 +428,40 @@ export class BuildingIncomesPageComponent implements OnInit {
     this.applyFilters();
   }
 
+  applyRollover(): void {
+    this.isRollingOver = true;
+    this.rolloverResult = null;
+    this.incomesApi.rollover({
+      buildingId: this.rollover.buildingId,
+      sourcePeriodId: this.rollover.sourcePeriodId,
+      targetPeriodId: this.rollover.targetPeriodId
+    }).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: (result) => {
+        this.rolloverResult = result;
+        this.isRollingOver = false;
+        if (result.rolloverCreated && result.createdIncome) {
+          const income = result.createdIncome;
+          const matchesFilters =
+            (!this.filters.buildingId || income.buildingId === this.filters.buildingId) &&
+            (!this.filters.expensePeriodId || income.expensePeriodId === this.filters.expensePeriodId);
+          if (matchesFilters) {
+            this.items = [income, ...this.items];
+            this.sortItems();
+          }
+          this.msg.add({ severity: 'success', summary: 'Éxito', detail: `Rollover aplicado: ${this.formatCurrency(result.saldo)} al periodo "${result.targetPeriodName}".`, life: 5000 });
+        }
+        this.cdr.markForCheck();
+      },
+      error: (error) => {
+        this.msg.add({ severity: 'error', summary: 'Error', detail: extractApiErrorMessage(error, 'No se pudo aplicar el rollover.'), life: 5000 });
+        this.isRollingOver = false;
+        this.cdr.markForCheck();
+      }
+    });
+  }
+
   submitIncome(): void {
     this.isSaving = true;
-
     const request: CreateBuildingIncomeRequest = {
       buildingId: this.form.buildingId,
       expensePeriodId: this.form.expensePeriodId,
@@ -313,7 +496,6 @@ export class BuildingIncomesPageComponent implements OnInit {
 
   deleteIncome(item: BuildingIncome): void {
     this.isSaving = true;
-
     this.incomesApi.delete(item.id).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: () => {
         this.items = this.items.filter((current) => current.id !== item.id);
@@ -352,23 +534,21 @@ export class BuildingIncomesPageComponent implements OnInit {
       incomes: this.incomesApi.getAll(),
       buildings: this.buildingsApi.getAll(),
       periods: this.periodsApi.getAll()
-    })
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: ({ incomes, buildings, periods }) => {
-          this.items = incomes;
-          this.buildings = buildings;
-          this.periods = periods;
-          this.sortItems();
-          this.loading = false;
-          this.cdr.markForCheck();
-        },
-        error: (error) => {
-          this.msg.add({ severity: 'error', summary: 'Error', detail: extractApiErrorMessage(error, 'No se pudo cargar el listado de ingresos del edificio.'), life: 5000 });
-          this.loading = false;
-          this.cdr.markForCheck();
-        }
-      });
+    }).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: ({ incomes, buildings, periods }) => {
+        this.items = incomes;
+        this.buildings = buildings;
+        this.periods = periods;
+        this.sortItems();
+        this.loading = false;
+        this.cdr.markForCheck();
+      },
+      error: (error) => {
+        this.msg.add({ severity: 'error', summary: 'Error', detail: extractApiErrorMessage(error, 'No se pudo cargar el listado de ingresos del edificio.'), life: 5000 });
+        this.loading = false;
+        this.cdr.markForCheck();
+      }
+    });
   }
 
   private upsertLocalItem(income: BuildingIncome): void {

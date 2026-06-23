@@ -2,7 +2,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { API_BASE_URL } from '../config/api.config';
-import { BuildingIncome, CreateBuildingIncomeRequest } from './models';
+import { BuildingIncome, CreateBuildingIncomeRequest, RolloverIncomeRequest, RolloverIncomeResult } from './models';
 
 @Injectable({ providedIn: 'root' })
 export class BuildingIncomesApiService {
@@ -32,5 +32,9 @@ export class BuildingIncomesApiService {
 
   delete(id: string): Observable<void> {
     return this.http.delete<void>(`${API_BASE_URL}/building-incomes/${id}`);
+  }
+
+  rollover(request: RolloverIncomeRequest): Observable<RolloverIncomeResult> {
+    return this.http.post<RolloverIncomeResult>(`${API_BASE_URL}/building-incomes/rollover`, request);
   }
 }
