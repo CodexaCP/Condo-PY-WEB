@@ -6,6 +6,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { forkJoin, of } from 'rxjs';
 import { Button } from 'primeng/button';
 import { Card } from 'primeng/card';
+import { Message } from 'primeng/message';
 import { MessageService } from 'primeng/api';
 import { Select } from 'primeng/select';
 import { Tooltip } from 'primeng/tooltip';
@@ -55,7 +56,7 @@ const ALL_ROLE_CARDS: RoleCard[] = [
 @Component({
   standalone: true,
   selector: 'app-user-create-page',
-  imports: [CommonModule, FormsModule, Button, Card, Select, Tooltip],
+  imports: [CommonModule, FormsModule, Button, Card, Message, Select, Tooltip],
   template: `
     <p-card styleClass="app-page-card">
 

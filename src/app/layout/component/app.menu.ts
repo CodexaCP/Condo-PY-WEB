@@ -25,6 +25,7 @@ export class AppMenu {
     readonly menuItems = computed<MenuItem[]>(() => {
         const isSuperAdmin = this.auth.hasRole('SuperAdmin');
         const isCompanyAdmin = this.auth.hasRole('CompanyAdmin');
+        const isManager = this.auth.hasRole('BuildingManager');
         const isAdmin = this.auth.hasRole('CompanyAdmin', 'CompanyOperator', 'BuildingManager');
 
         // ── Secciones de la plantilla (siempre visibles) ──────────────────
@@ -108,6 +109,12 @@ export class AppMenu {
                           { label: 'Periodos', icon: 'pi pi-fw pi-calendar', routerLink: ['/expense-periods'] },
                           { label: 'Cargos', icon: 'pi pi-fw pi-tags', routerLink: ['/expense-charges'] },
                           { label: 'Pagos', icon: 'pi pi-fw pi-credit-card', routerLink: ['/payments'] }
+                      ]
+                  },
+                  {
+                      label: 'Propietarios',
+                      items: [
+                          { label: 'Propietarios', icon: 'pi pi-fw pi-id-card', routerLink: ['/propietarios'] }
                       ]
                   },
                   {

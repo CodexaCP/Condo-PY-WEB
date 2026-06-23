@@ -599,6 +599,33 @@ export interface CollectionReport {
   items: CollectionItem[];
 }
 
+export interface Owner {
+  id: string;
+  companyId: string | null;
+  firstName: string;
+  lastName: string;
+  fullName: string;
+  username: string;
+  email: string;
+  phonePrefix?: string | null;
+  phone?: string | null;
+  address?: string | null;
+  isActive: boolean;
+}
+
+export interface OwnerUpsertRequest {
+  firstName: string;
+  lastName: string;
+  fullName?: string;
+  username: string;
+  email: string;
+  password?: string;
+  phonePrefix?: string | null;
+  phone?: string | null;
+  address?: string | null;
+  isActive: boolean;
+}
+
 export interface ManagedUser {
   id: string;
   companyId: string | null;

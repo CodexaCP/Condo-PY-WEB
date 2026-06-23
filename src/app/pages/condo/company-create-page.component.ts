@@ -5,6 +5,7 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Button } from 'primeng/button';
 import { Card } from 'primeng/card';
+import { Message } from 'primeng/message';
 import { MessageService } from 'primeng/api';
 import { Select } from 'primeng/select';
 import { Textarea } from 'primeng/textarea';
@@ -24,7 +25,7 @@ const PHONE_PREFIXES: PhonePrefix[] = [
 @Component({
   standalone: true,
   selector: 'app-company-create-page',
-  imports: [CommonModule, FormsModule, Button, Card, Select, Textarea, Tooltip],
+  imports: [CommonModule, FormsModule, Button, Card, Message, Select, Textarea, Tooltip],
   template: `
     <p-card styleClass="app-page-card">
       <div class="create-header">

@@ -17,6 +17,8 @@ export function roleLabel(role: string | null | undefined): string {
       return 'Residente';
     case 'Porter':
       return 'Porteria';
+    case 'Owner':
+      return 'Propietario';
     default:
       return role ?? '';
   }
