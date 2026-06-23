@@ -629,6 +629,14 @@ export interface MorositySummary {
   vacantUnitsInArrears: number;
   occupiedOverdueAmount: number;
   vacantOverdueAmount: number;
+  units0To30: number;
+  amount0To30: number;
+  units31To60: number;
+  amount31To60: number;
+  units61To90: number;
+  amount61To90: number;
+  unitsOver90: number;
+  amountOver90: number;
 }
 
 export interface MorosityItem {
@@ -652,6 +660,7 @@ export interface MorosityItem {
   isOccupied: boolean;
   responsibleType: string;
   responsibleName: string;
+  agingBucket: string;
 }
 
 export interface MorosityReport {
