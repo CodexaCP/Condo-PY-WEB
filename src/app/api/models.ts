@@ -430,11 +430,16 @@ export interface ExpenseCharge {
   unitCode: string;
   chargeType: ExpenseChargeType;
   sourceBuildingExpenseId: string | null;
+  sourceBuildingExpenseDescription: string;
   sourceSettlementId: string | null;
+  sourceSettlementName: string;
   isLateFee: boolean;
   concept: string;
   amount: number;
   notes: string;
+  isReversal: boolean;
+  reversalOfChargeId: string | null;
+  isReversed: boolean;
 }
 
 export interface CreateExpenseChargeRequest {
