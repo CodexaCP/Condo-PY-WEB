@@ -440,6 +440,8 @@ export interface ExpenseCharge {
   isReversal: boolean;
   reversalOfChargeId: string | null;
   isReversed: boolean;
+  totalAllocated: number;
+  pendingAmount: number;
 }
 
 export interface CreateExpenseChargeRequest {
@@ -490,6 +492,14 @@ export interface ExpensePeriodOperationalAlerts {
 
 export type PaymentMethod = 'Cash' | 'BankTransfer' | 'Card' | 'Check' | 'Other';
 
+export interface PaymentAllocation {
+  id: string;
+  expenseChargeId: string;
+  chargeConcept: string;
+  chargeType: ExpenseChargeType;
+  allocatedAmount: number;
+}
+
 export interface Payment {
   id: string;
   companyId: string;
@@ -501,9 +511,16 @@ export interface Payment {
   unitCode: string;
   paymentDate: string;
   amount: number;
+  allocatedAmount: number;
   method: PaymentMethod;
   reference: string;
   notes: string;
+  allocations: PaymentAllocation[];
+}
+
+export interface AllocationRequest {
+  expenseChargeId: string;
+  amount: number;
 }
 
 export interface CreatePaymentRequest {
@@ -514,6 +531,7 @@ export interface CreatePaymentRequest {
   method: PaymentMethod;
   reference: string;
   notes: string;
+  allocations: AllocationRequest[];
 }
 
 export interface AccountStatementPeriod {
