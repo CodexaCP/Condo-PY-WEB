@@ -703,6 +703,7 @@ export interface CollectionItem {
   ownerChargedAmount: number;
   ownerCollectedAmount: number;
   ownerPendingAmount: number;
+  previousPeriodCollectionRatePercentage: number | null;
 }
 
 export interface CollectionReport {

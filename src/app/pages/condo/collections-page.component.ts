@@ -11,6 +11,13 @@ import { Building, CollectionReport } from '../../api/models';
 import { BuildingsApiService } from '../../api/buildings-api.service';
 import { CollectionsApiService } from '../../api/collections-api.service';
 
+const MONTHS = [
+  { value: 1, label: 'Ene' }, { value: 2, label: 'Feb' }, { value: 3, label: 'Mar' },
+  { value: 4, label: 'Abr' }, { value: 5, label: 'May' }, { value: 6, label: 'Jun' },
+  { value: 7, label: 'Jul' }, { value: 8, label: 'Ago' }, { value: 9, label: 'Sep' },
+  { value: 10, label: 'Oct' }, { value: 11, label: 'Nov' }, { value: 12, label: 'Dic' }
+];
+
 @Component({
   standalone: true,
   selector: 'app-collections-page',
@@ -30,10 +37,32 @@ import { CollectionsApiService } from '../../api/collections-api.service';
             <span>Edificio</span>
             <select [(ngModel)]="selectedBuildingId" name="selectedBuildingId">
               <option value="">Todos</option>
-              <option *ngFor="let building of buildings" [value]="building.id">{{ building.name }}</option>
+              <option *ngFor="let b of buildings" [value]="b.id">{{ b.name }}</option>
+            </select>
+          </label>
+          <label>
+            <span>Año</span>
+            <select [(ngModel)]="selectedYear" name="selectedYear">
+              <option [value]="null">Todos</option>
+              <option *ngFor="let y of yearOptions" [value]="y">{{ y }}</option>
+            </select>
+          </label>
+          <label>
+            <span>Mes desde</span>
+            <select [(ngModel)]="selectedFromMonth" name="selectedFromMonth">
+              <option [value]="null">Todos</option>
+              <option *ngFor="let m of months" [value]="m.value">{{ m.label }}</option>
+            </select>
+          </label>
+          <label>
+            <span>Mes hasta</span>
+            <select [(ngModel)]="selectedToMonth" name="selectedToMonth">
+              <option [value]="null">Todos</option>
+              <option *ngFor="let m of months" [value]="m.value">{{ m.label }}</option>
             </select>
           </label>
           <p-button label="Actualizar" icon="pi pi-refresh" (onClick)="loadReport()"></p-button>
+          <p-button label="Exportar CSV" icon="pi pi-download" severity="secondary" [outlined]="true" (onClick)="exportCsv()" [disabled]="!report || !report.items.length"></p-button>
         </div>
       </div>
 
@@ -114,7 +143,15 @@ import { CollectionsApiService } from '../../api/collections-api.service';
             <strong [class.warning-text]="item.pendingAmount > 0">{{ formatCurrency(item.pendingAmount) }}</strong>
             <span class="detail-copy">{{ occupancyBreakdownLabel(item) }}</span>
             <span class="detail-copy">{{ chargeBreakdownLabel(item) }}</span>
-            <span>{{ item.collectionRatePercentage }}%</span>
+            <span class="rate-cell">
+              {{ item.collectionRatePercentage }}%
+              <span *ngIf="item.previousPeriodCollectionRatePercentage != null"
+                    [class.delta-up]="item.collectionRatePercentage >= item.previousPeriodCollectionRatePercentage"
+                    [class.delta-down]="item.collectionRatePercentage < item.previousPeriodCollectionRatePercentage"
+                    class="delta">
+                {{ formatDelta(item.collectionRatePercentage, item.previousPeriodCollectionRatePercentage) }}
+              </span>
+            </span>
           </div>
         </div>
       </ng-container>
@@ -124,7 +161,7 @@ import { CollectionsApiService } from '../../api/collections-api.service';
     .filter-row { display:flex; gap:0.75rem; align-items:end; flex-wrap:wrap; }
     .filter-row label { display:grid; gap:0.4rem; color:#29484f; font-weight:700; }
     .filter-row select {
-      min-width: 280px;
+      min-width: 160px;
       border: 1px solid #d7e5e1;
       border-radius: 14px;
       padding: 0.85rem 0.9rem;
@@ -153,9 +190,13 @@ import { CollectionsApiService } from '../../api/collections-api.service';
     .summary-card strong { color:var(--brand-ink); font-size:1.8rem; }
     .summary-card.warning strong, .warning-text { color:#c94d3f; }
     .summary-card.success strong { color:var(--brand-blue); }
-    .collections-grid { grid-template-columns: 0.9fr 1fr 0.7fr 0.8fr 0.8fr 0.8fr 0.8fr 1.2fr 0.7fr; }
+    .collections-grid { grid-template-columns: 0.9fr 1fr 0.7fr 0.8fr 0.8fr 0.8fr 0.8fr 1.2fr 0.9fr; }
     .ownership-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
     .detail-copy { color:var(--brand-muted); }
+    .rate-cell { display:flex; align-items:center; gap:0.35rem; }
+    .delta { font-size:0.78rem; font-weight:700; border-radius:999px; padding:0.15rem 0.45rem; }
+    .delta-up { background:#e6f4ea; color:#1a7f37; }
+    .delta-down { background:#fdecea; color:#c94d3f; }
     @media (max-width: 980px) {
       .stats-grid { grid-template-columns: 1fr 1fr; }
       .collections-grid { grid-template-columns: 1fr; }
@@ -172,8 +213,17 @@ export class CollectionsPageComponent implements OnInit {
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly msg = inject(MessageService);
 
+  readonly months = MONTHS;
+  readonly yearOptions: number[] = (() => {
+    const currentYear = new Date().getFullYear();
+    return [currentYear, currentYear - 1, currentYear - 2, currentYear - 3];
+  })();
+
   buildings: Building[] = [];
   selectedBuildingId = '';
+  selectedYear: number | null = new Date().getFullYear();
+  selectedFromMonth: number | null = null;
+  selectedToMonth: number | null = null;
   report: CollectionReport | null = null;
   loading = true;
 
@@ -194,21 +244,51 @@ export class CollectionsPageComponent implements OnInit {
 
   loadReport(): void {
     this.loading = true;
+    this.collectionsApi.getReport({
+      buildingId: this.selectedBuildingId || undefined,
+      year: this.selectedYear ?? undefined,
+      fromMonth: this.selectedFromMonth ?? undefined,
+      toMonth: this.selectedToMonth ?? undefined
+    }).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: (report) => {
+        this.report = report;
+        this.loading = false;
+        this.cdr.markForCheck();
+      },
+      error: (error) => {
+        this.msg.add({ severity: 'error', summary: 'Error', detail: extractApiErrorMessage(error, 'No se pudo cargar el reporte de cobranza.'), life: 5000 });
+        this.loading = false;
+        this.cdr.markForCheck();
+      }
+    });
+  }
 
-    this.collectionsApi.getReport(this.selectedBuildingId || undefined)
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: (report) => {
-          this.report = report;
-          this.loading = false;
-          this.cdr.markForCheck();
-        },
-        error: (error) => {
-          this.msg.add({ severity: 'error', summary: 'Error', detail: extractApiErrorMessage(error, 'No se pudo cargar el reporte de cobranza.'), life: 5000 });
-          this.loading = false;
-          this.cdr.markForCheck();
-        }
-      });
+  exportCsv(): void {
+    if (!this.report?.items.length) return;
+
+    const headers = ['Periodo', 'Edificio', 'Estado', 'Emitido', 'Cobrado', 'Pendiente', 'Recuperacion %', 'Recuperacion anterior %', 'Variacion %'];
+    const rows = this.report.items.map(item => [
+      item.expensePeriodName,
+      item.buildingName,
+      this.statusLabel(item.status),
+      item.totalChargedAmount,
+      item.totalCollectedAmount,
+      item.pendingAmount,
+      item.collectionRatePercentage,
+      item.previousPeriodCollectionRatePercentage ?? '',
+      item.previousPeriodCollectionRatePercentage != null
+        ? (item.collectionRatePercentage - item.previousPeriodCollectionRatePercentage).toFixed(2)
+        : ''
+    ]);
+
+    const csv = [headers, ...rows].map(r => r.map(v => `"${v}"`).join(',')).join('\n');
+    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `cobranza_${this.selectedYear ?? 'todos'}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
   }
 
   statusLabel(status: string): string {
@@ -221,6 +301,11 @@ export class CollectionsPageComponent implements OnInit {
 
   formatCurrency(value: number): string {
     return new Intl.NumberFormat('es-PY', { style: 'currency', currency: 'PYG', maximumFractionDigits: 0 }).format(value ?? 0);
+  }
+
+  formatDelta(current: number, previous: number): string {
+    const diff = current - previous;
+    return (diff >= 0 ? '+' : '') + diff.toFixed(1) + '%';
   }
 
   chargeBreakdownLabel(item: CollectionReport['items'][number]): string {
