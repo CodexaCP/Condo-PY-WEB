@@ -12,6 +12,10 @@ export class UnitsApiService {
     return this.http.get<Unit[]>(`${API_BASE_URL}/units`);
   }
 
+  getById(id: string): Observable<Unit> {
+    return this.http.get<Unit>(`${API_BASE_URL}/units/${id}`);
+  }
+
   create(request: CreateUnitRequest): Observable<Unit> {
     return this.http.post<Unit>(`${API_BASE_URL}/units`, request);
   }

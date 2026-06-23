@@ -1,278 +1,149 @@
 import { CommonModule } from '@angular/common';
 import { ChangeDetectorRef, Component, DestroyRef, inject, OnInit } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
 import { forkJoin } from 'rxjs';
 import { Button } from 'primeng/button';
 import { Card } from 'primeng/card';
-import { MessageService } from 'primeng/api';
+import { Tag } from 'primeng/tag';
+import { Message } from 'primeng/message';
 import { BuildingsApiService } from '../../api/buildings-api.service';
-import { extractApiErrorMessage } from '../../api/api-error.util';
 import { Building, Unit } from '../../api/models';
 import { UnitsApiService } from '../../api/units-api.service';
 import { AuthService } from '../../auth/auth.service';
 
+interface BuildingGroup {
+  building: Building;
+  units: Unit[];
+}
+
 @Component({
   standalone: true,
   selector: 'app-units-page',
-  imports: [CommonModule, FormsModule, Button, Card],
+  imports: [CommonModule, Button, Card, Tag, Message],
   template: `
     <p-card styleClass="app-page-card">
       <div class="app-toolbar">
         <div class="app-page-head">
           <div>
             <h1>Unidades</h1>
-            <p>Unidades por edificio, con piso y coeficiente para el modulo 1.</p>
+            <p>Unidades y locales de cada edificio, con piso y coeficiente para expensas.</p>
           </div>
         </div>
-
-        <p-button
-          *ngIf="!isReadOnly"
-          [label]="showForm ? 'Cerrar formulario' : 'Nueva unidad'"
-          [icon]="showForm ? 'pi pi-times' : 'pi pi-plus'"
-          (onClick)="toggleForm()">
-        </p-button>
+        <p-button *ngIf="canEdit" label="Nueva unidad" icon="pi pi-plus" (onClick)="goToCreate()"></p-button>
       </div>
 
-      <form class="app-form-grid" *ngIf="showForm" (ngSubmit)="submitUnit()">
-        <label class="wide">
-          <span>Edificio</span>
-          <select [(ngModel)]="form.buildingId" name="buildingId" required>
-            <option value="" disabled>Selecciona un edificio</option>
-            <option *ngFor="let building of buildings" [value]="building.id">{{ building.name }}</option>
-          </select>
-        </label>
-
-        <label>
-          <span>Codigo</span>
-          <input
-            [(ngModel)]="form.code"
-            name="code"
-            type="text"
-            required
-            maxlength="40"
-            pattern="^[A-Z0-9]+(?:-[A-Z0-9]+)*$" />
-          <small>Usa solo letras, numeros y guiones medios.</small>
-        </label>
-
-        <label>
-          <span>Piso</span>
-          <input [(ngModel)]="form.floor" name="floor" type="text" required />
-        </label>
-
-        <label>
-          <span>Coeficiente</span>
-          <input [(ngModel)]="form.coefficient" name="coefficient" type="number" min="0" step="0.000001" required />
-        </label>
-
-        <label class="checkbox">
-          <input [(ngModel)]="form.isActive" name="isActive" type="checkbox" />
-          <span>Unidad activa</span>
-        </label>
-
-        <div class="wide form-actions">
-          <p-button type="submit" [disabled]="!buildings.length" [loading]="isSaving" [label]="editingId ? 'Guardar cambios' : 'Guardar unidad'"></p-button>
-          <p-button
-            *ngIf="editingId"
-            type="button"
-            label="Cancelar"
-            icon="pi pi-times"
-            severity="secondary"
-            [text]="true"
-            (onClick)="cancelEdit()">
-          </p-button>
-        </div>
-      </form>
-
+      <p-message *ngIf="pageError" severity="error" [text]="pageError"></p-message>
       <p class="app-state" *ngIf="loading">Cargando unidades...</p>
-      <p class="app-state" *ngIf="!loading && !items.length">No hay unidades cargadas.</p>
+      <p class="app-state" *ngIf="!loading && !groups.length && !pageError">No hay unidades registradas.</p>
 
-      <div class="unit-grid" *ngIf="items.length">
-        <article class="unit-card" *ngFor="let item of items">
-          <strong>{{ item.code }}</strong>
-          <span>{{ item.buildingName }}</span>
-          <small>Piso {{ item.floor }} · Coef. {{ item.coefficient | number: '1.2-6' }}</small>
-          <div class="app-actions" *ngIf="!isReadOnly">
-            <p-button type="button" icon="pi pi-pencil" severity="secondary" [rounded]="true" [text]="true" (onClick)="startEdit(item)"></p-button>
-            <p-button type="button" icon="pi pi-trash" severity="danger" [rounded]="true" [text]="true" [disabled]="isSaving" (onClick)="deleteUnit(item)"></p-button>
+      <div class="groups" *ngIf="groups.length">
+        <div class="building-group" *ngFor="let g of groups">
+          <div class="building-header">
+            <i class="pi pi-building"></i>
+            <span class="building-name">{{ g.building.name }}</span>
+            <span class="building-code">{{ g.building.code }}</span>
+            <span class="unit-count">{{ g.units.length }} unidad{{ g.units.length !== 1 ? 'es' : '' }}</span>
           </div>
-        </article>
+
+          <div class="app-list">
+            <div class="app-row header grid-unit">
+              <span>Código</span>
+              <span>Piso</span>
+              <span>Coeficiente</span>
+              <span>Estado</span>
+            </div>
+            <div class="app-row grid-unit" *ngFor="let u of g.units">
+              <button class="row-link" (click)="goToEdit(u.id)" [disabled]="!canEdit">{{ u.code }}</button>
+              <span class="floor-col">{{ u.floor }}</span>
+              <span class="coef-col">{{ u.coefficient | number:'1.2-6' }}</span>
+              <p-tag [value]="u.isActive ? 'Activo' : 'Inactivo'"
+                     [severity]="u.isActive ? 'success' : 'secondary'"></p-tag>
+            </div>
+          </div>
+        </div>
       </div>
     </p-card>
   `,
   styles: [`
-    .form-actions { display:flex; gap:0.75rem; justify-content:flex-end; }
-    .unit-grid { display:grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; }
-    .unit-card { background:#f8fbfa; border-radius:20px; padding:1.2rem; display:grid; gap:0.55rem; }
-    .unit-card strong { color:#15373d; font-size:1.1rem; }
-    .unit-card span, .unit-card small { color:#6b878d; }
-    @media (max-width: 860px) { .unit-grid { grid-template-columns: 1fr; } }
+    .groups { display:flex; flex-direction:column; gap:2rem; }
+
+    .building-group {}
+
+    .building-header {
+      display:flex; align-items:center; gap:0.6rem; margin-bottom:0.75rem;
+      padding-bottom:0.5rem; border-bottom:2px solid rgba(19,133,182,0.12);
+    }
+    .building-header i { color:var(--brand-blue); font-size:1rem; }
+    .building-name { font-weight:700; font-size:0.97rem; color:var(--brand-ink); }
+    .building-code {
+      font-family:monospace; font-size:0.8rem; color:var(--brand-muted);
+      background:rgba(19,133,182,0.08); padding:0.1rem 0.45rem; border-radius:6px;
+    }
+    .unit-count {
+      margin-left:auto; font-size:0.78rem; color:var(--brand-muted);
+      background:rgba(19,133,182,0.06); padding:0.15rem 0.6rem; border-radius:20px;
+    }
+
+    .grid-unit { grid-template-columns: 1fr 0.7fr 1fr 0.65fr; }
+    .floor-col { color:var(--brand-muted); font-size:0.9rem; }
+    .coef-col  { font-family:monospace; font-size:0.88rem; color:var(--brand-ink); }
+
+    .row-link {
+      background:none; border:none; padding:0; font:inherit; font-weight:700;
+      color:var(--brand-blue); cursor:pointer; text-align:left;
+      text-decoration:underline dotted;
+    }
+    .row-link:hover:not(:disabled) { color:var(--brand-ink); }
+    .row-link:disabled { color:var(--brand-muted); cursor:default; text-decoration:none; }
   `]
 })
 export class UnitsPageComponent implements OnInit {
-  private readonly unitsApi = inject(UnitsApiService);
+  private readonly unitsApi     = inject(UnitsApiService);
   private readonly buildingsApi = inject(BuildingsApiService);
-  private readonly auth = inject(AuthService);
-  private readonly destroyRef = inject(DestroyRef);
-  private readonly cdr = inject(ChangeDetectorRef);
-  private readonly msg = inject(MessageService);
+  private readonly auth         = inject(AuthService);
+  private readonly router       = inject(Router);
+  private readonly destroyRef   = inject(DestroyRef);
+  private readonly cdr          = inject(ChangeDetectorRef);
 
-  get isReadOnly(): boolean { return this.auth.hasRole('CompanyAdmin'); }
+  groups:    BuildingGroup[] = [];
+  loading   = true;
+  pageError = '';
 
-  items: Unit[] = [];
-  buildings: Building[] = [];
-  loading = true;
-  isSaving = false;
-  showForm = false;
-  editingId: string | null = null;
-  form = this.createInitialForm();
+  get canEdit(): boolean { return !this.auth.hasRole('CompanyAdmin'); }
 
   ngOnInit(): void {
-    this.loadData();
-  }
-
-  toggleForm(): void {
-    if (this.showForm && this.editingId) {
-      this.cancelEdit();
-      return;
-    }
-
-    this.showForm = !this.showForm;
-    if (!this.showForm) {
-      this.form = this.createInitialForm();
-    }
-  }
-
-  startEdit(item: Unit): void {
-    this.editingId = item.id;
-    this.showForm = true;
-    this.form = {
-      buildingId: item.buildingId,
-      code: item.code,
-      floor: item.floor,
-      coefficient: item.coefficient,
-      isActive: item.isActive
-    };
-  }
-
-  cancelEdit(): void {
-    this.editingId = null;
-    this.showForm = false;
-    this.form = this.createInitialForm();
-  }
-
-  submitUnit(): void {
-    if (!this.form.buildingId) {
-      this.msg.add({ severity: 'error', summary: 'Error', detail: 'No se puede crear una unidad sin seleccionar un edificio.', life: 5000 });
-      return;
-    }
-
-    if (!this.form.code.trim()) {
-      this.msg.add({ severity: 'error', summary: 'Error', detail: 'El codigo de la unidad es obligatorio.', life: 5000 });
-      return;
-    }
-
-    if (!this.form.floor.trim()) {
-      this.msg.add({ severity: 'error', summary: 'Error', detail: 'El piso de la unidad es obligatorio.', life: 5000 });
-      return;
-    }
-
-    const normalizedCode = this.form.code.trim().toUpperCase();
-    if (!/^[A-Z0-9]+(?:-[A-Z0-9]+)*$/.test(normalizedCode)) {
-      this.msg.add({ severity: 'error', summary: 'Error', detail: 'El codigo de la unidad solo puede contener letras, numeros y guiones medios.', life: 5000 });
-      return;
-    }
-
-    this.isSaving = true;
-
-    const request = {
-      buildingId: this.form.buildingId,
-      code: normalizedCode,
-      floor: this.form.floor.trim(),
-      coefficient: Number(this.form.coefficient),
-      isActive: this.form.isActive
-    };
-
-    const operation = this.editingId
-      ? this.unitsApi.update(this.editingId, request)
-      : this.unitsApi.create(request);
-
-    operation
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: (unit) => {
-          this.items = this.editingId
-            ? this.items.map((item) => item.id === unit.id ? unit : item).sort((a, b) => a.code.localeCompare(b.code))
-            : [...this.items, unit].sort((a, b) => a.code.localeCompare(b.code));
-          this.form = this.createInitialForm();
-          this.isSaving = false;
-          this.showForm = false;
-          this.msg.add({ severity: 'success', summary: 'Éxito', detail: this.editingId ? 'Unidad actualizada correctamente.' : 'Unidad creada correctamente.', life: 4000 });
-          this.editingId = null;
-          this.cdr.markForCheck();
-        },
-        error: (error) => {
-          this.msg.add({ severity: 'error', summary: 'Error', detail: extractApiErrorMessage(
-            error,
-            this.editingId ? 'No se pudo actualizar la unidad.' : 'No se pudo guardar la unidad.'), life: 5000 });
-          this.isSaving = false;
-          this.cdr.markForCheck();
-        }
-      });
-  }
-
-  deleteUnit(item: Unit): void {
-    this.isSaving = true;
-
-    this.unitsApi
-      .delete(item.id)
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: () => {
-          this.items = this.items.filter((current) => current.id !== item.id);
-          if (this.editingId === item.id) {
-            this.cancelEdit();
-          }
-          this.isSaving = false;
-          this.msg.add({ severity: 'success', summary: 'Éxito', detail: 'Unidad eliminada correctamente.', life: 4000 });
-          this.cdr.markForCheck();
-        },
-        error: (error) => {
-          this.msg.add({ severity: 'error', summary: 'Error', detail: extractApiErrorMessage(error, 'No se pudo eliminar la unidad.'), life: 5000 });
-          this.isSaving = false;
-          this.cdr.markForCheck();
-        }
-      });
-  }
-
-  private loadData(): void {
     forkJoin({
-      units: this.unitsApi.getAll(),
+      units:     this.unitsApi.getAll(),
       buildings: this.buildingsApi.getAll()
-    })
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: ({ units, buildings }) => {
-          this.items = units;
-          this.buildings = buildings;
-          this.loading = false;
-          this.cdr.markForCheck();
-        },
-        error: (error) => {
-          this.msg.add({ severity: 'error', summary: 'Error', detail: extractApiErrorMessage(error, 'No se pudo cargar el listado de unidades.'), life: 5000 });
-          this.loading = false;
-          this.cdr.markForCheck();
+    }).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: ({ units, buildings }) => {
+        const buildingMap = new Map(buildings.map(b => [b.id, b]));
+
+        const grouped = new Map<string, Unit[]>();
+        for (const u of units) {
+          if (!grouped.has(u.buildingId)) grouped.set(u.buildingId, []);
+          grouped.get(u.buildingId)!.push(u);
         }
-      });
+
+        this.groups = [...grouped.entries()]
+          .map(([bid, us]) => ({
+            building: buildingMap.get(bid) ?? { id: bid, name: us[0].buildingName, code: '', companyId: '', condominiumId: null, condominiumName: '', address: '', isActive: true },
+            units: us.sort((a, b) => a.code.localeCompare(b.code))
+          }))
+          .sort((a, b) => a.building.name.localeCompare(b.building.name));
+
+        this.loading = false;
+        this.cdr.markForCheck();
+      },
+      error: () => {
+        this.pageError = 'No se pudieron cargar las unidades.';
+        this.loading   = false;
+        this.cdr.markForCheck();
+      }
+    });
   }
 
-  private createInitialForm() {
-    return {
-      buildingId: '',
-      code: '',
-      floor: '',
-      coefficient: 0,
-      isActive: true
-    };
-  }
+  goToCreate(): void { this.router.navigate(['/units/create']); }
+  goToEdit(id: string): void { this.router.navigate(['/units', id]); }
 }

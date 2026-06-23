@@ -89,6 +89,20 @@ export const appRoutes: Routes = [
                 loadComponent: () => import('./app/pages/condo/user-create-page.component').then(m => m.UserCreatePageComponent)
             },
 
+            // ── Condo: Propietarios ───────────────────────────────────────
+            {
+                path: 'propietarios',
+                loadComponent: () => import('./app/pages/condo/propietarios-page.component').then(m => m.PropietariosPageComponent)
+            },
+            {
+                path: 'propietarios/create',
+                loadComponent: () => import('./app/pages/condo/propietario-create-page.component').then(m => m.PropietarioCreatePageComponent)
+            },
+            {
+                path: 'propietarios/:id',
+                loadComponent: () => import('./app/pages/condo/propietario-create-page.component').then(m => m.PropietarioCreatePageComponent)
+            },
+
             // ── Condo: Admin/General ──────────────────────────────────────
             {
                 path: 'dashboard',
@@ -105,6 +119,15 @@ export const appRoutes: Routes = [
             {
                 path: 'buildings/:id',
                 loadComponent: () => import('./app/pages/condo/building-create-page.component').then(m => m.BuildingCreatePageComponent)
+            },
+
+            {
+                path: 'units/create',
+                loadComponent: () => import('./app/pages/condo/unit-create-page.component').then(m => m.UnitCreatePageComponent)
+            },
+            {
+                path: 'units/:id',
+                loadComponent: () => import('./app/pages/condo/unit-create-page.component').then(m => m.UnitCreatePageComponent)
             },
 
             // ── Condo: Finanzas ───────────────────────────────────────────
