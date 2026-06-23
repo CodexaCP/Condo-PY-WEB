@@ -6,7 +6,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { forkJoin, of } from 'rxjs';
 import { Button } from 'primeng/button';
 import { Card } from 'primeng/card';
-import { Message } from 'primeng/message';
+import { MessageService } from 'primeng/api';
 import { Select } from 'primeng/select';
 import { Tooltip } from 'primeng/tooltip';
 import { extractApiErrorMessage } from '../../api/api-error.util';
@@ -55,7 +55,7 @@ const ALL_ROLE_CARDS: RoleCard[] = [
 @Component({
   standalone: true,
   selector: 'app-user-create-page',
-  imports: [CommonModule, FormsModule, Button, Card, Message, Select, Tooltip],
+  imports: [CommonModule, FormsModule, Button, Card, Select, Tooltip],
   template: `
     <p-card styleClass="app-page-card">
 
@@ -71,8 +71,6 @@ const ALL_ROLE_CARDS: RoleCard[] = [
       </div>
 
       <p-message *ngIf="loadError" severity="error" [text]="loadError"></p-message>
-      <p-message *ngIf="formError" severity="error" [text]="formError" styleClass="mb-4"></p-message>
-      <p-message *ngIf="formSuccess" severity="success" [text]="formSuccess" styleClass="mb-4"></p-message>
       <div *ngIf="loading" class="app-state">Cargando datos...</div>
 
       <form class="create-form" (ngSubmit)="save()" *ngIf="!loading && !loadError">
@@ -147,28 +145,6 @@ const ALL_ROLE_CARDS: RoleCard[] = [
           </div>
         </section>
 
-        <!-- ══ CONTACTO ══════════════════════════════════════════════ -->
-        <section class="form-section">
-          <h2 class="section-title">Contacto</h2>
-          <div class="field">
-            <label>Teléfono <span class="optional">(opcional)</span></label>
-            <div class="phone-row">
-              <p-select [options]="prefixOptions" [(ngModel)]="form.phonePrefix" name="phonePrefix"
-                        optionLabel="label" optionValue="value" styleClass="phone-prefix-select">
-                <ng-template pTemplate="selectedItem" let-item>
-                  <span *ngIf="item">{{ item.flag }} {{ item.value }}</span>
-                </ng-template>
-                <ng-template pTemplate="item" let-item>
-                  <span>{{ item.flag }} {{ item.label }}</span>
-                </ng-template>
-              </p-select>
-              <input type="tel" [(ngModel)]="form.phone" name="phone"
-                     placeholder="0981 123 456" class="phone-input"
-                     (input)="onPhoneInput()" maxlength="15" />
-            </div>
-          </div>
-        </section>
-
         <!-- ══ ROL ═══════════════════════════════════════════════════ -->
         <section class="form-section">
           <h2 class="section-title">Rol <span class="required">*</span></h2>
@@ -178,8 +154,11 @@ const ALL_ROLE_CARDS: RoleCard[] = [
             <div class="role-card" *ngFor="let r of visibleRoleCards"
                  [class.selected]="form.role === r.value"
                  (click)="form.role = r.value">
-              <div class="role-card-icon">
-                <i class="pi {{ r.icon }}"></i>
+              <div class="role-card-head">
+                <div class="role-card-icon"><i class="pi {{ r.icon }}"></i></div>
+                <div class="role-check" *ngIf="form.role === r.value">
+                  <i class="pi pi-check-circle"></i>
+                </div>
               </div>
               <div class="role-card-body">
                 <strong>{{ r.label }}</strong>
@@ -187,9 +166,6 @@ const ALL_ROLE_CARDS: RoleCard[] = [
                 <span class="role-scope-note">
                   <i class="pi pi-info-circle"></i> {{ r.note }}
                 </span>
-              </div>
-              <div class="role-check" *ngIf="form.role === r.value">
-                <i class="pi pi-check-circle"></i>
               </div>
             </div>
           </div>
@@ -230,21 +206,40 @@ const ALL_ROLE_CARDS: RoleCard[] = [
             </p-select>
           </div>
 
-          <!-- Condominio (opcional, filtrado por empresa) -->
-          <div class="field">
-            <label for="condominium">
-              Condominio <span class="optional">(opcional)</span>
-            </label>
-            <p-select id="condominium" [options]="filteredCondominiumOptions"
-                      [(ngModel)]="form.condominiumId" name="condominiumId"
-                      optionLabel="label" optionValue="value"
-                      placeholder="Sin condominio asignado" [showClear]="true"
-                      styleClass="full-select"
-                      (onChange)="onCondominiumChange()">
-            </p-select>
-            <small class="field-hint" *ngIf="form.condominiumId">
-              El usuario podrá ver y editar todos los edificios de este condominio.
-            </small>
+          <!-- Condominio + Teléfono en la misma fila -->
+          <div class="field-row">
+            <div class="field">
+              <label for="condominium">
+                Condominio <span class="optional">(opcional)</span>
+              </label>
+              <p-select id="condominium" [options]="filteredCondominiumOptions"
+                        [(ngModel)]="form.condominiumId" name="condominiumId"
+                        optionLabel="label" optionValue="value"
+                        placeholder="Sin condominio asignado" [showClear]="true"
+                        styleClass="full-select"
+                        (onChange)="onCondominiumChange()">
+              </p-select>
+              <small class="field-hint" *ngIf="form.condominiumId">
+                El usuario podrá ver y editar todos los edificios de este condominio.
+              </small>
+            </div>
+            <div class="field">
+              <label>Teléfono <span class="optional">(opcional)</span></label>
+              <div class="phone-row">
+                <p-select [options]="prefixOptions" [(ngModel)]="form.phonePrefix" name="phonePrefix"
+                          optionLabel="label" optionValue="value" styleClass="phone-prefix-select">
+                  <ng-template pTemplate="selectedItem" let-item>
+                    <span *ngIf="item">{{ item.flag }} {{ item.value }}</span>
+                  </ng-template>
+                  <ng-template pTemplate="item" let-item>
+                    <span>{{ item.flag }} {{ item.label }}</span>
+                  </ng-template>
+                </p-select>
+                <input type="tel" [(ngModel)]="form.phone" name="phone"
+                       placeholder="0981 123 456" class="phone-input"
+                       (input)="onPhoneInput()" maxlength="15" />
+              </div>
+            </div>
           </div>
 
           <!-- Edificios (requerido ≥ 1) -->
@@ -335,7 +330,6 @@ const ALL_ROLE_CARDS: RoleCard[] = [
         ¿Eliminar al usuario <strong>{{ editingFullName }}</strong> de forma permanente?
         Esta acción no se puede deshacer.
       </p>
-      <p-message *ngIf="deleteError" severity="error" [text]="deleteError"></p-message>
       <div class="confirm-footer">
         <p-button label="Cancelar" severity="secondary" [outlined]="true" (onClick)="cancelDelete()"></p-button>
         <p-button label="Eliminar definitivamente" severity="danger"
@@ -408,9 +402,9 @@ const ALL_ROLE_CARDS: RoleCard[] = [
     .login-note code { background:rgba(19,133,182,0.1); color:var(--brand-blue); padding:0.1rem 0.4rem; border-radius:6px; font-size:0.85rem; }
 
     /* ── ROLE CARDS ── */
-    .role-cards { display:flex; flex-direction:column; gap:0.75rem; }
+    .role-cards { display:grid; grid-template-columns:repeat(auto-fit, minmax(190px, 1fr)); gap:0.75rem; }
     .role-card {
-      display:flex; align-items:flex-start; gap:1rem; padding:1rem 1.1rem;
+      display:flex; flex-direction:column; gap:0.6rem; padding:1rem 1.1rem;
       border:2px solid rgba(19,133,182,0.15); border-radius:16px; background:#fff;
       cursor:pointer; transition:border-color 0.15s, background 0.15s, box-shadow 0.15s;
     }
@@ -419,17 +413,18 @@ const ALL_ROLE_CARDS: RoleCard[] = [
       border-color:var(--brand-blue); background:#eef7fd;
       box-shadow:0 0 0 3px rgba(19,133,182,0.1);
     }
+    .role-card-head { display:flex; justify-content:space-between; align-items:center; }
     .role-card-icon {
-      width:40px; height:40px; border-radius:12px;
-      background:rgba(19,133,182,0.1); display:grid; place-items:center; flex-shrink:0;
+      width:38px; height:38px; border-radius:12px;
+      background:rgba(19,133,182,0.1); display:grid; place-items:center;
     }
     .role-card.selected .role-card-icon { background:rgba(19,133,182,0.18); }
-    .role-card-icon i { color:var(--brand-blue); font-size:1.1rem; }
-    .role-card-body { flex:1; display:grid; gap:0.2rem; }
-    .role-card-body strong { font-size:0.95rem; color:var(--brand-ink); }
-    .role-card-body p { margin:0; font-size:0.83rem; color:var(--brand-muted); line-height:1.45; }
-    .role-scope-note { font-size:0.78rem; color:rgba(19,133,182,0.8); display:flex; align-items:center; gap:0.3rem; }
-    .role-check { color:var(--brand-blue); font-size:1.25rem; flex-shrink:0; margin-top:2px; }
+    .role-card-icon i { color:var(--brand-blue); font-size:1.05rem; }
+    .role-card-body { display:flex; flex-direction:column; gap:0.25rem; }
+    .role-card-body strong { font-size:0.93rem; color:var(--brand-ink); }
+    .role-card-body p { margin:0; font-size:0.81rem; color:var(--brand-muted); line-height:1.45; }
+    .role-scope-note { font-size:0.76rem; color:rgba(19,133,182,0.8); display:flex; align-items:center; gap:0.3rem; }
+    .role-check { color:var(--brand-blue); font-size:1.2rem; }
 
     /* ── SCOPE SUMMARY ── */
     .scope-summary {
@@ -537,6 +532,7 @@ export class UserCreatePageComponent implements OnInit {
   private readonly router          = inject(Router);
   private readonly destroyRef      = inject(DestroyRef);
   private readonly cdr             = inject(ChangeDetectorRef);
+  private readonly msg             = inject(MessageService);
 
   prefixOptions = PHONE_PREFIXES;
   companyOptions:              { label: string; value: string }[] = [];
@@ -553,9 +549,6 @@ export class UserCreatePageComponent implements OnInit {
   loadError     = '';
   isSaving      = false;
   isDeleting    = false;
-  formError     = '';
-  formSuccess   = '';
-  deleteError   = '';
   confirmVisible = false;
 
   form = this.emptyForm();
@@ -724,9 +717,6 @@ export class UserCreatePageComponent implements OnInit {
   }
 
   save(): void {
-    this.formError   = '';
-    this.formSuccess = '';
-
     const firstName = this.form.firstName.trim();
     const lastName  = this.form.lastName.trim();
     const username  = this.form.username.trim();
@@ -735,18 +725,18 @@ export class UserCreatePageComponent implements OnInit {
     const condominiumId = this.form.condominiumId || null;
     const buildingIds  = [...new Set(this.form.buildingIds)];
 
-    if (this.isSuperAdmin && !companyId) { this.formError = 'La empresa es obligatoria.'; return; }
-    if (!firstName) { this.formError = 'El nombre es obligatorio.'; return; }
-    if (!lastName)  { this.formError = 'Los apellidos son obligatorios.'; return; }
-    if (!username)  { this.formError = 'El nombre de usuario es obligatorio.'; return; }
+    if (this.isSuperAdmin && !companyId) { this.msg.add({ severity: 'error', summary: 'Error', detail: 'La empresa es obligatoria.', life: 5000 }); return; }
+    if (!firstName) { this.msg.add({ severity: 'error', summary: 'Error', detail: 'El nombre es obligatorio.', life: 5000 }); return; }
+    if (!lastName)  { this.msg.add({ severity: 'error', summary: 'Error', detail: 'Los apellidos son obligatorios.', life: 5000 }); return; }
+    if (!username)  { this.msg.add({ severity: 'error', summary: 'Error', detail: 'El nombre de usuario es obligatorio.', life: 5000 }); return; }
     if (!/^[a-z0-9][a-z0-9.\-_]*$/.test(username)) {
-      this.formError = 'Nombre de usuario inválido. Solo minúsculas, números, puntos y guiones.'; return;
+      this.msg.add({ severity: 'error', summary: 'Error', detail: 'Nombre de usuario inválido. Solo minúsculas, números, puntos y guiones.', life: 5000 }); return;
     }
     if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      this.formError = 'Correo electrónico inválido.'; return;
+      this.msg.add({ severity: 'error', summary: 'Error', detail: 'Correo electrónico inválido.', life: 5000 }); return;
     }
-    if (!this.form.role) { this.formError = 'Debes seleccionar un rol.'; return; }
-    if (buildingIds.length === 0) { this.formError = 'Debes asignar al menos un edificio.'; return; }
+    if (!this.form.role) { this.msg.add({ severity: 'error', summary: 'Error', detail: 'Debes seleccionar un rol.', life: 5000 }); return; }
+    if (buildingIds.length === 0) { this.msg.add({ severity: 'error', summary: 'Error', detail: 'Debes asignar al menos un edificio.', life: 5000 }); return; }
 
     const req = {
       companyId, condominiumId, firstName, lastName,
@@ -773,21 +763,21 @@ export class UserCreatePageComponent implements OnInit {
         if (!this.isEditing) {
           this.isEditing = true;
           this.editingId = saved.id;
-          this.formSuccess = `Usuario creado. Clave inicial: 123456`;
+          this.msg.add({ severity: 'success', summary: 'Éxito', detail: 'Usuario creado. Clave inicial: 123456', life: 4000 });
         } else {
-          this.formSuccess = 'Cambios guardados correctamente.';
+          this.msg.add({ severity: 'success', summary: 'Éxito', detail: 'Cambios guardados correctamente.', life: 4000 });
         }
         this.cdr.markForCheck();
       },
       error: err => {
-        this.formError = extractApiErrorMessage(err, 'No se pudo guardar el usuario.');
+        this.msg.add({ severity: 'error', summary: 'Error', detail: extractApiErrorMessage(err, 'No se pudo guardar el usuario.'), life: 5000 });
         this.isSaving  = false;
         this.cdr.markForCheck();
       }
     });
   }
 
-  askDelete():    void { this.confirmVisible = true; this.deleteError = ''; }
+  askDelete():    void { this.confirmVisible = true; }
   cancelDelete(): void { this.confirmVisible = false; }
 
   confirmDelete(): void {
@@ -801,7 +791,7 @@ export class UserCreatePageComponent implements OnInit {
           this.router.navigate(['/users']);
         },
         error: err => {
-          this.deleteError = extractApiErrorMessage(err, 'No se pudo eliminar el usuario.');
+          this.msg.add({ severity: 'error', summary: 'Error', detail: extractApiErrorMessage(err, 'No se pudo eliminar el usuario.'), life: 5000 });
           this.isDeleting  = false;
           this.cdr.markForCheck();
         }

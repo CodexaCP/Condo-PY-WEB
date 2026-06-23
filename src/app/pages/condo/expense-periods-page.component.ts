@@ -5,11 +5,12 @@ import { FormsModule } from '@angular/forms';
 import { forkJoin } from 'rxjs';
 import { Button } from 'primeng/button';
 import { Card } from 'primeng/card';
-import { Message } from 'primeng/message';
+import { MessageService } from 'primeng/api';
 import { Tag } from 'primeng/tag';
 import { extractApiErrorMessage } from '../../api/api-error.util';
 import { BuildingsApiService } from '../../api/buildings-api.service';
 import { ExpensePeriodsApiService } from '../../api/expense-periods-api.service';
+import { AuthService } from '../../auth/auth.service';
 import {
   ApplyLateFeesResult,
   Building,
@@ -25,7 +26,7 @@ import {
 @Component({
   standalone: true,
   selector: 'app-expense-periods-page',
-  imports: [CommonModule, FormsModule, Button, Card, Message, Tag],
+  imports: [CommonModule, FormsModule, Button, Card, Tag],
   template: `
     <p-card styleClass="app-page-card">
       <div class="app-toolbar">
@@ -37,6 +38,7 @@ import {
         </div>
 
         <p-button
+          *ngIf="!isReadOnly"
           [label]="showForm ? 'Cerrar formulario' : 'Nuevo periodo'"
           [icon]="showForm ? 'pi pi-times' : 'pi pi-plus'"
           (onClick)="toggleForm()">
@@ -110,9 +112,6 @@ import {
           </p-button>
         </div>
       </form>
-
-      <p-message *ngIf="errorMessage" severity="error" [text]="errorMessage"></p-message>
-      <p-message *ngIf="successMessage" severity="success" [text]="successMessage"></p-message>
 
       <div class="action-box" *ngIf="alerts.length">
         <div class="action-head">
@@ -241,6 +240,7 @@ import {
 
         <div class="form-actions">
           <p-button
+            *ngIf="!isReadOnly"
             type="button"
             [label]="settlementSummary.isCalculated ? 'Recalcular liquidacion' : 'Calcular liquidacion'"
             [loading]="isCalculatingSettlement"
@@ -248,6 +248,7 @@ import {
             (onClick)="calculateSettlement()">
           </p-button>
           <p-button
+            *ngIf="!isReadOnly"
             type="button"
             label="Aprobar liquidacion"
             severity="info"
@@ -265,6 +266,7 @@ import {
             (onClick)="loadSettlementPreview()">
           </p-button>
           <p-button
+            *ngIf="!isReadOnly"
             type="button"
             label="Publicar comprobantes"
             severity="contrast"
@@ -273,6 +275,7 @@ import {
             (onClick)="publishSettlement()">
           </p-button>
           <p-button
+            *ngIf="!isReadOnly"
             type="button"
             label="Registrar recargos"
             severity="warn"
@@ -331,7 +334,7 @@ import {
       </div>
 
       <p class="app-state" *ngIf="loading">Cargando periodos...</p>
-      <p class="app-state" *ngIf="!loading && !errorMessage && !items.length">No hay periodos cargados.</p>
+      <p class="app-state" *ngIf="!loading && !items.length">No hay periodos cargados.</p>
 
       <div class="app-list" *ngIf="items.length">
         <div class="app-row header periods-grid">
@@ -351,9 +354,9 @@ import {
           <p-tag [value]="statusLabel(item.status)" [severity]="statusSeverity(item.status)"></p-tag>
           <div class="app-actions">
             <p-button type="button" icon="pi pi-calculator" severity="info" [rounded]="true" [text]="true" [disabled]="isSaving || isGenerating || isCalculatingSettlement" (onClick)="openSettlement(item)"></p-button>
-            <p-button type="button" icon="pi pi-bolt" severity="success" [rounded]="true" [text]="true" [disabled]="item.status !== 'Draft' || isSaving || isGenerating" (onClick)="openGenerator(item)"></p-button>
-            <p-button type="button" icon="pi pi-pencil" severity="secondary" [rounded]="true" [text]="true" [disabled]="item.status !== 'Draft'" (onClick)="startEdit(item)"></p-button>
-            <p-button type="button" icon="pi pi-trash" severity="danger" [rounded]="true" [text]="true" [disabled]="isSaving || item.status !== 'Draft'" (onClick)="deletePeriod(item)"></p-button>
+            <p-button *ngIf="!isReadOnly" type="button" icon="pi pi-bolt" severity="success" [rounded]="true" [text]="true" [disabled]="item.status !== 'Draft' || isSaving || isGenerating" (onClick)="openGenerator(item)"></p-button>
+            <p-button *ngIf="!isReadOnly" type="button" icon="pi pi-pencil" severity="secondary" [rounded]="true" [text]="true" [disabled]="item.status !== 'Draft'" (onClick)="startEdit(item)"></p-button>
+            <p-button *ngIf="!isReadOnly" type="button" icon="pi pi-trash" severity="danger" [rounded]="true" [text]="true" [disabled]="isSaving || item.status !== 'Draft'" (onClick)="deletePeriod(item)"></p-button>
           </div>
         </div>
       </div>
@@ -438,8 +441,12 @@ import {
 export class ExpensePeriodsPageComponent implements OnInit {
   private readonly periodsApi = inject(ExpensePeriodsApiService);
   private readonly buildingsApi = inject(BuildingsApiService);
+  private readonly auth = inject(AuthService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly cdr = inject(ChangeDetectorRef);
+  private readonly msg = inject(MessageService);
+
+  get isReadOnly(): boolean { return this.auth.hasRole('CompanyAdmin'); }
 
   items: ExpensePeriod[] = [];
   buildings: Building[] = [];
@@ -455,8 +462,6 @@ export class ExpensePeriodsPageComponent implements OnInit {
   showForm = false;
   showLateFeeForm = false;
   editingId: string | null = null;
-  errorMessage = '';
-  successMessage = '';
   readonly generationModes: GenerateExpenseChargesMode[] = ['FixedAmount', 'ByCoefficient'];
   alerts: ExpensePeriodOperationalAlertItem[] = [];
   generatorPeriod: ExpensePeriod | null = null;
@@ -478,8 +483,6 @@ export class ExpensePeriodsPageComponent implements OnInit {
     }
 
     this.showForm = !this.showForm;
-    this.errorMessage = '';
-    this.successMessage = '';
     if (!this.showForm) {
       this.form = this.createInitialForm();
     }
@@ -488,8 +491,6 @@ export class ExpensePeriodsPageComponent implements OnInit {
   startEdit(item: ExpensePeriod): void {
     this.editingId = item.id;
     this.showForm = true;
-    this.errorMessage = '';
-    this.successMessage = '';
     this.form = {
       buildingId: item.buildingId,
       year: item.year,
@@ -506,7 +507,6 @@ export class ExpensePeriodsPageComponent implements OnInit {
     this.editingId = null;
     this.showForm = false;
     this.form = this.createInitialForm();
-    this.errorMessage = '';
   }
 
   openGenerator(item: ExpensePeriod): void {
@@ -517,8 +517,6 @@ export class ExpensePeriodsPageComponent implements OnInit {
       amount: 0,
       notes: ''
     };
-    this.errorMessage = '';
-    this.successMessage = '';
   }
 
   cancelGenerator(): void {
@@ -532,8 +530,6 @@ export class ExpensePeriodsPageComponent implements OnInit {
     this.settlementPreview = null;
     this.showLateFeeForm = false;
     this.lateFeeForm = this.createInitialLateFeeForm(item);
-    this.errorMessage = '';
-    this.successMessage = '';
     this.isCalculatingSettlement = true;
 
     this.periodsApi.getSettlement(item.id)
@@ -545,7 +541,7 @@ export class ExpensePeriodsPageComponent implements OnInit {
           this.cdr.markForCheck();
         },
         error: (error) => {
-          this.errorMessage = extractApiErrorMessage(error, 'No se pudo cargar la liquidacion del periodo.');
+          this.msg.add({ severity: 'error', summary: 'Error', detail: extractApiErrorMessage(error, 'No se pudo cargar la liquidacion del periodo.'), life: 5000 });
           this.isCalculatingSettlement = false;
           this.settlementPeriod = null;
           this.cdr.markForCheck();
@@ -561,9 +557,6 @@ export class ExpensePeriodsPageComponent implements OnInit {
   }
 
   submitPeriod(): void {
-    this.errorMessage = '';
-    this.successMessage = '';
-
     const request = {
       buildingId: this.form.buildingId,
       year: Number(this.form.year),
@@ -578,7 +571,7 @@ export class ExpensePeriodsPageComponent implements OnInit {
 
     const validationError = this.validatePeriodForm(request);
     if (validationError) {
-      this.errorMessage = validationError;
+      this.msg.add({ severity: 'error', summary: 'Error', detail: validationError, life: 5000 });
       return;
     }
 
@@ -597,14 +590,12 @@ export class ExpensePeriodsPageComponent implements OnInit {
         this.form = this.createInitialForm();
         this.isSaving = false;
         this.showForm = false;
-        this.successMessage = this.editingId ? 'Periodo actualizado correctamente.' : 'Periodo creado correctamente.';
+        this.msg.add({ severity: 'success', summary: 'Éxito', detail: this.editingId ? 'Periodo actualizado correctamente.' : 'Periodo creado correctamente.', life: 4000 });
         this.editingId = null;
         this.cdr.markForCheck();
       },
       error: (error) => {
-        this.errorMessage = extractApiErrorMessage(
-          error,
-          this.editingId ? 'No se pudo actualizar el periodo.' : 'No se pudo guardar el periodo.');
+        this.msg.add({ severity: 'error', summary: 'Error', detail: extractApiErrorMessage(error, this.editingId ? 'No se pudo actualizar el periodo.' : 'No se pudo guardar el periodo.'), life: 5000 });
         this.isSaving = false;
         this.cdr.markForCheck();
       }
@@ -616,8 +607,6 @@ export class ExpensePeriodsPageComponent implements OnInit {
       return;
     }
 
-    this.errorMessage = '';
-    this.successMessage = '';
     this.isGenerating = true;
 
     this.periodsApi.generateCharges(this.generatorPeriod.id, {
@@ -630,13 +619,12 @@ export class ExpensePeriodsPageComponent implements OnInit {
       .subscribe({
         next: (result) => {
           this.isGenerating = false;
-          this.successMessage =
-            `Se generaron ${result.unitsAffected} cargos por ${this.formatCurrency(result.totalGeneratedAmount)} en ${result.expensePeriodName}.`;
+          this.msg.add({ severity: 'success', summary: 'Éxito', detail: `Se generaron ${result.unitsAffected} cargos por ${this.formatCurrency(result.totalGeneratedAmount)} en ${result.expensePeriodName}.`, life: 4000 });
           this.cancelGenerator();
           this.cdr.markForCheck();
         },
         error: (error) => {
-          this.errorMessage = extractApiErrorMessage(error, 'No se pudieron generar los cargos masivos.');
+          this.msg.add({ severity: 'error', summary: 'Error', detail: extractApiErrorMessage(error, 'No se pudieron generar los cargos masivos.'), life: 5000 });
           this.isGenerating = false;
           this.cdr.markForCheck();
         }
@@ -648,8 +636,6 @@ export class ExpensePeriodsPageComponent implements OnInit {
       return;
     }
 
-    this.errorMessage = '';
-    this.successMessage = '';
     this.isCalculatingSettlement = true;
 
     this.periodsApi.calculateSettlement(this.settlementPeriod.id)
@@ -659,12 +645,12 @@ export class ExpensePeriodsPageComponent implements OnInit {
           this.settlementSummary = summary;
           this.syncPeriodStatus(summary.expensePeriodId, summary.periodStatus);
           this.settlementPreview = null;
-          this.successMessage = `Liquidacion consolidada calculada por ${this.formatCurrency(summary.netCommonAmount)} en ${summary.expensePeriodName}.`;
+          this.msg.add({ severity: 'success', summary: 'Éxito', detail: `Liquidacion consolidada calculada por ${this.formatCurrency(summary.netCommonAmount)} en ${summary.expensePeriodName}.`, life: 4000 });
           this.isCalculatingSettlement = false;
           this.cdr.markForCheck();
         },
         error: (error) => {
-          this.errorMessage = extractApiErrorMessage(error, 'No se pudo calcular la liquidacion del periodo.');
+          this.msg.add({ severity: 'error', summary: 'Error', detail: extractApiErrorMessage(error, 'No se pudo calcular la liquidacion del periodo.'), life: 5000 });
           this.isCalculatingSettlement = false;
           this.cdr.markForCheck();
         }
@@ -676,7 +662,6 @@ export class ExpensePeriodsPageComponent implements OnInit {
       return;
     }
 
-    this.errorMessage = '';
     this.isLoadingSettlementPreview = true;
 
     this.periodsApi.getSettlementChargePreview(this.settlementPeriod.id)
@@ -688,7 +673,7 @@ export class ExpensePeriodsPageComponent implements OnInit {
           this.cdr.markForCheck();
         },
         error: (error) => {
-          this.errorMessage = extractApiErrorMessage(error, 'No se pudo generar la vista previa de cargos.');
+          this.msg.add({ severity: 'error', summary: 'Error', detail: extractApiErrorMessage(error, 'No se pudo generar la vista previa de cargos.'), life: 5000 });
           this.isLoadingSettlementPreview = false;
           this.cdr.markForCheck();
         }
@@ -696,8 +681,6 @@ export class ExpensePeriodsPageComponent implements OnInit {
   }
 
   deletePeriod(item: ExpensePeriod): void {
-    this.errorMessage = '';
-    this.successMessage = '';
     this.isSaving = true;
 
     this.periodsApi.delete(item.id).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
@@ -713,11 +696,11 @@ export class ExpensePeriodsPageComponent implements OnInit {
           this.closeSettlement();
         }
         this.isSaving = false;
-        this.successMessage = 'Periodo eliminado correctamente.';
+        this.msg.add({ severity: 'success', summary: 'Éxito', detail: 'Periodo eliminado correctamente.', life: 4000 });
         this.cdr.markForCheck();
       },
       error: (error) => {
-        this.errorMessage = extractApiErrorMessage(error, 'No se pudo eliminar el periodo.');
+        this.msg.add({ severity: 'error', summary: 'Error', detail: extractApiErrorMessage(error, 'No se pudo eliminar el periodo.'), life: 5000 });
         this.isSaving = false;
         this.cdr.markForCheck();
       }
@@ -729,8 +712,6 @@ export class ExpensePeriodsPageComponent implements OnInit {
       return;
     }
 
-    this.errorMessage = '';
-    this.successMessage = '';
     this.isApprovingSettlement = true;
 
     this.periodsApi.approveSettlement(this.settlementPeriod.id)
@@ -739,12 +720,12 @@ export class ExpensePeriodsPageComponent implements OnInit {
         next: (summary) => {
           this.settlementSummary = summary;
           this.syncPeriodStatus(summary.expensePeriodId, summary.periodStatus);
-          this.successMessage = `Liquidacion aprobada y deuda emitida para ${summary.expensePeriodName}.`;
+          this.msg.add({ severity: 'success', summary: 'Éxito', detail: `Liquidacion aprobada y deuda emitida para ${summary.expensePeriodName}.`, life: 4000 });
           this.isApprovingSettlement = false;
           this.cdr.markForCheck();
         },
         error: (error) => {
-          this.errorMessage = extractApiErrorMessage(error, 'No se pudo aprobar la liquidacion.');
+          this.msg.add({ severity: 'error', summary: 'Error', detail: extractApiErrorMessage(error, 'No se pudo aprobar la liquidacion.'), life: 5000 });
           this.isApprovingSettlement = false;
           this.cdr.markForCheck();
         }
@@ -756,8 +737,6 @@ export class ExpensePeriodsPageComponent implements OnInit {
       return;
     }
 
-    this.errorMessage = '';
-    this.successMessage = '';
     this.isPublishingSettlement = true;
 
     this.periodsApi.publish(this.settlementPeriod.id)
@@ -766,13 +745,13 @@ export class ExpensePeriodsPageComponent implements OnInit {
         next: (summary) => {
           this.settlementSummary = summary;
           this.syncPeriodStatus(summary.expensePeriodId, summary.periodStatus);
-          this.successMessage = `Comprobantes publicados para ${summary.expensePeriodName}.`;
+          this.msg.add({ severity: 'success', summary: 'Éxito', detail: `Comprobantes publicados para ${summary.expensePeriodName}.`, life: 4000 });
           this.isPublishingSettlement = false;
           this.loadAlerts();
           this.cdr.markForCheck();
         },
         error: (error) => {
-          this.errorMessage = extractApiErrorMessage(error, 'No se pudieron publicar los comprobantes.');
+          this.msg.add({ severity: 'error', summary: 'Error', detail: extractApiErrorMessage(error, 'No se pudieron publicar los comprobantes.'), life: 5000 });
           this.isPublishingSettlement = false;
           this.cdr.markForCheck();
         }
@@ -788,12 +767,9 @@ export class ExpensePeriodsPageComponent implements OnInit {
       return;
     }
 
-    this.errorMessage = '';
-    this.successMessage = '';
-
     const lateFeeError = this.validateLateFeeForm();
     if (lateFeeError) {
-      this.errorMessage = lateFeeError;
+      this.msg.add({ severity: 'error', summary: 'Error', detail: lateFeeError, life: 5000 });
       return;
     }
 
@@ -813,7 +789,7 @@ export class ExpensePeriodsPageComponent implements OnInit {
           this.cdr.markForCheck();
         },
         error: (error) => {
-          this.errorMessage = extractApiErrorMessage(error, 'No se pudieron registrar los recargos por mora.');
+          this.msg.add({ severity: 'error', summary: 'Error', detail: extractApiErrorMessage(error, 'No se pudieron registrar los recargos por mora.'), life: 5000 });
           this.isApplyingLateFees = false;
           this.cdr.markForCheck();
         }
@@ -905,7 +881,7 @@ export class ExpensePeriodsPageComponent implements OnInit {
           this.cdr.markForCheck();
         },
         error: (error) => {
-          this.errorMessage = extractApiErrorMessage(error, 'No se pudo cargar el listado de periodos.');
+          this.msg.add({ severity: 'error', summary: 'Error', detail: extractApiErrorMessage(error, 'No se pudo cargar el listado de periodos.'), life: 5000 });
           this.loading = false;
           this.cdr.markForCheck();
         }
@@ -975,8 +951,7 @@ export class ExpensePeriodsPageComponent implements OnInit {
     }
 
     this.showLateFeeForm = false;
-    this.successMessage =
-      `Se registraron ${result.chargesCreated} recargos por ${this.formatCurrency(result.totalLateFeeAmount)} en ${result.expensePeriodName}.`;
+    this.msg.add({ severity: 'success', summary: 'Éxito', detail: `Se registraron ${result.chargesCreated} recargos por ${this.formatCurrency(result.totalLateFeeAmount)} en ${result.expensePeriodName}.`, life: 4000 });
     this.loadAlerts();
   }
 

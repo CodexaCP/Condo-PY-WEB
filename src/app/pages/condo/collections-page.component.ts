@@ -4,7 +4,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { Button } from 'primeng/button';
 import { Card } from 'primeng/card';
-import { Message } from 'primeng/message';
+import { MessageService } from 'primeng/api';
 import { Tag } from 'primeng/tag';
 import { extractApiErrorMessage } from '../../api/api-error.util';
 import { Building, CollectionReport } from '../../api/models';
@@ -14,7 +14,7 @@ import { CollectionsApiService } from '../../api/collections-api.service';
 @Component({
   standalone: true,
   selector: 'app-collections-page',
-  imports: [CommonModule, FormsModule, Button, Card, Message, Tag],
+  imports: [CommonModule, FormsModule, Button, Card, Tag],
   template: `
     <p-card styleClass="app-page-card">
       <div class="app-toolbar">
@@ -37,7 +37,6 @@ import { CollectionsApiService } from '../../api/collections-api.service';
         </div>
       </div>
 
-      <p-message *ngIf="errorMessage" severity="error" [text]="errorMessage"></p-message>
       <p class="app-state" *ngIf="loading">Cargando reporte de cobranza...</p>
 
       <ng-container *ngIf="!loading && report">
@@ -171,12 +170,12 @@ export class CollectionsPageComponent implements OnInit {
   private readonly buildingsApi = inject(BuildingsApiService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly cdr = inject(ChangeDetectorRef);
+  private readonly msg = inject(MessageService);
 
   buildings: Building[] = [];
   selectedBuildingId = '';
   report: CollectionReport | null = null;
   loading = true;
-  errorMessage = '';
 
   ngOnInit(): void {
     this.buildingsApi.getAll().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
@@ -186,7 +185,7 @@ export class CollectionsPageComponent implements OnInit {
         this.cdr.markForCheck();
       },
       error: (error) => {
-        this.errorMessage = extractApiErrorMessage(error, 'No se pudieron cargar los edificios.');
+        this.msg.add({ severity: 'error', summary: 'Error', detail: extractApiErrorMessage(error, 'No se pudieron cargar los edificios.'), life: 5000 });
         this.loading = false;
         this.cdr.markForCheck();
       }
@@ -195,7 +194,6 @@ export class CollectionsPageComponent implements OnInit {
 
   loadReport(): void {
     this.loading = true;
-    this.errorMessage = '';
 
     this.collectionsApi.getReport(this.selectedBuildingId || undefined)
       .pipe(takeUntilDestroyed(this.destroyRef))
@@ -206,7 +204,7 @@ export class CollectionsPageComponent implements OnInit {
           this.cdr.markForCheck();
         },
         error: (error) => {
-          this.errorMessage = extractApiErrorMessage(error, 'No se pudo cargar el reporte de cobranza.');
+          this.msg.add({ severity: 'error', summary: 'Error', detail: extractApiErrorMessage(error, 'No se pudo cargar el reporte de cobranza.'), life: 5000 });
           this.loading = false;
           this.cdr.markForCheck();
         }

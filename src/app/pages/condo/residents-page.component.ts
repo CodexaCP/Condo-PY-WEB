@@ -2,9 +2,9 @@ import { CommonModule } from '@angular/common';
 import { ChangeDetectorRef, Component, DestroyRef, inject, OnInit } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
+import { MessageService } from 'primeng/api';
 import { Button } from 'primeng/button';
 import { Card } from 'primeng/card';
-import { Message } from 'primeng/message';
 import { CompaniesApiService } from '../../api/companies-api.service';
 import { extractApiErrorMessage } from '../../api/api-error.util';
 import { Company, Resident } from '../../api/models';
@@ -14,7 +14,7 @@ import { AuthService } from '../../auth/auth.service';
 @Component({
   standalone: true,
   selector: 'app-residents-page',
-  imports: [CommonModule, FormsModule, Button, Card, Message],
+  imports: [CommonModule, FormsModule, Button, Card],
   template: `
     <p-card styleClass="app-page-card">
       <div class="app-toolbar">
@@ -26,6 +26,7 @@ import { AuthService } from '../../auth/auth.service';
         </div>
 
         <p-button
+          *ngIf="!isReadOnly"
           [label]="showForm ? 'Cerrar formulario' : 'Nuevo residente'"
           [icon]="showForm ? 'pi pi-times' : 'pi pi-plus'"
           (onClick)="toggleForm()">
@@ -87,10 +88,8 @@ import { AuthService } from '../../auth/auth.service';
         </div>
       </form>
 
-      <p-message *ngIf="errorMessage" severity="error" [text]="errorMessage"></p-message>
-      <p-message *ngIf="successMessage" severity="success" [text]="successMessage"></p-message>
       <p class="app-state" *ngIf="loading">Cargando residentes...</p>
-      <p class="app-state" *ngIf="!loading && !errorMessage && !items.length">No hay residentes cargados.</p>
+      <p class="app-state" *ngIf="!loading && !items.length">No hay residentes cargados.</p>
 
       <div class="resident-list" *ngIf="items.length">
         <article class="resident-card" *ngFor="let item of items">
@@ -100,7 +99,7 @@ import { AuthService } from '../../auth/auth.service';
             <span>{{ item.email }}</span>
             <small>{{ item.isOwner ? 'Propietario' : 'Inquilino' }} · {{ item.phoneNumber }}</small>
           </div>
-          <div class="app-actions">
+          <div class="app-actions" *ngIf="!isReadOnly">
             <p-button type="button" icon="pi pi-pencil" severity="secondary" [rounded]="true" [text]="true" (onClick)="startEdit(item)"></p-button>
             <p-button type="button" icon="pi pi-trash" severity="danger" [rounded]="true" [text]="true" [disabled]="isSaving" (onClick)="deleteResident(item)"></p-button>
           </div>
@@ -125,6 +124,7 @@ export class ResidentsPageComponent implements OnInit {
   private readonly auth = inject(AuthService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly cdr = inject(ChangeDetectorRef);
+  private readonly msg = inject(MessageService);
 
   items: Resident[] = [];
   companies: Company[] = [];
@@ -132,12 +132,14 @@ export class ResidentsPageComponent implements OnInit {
   isSaving = false;
   showForm = false;
   editingId: string | null = null;
-  errorMessage = '';
-  successMessage = '';
   form = this.createInitialForm();
 
   get isSuperAdmin(): boolean {
     return this.auth.hasRole('SuperAdmin');
+  }
+
+  get isReadOnly(): boolean {
+    return this.auth.hasRole('CompanyAdmin');
   }
 
   ngOnInit(): void {
@@ -151,8 +153,6 @@ export class ResidentsPageComponent implements OnInit {
     }
 
     this.showForm = !this.showForm;
-    this.errorMessage = '';
-    this.successMessage = '';
     if (!this.showForm) {
       this.form = this.createInitialForm();
     }
@@ -161,8 +161,6 @@ export class ResidentsPageComponent implements OnInit {
   startEdit(item: Resident): void {
     this.editingId = item.id;
     this.showForm = true;
-    this.errorMessage = '';
-    this.successMessage = '';
     this.form = {
       companyId: '',
       fullName: item.fullName,
@@ -178,13 +176,9 @@ export class ResidentsPageComponent implements OnInit {
     this.editingId = null;
     this.showForm = false;
     this.form = this.createInitialForm();
-    this.errorMessage = '';
   }
 
   submitResident(): void {
-    this.errorMessage = '';
-    this.successMessage = '';
-
     const request = {
       companyId: this.form.companyId || null,
       fullName: this.form.fullName.trim(),
@@ -197,7 +191,7 @@ export class ResidentsPageComponent implements OnInit {
 
     const validationError = this.validateForm(request);
     if (validationError) {
-      this.errorMessage = validationError;
+      this.msg.add({ severity: 'error', summary: 'Error', detail: validationError, life: 5000 });
       return;
     }
 
@@ -217,15 +211,15 @@ export class ResidentsPageComponent implements OnInit {
           this.form = this.createInitialForm();
           this.isSaving = false;
           this.showForm = false;
-          this.successMessage = this.editingId ? 'Residente actualizado correctamente.' : 'Residente creado correctamente.';
+          this.msg.add({ severity: 'success', summary: 'Éxito', detail: this.editingId ? 'Residente actualizado correctamente.' : 'Residente creado correctamente.', life: 4000 });
           this.editingId = null;
           this.cdr.markForCheck();
         },
         error: (error) => {
-          this.errorMessage = extractApiErrorMessage(
+          this.msg.add({ severity: 'error', summary: 'Error', detail: extractApiErrorMessage(
             error,
             this.editingId ? 'No se pudo actualizar el residente.' : 'No se pudo guardar el residente.'
-          );
+          ), life: 5000 });
           this.isSaving = false;
           this.cdr.markForCheck();
         }
@@ -233,8 +227,6 @@ export class ResidentsPageComponent implements OnInit {
   }
 
   deleteResident(item: Resident): void {
-    this.errorMessage = '';
-    this.successMessage = '';
     this.isSaving = true;
 
     this.residentsApi
@@ -247,11 +239,11 @@ export class ResidentsPageComponent implements OnInit {
             this.cancelEdit();
           }
           this.isSaving = false;
-          this.successMessage = 'Residente eliminado correctamente.';
+          this.msg.add({ severity: 'success', summary: 'Éxito', detail: 'Residente eliminado correctamente.', life: 4000 });
           this.cdr.markForCheck();
         },
         error: (error) => {
-          this.errorMessage = extractApiErrorMessage(error, 'No se pudo eliminar el residente.');
+          this.msg.add({ severity: 'error', summary: 'Error', detail: extractApiErrorMessage(error, 'No se pudo eliminar el residente.'), life: 5000 });
           this.isSaving = false;
           this.cdr.markForCheck();
         }
@@ -290,7 +282,7 @@ export class ResidentsPageComponent implements OnInit {
           this.cdr.markForCheck();
         },
         error: (error) => {
-          this.errorMessage = extractApiErrorMessage(error, 'No se pudo cargar el listado de residentes.');
+          this.msg.add({ severity: 'error', summary: 'Error', detail: extractApiErrorMessage(error, 'No se pudo cargar el listado de residentes.'), life: 5000 });
           this.loading = false;
           this.cdr.markForCheck();
         }

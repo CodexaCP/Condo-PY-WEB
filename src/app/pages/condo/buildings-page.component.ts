@@ -8,6 +8,7 @@ import { Button } from 'primeng/button';
 import { Card } from 'primeng/card';
 import { Message } from 'primeng/message';
 import { Tag } from 'primeng/tag';
+import { MessageService } from 'primeng/api';
 import { extractApiErrorMessage } from '../../api/api-error.util';
 import { BuildingsApiService } from '../../api/buildings-api.service';
 import { CompaniesApiService } from '../../api/companies-api.service';
@@ -66,9 +67,6 @@ import { AuthService } from '../../auth/auth.service';
         <button class="ov-close" (click)="closeDialog()">✕</button>
       </div>
 
-      <p-message *ngIf="dialogError" severity="error" [text]="dialogError"></p-message>
-      <p-message *ngIf="dialogSuccess" severity="success" [text]="dialogSuccess"></p-message>
-
       <form class="ficha-form" (ngSubmit)="save()">
         <label *ngIf="isSuperAdmin">
           <span>Empresa</span>
@@ -122,7 +120,6 @@ import { AuthService } from '../../auth/auth.service';
         ¿Eliminar el edificio <strong>{{ selected?.name }}</strong> de forma permanente?
         Esta accion no se puede deshacer.
       </p>
-      <p-message *ngIf="dialogError" severity="error" [text]="dialogError"></p-message>
       <div class="confirm-footer">
         <p-button label="Cancelar" severity="secondary" [outlined]="true" (onClick)="cancelDelete()"></p-button>
         <p-button label="Eliminar definitivamente" severity="danger" [loading]="isDeleting" (onClick)="confirmDelete()"></p-button>
@@ -178,6 +175,7 @@ export class BuildingsPageComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
   private readonly cdr = inject(ChangeDetectorRef);
+  private readonly msg = inject(MessageService);
 
   items: Building[] = [];
   companies: Company[] = [];
@@ -190,8 +188,6 @@ export class BuildingsPageComponent implements OnInit {
   form = this.emptyForm();
   isSaving = false;
   isDeleting = false;
-  dialogError = '';
-  dialogSuccess = '';
 
   get isSuperAdmin(): boolean { return this.auth.hasRole('SuperAdmin'); }
 
@@ -226,30 +222,29 @@ export class BuildingsPageComponent implements OnInit {
 
   openCreate(): void {
     this.selected = null; this.form = this.emptyForm();
-    this.dialogError = ''; this.dialogSuccess = ''; this.dialogVisible = true;
+    this.dialogVisible = true;
   }
 
   openFicha(item: Building): void {
     this.selected = item;
     this.form = { companyId: item.companyId ?? '', condominiumId: item.condominiumId ?? '',
                   name: item.name, code: item.code, address: item.address, isActive: item.isActive };
-    this.dialogError = ''; this.dialogSuccess = ''; this.dialogVisible = true;
+    this.dialogVisible = true;
   }
 
   closeDialog(): void { this.dialogVisible = false; this.confirmVisible = false; this.selected = null; }
 
   save(): void {
-    this.dialogError = ''; this.dialogSuccess = '';
     const req = {
       companyId: this.form.companyId || null, condominiumId: this.form.condominiumId || null,
       name: this.form.name.trim(), code: this.form.code.trim().toUpperCase(),
       address: this.form.address.trim(), isActive: this.form.isActive
     };
-    if (this.isSuperAdmin && !req.companyId) { this.dialogError = 'La empresa es obligatoria.'; return; }
-    if (!req.name) { this.dialogError = 'El nombre es obligatorio.'; return; }
-    if (!req.code) { this.dialogError = 'El codigo es obligatorio.'; return; }
-    if (!/^[A-Z0-9]+(?:-[A-Z0-9]+)*$/.test(req.code)) { this.dialogError = 'Codigo invalido.'; return; }
-    if (!req.address) { this.dialogError = 'La direccion es obligatoria.'; return; }
+    if (this.isSuperAdmin && !req.companyId) { this.msg.add({ severity: 'error', summary: 'Error', detail: 'La empresa es obligatoria.', life: 5000 }); return; }
+    if (!req.name) { this.msg.add({ severity: 'error', summary: 'Error', detail: 'El nombre es obligatorio.', life: 5000 }); return; }
+    if (!req.code) { this.msg.add({ severity: 'error', summary: 'Error', detail: 'El codigo es obligatorio.', life: 5000 }); return; }
+    if (!/^[A-Z0-9]+(?:-[A-Z0-9]+)*$/.test(req.code)) { this.msg.add({ severity: 'error', summary: 'Error', detail: 'Codigo invalido.', life: 5000 }); return; }
+    if (!req.address) { this.msg.add({ severity: 'error', summary: 'Error', detail: 'La direccion es obligatoria.', life: 5000 }); return; }
 
     this.isSaving = true;
     const op = this.selected ? this.buildingsApi.update(this.selected.id, req) : this.buildingsApi.create(req);
@@ -259,11 +254,11 @@ export class BuildingsPageComponent implements OnInit {
           ? this.items.map(x => x.id === item.id ? item : x).sort((a, b) => a.name.localeCompare(b.name))
           : [...this.items, item].sort((a, b) => a.name.localeCompare(b.name));
         this.isSaving = false;
-        this.dialogSuccess = this.selected ? 'Edificio actualizado.' : 'Edificio creado.';
+        this.msg.add({ severity: 'success', summary: 'Éxito', detail: this.selected ? 'Edificio actualizado.' : 'Edificio creado.', life: 4000 });
         this.selected = item;
         this.cdr.markForCheck();
       },
-      error: err => { this.dialogError = extractApiErrorMessage(err, 'No se pudo guardar.'); this.isSaving = false; this.cdr.markForCheck(); }
+      error: err => { this.msg.add({ severity: 'error', summary: 'Error', detail: extractApiErrorMessage(err, 'No se pudo guardar.'), life: 5000 }); this.isSaving = false; this.cdr.markForCheck(); }
     });
   }
 
@@ -279,7 +274,7 @@ export class BuildingsPageComponent implements OnInit {
         this.isDeleting = false; this.confirmVisible = false; this.dialogVisible = false; this.selected = null;
         this.cdr.markForCheck();
       },
-      error: err => { this.dialogError = extractApiErrorMessage(err, 'No se pudo eliminar.'); this.isDeleting = false; this.confirmVisible = false; this.cdr.markForCheck(); }
+      error: err => { this.msg.add({ severity: 'error', summary: 'Error', detail: extractApiErrorMessage(err, 'No se pudo eliminar.'), life: 5000 }); this.isDeleting = false; this.confirmVisible = false; this.cdr.markForCheck(); }
     });
   }
 

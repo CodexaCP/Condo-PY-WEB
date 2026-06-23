@@ -3,6 +3,7 @@ import { ChangeDetectorRef, Component, DestroyRef, inject, OnInit } from '@angul
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
+import { MessageService } from 'primeng/api';
 import { Button } from 'primeng/button';
 import { Card } from 'primeng/card';
 import { Message } from 'primeng/message';
@@ -54,9 +55,6 @@ import { Company } from '../../api/models';
         <button class="ov-close" (click)="closeDialog()">✕</button>
       </div>
 
-      <p-message *ngIf="dialogError" severity="error" [text]="dialogError"></p-message>
-      <p-message *ngIf="dialogSuccess" severity="success" [text]="dialogSuccess"></p-message>
-
       <form class="ficha-form" (ngSubmit)="save()">
         <label>
           <span>Nombre</span>
@@ -92,7 +90,6 @@ import { Company } from '../../api/models';
         ¿Eliminar la empresa <strong>{{ selected?.name }}</strong> de forma permanente?
         Esta accion no se puede deshacer.
       </p>
-      <p-message *ngIf="dialogError" severity="error" [text]="dialogError"></p-message>
       <div class="confirm-footer">
         <p-button label="Cancelar" severity="secondary" [outlined]="true" (onClick)="cancelDelete()"></p-button>
         <p-button label="Eliminar definitivamente" severity="danger" [loading]="isDeleting" (onClick)="confirmDelete()"></p-button>
@@ -150,6 +147,7 @@ export class CompaniesPageComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
   private readonly cdr = inject(ChangeDetectorRef);
+  private readonly msg = inject(MessageService);
 
   items: Company[] = [];
   loading = true;
@@ -161,8 +159,6 @@ export class CompaniesPageComponent implements OnInit {
   form = this.emptyForm();
   isSaving = false;
   isDeleting = false;
-  dialogError = '';
-  dialogSuccess = '';
 
   ngOnInit(): void {
     this.api.getAll().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
@@ -177,16 +173,12 @@ export class CompaniesPageComponent implements OnInit {
   openCreate(): void {
     this.selected = null;
     this.form = this.emptyForm();
-    this.dialogError = '';
-    this.dialogSuccess = '';
     this.dialogVisible = true;
   }
 
   openFicha(item: Company): void {
     this.selected = item;
     this.form = { name: item.name, slug: item.slug, isActive: item.isActive };
-    this.dialogError = '';
-    this.dialogSuccess = '';
     this.dialogVisible = true;
   }
 
@@ -197,12 +189,10 @@ export class CompaniesPageComponent implements OnInit {
   }
 
   save(): void {
-    this.dialogError = '';
-    this.dialogSuccess = '';
     const req = { name: this.form.name.trim(), slug: this.form.slug.trim().toLowerCase(), isActive: this.form.isActive };
-    if (!req.name) { this.dialogError = 'El nombre es obligatorio.'; return; }
-    if (!req.slug) { this.dialogError = 'El slug es obligatorio.'; return; }
-    if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(req.slug)) { this.dialogError = 'Slug invalido: solo minusculas, numeros y guiones.'; return; }
+    if (!req.name) { this.msg.add({ severity: 'error', summary: 'Error', detail: 'El nombre es obligatorio.', life: 5000 }); return; }
+    if (!req.slug) { this.msg.add({ severity: 'error', summary: 'Error', detail: 'El slug es obligatorio.', life: 5000 }); return; }
+    if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(req.slug)) { this.msg.add({ severity: 'error', summary: 'Error', detail: 'Slug invalido: solo minusculas, numeros y guiones.', life: 5000 }); return; }
 
     this.isSaving = true;
     const op = this.selected ? this.api.update(this.selected.id, req) : this.api.create(req);
@@ -212,11 +202,11 @@ export class CompaniesPageComponent implements OnInit {
           ? this.items.map(x => x.id === item.id ? item : x).sort((a, b) => a.name.localeCompare(b.name))
           : [...this.items, item].sort((a, b) => a.name.localeCompare(b.name));
         this.isSaving = false;
-        this.dialogSuccess = this.selected ? 'Empresa actualizada.' : 'Empresa creada.';
+        this.msg.add({ severity: 'success', summary: 'Éxito', detail: this.selected ? 'Empresa actualizada.' : 'Empresa creada.', life: 4000 });
         this.selected = item;
         this.cdr.markForCheck();
       },
-      error: err => { this.dialogError = extractApiErrorMessage(err, 'No se pudo guardar.'); this.isSaving = false; this.cdr.markForCheck(); }
+      error: err => { this.msg.add({ severity: 'error', summary: 'Error', detail: extractApiErrorMessage(err, 'No se pudo guardar.'), life: 5000 }); this.isSaving = false; this.cdr.markForCheck(); }
     });
   }
 
@@ -236,7 +226,7 @@ export class CompaniesPageComponent implements OnInit {
         this.cdr.markForCheck();
       },
       error: err => {
-        this.dialogError = extractApiErrorMessage(err, 'No se pudo eliminar la empresa.');
+        this.msg.add({ severity: 'error', summary: 'Error', detail: extractApiErrorMessage(err, 'No se pudo eliminar la empresa.'), life: 5000 });
         this.isDeleting = false;
         this.confirmVisible = false;
         this.cdr.markForCheck();

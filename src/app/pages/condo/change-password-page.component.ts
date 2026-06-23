@@ -7,13 +7,13 @@ import { Button } from 'primeng/button';
 import { Card } from 'primeng/card';
 import { FloatLabel } from 'primeng/floatlabel';
 import { InputText } from 'primeng/inputtext';
-import { Message } from 'primeng/message';
+import { MessageService } from 'primeng/api';
 import { AuthService } from '../../auth/auth.service';
 
 @Component({
   standalone: true,
   selector: 'app-change-password-page',
-  imports: [CommonModule, FormsModule, Button, Card, FloatLabel, InputText, Message],
+  imports: [CommonModule, FormsModule, Button, Card, FloatLabel, InputText],
   template: `
     <section class="password-page">
       <p-card styleClass="password-card">
@@ -39,7 +39,6 @@ import { AuthService } from '../../auth/auth.service';
         </p-floatlabel>
 
         <p class="hint">Debe tener mínimo 8 caracteres, mayúscula, minúscula y caracter especial.</p>
-        <p-message *ngIf="errorMessage" severity="error" [text]="errorMessage"></p-message>
 
         <p-button type="submit" [loading]="isSubmitting" label="Actualizar contraseña"></p-button>
       </form>
@@ -61,23 +60,21 @@ export class ChangePasswordPageComponent {
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
   private readonly cdr = inject(ChangeDetectorRef);
+  private readonly msg = inject(MessageService);
 
   currentPassword = '123456';
   newPassword = '';
   confirmPassword = '';
-  errorMessage = '';
   isSubmitting = false;
 
   submit(): void {
-    this.errorMessage = '';
-
     if (this.newPassword !== this.confirmPassword) {
-      this.errorMessage = 'La confirmación no coincide.';
+      this.msg.add({ severity: 'error', summary: 'Error', detail: 'La confirmación no coincide.', life: 5000 });
       return;
     }
 
     if (!this.isValidPassword(this.newPassword)) {
-      this.errorMessage = 'La nueva contraseña no cumple la política mínima.';
+      this.msg.add({ severity: 'error', summary: 'Error', detail: 'La nueva contraseña no cumple la política mínima.', life: 5000 });
       return;
     }
 
@@ -91,7 +88,7 @@ export class ChangePasswordPageComponent {
           this.cdr.markForCheck();
         },
         error: () => {
-          this.errorMessage = 'No se pudo actualizar la contraseña.';
+          this.msg.add({ severity: 'error', summary: 'Error', detail: 'No se pudo actualizar la contraseña.', life: 5000 });
           this.cdr.markForCheck();
         }
       });

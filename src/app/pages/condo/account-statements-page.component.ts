@@ -5,8 +5,8 @@ import { FormsModule } from '@angular/forms';
 import { forkJoin } from 'rxjs';
 import { Button } from 'primeng/button';
 import { Card } from 'primeng/card';
-import { Message } from 'primeng/message';
 import { Tag } from 'primeng/tag';
+import { MessageService } from 'primeng/api';
 import { AccountStatementsApiService } from '../../api/account-statements-api.service';
 import { extractApiErrorMessage } from '../../api/api-error.util';
 import { AccountStatementDetail, AccountStatementPeriod, ExpenseChargeType, ExpenseReceipt, PaymentMethod, Unit } from '../../api/models';
@@ -15,7 +15,7 @@ import { UnitsApiService } from '../../api/units-api.service';
 @Component({
   standalone: true,
   selector: 'app-account-statements-page',
-  imports: [CommonModule, FormsModule, Button, Card, Message, Tag],
+  imports: [CommonModule, FormsModule, Button, Card, Tag],
   template: `
     <p-card styleClass="app-page-card">
       <div class="app-toolbar">
@@ -37,10 +37,9 @@ import { UnitsApiService } from '../../api/units-api.service';
         </label>
       </div>
 
-      <p-message *ngIf="errorMessage" severity="error" [text]="errorMessage"></p-message>
       <p class="app-state" *ngIf="loading">Cargando estado de cuenta...</p>
-      <p class="app-state" *ngIf="!loading && !errorMessage && !selectedUnitId">Selecciona una unidad para consultar.</p>
-      <p class="app-state" *ngIf="!loading && !errorMessage && selectedUnitId && !statements.length">La unidad no tiene movimientos.</p>
+      <p class="app-state" *ngIf="!loading && !selectedUnitId">Selecciona una unidad para consultar.</p>
+      <p class="app-state" *ngIf="!loading && selectedUnitId && !statements.length">La unidad no tiene movimientos.</p>
 
       <div class="content-grid" *ngIf="statements.length">
         <section class="statement-list">
@@ -286,6 +285,7 @@ export class AccountStatementsPageComponent implements OnInit {
   private readonly unitsApi = inject(UnitsApiService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly cdr = inject(ChangeDetectorRef);
+  private readonly msg = inject(MessageService);
 
   units: Unit[] = [];
   statements: AccountStatementPeriod[] = [];
@@ -294,7 +294,6 @@ export class AccountStatementsPageComponent implements OnInit {
   selectedUnitId = '';
   selectedExpensePeriodId = '';
   loading = true;
-  errorMessage = '';
 
   ngOnInit(): void {
     this.unitsApi.getAll().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
@@ -304,7 +303,7 @@ export class AccountStatementsPageComponent implements OnInit {
         this.cdr.markForCheck();
       },
       error: (error) => {
-        this.errorMessage = extractApiErrorMessage(error, 'No se pudieron cargar las unidades.');
+        this.msg.add({ severity: 'error', summary: 'Error', detail: extractApiErrorMessage(error, 'No se pudieron cargar las unidades.'), life: 5000 });
         this.loading = false;
         this.cdr.markForCheck();
       }
@@ -312,7 +311,6 @@ export class AccountStatementsPageComponent implements OnInit {
   }
 
   loadStatements(): void {
-    this.errorMessage = '';
     this.detail = null;
     this.receipt = null;
     this.statements = [];
@@ -333,7 +331,7 @@ export class AccountStatementsPageComponent implements OnInit {
         this.cdr.markForCheck();
       },
       error: (error) => {
-        this.errorMessage = extractApiErrorMessage(error, 'No se pudo cargar el estado de cuenta.');
+        this.msg.add({ severity: 'error', summary: 'Error', detail: extractApiErrorMessage(error, 'No se pudo cargar el estado de cuenta.'), life: 5000 });
         this.loading = false;
         this.cdr.markForCheck();
       }
@@ -356,7 +354,7 @@ export class AccountStatementsPageComponent implements OnInit {
           this.cdr.markForCheck();
         },
         error: (error) => {
-          this.errorMessage = extractApiErrorMessage(error, 'No se pudo cargar el detalle del periodo.');
+          this.msg.add({ severity: 'error', summary: 'Error', detail: extractApiErrorMessage(error, 'No se pudo cargar el detalle del periodo.'), life: 5000 });
           this.loading = false;
           this.cdr.markForCheck();
         }

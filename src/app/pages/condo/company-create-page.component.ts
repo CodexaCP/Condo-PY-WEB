@@ -5,7 +5,7 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Button } from 'primeng/button';
 import { Card } from 'primeng/card';
-import { Message } from 'primeng/message';
+import { MessageService } from 'primeng/api';
 import { Select } from 'primeng/select';
 import { Textarea } from 'primeng/textarea';
 import { Tooltip } from 'primeng/tooltip';
@@ -24,7 +24,7 @@ const PHONE_PREFIXES: PhonePrefix[] = [
 @Component({
   standalone: true,
   selector: 'app-company-create-page',
-  imports: [CommonModule, FormsModule, Button, Card, Message, Select, Textarea, Tooltip],
+  imports: [CommonModule, FormsModule, Button, Card, Select, Textarea, Tooltip],
   template: `
     <p-card styleClass="app-page-card">
       <div class="create-header">
@@ -38,7 +38,6 @@ const PHONE_PREFIXES: PhonePrefix[] = [
       </div>
 
       <p-message *ngIf="loadError" severity="error" [text]="loadError"></p-message>
-      <p-message *ngIf="formError" severity="error" [text]="formError" styleClass="mb-4"></p-message>
 
       <div *ngIf="loading" class="app-state">Cargando datos...</div>
 
@@ -149,6 +148,7 @@ export class CompanyCreatePageComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
   private readonly cdr    = inject(ChangeDetectorRef);
+  private readonly msg    = inject(MessageService);
 
   prefixOptions = PHONE_PREFIXES;
   isEditing  = false;
@@ -157,7 +157,6 @@ export class CompanyCreatePageComponent implements OnInit {
   loading    = false;
   loadError  = '';
   isSaving   = false;
-  formError  = '';
   phoneError = '';
   emailError = '';
 
@@ -195,7 +194,7 @@ export class CompanyCreatePageComponent implements OnInit {
   cancel() { this.router.navigate(['/companies']); }
 
   save(): void {
-    this.formError = ''; this.phoneError = ''; this.emailError = '';
+    this.phoneError = ''; this.emailError = '';
     const name  = this.form.name.trim();
     const slug  = this.form.slug.trim().toLowerCase();
     const description  = this.form.description.trim() || null;
@@ -203,9 +202,9 @@ export class CompanyCreatePageComponent implements OnInit {
     const phoneNumber  = this.form.phoneNumber.trim() || null;
     const email        = this.form.email.trim().toLowerCase() || null;
 
-    if (!name) { this.formError = 'El nombre es obligatorio.'; return; }
-    if (!slug) { this.formError = 'El slug es obligatorio.'; return; }
-    if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)) { this.formError = 'Slug inválido: solo minúsculas, números y guiones.'; return; }
+    if (!name) { this.msg.add({ severity: 'error', summary: 'Error', detail: 'El nombre es obligatorio.', life: 5000 }); return; }
+    if (!slug) { this.msg.add({ severity: 'error', summary: 'Error', detail: 'El slug es obligatorio.', life: 5000 }); return; }
+    if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)) { this.msg.add({ severity: 'error', summary: 'Error', detail: 'Slug inválido: solo minúsculas, números y guiones.', life: 5000 }); return; }
     if (phoneNumber) {
       const p = PHONE_PREFIXES.find(x => x.value === phonePrefix);
       if (p && !p.pattern.test(phoneNumber)) { this.phoneError = `Formato inválido para ${p.label}: ${p.hint}.`; return; }
@@ -217,7 +216,7 @@ export class CompanyCreatePageComponent implements OnInit {
     const op = this.isEditing ? this.api.update(this.editingId, req) : this.api.create(req);
     op.pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: () => { this.isSaving = false; this.router.navigate(['/companies']); },
-      error: err => { this.formError = extractApiErrorMessage(err, 'No se pudo guardar.'); this.isSaving = false; this.cdr.markForCheck(); }
+      error: err => { this.msg.add({ severity: 'error', summary: 'Error', detail: extractApiErrorMessage(err, 'No se pudo guardar.'), life: 5000 }); this.isSaving = false; this.cdr.markForCheck(); }
     });
   }
 }

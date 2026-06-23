@@ -5,17 +5,18 @@ import { FormsModule } from '@angular/forms';
 import { forkJoin } from 'rxjs';
 import { Button } from 'primeng/button';
 import { Card } from 'primeng/card';
-import { Message } from 'primeng/message';
+import { MessageService } from 'primeng/api';
 import { AssignmentsApiService } from '../../api/assignments-api.service';
 import { extractApiErrorMessage } from '../../api/api-error.util';
 import { Resident, Unit, Assignment } from '../../api/models';
 import { ResidentsApiService } from '../../api/residents-api.service';
 import { UnitsApiService } from '../../api/units-api.service';
+import { AuthService } from '../../auth/auth.service';
 
 @Component({
   standalone: true,
   selector: 'app-assignments-page',
-  imports: [CommonModule, FormsModule, Button, Card, Message],
+  imports: [CommonModule, FormsModule, Button, Card],
   template: `
     <p-card styleClass="app-page-card">
       <div class="app-toolbar">
@@ -27,6 +28,7 @@ import { UnitsApiService } from '../../api/units-api.service';
         </div>
 
         <p-button
+          *ngIf="!isReadOnly"
           [label]="showForm ? 'Cerrar formulario' : 'Nueva asignacion'"
           [icon]="showForm ? 'pi pi-times' : 'pi pi-plus'"
           (onClick)="toggleForm()">
@@ -70,17 +72,15 @@ import { UnitsApiService } from '../../api/units-api.service';
         </div>
       </form>
 
-      <p-message *ngIf="errorMessage" severity="error" [text]="errorMessage"></p-message>
-      <p-message *ngIf="successMessage" severity="success" [text]="successMessage"></p-message>
       <p class="app-state" *ngIf="loading">Cargando asignaciones...</p>
-      <p class="app-state" *ngIf="!loading && !errorMessage && !items.length">No hay asignaciones cargadas.</p>
+      <p class="app-state" *ngIf="!loading && !items.length">No hay asignaciones cargadas.</p>
 
       <div class="assignment-grid" *ngIf="items.length">
         <article class="assignment-card" *ngFor="let item of items">
           <strong>{{ item.unitCode }}</strong>
           <span>{{ item.residentName }}</span>
           <small>{{ item.isPrimary ? 'Principal' : 'Secundaria' }} · Desde {{ item.startDate }}</small>
-          <div class="app-actions">
+          <div class="app-actions" *ngIf="!isReadOnly">
             <p-button type="button" icon="pi pi-trash" severity="danger" [rounded]="true" [text]="true" [disabled]="isSaving" (onClick)="deleteAssignment(item)"></p-button>
           </div>
         </article>
@@ -100,8 +100,12 @@ export class AssignmentsPageComponent implements OnInit {
   private readonly assignmentsApi = inject(AssignmentsApiService);
   private readonly unitsApi = inject(UnitsApiService);
   private readonly residentsApi = inject(ResidentsApiService);
+  private readonly auth = inject(AuthService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly cdr = inject(ChangeDetectorRef);
+  private readonly msg = inject(MessageService);
+
+  get isReadOnly(): boolean { return this.auth.hasRole('CompanyAdmin'); }
 
   items: Assignment[] = [];
   units: Unit[] = [];
@@ -109,8 +113,6 @@ export class AssignmentsPageComponent implements OnInit {
   loading = true;
   isSaving = false;
   showForm = false;
-  errorMessage = '';
-  successMessage = '';
   form = this.createInitialForm();
 
   ngOnInit(): void {
@@ -119,25 +121,21 @@ export class AssignmentsPageComponent implements OnInit {
 
   toggleForm(): void {
     this.showForm = !this.showForm;
-    this.successMessage = '';
   }
 
   createAssignment(): void {
-    this.errorMessage = '';
-    this.successMessage = '';
-
     if (!this.form.unitId) {
-      this.errorMessage = 'La unidad es obligatoria.';
+      this.msg.add({ severity: 'error', summary: 'Error', detail: 'La unidad es obligatoria.', life: 5000 });
       return;
     }
 
     if (!this.form.residentId) {
-      this.errorMessage = 'El residente es obligatorio.';
+      this.msg.add({ severity: 'error', summary: 'Error', detail: 'El residente es obligatorio.', life: 5000 });
       return;
     }
 
     if (this.form.endDate && this.form.endDate < this.form.startDate) {
-      this.errorMessage = 'La fecha de fin no puede ser anterior a la fecha de inicio.';
+      this.msg.add({ severity: 'error', summary: 'Error', detail: 'La fecha de fin no puede ser anterior a la fecha de inicio.', life: 5000 });
       return;
     }
 
@@ -158,11 +156,11 @@ export class AssignmentsPageComponent implements OnInit {
           this.form = this.createInitialForm();
           this.isSaving = false;
           this.showForm = false;
-          this.successMessage = 'Asignacion creada correctamente.';
+          this.msg.add({ severity: 'success', summary: 'Éxito', detail: 'Asignacion creada correctamente.', life: 4000 });
           this.cdr.markForCheck();
         },
         error: (error) => {
-          this.errorMessage = extractApiErrorMessage(error, 'No se pudo guardar la asignacion.');
+          this.msg.add({ severity: 'error', summary: 'Error', detail: extractApiErrorMessage(error, 'No se pudo guardar la asignacion.'), life: 5000 });
           this.isSaving = false;
           this.cdr.markForCheck();
         }
@@ -170,8 +168,6 @@ export class AssignmentsPageComponent implements OnInit {
   }
 
   deleteAssignment(item: Assignment): void {
-    this.errorMessage = '';
-    this.successMessage = '';
     this.isSaving = true;
 
     this.assignmentsApi
@@ -181,11 +177,11 @@ export class AssignmentsPageComponent implements OnInit {
         next: () => {
           this.items = this.items.filter((current) => current.id !== item.id);
           this.isSaving = false;
-          this.successMessage = 'Asignacion eliminada correctamente.';
+          this.msg.add({ severity: 'success', summary: 'Éxito', detail: 'Asignacion eliminada correctamente.', life: 4000 });
           this.cdr.markForCheck();
         },
         error: (error) => {
-          this.errorMessage = extractApiErrorMessage(error, 'No se pudo eliminar la asignacion.');
+          this.msg.add({ severity: 'error', summary: 'Error', detail: extractApiErrorMessage(error, 'No se pudo eliminar la asignacion.'), life: 5000 });
           this.isSaving = false;
           this.cdr.markForCheck();
         }
@@ -194,7 +190,6 @@ export class AssignmentsPageComponent implements OnInit {
 
   private loadData(): void {
     this.loading = true;
-    this.errorMessage = '';
 
     forkJoin({
       assignments: this.assignmentsApi.getAll(),
@@ -211,7 +206,7 @@ export class AssignmentsPageComponent implements OnInit {
           this.cdr.markForCheck();
         },
         error: (error) => {
-          this.errorMessage = extractApiErrorMessage(error, 'No se pudieron cargar las asignaciones.');
+          this.msg.add({ severity: 'error', summary: 'Error', detail: extractApiErrorMessage(error, 'No se pudieron cargar las asignaciones.'), life: 5000 });
           this.loading = false;
           this.cdr.markForCheck();
         }

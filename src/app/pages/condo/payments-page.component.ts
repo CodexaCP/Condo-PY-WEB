@@ -6,10 +6,12 @@ import { forkJoin } from 'rxjs';
 import { Button } from 'primeng/button';
 import { Card } from 'primeng/card';
 import { Message } from 'primeng/message';
+import { MessageService } from 'primeng/api';
 import { extractApiErrorMessage } from '../../api/api-error.util';
 import { ExpensePeriodsApiService } from '../../api/expense-periods-api.service';
 import { PaymentsApiService } from '../../api/payments-api.service';
 import { UnitsApiService } from '../../api/units-api.service';
+import { AuthService } from '../../auth/auth.service';
 import { ExpensePeriod, Payment, PaymentMethod, Unit } from '../../api/models';
 
 @Component({
@@ -27,6 +29,7 @@ import { ExpensePeriod, Payment, PaymentMethod, Unit } from '../../api/models';
         </div>
 
         <p-button
+          *ngIf="!isReadOnly"
           [label]="showForm ? 'Cerrar formulario' : 'Nuevo pago'"
           [icon]="showForm ? 'pi pi-times' : 'pi pi-plus'"
           (onClick)="toggleForm()">
@@ -88,10 +91,8 @@ import { ExpensePeriod, Payment, PaymentMethod, Unit } from '../../api/models';
         </div>
       </form>
 
-      <p-message *ngIf="errorMessage" severity="error" [text]="errorMessage"></p-message>
-      <p-message *ngIf="successMessage" severity="success" [text]="successMessage"></p-message>
       <p class="app-state" *ngIf="loading">Cargando pagos...</p>
-      <p class="app-state" *ngIf="!loading && !errorMessage && !items.length">No hay pagos cargados.</p>
+      <p class="app-state" *ngIf="!loading && !items.length">No hay pagos cargados.</p>
 
       <div class="app-list" *ngIf="items.length">
         <div class="app-row header payments-grid">
@@ -100,7 +101,7 @@ import { ExpensePeriod, Payment, PaymentMethod, Unit } from '../../api/models';
           <span>Unidad</span>
           <span>Metodo</span>
           <span>Monto</span>
-          <span class="actions-head">Acciones</span>
+          <span class="actions-head" *ngIf="!isReadOnly">Acciones</span>
         </div>
 
         <div class="app-row payments-grid" *ngFor="let item of items">
@@ -109,7 +110,7 @@ import { ExpensePeriod, Payment, PaymentMethod, Unit } from '../../api/models';
           <span>{{ item.unitCode }} · {{ item.buildingName }}</span>
           <span>{{ paymentMethodLabel(item.method) }}</span>
           <span>{{ formatCurrency(item.amount) }}</span>
-          <div class="app-actions">
+          <div class="app-actions" *ngIf="!isReadOnly">
             <p-button type="button" icon="pi pi-pencil" severity="secondary" [rounded]="true" [text]="true" (onClick)="startEdit(item)"></p-button>
             <p-button type="button" icon="pi pi-trash" severity="danger" [rounded]="true" [text]="true" [disabled]="isSaving" (onClick)="deletePayment(item)"></p-button>
           </div>
@@ -127,8 +128,12 @@ export class PaymentsPageComponent implements OnInit {
   private readonly paymentsApi = inject(PaymentsApiService);
   private readonly periodsApi = inject(ExpensePeriodsApiService);
   private readonly unitsApi = inject(UnitsApiService);
+  private readonly auth = inject(AuthService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly cdr = inject(ChangeDetectorRef);
+  private readonly msg = inject(MessageService);
+
+  get isReadOnly(): boolean { return this.auth.hasRole('CompanyAdmin'); }
 
   items: Payment[] = [];
   periods: ExpensePeriod[] = [];
@@ -137,8 +142,6 @@ export class PaymentsPageComponent implements OnInit {
   isSaving = false;
   showForm = false;
   editingId: string | null = null;
-  errorMessage = '';
-  successMessage = '';
   readonly methods: PaymentMethod[] = ['Cash', 'BankTransfer', 'Card', 'Check', 'Other'];
   form = this.createInitialForm();
 
@@ -158,8 +161,6 @@ export class PaymentsPageComponent implements OnInit {
     }
 
     this.showForm = !this.showForm;
-    this.errorMessage = '';
-    this.successMessage = '';
     if (!this.showForm) {
       this.form = this.createInitialForm();
     }
@@ -168,8 +169,6 @@ export class PaymentsPageComponent implements OnInit {
   startEdit(item: Payment): void {
     this.editingId = item.id;
     this.showForm = true;
-    this.errorMessage = '';
-    this.successMessage = '';
     this.form = {
       expensePeriodId: item.expensePeriodId,
       unitId: item.unitId,
@@ -185,12 +184,9 @@ export class PaymentsPageComponent implements OnInit {
     this.editingId = null;
     this.showForm = false;
     this.form = this.createInitialForm();
-    this.errorMessage = '';
   }
 
   submitPayment(): void {
-    this.errorMessage = '';
-    this.successMessage = '';
     this.isSaving = true;
 
     const request = {
@@ -216,14 +212,12 @@ export class PaymentsPageComponent implements OnInit {
         this.form = this.createInitialForm();
         this.isSaving = false;
         this.showForm = false;
-        this.successMessage = this.editingId ? 'Pago actualizado correctamente.' : 'Pago registrado correctamente.';
+        this.msg.add({ severity: 'success', summary: 'Éxito', detail: this.editingId ? 'Pago actualizado correctamente.' : 'Pago registrado correctamente.', life: 4000 });
         this.editingId = null;
         this.cdr.markForCheck();
       },
       error: (error) => {
-        this.errorMessage = extractApiErrorMessage(
-          error,
-          this.editingId ? 'No se pudo actualizar el pago.' : 'No se pudo guardar el pago.');
+        this.msg.add({ severity: 'error', summary: 'Error', detail: extractApiErrorMessage(error, this.editingId ? 'No se pudo actualizar el pago.' : 'No se pudo guardar el pago.'), life: 5000 });
         this.isSaving = false;
         this.cdr.markForCheck();
       }
@@ -231,8 +225,6 @@ export class PaymentsPageComponent implements OnInit {
   }
 
   deletePayment(item: Payment): void {
-    this.errorMessage = '';
-    this.successMessage = '';
     this.isSaving = true;
 
     this.paymentsApi.delete(item.id).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
@@ -242,11 +234,11 @@ export class PaymentsPageComponent implements OnInit {
           this.cancelEdit();
         }
         this.isSaving = false;
-        this.successMessage = 'Pago eliminado correctamente.';
+        this.msg.add({ severity: 'success', summary: 'Éxito', detail: 'Pago eliminado correctamente.', life: 4000 });
         this.cdr.markForCheck();
       },
       error: (error) => {
-        this.errorMessage = extractApiErrorMessage(error, 'No se pudo eliminar el pago.');
+        this.msg.add({ severity: 'error', summary: 'Error', detail: extractApiErrorMessage(error, 'No se pudo eliminar el pago.'), life: 5000 });
         this.isSaving = false;
         this.cdr.markForCheck();
       }
@@ -286,7 +278,7 @@ export class PaymentsPageComponent implements OnInit {
           this.cdr.markForCheck();
         },
         error: (error) => {
-          this.errorMessage = extractApiErrorMessage(error, 'No se pudo cargar el listado de pagos.');
+          this.msg.add({ severity: 'error', summary: 'Error', detail: extractApiErrorMessage(error, 'No se pudo cargar el listado de pagos.'), life: 5000 });
           this.loading = false;
           this.cdr.markForCheck();
         }

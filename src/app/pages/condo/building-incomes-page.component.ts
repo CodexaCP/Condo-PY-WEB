@@ -5,11 +5,12 @@ import { FormsModule } from '@angular/forms';
 import { forkJoin } from 'rxjs';
 import { Button } from 'primeng/button';
 import { Card } from 'primeng/card';
-import { Message } from 'primeng/message';
+import { MessageService } from 'primeng/api';
 import { extractApiErrorMessage } from '../../api/api-error.util';
 import { BuildingIncomesApiService } from '../../api/building-incomes-api.service';
 import { BuildingsApiService } from '../../api/buildings-api.service';
 import { ExpensePeriodsApiService } from '../../api/expense-periods-api.service';
+import { AuthService } from '../../auth/auth.service';
 import {
   Building,
   BuildingIncome,
@@ -21,7 +22,7 @@ import {
 @Component({
   standalone: true,
   selector: 'app-building-incomes-page',
-  imports: [CommonModule, FormsModule, Button, Card, Message],
+  imports: [CommonModule, FormsModule, Button, Card],
   template: `
     <p-card styleClass="app-page-card">
       <div class="app-toolbar">
@@ -33,6 +34,7 @@ import {
         </div>
 
         <p-button
+          *ngIf="!isReadOnly"
           [label]="showForm ? 'Cerrar formulario' : 'Nuevo ingreso'"
           [icon]="showForm ? 'pi pi-times' : 'pi pi-plus'"
           (onClick)="toggleForm()">
@@ -116,10 +118,8 @@ import {
         </div>
       </form>
 
-      <p-message *ngIf="errorMessage" severity="error" [text]="errorMessage"></p-message>
-      <p-message *ngIf="successMessage" severity="success" [text]="successMessage"></p-message>
       <p class="app-state" *ngIf="loading">Cargando ingresos del edificio...</p>
-      <p class="app-state" *ngIf="!loading && !errorMessage && !items.length">No hay ingresos cargados.</p>
+      <p class="app-state" *ngIf="!loading && !items.length">No hay ingresos cargados.</p>
 
       <div class="app-list" *ngIf="items.length">
         <div class="app-row header incomes-grid">
@@ -128,7 +128,7 @@ import {
           <span>Periodo</span>
           <span>Categoria</span>
           <span>Monto</span>
-          <span class="actions-head">Acciones</span>
+          <span class="actions-head" *ngIf="!isReadOnly">Acciones</span>
         </div>
 
         <div class="app-row incomes-grid" *ngFor="let item of items">
@@ -137,7 +137,7 @@ import {
           <span>{{ item.expensePeriodName }} - {{ item.buildingName }}</span>
           <span>{{ categoryLabel(item.category) }}</span>
           <span>{{ formatCurrency(item.amount) }}</span>
-          <div class="app-actions">
+          <div class="app-actions" *ngIf="!isReadOnly">
             <p-button type="button" icon="pi pi-pencil" severity="secondary" [rounded]="true" [text]="true" (onClick)="startEdit(item)"></p-button>
             <p-button type="button" icon="pi pi-trash" severity="danger" [rounded]="true" [text]="true" [disabled]="isSaving" (onClick)="deleteIncome(item)"></p-button>
           </div>
@@ -166,8 +166,12 @@ export class BuildingIncomesPageComponent implements OnInit {
   private readonly incomesApi = inject(BuildingIncomesApiService);
   private readonly buildingsApi = inject(BuildingsApiService);
   private readonly periodsApi = inject(ExpensePeriodsApiService);
+  private readonly auth = inject(AuthService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly cdr = inject(ChangeDetectorRef);
+  private readonly msg = inject(MessageService);
+
+  get isReadOnly(): boolean { return this.auth.hasRole('CompanyAdmin'); }
 
   items: BuildingIncome[] = [];
   buildings: Building[] = [];
@@ -176,8 +180,6 @@ export class BuildingIncomesPageComponent implements OnInit {
   isSaving = false;
   showForm = false;
   editingId: string | null = null;
-  errorMessage = '';
-  successMessage = '';
   readonly categories: BuildingIncomeCategory[] = ['AccumulatedBalance', 'CommonAreaRental', 'Interest', 'OperationalFund', 'CreditAdjustment', 'Other'];
   filters = { buildingId: '', expensePeriodId: '' };
   form = this.createInitialForm();
@@ -205,8 +207,6 @@ export class BuildingIncomesPageComponent implements OnInit {
     }
 
     this.showForm = !this.showForm;
-    this.errorMessage = '';
-    this.successMessage = '';
     if (!this.showForm) {
       this.form = this.createInitialForm();
     }
@@ -215,8 +215,6 @@ export class BuildingIncomesPageComponent implements OnInit {
   startEdit(item: BuildingIncome): void {
     this.editingId = item.id;
     this.showForm = true;
-    this.errorMessage = '';
-    this.successMessage = '';
     this.form = {
       buildingId: item.buildingId,
       expensePeriodId: item.expensePeriodId,
@@ -232,7 +230,6 @@ export class BuildingIncomesPageComponent implements OnInit {
     this.editingId = null;
     this.showForm = false;
     this.form = this.createInitialForm();
-    this.errorMessage = '';
   }
 
   onFormBuildingChange(): void {
@@ -253,7 +250,6 @@ export class BuildingIncomesPageComponent implements OnInit {
 
   applyFilters(): void {
     this.loading = true;
-    this.errorMessage = '';
 
     this.incomesApi.getAll({
       buildingId: this.filters.buildingId || undefined,
@@ -268,7 +264,7 @@ export class BuildingIncomesPageComponent implements OnInit {
           this.cdr.markForCheck();
         },
         error: (error) => {
-          this.errorMessage = extractApiErrorMessage(error, 'No se pudo cargar el listado de ingresos del edificio.');
+          this.msg.add({ severity: 'error', summary: 'Error', detail: extractApiErrorMessage(error, 'No se pudo cargar el listado de ingresos del edificio.'), life: 5000 });
           this.loading = false;
           this.cdr.markForCheck();
         }
@@ -281,8 +277,6 @@ export class BuildingIncomesPageComponent implements OnInit {
   }
 
   submitIncome(): void {
-    this.errorMessage = '';
-    this.successMessage = '';
     this.isSaving = true;
 
     const request: CreateBuildingIncomeRequest = {
@@ -305,14 +299,12 @@ export class BuildingIncomesPageComponent implements OnInit {
         this.form = this.createInitialForm();
         this.isSaving = false;
         this.showForm = false;
-        this.successMessage = this.editingId ? 'Ingreso actualizado correctamente.' : 'Ingreso creado correctamente.';
+        this.msg.add({ severity: 'success', summary: 'Éxito', detail: this.editingId ? 'Ingreso actualizado correctamente.' : 'Ingreso creado correctamente.', life: 4000 });
         this.editingId = null;
         this.cdr.markForCheck();
       },
       error: (error) => {
-        this.errorMessage = extractApiErrorMessage(
-          error,
-          this.editingId ? 'No se pudo actualizar el ingreso.' : 'No se pudo guardar el ingreso.');
+        this.msg.add({ severity: 'error', summary: 'Error', detail: extractApiErrorMessage(error, this.editingId ? 'No se pudo actualizar el ingreso.' : 'No se pudo guardar el ingreso.'), life: 5000 });
         this.isSaving = false;
         this.cdr.markForCheck();
       }
@@ -320,8 +312,6 @@ export class BuildingIncomesPageComponent implements OnInit {
   }
 
   deleteIncome(item: BuildingIncome): void {
-    this.errorMessage = '';
-    this.successMessage = '';
     this.isSaving = true;
 
     this.incomesApi.delete(item.id).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
@@ -331,11 +321,11 @@ export class BuildingIncomesPageComponent implements OnInit {
           this.cancelEdit();
         }
         this.isSaving = false;
-        this.successMessage = 'Ingreso eliminado correctamente.';
+        this.msg.add({ severity: 'success', summary: 'Éxito', detail: 'Ingreso eliminado correctamente.', life: 4000 });
         this.cdr.markForCheck();
       },
       error: (error) => {
-        this.errorMessage = extractApiErrorMessage(error, 'No se pudo eliminar el ingreso.');
+        this.msg.add({ severity: 'error', summary: 'Error', detail: extractApiErrorMessage(error, 'No se pudo eliminar el ingreso.'), life: 5000 });
         this.isSaving = false;
         this.cdr.markForCheck();
       }
@@ -374,7 +364,7 @@ export class BuildingIncomesPageComponent implements OnInit {
           this.cdr.markForCheck();
         },
         error: (error) => {
-          this.errorMessage = extractApiErrorMessage(error, 'No se pudo cargar el listado de ingresos del edificio.');
+          this.msg.add({ severity: 'error', summary: 'Error', detail: extractApiErrorMessage(error, 'No se pudo cargar el listado de ingresos del edificio.'), life: 5000 });
           this.loading = false;
           this.cdr.markForCheck();
         }

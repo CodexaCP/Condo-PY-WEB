@@ -5,17 +5,18 @@ import { FormsModule } from '@angular/forms';
 import { forkJoin } from 'rxjs';
 import { Button } from 'primeng/button';
 import { Card } from 'primeng/card';
-import { Message } from 'primeng/message';
+import { MessageService } from 'primeng/api';
 import { extractApiErrorMessage } from '../../api/api-error.util';
 import { ExpenseChargesApiService } from '../../api/expense-charges-api.service';
 import { ExpensePeriodsApiService } from '../../api/expense-periods-api.service';
 import { UnitsApiService } from '../../api/units-api.service';
+import { AuthService } from '../../auth/auth.service';
 import { ExpenseCharge, ExpenseChargeType, ExpensePeriod, Unit } from '../../api/models';
 
 @Component({
   standalone: true,
   selector: 'app-expense-charges-page',
-  imports: [CommonModule, FormsModule, Button, Card, Message],
+  imports: [CommonModule, FormsModule, Button, Card],
   template: `
     <p-card styleClass="app-page-card">
       <div class="app-toolbar">
@@ -27,6 +28,7 @@ import { ExpenseCharge, ExpenseChargeType, ExpensePeriod, Unit } from '../../api
         </div>
 
         <p-button
+          *ngIf="!isReadOnly"
           [label]="showForm ? 'Cerrar formulario' : 'Nuevo cargo'"
           [icon]="showForm ? 'pi pi-times' : 'pi pi-plus'"
           (onClick)="toggleForm()">
@@ -83,10 +85,8 @@ import { ExpenseCharge, ExpenseChargeType, ExpensePeriod, Unit } from '../../api
         </div>
       </form>
 
-      <p-message *ngIf="errorMessage" severity="error" [text]="errorMessage"></p-message>
-      <p-message *ngIf="successMessage" severity="success" [text]="successMessage"></p-message>
       <p class="app-state" *ngIf="loading">Cargando cargos...</p>
-      <p class="app-state" *ngIf="!loading && !errorMessage && !items.length">No hay cargos cargados.</p>
+      <p class="app-state" *ngIf="!loading && !items.length">No hay cargos cargados.</p>
 
       <div class="app-list" *ngIf="items.length">
         <div class="app-row header charges-grid">
@@ -96,7 +96,7 @@ import { ExpenseCharge, ExpenseChargeType, ExpensePeriod, Unit } from '../../api
           <span>Unidad</span>
           <span>Edificio</span>
           <span>Monto</span>
-          <span class="actions-head">Acciones</span>
+          <span class="actions-head" *ngIf="!isReadOnly">Acciones</span>
         </div>
 
         <div class="app-row charges-grid" *ngFor="let item of items">
@@ -106,7 +106,7 @@ import { ExpenseCharge, ExpenseChargeType, ExpensePeriod, Unit } from '../../api
           <span>{{ item.unitCode }}</span>
           <span>{{ item.buildingName }}</span>
           <span>{{ formatCurrency(item.amount) }}</span>
-          <div class="app-actions">
+          <div class="app-actions" *ngIf="!isReadOnly">
             <p-button type="button" icon="pi pi-pencil" severity="secondary" [rounded]="true" [text]="true" [disabled]="!isDraftPeriod(item.expensePeriodId)" (onClick)="startEdit(item)"></p-button>
             <p-button type="button" icon="pi pi-trash" severity="danger" [rounded]="true" [text]="true" [disabled]="isSaving || !isDraftPeriod(item.expensePeriodId)" (onClick)="deleteCharge(item)"></p-button>
           </div>
@@ -124,8 +124,12 @@ export class ExpenseChargesPageComponent implements OnInit {
   private readonly chargesApi = inject(ExpenseChargesApiService);
   private readonly periodsApi = inject(ExpensePeriodsApiService);
   private readonly unitsApi = inject(UnitsApiService);
+  private readonly auth = inject(AuthService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly cdr = inject(ChangeDetectorRef);
+  private readonly msg = inject(MessageService);
+
+  get isReadOnly(): boolean { return this.auth.hasRole('CompanyAdmin'); }
 
   items: ExpenseCharge[] = [];
   periods: ExpensePeriod[] = [];
@@ -134,8 +138,6 @@ export class ExpenseChargesPageComponent implements OnInit {
   isSaving = false;
   showForm = false;
   editingId: string | null = null;
-  errorMessage = '';
-  successMessage = '';
   readonly chargeTypes: ExpenseChargeType[] = ['Ordinary', 'ReserveFund', 'Extraordinary', 'Individual', 'Adjustment'];
   form = this.createInitialForm();
 
@@ -159,8 +161,6 @@ export class ExpenseChargesPageComponent implements OnInit {
     }
 
     this.showForm = !this.showForm;
-    this.errorMessage = '';
-    this.successMessage = '';
     if (!this.showForm) {
       this.form = this.createInitialForm();
     }
@@ -169,8 +169,6 @@ export class ExpenseChargesPageComponent implements OnInit {
   startEdit(item: ExpenseCharge): void {
     this.editingId = item.id;
     this.showForm = true;
-    this.errorMessage = '';
-    this.successMessage = '';
     this.form = {
       expensePeriodId: item.expensePeriodId,
       unitId: item.unitId,
@@ -185,12 +183,9 @@ export class ExpenseChargesPageComponent implements OnInit {
     this.editingId = null;
     this.showForm = false;
     this.form = this.createInitialForm();
-    this.errorMessage = '';
   }
 
   submitCharge(): void {
-    this.errorMessage = '';
-    this.successMessage = '';
     this.isSaving = true;
 
     const request = {
@@ -215,14 +210,14 @@ export class ExpenseChargesPageComponent implements OnInit {
         this.form = this.createInitialForm();
         this.isSaving = false;
         this.showForm = false;
-        this.successMessage = this.editingId ? 'Cargo actualizado correctamente.' : 'Cargo creado correctamente.';
+        this.msg.add({ severity: 'success', summary: 'Éxito', detail: this.editingId ? 'Cargo actualizado correctamente.' : 'Cargo creado correctamente.', life: 4000 });
         this.editingId = null;
         this.cdr.markForCheck();
       },
       error: (error) => {
-        this.errorMessage = extractApiErrorMessage(
+        this.msg.add({ severity: 'error', summary: 'Error', detail: extractApiErrorMessage(
           error,
-          this.editingId ? 'No se pudo actualizar el cargo.' : 'No se pudo guardar el cargo.');
+          this.editingId ? 'No se pudo actualizar el cargo.' : 'No se pudo guardar el cargo.'), life: 5000 });
         this.isSaving = false;
         this.cdr.markForCheck();
       }
@@ -230,8 +225,6 @@ export class ExpenseChargesPageComponent implements OnInit {
   }
 
   deleteCharge(item: ExpenseCharge): void {
-    this.errorMessage = '';
-    this.successMessage = '';
     this.isSaving = true;
 
     this.chargesApi.delete(item.id).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
@@ -241,11 +234,11 @@ export class ExpenseChargesPageComponent implements OnInit {
           this.cancelEdit();
         }
         this.isSaving = false;
-        this.successMessage = 'Cargo eliminado correctamente.';
+        this.msg.add({ severity: 'success', summary: 'Éxito', detail: 'Cargo eliminado correctamente.', life: 4000 });
         this.cdr.markForCheck();
       },
       error: (error) => {
-        this.errorMessage = extractApiErrorMessage(error, 'No se pudo eliminar el cargo.');
+        this.msg.add({ severity: 'error', summary: 'Error', detail: extractApiErrorMessage(error, 'No se pudo eliminar el cargo.'), life: 5000 });
         this.isSaving = false;
         this.cdr.markForCheck();
       }
@@ -289,7 +282,7 @@ export class ExpenseChargesPageComponent implements OnInit {
           this.cdr.markForCheck();
         },
         error: (error) => {
-          this.errorMessage = extractApiErrorMessage(error, 'No se pudo cargar el listado de cargos.');
+          this.msg.add({ severity: 'error', summary: 'Error', detail: extractApiErrorMessage(error, 'No se pudo cargar el listado de cargos.'), life: 5000 });
           this.loading = false;
           this.cdr.markForCheck();
         }

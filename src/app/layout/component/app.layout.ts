@@ -1,6 +1,7 @@
 import { Component, computed, effect, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
+import { Toast } from 'primeng/toast';
 import { AppTopbar } from './app.topbar';
 import { AppSidebar } from './app.sidebar';
 import { AppFooter } from './app.footer';
@@ -9,8 +10,9 @@ import { LayoutService } from '@/app/layout/service/layout.service';
 @Component({
     selector: 'app-layout',
     standalone: true,
-    imports: [CommonModule, AppTopbar, AppSidebar, RouterModule, AppFooter],
+    imports: [CommonModule, AppTopbar, AppSidebar, RouterModule, AppFooter, Toast],
     template: `<div class="layout-wrapper" [ngClass]="containerClass()">
+        <p-toast position="top-right" [life]="4500" [breakpoints]="{'960px': {width: '100%', right: '0', left: '0'}}"></p-toast>
         <app-topbar></app-topbar>
         <app-sidebar></app-sidebar>
         <div class="layout-main-container">

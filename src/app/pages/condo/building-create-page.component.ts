@@ -4,6 +4,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { forkJoin, of } from 'rxjs';
+import { MessageService } from 'primeng/api';
 import { Button } from 'primeng/button';
 import { Card } from 'primeng/card';
 import { Message } from 'primeng/message';
@@ -43,7 +44,6 @@ const PHONE_PREFIXES: PhonePrefix[] = [
       </div>
 
       <p-message *ngIf="loadError" severity="error" [text]="loadError"></p-message>
-      <p-message *ngIf="formError" severity="error" [text]="formError" styleClass="mb-4"></p-message>
       <div *ngIf="loading" class="app-state">Cargando datos...</div>
 
       <form class="create-form" (ngSubmit)="save()" *ngIf="!loading && !loadError">
@@ -88,16 +88,46 @@ const PHONE_PREFIXES: PhonePrefix[] = [
 
         <section class="form-section">
           <h2 class="section-title">Información básica</h2>
-          <div class="field">
-            <label for="name">Nombre</label>
-            <input id="name" type="text" [(ngModel)]="form.name" name="name"
-                   placeholder="Nombre del edificio" maxlength="120" autocomplete="off" />
+          <div class="field-row">
+            <div class="field">
+              <label for="name">Nombre</label>
+              <input id="name" type="text" [(ngModel)]="form.name" name="name"
+                     placeholder="Nombre del edificio" maxlength="120" autocomplete="off" />
+            </div>
+            <div class="field">
+              <label for="code">Código</label>
+              <input id="code" type="text" [(ngModel)]="form.code" name="code"
+                     placeholder="EDI-001" maxlength="40" autocomplete="off" (input)="onCodeInput()" />
+              <small class="field-hint">Solo letras mayúsculas, números y guiones medios.</small>
+            </div>
           </div>
-          <div class="field">
-            <label for="code">Código</label>
-            <input id="code" type="text" [(ngModel)]="form.code" name="code"
-                   placeholder="EDI-001" maxlength="40" autocomplete="off" (input)="onCodeInput()" />
-            <small class="field-hint">Solo letras mayúsculas, números y guiones medios.</small>
+          <div class="field-row">
+            <div class="field">
+              <label>Teléfono de contacto</label>
+              <div class="phone-row">
+                <p-select [options]="prefixOptions" [(ngModel)]="form.phonePrefix" name="phonePrefix"
+                          optionLabel="label" optionValue="value" placeholder="País" styleClass="phone-prefix-select">
+                  <ng-template pTemplate="selectedItem" let-item>
+                    <span *ngIf="item">{{ item.flag }} {{ item.value }}</span>
+                  </ng-template>
+                  <ng-template pTemplate="item" let-item>
+                    <span>{{ item.flag }} {{ item.label }}</span>
+                  </ng-template>
+                </p-select>
+                <input type="tel" [(ngModel)]="form.phoneNumber" name="phoneNumber"
+                       placeholder="Número de teléfono" class="phone-input"
+                       (input)="onPhoneInput()" maxlength="15" />
+              </div>
+              <small class="field-hint" *ngIf="selectedPrefix">Formato esperado: {{ selectedPrefix.hint }}</small>
+              <small class="field-error" *ngIf="phoneError">{{ phoneError }}</small>
+            </div>
+            <div class="field">
+              <label for="email">Correo electrónico principal</label>
+              <input id="email" type="email" [(ngModel)]="form.email" name="email"
+                     placeholder="edificio@gmail.com" maxlength="200" autocomplete="off"
+                     (input)="onEmailInput()" />
+              <small class="field-error" *ngIf="emailError">{{ emailError }}</small>
+            </div>
           </div>
           <div class="field">
             <label for="address">Dirección</label>
@@ -114,36 +144,6 @@ const PHONE_PREFIXES: PhonePrefix[] = [
               <input type="checkbox" [(ngModel)]="form.isActive" name="isActive" />
               <span>Edificio activo</span>
             </label>
-          </div>
-        </section>
-
-        <section class="form-section">
-          <h2 class="section-title">Contacto</h2>
-          <div class="field">
-            <label>Teléfono de contacto</label>
-            <div class="phone-row">
-              <p-select [options]="prefixOptions" [(ngModel)]="form.phonePrefix" name="phonePrefix"
-                        optionLabel="label" optionValue="value" placeholder="País" styleClass="phone-prefix-select">
-                <ng-template pTemplate="selectedItem" let-item>
-                  <span *ngIf="item">{{ item.flag }} {{ item.value }}</span>
-                </ng-template>
-                <ng-template pTemplate="item" let-item>
-                  <span>{{ item.flag }} {{ item.label }}</span>
-                </ng-template>
-              </p-select>
-              <input type="tel" [(ngModel)]="form.phoneNumber" name="phoneNumber"
-                     placeholder="Número de teléfono" class="phone-input"
-                     (input)="onPhoneInput()" maxlength="15" />
-            </div>
-            <small class="field-hint" *ngIf="selectedPrefix">Formato esperado: {{ selectedPrefix.hint }}</small>
-            <small class="field-error" *ngIf="phoneError">{{ phoneError }}</small>
-          </div>
-          <div class="field">
-            <label for="email">Correo electrónico principal</label>
-            <input id="email" type="email" [(ngModel)]="form.email" name="email"
-                   placeholder="edificio@gmail.com" maxlength="200" autocomplete="off"
-                   (input)="onEmailInput()" />
-            <small class="field-error" *ngIf="emailError">{{ emailError }}</small>
           </div>
         </section>
 
@@ -169,6 +169,7 @@ const PHONE_PREFIXES: PhonePrefix[] = [
     .back-btn:hover { background:rgba(19,133,182,0.08); color:var(--brand-blue); }
     .create-form { display:flex; flex-direction:column; gap:2rem; }
     .form-section { display:flex; flex-direction:column; gap:1.25rem; }
+    .field-row { display:grid; grid-template-columns:1fr 1fr; gap:1.25rem; }
     .section-title { font-size:0.9rem; font-weight:600; text-transform:uppercase; letter-spacing:0.06em;
       color:var(--brand-muted); margin:0 0 0.25rem; padding-bottom:0.5rem; border-bottom:1px solid rgba(19,133,182,0.1); }
     .field { display:flex; flex-direction:column; gap:0.4rem; }
@@ -204,6 +205,7 @@ export class BuildingCreatePageComponent implements OnInit {
   private readonly router          = inject(Router);
   private readonly destroyRef      = inject(DestroyRef);
   private readonly cdr             = inject(ChangeDetectorRef);
+  private readonly msg             = inject(MessageService);
 
   prefixOptions = PHONE_PREFIXES;
   companyOptions: { label: string; value: string }[] = [];
@@ -217,7 +219,6 @@ export class BuildingCreatePageComponent implements OnInit {
   loading   = false;
   loadError = '';
   isSaving  = false;
-  formError = '';
   phoneError = '';
   emailError = '';
 
@@ -292,7 +293,7 @@ export class BuildingCreatePageComponent implements OnInit {
   cancel()       { this.router.navigate(['/buildings']); }
 
   save(): void {
-    this.formError = ''; this.phoneError = ''; this.emailError = '';
+    this.phoneError = ''; this.emailError = '';
     const companyId     = this.form.companyId || null;
     const condominiumId = this.form.condominiumId || null;
     const name          = this.form.name.trim();
@@ -303,11 +304,11 @@ export class BuildingCreatePageComponent implements OnInit {
     const phoneNumber   = this.form.phoneNumber.trim() || null;
     const email         = this.form.email.trim().toLowerCase() || null;
 
-    if (this.isSuperAdmin && !this.isEditing && !companyId) { this.formError = 'La empresa es obligatoria.'; return; }
-    if (!name)    { this.formError = 'El nombre es obligatorio.'; return; }
-    if (!code)    { this.formError = 'El código es obligatorio.'; return; }
-    if (!/^[A-Z0-9]+(?:-[A-Z0-9]+)*$/.test(code)) { this.formError = 'Código inválido: solo letras mayúsculas, números y guiones.'; return; }
-    if (!address) { this.formError = 'La dirección es obligatoria.'; return; }
+    if (this.isSuperAdmin && !this.isEditing && !companyId) { this.msg.add({ severity: 'error', summary: 'Error', detail: 'La empresa es obligatoria.', life: 5000 }); return; }
+    if (!name)    { this.msg.add({ severity: 'error', summary: 'Error', detail: 'El nombre es obligatorio.', life: 5000 }); return; }
+    if (!code)    { this.msg.add({ severity: 'error', summary: 'Error', detail: 'El código es obligatorio.', life: 5000 }); return; }
+    if (!/^[A-Z0-9]+(?:-[A-Z0-9]+)*$/.test(code)) { this.msg.add({ severity: 'error', summary: 'Error', detail: 'Código inválido: solo letras mayúsculas, números y guiones.', life: 5000 }); return; }
+    if (!address) { this.msg.add({ severity: 'error', summary: 'Error', detail: 'La dirección es obligatoria.', life: 5000 }); return; }
     if (phoneNumber) {
       const p = PHONE_PREFIXES.find(x => x.value === phonePrefix);
       if (p && !p.pattern.test(phoneNumber)) { this.phoneError = `Formato inválido para ${p.label}: ${p.hint}.`; return; }
@@ -319,7 +320,7 @@ export class BuildingCreatePageComponent implements OnInit {
     const op = this.isEditing ? this.api.update(this.editingId, req) : this.api.create(req);
     op.pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: () => { this.isSaving = false; this.router.navigate(['/buildings']); },
-      error: err => { this.formError = extractApiErrorMessage(err, 'No se pudo guardar.'); this.isSaving = false; this.cdr.markForCheck(); }
+      error: err => { this.msg.add({ severity: 'error', summary: 'Error', detail: extractApiErrorMessage(err, 'No se pudo guardar.'), life: 5000 }); this.isSaving = false; this.cdr.markForCheck(); }
     });
   }
 }

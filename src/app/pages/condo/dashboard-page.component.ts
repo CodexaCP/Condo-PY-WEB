@@ -1,15 +1,15 @@
 import { CommonModule } from '@angular/common';
 import { ChangeDetectorRef, Component, DestroyRef, inject, OnInit } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { MessageService } from 'primeng/api';
 import { Card } from 'primeng/card';
-import { Message } from 'primeng/message';
 import { DashboardApiService } from '../../api/dashboard-api.service';
 import { DashboardSummary } from '../../api/models';
 
 @Component({
   standalone: true,
   selector: 'app-dashboard-page',
-  imports: [CommonModule, Card, Message],
+  imports: [CommonModule, Card],
   template: `
     <section class="page-head">
       <div>
@@ -19,7 +19,6 @@ import { DashboardSummary } from '../../api/models';
     </section>
 
     <p class="app-state" *ngIf="loading">Cargando resumen operativo y financiero...</p>
-    <p-message *ngIf="errorMessage" severity="error" [text]="errorMessage"></p-message>
 
     <ng-container *ngIf="summary">
       <section class="stats-grid">
@@ -203,10 +202,10 @@ export class DashboardPageComponent implements OnInit {
   private readonly dashboardApi = inject(DashboardApiService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly cdr = inject(ChangeDetectorRef);
+  private readonly msg = inject(MessageService);
 
   summary: DashboardSummary | null = null;
   loading = true;
-  errorMessage = '';
 
   readonly systemFlow = [
     { title: 'Alta de edificio', detail: 'Se registra el edificio o condominio administrado.' },
@@ -226,7 +225,7 @@ export class DashboardPageComponent implements OnInit {
           this.cdr.markForCheck();
         },
         error: () => {
-          this.errorMessage = 'No se pudo cargar el resumen del dashboard.';
+          this.msg.add({ severity: 'error', summary: 'Error', detail: 'No se pudo cargar el resumen del dashboard.', life: 5000 });
           this.loading = false;
           this.cdr.markForCheck();
         }

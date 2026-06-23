@@ -3,14 +3,15 @@ import { ChangeDetectorRef, Component, DestroyRef, inject, OnInit } from '@angul
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { forkJoin } from 'rxjs';
+import { MessageService } from 'primeng/api';
 import { Button } from 'primeng/button';
 import { Card } from 'primeng/card';
-import { Message } from 'primeng/message';
 import { extractApiErrorMessage } from '../../api/api-error.util';
 import { BuildingExpensesApiService } from '../../api/building-expenses-api.service';
 import { BuildingsApiService } from '../../api/buildings-api.service';
 import { ExpensePeriodsApiService } from '../../api/expense-periods-api.service';
 import { UnitsApiService } from '../../api/units-api.service';
+import { AuthService } from '../../auth/auth.service';
 import {
   Building,
   BuildingExpense,
@@ -24,7 +25,7 @@ import {
 @Component({
   standalone: true,
   selector: 'app-building-expenses-page',
-  imports: [CommonModule, FormsModule, Button, Card, Message],
+  imports: [CommonModule, FormsModule, Button, Card],
   template: `
     <p-card styleClass="app-page-card">
       <div class="app-toolbar">
@@ -36,6 +37,7 @@ import {
         </div>
 
         <p-button
+          *ngIf="!isReadOnly"
           [label]="showForm ? 'Cerrar formulario' : 'Nuevo gasto'"
           [icon]="showForm ? 'pi pi-times' : 'pi pi-plus'"
           (onClick)="toggleForm()">
@@ -139,10 +141,8 @@ import {
         </div>
       </form>
 
-      <p-message *ngIf="errorMessage" severity="error" [text]="errorMessage"></p-message>
-      <p-message *ngIf="successMessage" severity="success" [text]="successMessage"></p-message>
       <p class="app-state" *ngIf="loading">Cargando gastos del edificio...</p>
-      <p class="app-state" *ngIf="!loading && !errorMessage && !items.length">No hay gastos cargados.</p>
+      <p class="app-state" *ngIf="!loading && !items.length">No hay gastos cargados.</p>
 
       <div class="app-list" *ngIf="items.length">
         <div class="app-row header expenses-grid">
@@ -151,7 +151,7 @@ import {
           <span>Periodo</span>
           <span>Distribucion</span>
           <span>Monto</span>
-          <span class="actions-head">Acciones</span>
+          <span class="actions-head" *ngIf="!isReadOnly">Acciones</span>
         </div>
 
         <div class="app-row expenses-grid" *ngFor="let item of items">
@@ -160,7 +160,7 @@ import {
           <span>{{ item.expensePeriodName }} - {{ item.buildingName }}</span>
           <span>{{ distributionSummary(item) }}</span>
           <span>{{ formatCurrency(item.amount) }}</span>
-          <div class="app-actions">
+          <div class="app-actions" *ngIf="!isReadOnly">
             <p-button type="button" icon="pi pi-pencil" severity="secondary" [rounded]="true" [text]="true" [disabled]="!isDraftPeriod(item.expensePeriodId)" (onClick)="startEdit(item)"></p-button>
             <p-button type="button" icon="pi pi-trash" severity="danger" [rounded]="true" [text]="true" [disabled]="isSaving || !isDraftPeriod(item.expensePeriodId)" (onClick)="deleteExpense(item)"></p-button>
           </div>
@@ -191,8 +191,12 @@ export class BuildingExpensesPageComponent implements OnInit {
   private readonly buildingsApi = inject(BuildingsApiService);
   private readonly periodsApi = inject(ExpensePeriodsApiService);
   private readonly unitsApi = inject(UnitsApiService);
+  private readonly auth = inject(AuthService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly cdr = inject(ChangeDetectorRef);
+  private readonly msg = inject(MessageService);
+
+  get isReadOnly(): boolean { return this.auth.hasRole('CompanyAdmin'); }
 
   items: BuildingExpense[] = [];
   buildings: Building[] = [];
@@ -202,8 +206,6 @@ export class BuildingExpensesPageComponent implements OnInit {
   isSaving = false;
   showForm = false;
   editingId: string | null = null;
-  errorMessage = '';
-  successMessage = '';
   readonly categories: BuildingExpenseCategory[] = ['Utilities', 'Cleaning', 'Security', 'Maintenance', 'Elevator', 'Insurance', 'Payroll', 'Taxes', 'Administration', 'ReserveFund', 'Extraordinary', 'Supplies', 'Other'];
   readonly distributionTypes: BuildingExpenseDistributionType[] = ['ByCoefficient', 'FixedPerUnit', 'IndividualUnit', 'NonDistributed'];
   filters = { buildingId: '', expensePeriodId: '' };
@@ -242,8 +244,6 @@ export class BuildingExpensesPageComponent implements OnInit {
     }
 
     this.showForm = !this.showForm;
-    this.errorMessage = '';
-    this.successMessage = '';
     if (!this.showForm) {
       this.form = this.createInitialForm();
     }
@@ -252,8 +252,6 @@ export class BuildingExpensesPageComponent implements OnInit {
   startEdit(item: BuildingExpense): void {
     this.editingId = item.id;
     this.showForm = true;
-    this.errorMessage = '';
-    this.successMessage = '';
     this.form = {
       buildingId: item.buildingId,
       expensePeriodId: item.expensePeriodId,
@@ -272,7 +270,6 @@ export class BuildingExpensesPageComponent implements OnInit {
     this.editingId = null;
     this.showForm = false;
     this.form = this.createInitialForm();
-    this.errorMessage = '';
   }
 
   onFormBuildingChange(): void {
@@ -304,7 +301,6 @@ export class BuildingExpensesPageComponent implements OnInit {
 
   applyFilters(): void {
     this.loading = true;
-    this.errorMessage = '';
 
     this.expensesApi.getAll({
       buildingId: this.filters.buildingId || undefined,
@@ -319,7 +315,7 @@ export class BuildingExpensesPageComponent implements OnInit {
           this.cdr.markForCheck();
         },
         error: (error) => {
-          this.errorMessage = extractApiErrorMessage(error, 'No se pudo cargar el listado de gastos del edificio.');
+          this.msg.add({ severity: 'error', summary: 'Error', detail: extractApiErrorMessage(error, 'No se pudo cargar el listado de gastos del edificio.'), life: 5000 });
           this.loading = false;
           this.cdr.markForCheck();
         }
@@ -332,9 +328,6 @@ export class BuildingExpensesPageComponent implements OnInit {
   }
 
   submitExpense(): void {
-    this.errorMessage = '';
-    this.successMessage = '';
-
     const request: CreateBuildingExpenseRequest = {
       buildingId: this.form.buildingId,
       expensePeriodId: this.form.expensePeriodId,
@@ -350,7 +343,7 @@ export class BuildingExpensesPageComponent implements OnInit {
 
     const validationError = this.validateForm(request);
     if (validationError) {
-      this.errorMessage = validationError;
+      this.msg.add({ severity: 'error', summary: 'Error', detail: validationError, life: 5000 });
       return;
     }
 
@@ -366,14 +359,12 @@ export class BuildingExpensesPageComponent implements OnInit {
         this.form = this.createInitialForm();
         this.isSaving = false;
         this.showForm = false;
-        this.successMessage = this.editingId ? 'Gasto actualizado correctamente.' : 'Gasto creado correctamente.';
+        this.msg.add({ severity: 'success', summary: 'Éxito', detail: this.editingId ? 'Gasto actualizado correctamente.' : 'Gasto creado correctamente.', life: 4000 });
         this.editingId = null;
         this.cdr.markForCheck();
       },
       error: (error) => {
-        this.errorMessage = extractApiErrorMessage(
-          error,
-          this.editingId ? 'No se pudo actualizar el gasto.' : 'No se pudo guardar el gasto.');
+        this.msg.add({ severity: 'error', summary: 'Error', detail: extractApiErrorMessage(error, this.editingId ? 'No se pudo actualizar el gasto.' : 'No se pudo guardar el gasto.'), life: 5000 });
         this.isSaving = false;
         this.cdr.markForCheck();
       }
@@ -381,8 +372,6 @@ export class BuildingExpensesPageComponent implements OnInit {
   }
 
   deleteExpense(item: BuildingExpense): void {
-    this.errorMessage = '';
-    this.successMessage = '';
     this.isSaving = true;
 
     this.expensesApi.delete(item.id).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
@@ -392,11 +381,11 @@ export class BuildingExpensesPageComponent implements OnInit {
           this.cancelEdit();
         }
         this.isSaving = false;
-        this.successMessage = 'Gasto eliminado correctamente.';
+        this.msg.add({ severity: 'success', summary: 'Éxito', detail: 'Gasto eliminado correctamente.', life: 4000 });
         this.cdr.markForCheck();
       },
       error: (error) => {
-        this.errorMessage = extractApiErrorMessage(error, 'No se pudo eliminar el gasto.');
+        this.msg.add({ severity: 'error', summary: 'Error', detail: extractApiErrorMessage(error, 'No se pudo eliminar el gasto.'), life: 5000 });
         this.isSaving = false;
         this.cdr.markForCheck();
       }
@@ -463,7 +452,7 @@ export class BuildingExpensesPageComponent implements OnInit {
           this.cdr.markForCheck();
         },
         error: (error) => {
-          this.errorMessage = extractApiErrorMessage(error, 'No se pudo cargar el listado de gastos del edificio.');
+          this.msg.add({ severity: 'error', summary: 'Error', detail: extractApiErrorMessage(error, 'No se pudo cargar el listado de gastos del edificio.'), life: 5000 });
           this.loading = false;
           this.cdr.markForCheck();
         }

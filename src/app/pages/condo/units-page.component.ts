@@ -5,16 +5,17 @@ import { FormsModule } from '@angular/forms';
 import { forkJoin } from 'rxjs';
 import { Button } from 'primeng/button';
 import { Card } from 'primeng/card';
-import { Message } from 'primeng/message';
+import { MessageService } from 'primeng/api';
 import { BuildingsApiService } from '../../api/buildings-api.service';
 import { extractApiErrorMessage } from '../../api/api-error.util';
 import { Building, Unit } from '../../api/models';
 import { UnitsApiService } from '../../api/units-api.service';
+import { AuthService } from '../../auth/auth.service';
 
 @Component({
   standalone: true,
   selector: 'app-units-page',
-  imports: [CommonModule, FormsModule, Button, Card, Message],
+  imports: [CommonModule, FormsModule, Button, Card],
   template: `
     <p-card styleClass="app-page-card">
       <div class="app-toolbar">
@@ -26,6 +27,7 @@ import { UnitsApiService } from '../../api/units-api.service';
         </div>
 
         <p-button
+          *ngIf="!isReadOnly"
           [label]="showForm ? 'Cerrar formulario' : 'Nueva unidad'"
           [icon]="showForm ? 'pi pi-times' : 'pi pi-plus'"
           (onClick)="toggleForm()">
@@ -82,17 +84,15 @@ import { UnitsApiService } from '../../api/units-api.service';
         </div>
       </form>
 
-      <p-message *ngIf="errorMessage" severity="error" [text]="errorMessage"></p-message>
-      <p-message *ngIf="successMessage" severity="success" [text]="successMessage"></p-message>
       <p class="app-state" *ngIf="loading">Cargando unidades...</p>
-      <p class="app-state" *ngIf="!loading && !errorMessage && !items.length">No hay unidades cargadas.</p>
+      <p class="app-state" *ngIf="!loading && !items.length">No hay unidades cargadas.</p>
 
       <div class="unit-grid" *ngIf="items.length">
         <article class="unit-card" *ngFor="let item of items">
           <strong>{{ item.code }}</strong>
           <span>{{ item.buildingName }}</span>
           <small>Piso {{ item.floor }} · Coef. {{ item.coefficient | number: '1.2-6' }}</small>
-          <div class="app-actions">
+          <div class="app-actions" *ngIf="!isReadOnly">
             <p-button type="button" icon="pi pi-pencil" severity="secondary" [rounded]="true" [text]="true" (onClick)="startEdit(item)"></p-button>
             <p-button type="button" icon="pi pi-trash" severity="danger" [rounded]="true" [text]="true" [disabled]="isSaving" (onClick)="deleteUnit(item)"></p-button>
           </div>
@@ -112,8 +112,12 @@ import { UnitsApiService } from '../../api/units-api.service';
 export class UnitsPageComponent implements OnInit {
   private readonly unitsApi = inject(UnitsApiService);
   private readonly buildingsApi = inject(BuildingsApiService);
+  private readonly auth = inject(AuthService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly cdr = inject(ChangeDetectorRef);
+  private readonly msg = inject(MessageService);
+
+  get isReadOnly(): boolean { return this.auth.hasRole('CompanyAdmin'); }
 
   items: Unit[] = [];
   buildings: Building[] = [];
@@ -121,8 +125,6 @@ export class UnitsPageComponent implements OnInit {
   isSaving = false;
   showForm = false;
   editingId: string | null = null;
-  errorMessage = '';
-  successMessage = '';
   form = this.createInitialForm();
 
   ngOnInit(): void {
@@ -136,8 +138,6 @@ export class UnitsPageComponent implements OnInit {
     }
 
     this.showForm = !this.showForm;
-    this.errorMessage = '';
-    this.successMessage = '';
     if (!this.showForm) {
       this.form = this.createInitialForm();
     }
@@ -146,8 +146,6 @@ export class UnitsPageComponent implements OnInit {
   startEdit(item: Unit): void {
     this.editingId = item.id;
     this.showForm = true;
-    this.errorMessage = '';
-    this.successMessage = '';
     this.form = {
       buildingId: item.buildingId,
       code: item.code,
@@ -161,31 +159,27 @@ export class UnitsPageComponent implements OnInit {
     this.editingId = null;
     this.showForm = false;
     this.form = this.createInitialForm();
-    this.errorMessage = '';
   }
 
   submitUnit(): void {
-    this.errorMessage = '';
-    this.successMessage = '';
-
     if (!this.form.buildingId) {
-      this.errorMessage = 'No se puede crear una unidad sin seleccionar un edificio.';
+      this.msg.add({ severity: 'error', summary: 'Error', detail: 'No se puede crear una unidad sin seleccionar un edificio.', life: 5000 });
       return;
     }
 
     if (!this.form.code.trim()) {
-      this.errorMessage = 'El codigo de la unidad es obligatorio.';
+      this.msg.add({ severity: 'error', summary: 'Error', detail: 'El codigo de la unidad es obligatorio.', life: 5000 });
       return;
     }
 
     if (!this.form.floor.trim()) {
-      this.errorMessage = 'El piso de la unidad es obligatorio.';
+      this.msg.add({ severity: 'error', summary: 'Error', detail: 'El piso de la unidad es obligatorio.', life: 5000 });
       return;
     }
 
     const normalizedCode = this.form.code.trim().toUpperCase();
     if (!/^[A-Z0-9]+(?:-[A-Z0-9]+)*$/.test(normalizedCode)) {
-      this.errorMessage = 'El codigo de la unidad solo puede contener letras, numeros y guiones medios.';
+      this.msg.add({ severity: 'error', summary: 'Error', detail: 'El codigo de la unidad solo puede contener letras, numeros y guiones medios.', life: 5000 });
       return;
     }
 
@@ -213,14 +207,14 @@ export class UnitsPageComponent implements OnInit {
           this.form = this.createInitialForm();
           this.isSaving = false;
           this.showForm = false;
-          this.successMessage = this.editingId ? 'Unidad actualizada correctamente.' : 'Unidad creada correctamente.';
+          this.msg.add({ severity: 'success', summary: 'Éxito', detail: this.editingId ? 'Unidad actualizada correctamente.' : 'Unidad creada correctamente.', life: 4000 });
           this.editingId = null;
           this.cdr.markForCheck();
         },
         error: (error) => {
-          this.errorMessage = extractApiErrorMessage(
+          this.msg.add({ severity: 'error', summary: 'Error', detail: extractApiErrorMessage(
             error,
-            this.editingId ? 'No se pudo actualizar la unidad.' : 'No se pudo guardar la unidad.');
+            this.editingId ? 'No se pudo actualizar la unidad.' : 'No se pudo guardar la unidad.'), life: 5000 });
           this.isSaving = false;
           this.cdr.markForCheck();
         }
@@ -228,8 +222,6 @@ export class UnitsPageComponent implements OnInit {
   }
 
   deleteUnit(item: Unit): void {
-    this.errorMessage = '';
-    this.successMessage = '';
     this.isSaving = true;
 
     this.unitsApi
@@ -242,11 +234,11 @@ export class UnitsPageComponent implements OnInit {
             this.cancelEdit();
           }
           this.isSaving = false;
-          this.successMessage = 'Unidad eliminada correctamente.';
+          this.msg.add({ severity: 'success', summary: 'Éxito', detail: 'Unidad eliminada correctamente.', life: 4000 });
           this.cdr.markForCheck();
         },
         error: (error) => {
-          this.errorMessage = extractApiErrorMessage(error, 'No se pudo eliminar la unidad.');
+          this.msg.add({ severity: 'error', summary: 'Error', detail: extractApiErrorMessage(error, 'No se pudo eliminar la unidad.'), life: 5000 });
           this.isSaving = false;
           this.cdr.markForCheck();
         }
@@ -267,7 +259,7 @@ export class UnitsPageComponent implements OnInit {
           this.cdr.markForCheck();
         },
         error: (error) => {
-          this.errorMessage = extractApiErrorMessage(error, 'No se pudo cargar el listado de unidades.');
+          this.msg.add({ severity: 'error', summary: 'Error', detail: extractApiErrorMessage(error, 'No se pudo cargar el listado de unidades.'), life: 5000 });
           this.loading = false;
           this.cdr.markForCheck();
         }
