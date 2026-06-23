@@ -414,6 +414,11 @@ export interface ExpenseSettlementChargePreview {
   items: ExpenseSettlementChargePreviewItem[];
 }
 
+export interface VoidSettlementResult {
+  expensePeriodName: string;
+  deletedChargeCount: number;
+}
+
 export interface ExpenseCharge {
   id: string;
   companyId: string;

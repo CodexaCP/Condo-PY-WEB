@@ -23,7 +23,8 @@ import {
   ExpenseSettlementChargePreview,
   ExpenseSettlementStatus,
   ExpenseSettlementSummary,
-  GenerateExpenseChargesMode
+  GenerateExpenseChargesMode,
+  VoidSettlementResult
 } from '../../api/models';
 
 @Component({
@@ -354,6 +355,25 @@ import {
             [disabled]="!canApplyLateFees()"
             (onClick)="toggleLateFeeForm()">
           </p-button>
+          <a *ngIf="settlementSummary.isCalculated" [href]="getSettlementPdfUrl()" target="_blank" style="display:contents">
+            <p-button
+              type="button"
+              label="Descargar PDF"
+              icon="pi pi-file-pdf"
+              severity="secondary"
+              [text]="true">
+            </p-button>
+          </a>
+          <p-button
+            *ngIf="!isReadOnly && canVoidSettlement()"
+            type="button"
+            label="Anular liquidacion"
+            icon="pi pi-undo"
+            severity="danger"
+            [text]="true"
+            [loading]="isVoidingSettlement"
+            (onClick)="voidSettlement()">
+          </p-button>
         </div>
 
         <form class="app-form-grid compact late-fee-box" *ngIf="showLateFeeForm" (ngSubmit)="applyLateFees()">
@@ -531,6 +551,7 @@ export class ExpensePeriodsPageComponent implements OnInit {
   isApprovingSettlement = false;
   isPublishingSettlement = false;
   isApplyingLateFees = false;
+  isVoidingSettlement = false;
   isBulkCreating = false;
   isCloning = false;
   showForm = false;
@@ -1004,6 +1025,45 @@ export class ExpensePeriodsPageComponent implements OnInit {
   canApplyLateFees(): boolean {
     return !!this.settlementSummary &&
       this.settlementSummary.periodStatus === 'Published';
+  }
+
+  canVoidSettlement(): boolean {
+    return !!this.settlementSummary &&
+      this.settlementSummary.status === 'Approved' &&
+      this.settlementSummary.periodStatus === 'Closed';
+  }
+
+  getSettlementPdfUrl(): string {
+    if (!this.settlementPeriod) return '';
+    return this.periodsApi.getSettlementPdfUrl(this.settlementPeriod.id, this.auth.getToken() ?? '');
+  }
+
+  voidSettlement(): void {
+    if (!this.settlementPeriod) return;
+    if (!confirm(`¿Anular la liquidación de "${this.settlementPeriod.name}"? Se eliminarán los cargos generados y el período volverá a Borrador.`)) {
+      return;
+    }
+    this.isVoidingSettlement = true;
+    this.periodsApi.voidSettlement(this.settlementPeriod.id)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (result: VoidSettlementResult) => {
+          this.isVoidingSettlement = false;
+          this.msg.add({ severity: 'success', summary: 'Éxito', detail: `Liquidación anulada. Se eliminaron ${result.deletedChargeCount} cargos. El período volvió a Borrador.`, life: 6000 });
+          const period = this.items.find((p) => p.id === this.settlementPeriod!.id);
+          if (period) {
+            period.status = 'Draft';
+            this.settlementPeriod = { ...this.settlementPeriod!, status: 'Draft' };
+          }
+          this.openSettlement(this.settlementPeriod!);
+          this.cdr.markForCheck();
+        },
+        error: (error) => {
+          this.msg.add({ severity: 'error', summary: 'Error', detail: extractApiErrorMessage(error, 'No se pudo anular la liquidación.'), life: 5000 });
+          this.isVoidingSettlement = false;
+          this.cdr.markForCheck();
+        }
+      });
   }
 
   formatCurrency(value: number): string {

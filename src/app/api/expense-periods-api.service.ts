@@ -14,7 +14,8 @@ import {
   ExpenseSettlementChargePreview,
   ExpenseSettlementSummary,
   GenerateExpenseChargesRequest,
-  GenerateExpenseChargesResult
+  GenerateExpenseChargesResult,
+  VoidSettlementResult
 } from './models';
 
 @Injectable({ providedIn: 'root' })
@@ -81,5 +82,13 @@ export class ExpensePeriodsApiService {
 
   clone(id: string): Observable<CloneExpensePeriodResult> {
     return this.http.post<CloneExpensePeriodResult>(`${API_BASE_URL}/expense-periods/${id}/clone`, {});
+  }
+
+  voidSettlement(id: string): Observable<VoidSettlementResult> {
+    return this.http.post<VoidSettlementResult>(`${API_BASE_URL}/expense-periods/${id}/void-settlement`, {});
+  }
+
+  getSettlementPdfUrl(id: string, token: string): string {
+    return `${API_BASE_URL}/expense-periods/${id}/settlement-pdf?access_token=${token}`;
   }
 }
