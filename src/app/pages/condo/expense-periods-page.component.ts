@@ -7,13 +7,16 @@ import { Button } from 'primeng/button';
 import { Card } from 'primeng/card';
 import { MessageService } from 'primeng/api';
 import { Tag } from 'primeng/tag';
+import { Tooltip } from 'primeng/tooltip';
 import { extractApiErrorMessage } from '../../api/api-error.util';
 import { BuildingsApiService } from '../../api/buildings-api.service';
 import { ExpensePeriodsApiService } from '../../api/expense-periods-api.service';
 import { AuthService } from '../../auth/auth.service';
 import {
   ApplyLateFeesResult,
+  BulkCreateExpensePeriodsResult,
   Building,
+  CloneExpensePeriodResult,
   ExpensePeriod,
   ExpensePeriodOperationalAlertItem,
   ExpensePeriodStatus,
@@ -26,7 +29,7 @@ import {
 @Component({
   standalone: true,
   selector: 'app-expense-periods-page',
-  imports: [CommonModule, FormsModule, Button, Card, Tag],
+  imports: [CommonModule, FormsModule, Button, Card, Tag, Tooltip],
   template: `
     <p-card styleClass="app-page-card">
       <div class="app-toolbar">
@@ -37,12 +40,19 @@ import {
           </div>
         </div>
 
-        <p-button
-          *ngIf="!isReadOnly"
-          [label]="showForm ? 'Cerrar formulario' : 'Nuevo periodo'"
-          [icon]="showForm ? 'pi pi-times' : 'pi pi-plus'"
-          (onClick)="toggleForm()">
-        </p-button>
+        <div style="display:flex;gap:0.5rem;" *ngIf="!isReadOnly">
+          <p-button
+            label="Crear para todos"
+            icon="pi pi-th-large"
+            severity="secondary"
+            (onClick)="toggleBulkForm()">
+          </p-button>
+          <p-button
+            [label]="showForm ? 'Cerrar formulario' : 'Nuevo periodo'"
+            [icon]="showForm ? 'pi pi-times' : 'pi pi-plus'"
+            (onClick)="toggleForm()">
+          </p-button>
+        </div>
       </div>
 
       <form class="app-form-grid" *ngIf="showForm" (ngSubmit)="submitPeriod()">
@@ -85,6 +95,11 @@ import {
         </label>
 
         <label>
+          <span>Fecha corte mora <small>(opcional)</small></span>
+          <input [(ngModel)]="form.lateFeeDate" name="lateFeeDate" type="date" />
+        </label>
+
+        <label>
           <span>Estado inicial</span>
           <input value="Draft" type="text" readonly />
         </label>
@@ -112,6 +127,62 @@ import {
           </p-button>
         </div>
       </form>
+
+      <div class="action-box" *ngIf="showBulkForm">
+        <div class="action-head">
+          <div>
+            <strong>Crear periodos para todos los edificios</strong>
+            <span>Crea el mismo periodo en varios edificios a la vez. Se omiten los que ya existen.</span>
+          </div>
+          <p-button type="button" label="Cerrar" icon="pi pi-times" severity="secondary" [text]="true" (onClick)="toggleBulkForm()"></p-button>
+        </div>
+
+        <form class="app-form-grid compact" (ngSubmit)="submitBulkCreate()">
+          <label>
+            <span>Anio</span>
+            <input [(ngModel)]="bulkForm.year" name="bulkYear" type="number" min="2000" max="2100" required />
+          </label>
+
+          <label>
+            <span>Mes</span>
+            <input [(ngModel)]="bulkForm.month" name="bulkMonth" type="number" min="1" max="12" required />
+          </label>
+
+          <label>
+            <span>Nombre <small>(opcional, auto si vacío)</small></span>
+            <input [(ngModel)]="bulkForm.name" name="bulkName" type="text" maxlength="120" />
+          </label>
+
+          <label>
+            <span>Inicio</span>
+            <input [(ngModel)]="bulkForm.startDate" name="bulkStart" type="date" required />
+          </label>
+
+          <label>
+            <span>Fin</span>
+            <input [(ngModel)]="bulkForm.endDate" name="bulkEnd" type="date" required />
+          </label>
+
+          <label>
+            <span>Vencimiento</span>
+            <input [(ngModel)]="bulkForm.dueDate" name="bulkDue" type="date" required />
+          </label>
+
+          <label>
+            <span>Fecha corte mora <small>(opcional)</small></span>
+            <input [(ngModel)]="bulkForm.lateFeeDate" name="bulkLateFee" type="date" />
+          </label>
+
+          <label class="wide">
+            <span>Notas</span>
+            <input [(ngModel)]="bulkForm.notes" name="bulkNotes" type="text" maxlength="500" />
+          </label>
+
+          <div class="wide form-actions">
+            <p-button type="submit" [loading]="isBulkCreating" label="Crear periodos"></p-button>
+          </div>
+        </form>
+      </div>
 
       <div class="action-box" *ngIf="alerts.length">
         <div class="action-head">
@@ -353,10 +424,11 @@ import {
           <span>{{ item.dueDate }}</span>
           <p-tag [value]="statusLabel(item.status)" [severity]="statusSeverity(item.status)"></p-tag>
           <div class="app-actions">
-            <p-button type="button" icon="pi pi-calculator" severity="info" [rounded]="true" [text]="true" [disabled]="isSaving || isGenerating || isCalculatingSettlement" (onClick)="openSettlement(item)"></p-button>
-            <p-button *ngIf="!isReadOnly" type="button" icon="pi pi-bolt" severity="success" [rounded]="true" [text]="true" [disabled]="item.status !== 'Draft' || isSaving || isGenerating" (onClick)="openGenerator(item)"></p-button>
-            <p-button *ngIf="!isReadOnly" type="button" icon="pi pi-pencil" severity="secondary" [rounded]="true" [text]="true" [disabled]="item.status !== 'Draft'" (onClick)="startEdit(item)"></p-button>
-            <p-button *ngIf="!isReadOnly" type="button" icon="pi pi-trash" severity="danger" [rounded]="true" [text]="true" [disabled]="isSaving || item.status !== 'Draft'" (onClick)="deletePeriod(item)"></p-button>
+            <p-button type="button" icon="pi pi-calculator" severity="info" [rounded]="true" [text]="true" [disabled]="isSaving || isGenerating || isCalculatingSettlement" (onClick)="openSettlement(item)" pTooltip="Liquidación"></p-button>
+            <p-button *ngIf="!isReadOnly" type="button" icon="pi pi-bolt" severity="success" [rounded]="true" [text]="true" [disabled]="item.status !== 'Draft' || isSaving || isGenerating" (onClick)="openGenerator(item)" pTooltip="Generar cargos"></p-button>
+            <p-button *ngIf="!isReadOnly" type="button" icon="pi pi-copy" severity="secondary" [rounded]="true" [text]="true" [disabled]="isSaving || isCloning" (onClick)="clonePeriod(item)" pTooltip="Clonar al mes siguiente"></p-button>
+            <p-button *ngIf="!isReadOnly" type="button" icon="pi pi-pencil" severity="secondary" [rounded]="true" [text]="true" [disabled]="item.status !== 'Draft'" (onClick)="startEdit(item)" pTooltip="Editar"></p-button>
+            <p-button *ngIf="!isReadOnly" type="button" icon="pi pi-trash" severity="danger" [rounded]="true" [text]="true" [disabled]="isSaving || item.status !== 'Draft'" (onClick)="deletePeriod(item)" pTooltip="Eliminar"></p-button>
           </div>
         </div>
       </div>
@@ -459,7 +531,10 @@ export class ExpensePeriodsPageComponent implements OnInit {
   isApprovingSettlement = false;
   isPublishingSettlement = false;
   isApplyingLateFees = false;
+  isBulkCreating = false;
+  isCloning = false;
   showForm = false;
+  showBulkForm = false;
   showLateFeeForm = false;
   editingId: string | null = null;
   readonly generationModes: GenerateExpenseChargesMode[] = ['FixedAmount', 'ByCoefficient'];
@@ -469,6 +544,7 @@ export class ExpensePeriodsPageComponent implements OnInit {
   settlementSummary: ExpenseSettlementSummary | null = null;
   settlementPreview: ExpenseSettlementChargePreview | null = null;
   form = this.createInitialForm();
+  bulkForm = this.createInitialBulkForm();
   generatorForm = this.createInitialGeneratorForm();
   lateFeeForm = this.createInitialLateFeeForm();
 
@@ -499,8 +575,77 @@ export class ExpensePeriodsPageComponent implements OnInit {
       startDate: item.startDate,
       endDate: item.endDate,
       dueDate: item.dueDate,
+      lateFeeDate: item.lateFeeDate ?? '',
       notes: item.notes
     };
+  }
+
+  toggleBulkForm(): void {
+    this.showBulkForm = !this.showBulkForm;
+    if (!this.showBulkForm) {
+      this.bulkForm = this.createInitialBulkForm();
+    }
+  }
+
+  submitBulkCreate(): void {
+    this.isBulkCreating = true;
+
+    this.periodsApi.bulkCreate({
+      buildingIds: [],
+      year: Number(this.bulkForm.year),
+      month: Number(this.bulkForm.month),
+      name: this.bulkForm.name.trim(),
+      startDate: this.bulkForm.startDate,
+      endDate: this.bulkForm.endDate,
+      dueDate: this.bulkForm.dueDate,
+      lateFeeDate: this.bulkForm.lateFeeDate || null,
+      notes: this.bulkForm.notes.trim()
+    }).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: (result: BulkCreateExpensePeriodsResult) => {
+        this.isBulkCreating = false;
+        this.showBulkForm = false;
+        this.bulkForm = this.createInitialBulkForm();
+        const detail = result.created > 0
+          ? `Se crearon ${result.created} periodo(s).${result.skipped > 0 ? ` Se omitieron ${result.skipped} (ya existían).` : ''}`
+          : `No se creó ningún periodo. Todos los edificios ya tienen periodo para ese mes.`;
+        this.msg.add({ severity: result.created > 0 ? 'success' : 'info', summary: result.created > 0 ? 'Éxito' : 'Sin cambios', detail, life: 5000 });
+        this.loadData();
+        this.cdr.markForCheck();
+      },
+      error: (error) => {
+        this.msg.add({ severity: 'error', summary: 'Error', detail: extractApiErrorMessage(error, 'No se pudieron crear los periodos masivos.'), life: 5000 });
+        this.isBulkCreating = false;
+        this.cdr.markForCheck();
+      }
+    });
+  }
+
+  clonePeriod(item: ExpensePeriod): void {
+    const targetMonth = item.month === 12 ? 1 : item.month + 1;
+    const targetYear = item.month === 12 ? item.year + 1 : item.year;
+    const targetName = `${targetYear}-${String(targetMonth).padStart(2, '0')}`;
+
+    if (!confirm(`¿Clonar "${item.name}" al período ${targetName}? Se copiarán los gastos del edificio como base.`)) {
+      return;
+    }
+
+    this.isCloning = true;
+
+    this.periodsApi.clone(item.id).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: (result: CloneExpensePeriodResult) => {
+        this.items = [...this.items, result.period];
+        this.sortItems();
+        this.isCloning = false;
+        const expMsg = result.copiedExpenses > 0 ? ` Se copiaron ${result.copiedExpenses} gasto(s) como base.` : '';
+        this.msg.add({ severity: 'success', summary: 'Éxito', detail: `Período ${result.period.name} creado.${expMsg}`, life: 5000 });
+        this.cdr.markForCheck();
+      },
+      error: (error) => {
+        this.msg.add({ severity: 'error', summary: 'Error', detail: extractApiErrorMessage(error, 'No se pudo clonar el periodo.'), life: 5000 });
+        this.isCloning = false;
+        this.cdr.markForCheck();
+      }
+    });
   }
 
   cancelEdit(): void {
@@ -565,6 +710,7 @@ export class ExpensePeriodsPageComponent implements OnInit {
       startDate: this.form.startDate,
       endDate: this.form.endDate,
       dueDate: this.form.dueDate,
+      lateFeeDate: this.form.lateFeeDate || null,
       status: 'Draft' as ExpensePeriodStatus,
       notes: this.form.notes.trim()
     };
@@ -910,6 +1056,28 @@ export class ExpensePeriodsPageComponent implements OnInit {
       startDate,
       endDate,
       dueDate,
+      lateFeeDate: '',
+      notes: ''
+    };
+  }
+
+  private createInitialBulkForm() {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = today.getMonth() + 1;
+    const monthText = `${month}`.padStart(2, '0');
+    const startDate = `${year}-${monthText}-01`;
+    const endDate = new Date(year, month, 0).toISOString().slice(0, 10);
+    const dueDate = new Date(year, month, 10).toISOString().slice(0, 10);
+
+    return {
+      year,
+      month,
+      name: '',
+      startDate,
+      endDate,
+      dueDate,
+      lateFeeDate: '',
       notes: ''
     };
   }

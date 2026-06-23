@@ -164,6 +164,7 @@ export interface ExpensePeriod {
   startDate: string;
   endDate: string;
   dueDate: string;
+  lateFeeDate: string | null;
   status: ExpensePeriodStatus;
   notes: string;
 }
@@ -261,8 +262,33 @@ export interface CreateExpensePeriodRequest {
   startDate: string;
   endDate: string;
   dueDate: string;
+  lateFeeDate: string | null;
   status: ExpensePeriodStatus;
   notes: string;
+}
+
+export interface BulkCreateExpensePeriodsRequest {
+  buildingIds: string[];
+  year: number;
+  month: number;
+  name: string;
+  startDate: string;
+  endDate: string;
+  dueDate: string;
+  lateFeeDate: string | null;
+  notes: string;
+}
+
+export interface BulkCreateExpensePeriodsResult {
+  created: number;
+  skipped: number;
+  createdBuildings: string[];
+  skippedBuildings: string[];
+}
+
+export interface CloneExpensePeriodResult {
+  period: ExpensePeriod;
+  copiedExpenses: number;
 }
 
 export type GenerateExpenseChargesMode = 'FixedAmount' | 'ByCoefficient';

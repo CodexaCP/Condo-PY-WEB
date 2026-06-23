@@ -5,6 +5,9 @@ import { API_BASE_URL } from '../config/api.config';
 import {
   ApplyLateFeesRequest,
   ApplyLateFeesResult,
+  BulkCreateExpensePeriodsRequest,
+  BulkCreateExpensePeriodsResult,
+  CloneExpensePeriodResult,
   CreateExpensePeriodRequest,
   ExpensePeriod,
   ExpensePeriodOperationalAlerts,
@@ -70,5 +73,13 @@ export class ExpensePeriodsApiService {
     return this.http.get<ExpensePeriodOperationalAlerts>(`${API_BASE_URL}/expense-periods/operational-alerts`, {
       params: { daysAhead }
     });
+  }
+
+  bulkCreate(request: BulkCreateExpensePeriodsRequest): Observable<BulkCreateExpensePeriodsResult> {
+    return this.http.post<BulkCreateExpensePeriodsResult>(`${API_BASE_URL}/expense-periods/bulk-create`, request);
+  }
+
+  clone(id: string): Observable<CloneExpensePeriodResult> {
+    return this.http.post<CloneExpensePeriodResult>(`${API_BASE_URL}/expense-periods/${id}/clone`, {});
   }
 }
