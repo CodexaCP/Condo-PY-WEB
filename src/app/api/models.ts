@@ -207,6 +207,47 @@ export interface BuildingExpense {
   targetUnitId: string | null;
   targetUnitCode: string;
   notes: string;
+  hasReceipt: boolean;
+  receiptFileName: string | null;
+}
+
+export interface RecurringBuildingExpense {
+  id: string;
+  companyId: string;
+  buildingId: string;
+  buildingName: string;
+  category: BuildingExpenseCategory;
+  supplierName: string;
+  description: string;
+  amount: number;
+  distributionType: BuildingExpenseDistributionType;
+  targetUnitId: string | null;
+  targetUnitCode: string;
+  notes: string;
+  isActive: boolean;
+}
+
+export interface RecurringBuildingExpenseUpsertRequest {
+  buildingId: string;
+  category: BuildingExpenseCategory;
+  supplierName: string;
+  description: string;
+  amount: number;
+  distributionType: BuildingExpenseDistributionType;
+  targetUnitId: string | null;
+  notes: string;
+  isActive: boolean;
+}
+
+export interface ApplyRecurringExpensesRequest {
+  expensePeriodId: string;
+}
+
+export interface ApplyRecurringExpensesResult {
+  applied: number;
+  skipped: number;
+  expensePeriodName: string;
+  appliedDescriptions: string[];
 }
 
 export interface CreateBuildingExpenseRequest {

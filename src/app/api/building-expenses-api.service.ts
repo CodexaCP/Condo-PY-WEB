@@ -33,4 +33,18 @@ export class BuildingExpensesApiService {
   delete(id: string): Observable<void> {
     return this.http.delete<void>(`${API_BASE_URL}/building-expenses/${id}`);
   }
+
+  uploadReceipt(id: string, file: File): Observable<BuildingExpense> {
+    const formData = new FormData();
+    formData.append('file', file);
+    return this.http.post<BuildingExpense>(`${API_BASE_URL}/building-expenses/${id}/receipt`, formData);
+  }
+
+  getReceiptUrl(id: string): string {
+    return `${API_BASE_URL}/building-expenses/${id}/receipt`;
+  }
+
+  deleteReceipt(id: string): Observable<void> {
+    return this.http.delete<void>(`${API_BASE_URL}/building-expenses/${id}/receipt`);
+  }
 }
