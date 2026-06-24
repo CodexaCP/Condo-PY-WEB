@@ -6,6 +6,8 @@ import { forkJoin } from 'rxjs';
 import { Button } from 'primeng/button';
 import { Card } from 'primeng/card';
 import { MessageService } from 'primeng/api';
+import { InputNumber } from 'primeng/inputnumber';
+import { Tooltip } from 'primeng/tooltip';
 import { extractApiErrorMessage } from '../../api/api-error.util';
 import { BuildingsApiService } from '../../api/buildings-api.service';
 import { ExpensePeriodsApiService } from '../../api/expense-periods-api.service';
@@ -26,7 +28,7 @@ import {
 @Component({
   standalone: true,
   selector: 'app-payments-page',
-  imports: [CommonModule, FormsModule, Button, Card],
+  imports: [CommonModule, FormsModule, Button, Card, InputNumber, Tooltip],
   template: `
     <p-card styleClass="app-page-card">
       <div class="app-toolbar">
@@ -45,83 +47,101 @@ import {
         </p-button>
       </div>
 
-      <div class="filters-grid">
-        <label>
-          <span>Filtrar por edificio</span>
+      <!-- Filters bar -->
+      <div class="filters-bar">
+        <span class="pi pi-filter filters-icon"></span>
+        <div class="field-block">
+          <span>Edificio</span>
           <select [(ngModel)]="filters.buildingId" name="filterBuildingId" (ngModelChange)="onBuildingFilterChange()">
-            <option value="">Todos los edificios</option>
+            <option value="">Todos</option>
             <option *ngFor="let b of buildings" [value]="b.id">{{ b.name }}</option>
           </select>
-        </label>
-
-        <label>
-          <span>Filtrar por periodo</span>
+        </div>
+        <div class="field-block">
+          <span>Periodo</span>
           <select [(ngModel)]="filters.expensePeriodId" name="filterPeriodId" (ngModelChange)="applyFilters()">
-            <option value="">Todos los periodos</option>
+            <option value="">Todos</option>
             <option *ngFor="let p of filteredPeriodsForSelector" [value]="p.id">{{ p.name }} · {{ p.buildingName }}</option>
           </select>
-        </label>
-
-        <div class="filter-actions">
-          <p-button type="button" label="Limpiar filtros" severity="secondary" [text]="true" (onClick)="resetFilters()"></p-button>
         </div>
+        <div class="field-block">
+          <span>Unidad</span>
+          <select [(ngModel)]="filters.unitId" name="filterUnitId" (ngModelChange)="applyFilters()">
+            <option value="">Todas</option>
+            <option *ngFor="let u of filteredUnitsForSelector" [value]="u.id">{{ u.code }} · {{ u.buildingName }}</option>
+          </select>
+        </div>
+        <p-button type="button" label="Limpiar" icon="pi pi-times" severity="secondary" [outlined]="true" size="small" (onClick)="resetFilters()"></p-button>
       </div>
 
-      <form class="app-form-grid" *ngIf="showForm" (ngSubmit)="submitPayment()">
-        <label>
-          <span>Periodo</span>
-          <select [(ngModel)]="form.expensePeriodId" name="expensePeriodId" required (ngModelChange)="onFormContextChange()">
-            <option value="" disabled>Selecciona un periodo</option>
-            <option *ngFor="let p of periods" [value]="p.id">{{ p.name }} · {{ p.buildingName }}</option>
-          </select>
-        </label>
+      <!-- Payment form -->
+      <form class="panel-box form-panel" *ngIf="showForm" (ngSubmit)="submitPayment()">
+        <div class="panel-box-title">
+          <span class="pi pi-wallet"></span>
+          {{ editingId ? 'Editar pago' : 'Registrar pago' }}
+        </div>
 
-        <label>
-          <span>Unidad</span>
-          <select [(ngModel)]="form.unitId" name="unitId" required (ngModelChange)="onFormContextChange()">
-            <option value="" disabled>Selecciona una unidad</option>
-            <option *ngFor="let u of availableUnits" [value]="u.id">{{ u.code }} · {{ u.buildingName }}</option>
-          </select>
-        </label>
+        <!-- Row 1: context -->
+        <div class="payment-form">
+          <div class="field-block">
+            <span>Periodo <em>*</em></span>
+            <select [(ngModel)]="form.expensePeriodId" name="expensePeriodId" required (ngModelChange)="onFormContextChange()">
+              <option value="" disabled>— Seleccionar —</option>
+              <option *ngFor="let p of periods" [value]="p.id">{{ p.name }} · {{ p.buildingName }}</option>
+            </select>
+          </div>
 
-        <label>
-          <span>Fecha de pago</span>
-          <input [(ngModel)]="form.paymentDate" name="paymentDate" type="date" required />
-        </label>
+          <div class="field-block">
+            <span>Unidad <em>*</em></span>
+            <select [(ngModel)]="form.unitId" name="unitId" required (ngModelChange)="onFormContextChange()">
+              <option value="" disabled>— Seleccionar —</option>
+              <option *ngFor="let u of availableUnits" [value]="u.id">{{ u.code }} · {{ u.buildingName }}</option>
+            </select>
+          </div>
 
-        <label>
-          <span>Monto</span>
-          <input [(ngModel)]="form.amount" name="amount" type="number" min="1" step="0.01" required />
-        </label>
+          <div class="field-block">
+            <span>Fecha <em>*</em></span>
+            <input [(ngModel)]="form.paymentDate" name="paymentDate" type="date" required />
+          </div>
 
-        <label>
-          <span>Metodo</span>
-          <select [(ngModel)]="form.method" name="method" required>
-            <option *ngFor="let m of methods" [value]="m">{{ paymentMethodLabel(m) }}</option>
-          </select>
-        </label>
+          <div class="field-block">
+            <span>Método <em>*</em></span>
+            <select [(ngModel)]="form.method" name="method" required>
+              <option *ngFor="let m of methods" [value]="m">{{ paymentMethodLabel(m) }}</option>
+            </select>
+          </div>
 
-        <label>
-          <span>Referencia</span>
-          <input [(ngModel)]="form.reference" name="reference" type="text" maxlength="100" />
-        </label>
+          <div class="field-block">
+            <span>Monto <em>*</em></span>
+            <p-inputnumber [(ngModel)]="form.amount" name="amount" [useGrouping]="true" prefix="₲ " [min]="1" [minFractionDigits]="0" [maxFractionDigits]="0" [required]="true" styleClass="w-full"></p-inputnumber>
+          </div>
 
-        <label class="wide">
-          <span>Notas</span>
-          <input [(ngModel)]="form.notes" name="notes" type="text" maxlength="500" />
-        </label>
+          <div class="field-block">
+            <span>Referencia / N° comprobante</span>
+            <input [(ngModel)]="form.reference" name="reference" type="text" maxlength="100" placeholder="Ej: TRF-00123" />
+          </div>
 
-        <div class="wide charges-panel" *ngIf="pendingCharges.length > 0">
+          <div class="field-block wide2">
+            <span>Notas opcionales</span>
+            <input [(ngModel)]="form.notes" name="notes" type="text" maxlength="500" placeholder="Observaciones adicionales" />
+          </div>
+        </div>
+
+        <!-- Pending charges allocation -->
+        <div class="charges-panel" *ngIf="pendingCharges.length > 0">
           <div class="charges-panel-header">
-            <span>Cargos pendientes de esta unidad</span>
-            <small>Total pendiente: {{ formatCurrency(totalPending) }}</small>
+            <span class="pi pi-list-check"></span>
+            <strong>Imputar a cargos pendientes</strong>
+            <span class="pending-total">Pendiente total: <strong>{{ formatCurrency(totalPending) }}</strong></span>
           </div>
           <div class="charge-row" *ngFor="let charge of pendingCharges">
             <label class="charge-check">
               <input type="checkbox" [(ngModel)]="charge['_selected']" [ngModelOptions]="{standalone: true}"
                 (ngModelChange)="onChargeSelectionChange()" />
-              <span>{{ charge.concept }}</span>
-              <small>{{ chargeTypeLabel(charge.chargeType) }}</small>
+              <div class="charge-info">
+                <span>{{ charge.concept }}</span>
+                <small>{{ chargeTypeLabel(charge.chargeType) }}</small>
+              </div>
             </label>
             <div class="charge-amounts">
               <span class="charge-pending">{{ formatCurrency(charge.pendingAmount) }}</span>
@@ -131,36 +151,46 @@ import {
                 [ngModelOptions]="{standalone: true}"
                 min="1"
                 [max]="charge.pendingAmount"
-                step="0.01"
                 class="alloc-input"
+                placeholder="Importe"
                 (ngModelChange)="onChargeSelectionChange()" />
             </div>
           </div>
           <div class="charges-panel-footer">
-            <span>Asignado: {{ formatCurrency(totalAllocated) }}</span>
-            <span [class.credit]="form.amount - totalAllocated > 0">
-              Sin asignar: {{ formatCurrency(form.amount - totalAllocated) }}
-            </span>
+            <div class="alloc-stat">
+              <span>Imputado</span>
+              <strong>{{ formatCurrency(totalAllocated) }}</strong>
+            </div>
+            <div class="alloc-stat" [class.credit]="form.amount - totalAllocated > 0">
+              <span>Sin imputar</span>
+              <strong>{{ formatCurrency(form.amount - totalAllocated) }}</strong>
+            </div>
           </div>
         </div>
-        <p class="wide app-state" *ngIf="loadingCharges">Cargando cargos pendientes...</p>
+        <p class="app-state" *ngIf="loadingCharges">Cargando cargos pendientes...</p>
 
-        <div class="wide form-actions">
-          <p-button
-            type="submit"
-            [disabled]="!periods.length || !units.length"
-            [loading]="isSaving"
-            [label]="editingId ? 'Guardar cambios' : 'Registrar pago'">
-          </p-button>
-          <p-button *ngIf="editingId" type="button" label="Cancelar" icon="pi pi-times" severity="secondary" [text]="true" (onClick)="cancelEdit()"></p-button>
+        <div class="form-footer">
+          <div class="form-actions">
+            <p-button *ngIf="editingId" type="button" label="Cancelar" icon="pi pi-times" severity="secondary" [outlined]="true" (onClick)="cancelEdit()"></p-button>
+            <p-button
+              type="submit"
+              [disabled]="!periods.length || !units.length"
+              [loading]="isSaving"
+              [icon]="editingId ? 'pi pi-check' : 'pi pi-wallet'"
+              [label]="editingId ? 'Guardar cambios' : 'Registrar pago'">
+            </p-button>
+          </div>
         </div>
       </form>
 
       <!-- Recibo post-cobro -->
       <div class="receipt-panel" *ngIf="receipt">
         <div class="receipt-header">
+          <span class="pi pi-check-circle receipt-icon"></span>
           <span class="receipt-title">Comprobante de pago</span>
-          <p-button type="button" icon="pi pi-print" severity="secondary" [text]="true" label="Imprimir" (onClick)="printReceipt()"></p-button>
+          <a [href]="getReceiptPdfUrl(receipt.id)" target="_blank" style="display:contents">
+            <p-button type="button" label="Descargar PDF" icon="pi pi-file-pdf" severity="secondary" [outlined]="true" size="small"></p-button>
+          </a>
           <p-button type="button" icon="pi pi-times" severity="secondary" [rounded]="true" [text]="true" (onClick)="receipt = null"></p-button>
         </div>
         <div class="receipt-body">
@@ -169,18 +199,18 @@ import {
           <div class="receipt-row"><span>Periodo</span><strong>{{ receipt.expensePeriodName }}</strong></div>
           <div class="receipt-row"><span>Edificio</span><strong>{{ receipt.buildingName }}</strong></div>
           <div class="receipt-row"><span>Unidad</span><strong>{{ receipt.unitCode }}</strong></div>
-          <div class="receipt-row"><span>Monto cobrado</span><strong>{{ formatCurrency(receipt.amount) }}</strong></div>
-          <div class="receipt-row"><span>Metodo</span><strong>{{ paymentMethodLabel(receipt.method) }}</strong></div>
+          <div class="receipt-row receipt-amount"><span>Monto cobrado</span><strong>{{ formatCurrency(receipt.amount) }}</strong></div>
+          <div class="receipt-row"><span>Método</span><strong>{{ paymentMethodLabel(receipt.method) }}</strong></div>
           <div class="receipt-row" *ngIf="receipt.reference"><span>Referencia</span><strong>{{ receipt.reference }}</strong></div>
           <div class="receipt-allocations" *ngIf="receipt.allocations.length > 0">
-            <span class="alloc-title">Cargos cubiertos:</span>
+            <span class="alloc-title">Cargos cubiertos</span>
             <div class="alloc-row" *ngFor="let a of receipt.allocations">
               <span>{{ a.chargeConcept }}</span>
               <strong>{{ formatCurrency(a.allocatedAmount) }}</strong>
             </div>
           </div>
           <div class="receipt-row credit-row" *ngIf="receipt.amount - receipt.allocatedAmount > 0.01">
-            <span>Credito a favor</span>
+            <span>Crédito a favor</span>
             <strong>{{ formatCurrency(receipt.amount - receipt.allocatedAmount) }}</strong>
           </div>
         </div>
@@ -213,6 +243,9 @@ import {
           </span>
           <div class="app-actions" *ngIf="!isReadOnly">
             <p-button type="button" icon="pi pi-file" severity="secondary" [rounded]="true" [text]="true" pTooltip="Ver comprobante" (onClick)="showReceipt(item)"></p-button>
+            <a [href]="getReceiptPdfUrl(item.id)" target="_blank" style="display:contents">
+              <p-button type="button" icon="pi pi-file-pdf" severity="secondary" [rounded]="true" [text]="true" pTooltip="Descargar PDF"></p-button>
+            </a>
             <p-button type="button" icon="pi pi-pencil" severity="secondary" [rounded]="true" [text]="true" (onClick)="startEdit(item)"></p-button>
             <p-button type="button" icon="pi pi-trash" severity="danger" [rounded]="true" [text]="true" [disabled]="isSaving" (onClick)="deletePayment(item)"></p-button>
           </div>
@@ -221,88 +254,131 @@ import {
     </p-card>
   `,
   styles: [`
-    .filters-grid {
+    /* Filters bar */
+    .filters-bar {
+      display: flex; align-items: flex-end; gap: 1rem; flex-wrap: wrap;
+      padding: 0.75rem 1rem;
+      background: rgba(20,54,61,0.04);
+      border: 1px solid rgba(20,54,61,0.1);
+      border-radius: 14px;
+      margin-bottom: 1.25rem;
+    }
+    .filters-icon { color: var(--brand-muted); font-size: 1rem; margin-bottom: 0.35rem; }
+
+    /* Panel box */
+    .panel-box { border-radius: 16px; padding: 1.25rem 1.5rem; margin-bottom: 1.25rem; }
+    .form-panel { border: 1.5px solid rgba(19,133,182,0.25); background: rgba(235,247,255,0.45); }
+    .panel-box-title {
+      font-weight: 700; font-size: 0.95rem; color: var(--brand-ink);
+      margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;
+    }
+    .panel-box-title .pi { color: var(--brand-blue); }
+
+    /* Field blocks */
+    .field-block { display: flex; flex-direction: column; gap: 0.3rem; }
+    .field-block span { font-size: 0.8rem; font-weight: 600; color: var(--brand-muted); text-transform: uppercase; letter-spacing: 0.03em; }
+    .field-block em { color: #e53e3e; font-style: normal; }
+    .field-block select,
+    .field-block input[type="text"],
+    .field-block input[type="date"] {
+      border: 1.5px solid rgba(20,54,61,0.18); border-radius: 10px;
+      padding: 0.5rem 0.75rem; font-size: 0.92rem; color: var(--brand-ink);
+      background: #fff; outline: none; transition: border-color 0.15s; width: 100%;
+    }
+    .field-block select:focus,
+    .field-block input:focus { border-color: var(--brand-blue); }
+
+    /* Payment form grid */
+    .payment-form {
       display: grid;
-      grid-template-columns: 1fr 1fr auto;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
       gap: 1rem;
-      align-items: end;
+      margin-bottom: 1.25rem;
+    }
+    .wide2 { grid-column: span 2; }
+
+    /* Charges allocation panel */
+    .charges-panel {
+      border: 1.5px solid rgba(26,140,91,0.25);
+      border-radius: 12px;
+      padding: 1rem 1.25rem;
+      background: rgba(240,252,246,0.6);
       margin-bottom: 1rem;
     }
-    .payments-grid { grid-template-columns: 0.7fr 1.2fr 0.7fr 0.8fr 0.8fr 0.9fr 0.5fr; }
-    .form-actions { display:flex; gap:0.75rem; justify-content:flex-end; }
-    .filter-actions { display:flex; justify-content:flex-end; }
-    .actions-head { text-align:right; }
-
-    .charges-panel {
-      border: 1px solid var(--p-surface-border, #e5e7eb);
-      border-radius: 6px;
-      padding: 0.75rem;
-      background: var(--p-surface-50, #f9fafb);
-    }
     .charges-panel-header {
-      display: flex;
-      justify-content: space-between;
-      font-weight: 600;
-      margin-bottom: 0.5rem;
-      font-size: 0.9em;
+      display: flex; align-items: center; gap: 0.6rem;
+      margin-bottom: 0.75rem; font-size: 0.9rem;
     }
+    .charges-panel-header .pi { color: #1a8c5b; }
+    .charges-panel-header strong { color: var(--brand-ink); flex: 1; }
+    .pending-total { font-size: 0.85rem; color: var(--brand-muted); }
+    .pending-total strong { color: var(--brand-ink); }
     .charge-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 0.35rem 0;
-      border-bottom: 1px solid var(--p-surface-border, #f0f0f0);
-      gap: 1rem;
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 0.5rem 0; border-bottom: 1px solid rgba(26,140,91,0.12); gap: 1rem;
     }
-    .charge-check {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      flex: 1;
-      cursor: pointer;
+    .charge-row:last-of-type { border-bottom: none; }
+    .charge-check { display: flex; align-items: center; gap: 0.6rem; flex: 1; cursor: pointer; }
+    .charge-check input[type="checkbox"] { width: 16px; height: 16px; accent-color: #1a8c5b; cursor: pointer; }
+    .charge-info { display: flex; flex-direction: column; gap: 0.1rem; }
+    .charge-info span { font-size: 0.9rem; color: var(--brand-ink); }
+    .charge-info small { font-size: 0.78rem; color: var(--brand-muted); }
+    .charge-amounts { display: flex; align-items: center; gap: 0.75rem; }
+    .charge-pending { font-weight: 700; font-size: 0.9rem; color: var(--brand-ink); min-width: 90px; text-align: right; }
+    .alloc-input {
+      width: 110px; padding: 0.35rem 0.6rem;
+      border: 1.5px solid rgba(26,140,91,0.3); border-radius: 8px;
+      font-size: 0.88rem; color: var(--brand-ink); background: #fff; outline: none;
     }
-    .charge-check small { color: #6b7280; font-size: 0.8em; }
-    .charge-amounts { display: flex; align-items: center; gap: 0.5rem; }
-    .charge-pending { font-weight: 600; min-width: 80px; text-align: right; }
-    .alloc-input { width: 100px; padding: 2px 6px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 0.9em; }
+    .alloc-input:focus { border-color: #1a8c5b; }
     .charges-panel-footer {
-      display: flex;
-      justify-content: flex-end;
-      gap: 1.5rem;
-      margin-top: 0.5rem;
-      font-size: 0.88em;
-      color: #374151;
+      display: flex; justify-content: flex-end; gap: 1.5rem;
+      margin-top: 0.75rem; padding-top: 0.75rem;
+      border-top: 1px solid rgba(26,140,91,0.15);
     }
-    .credit { color: #059669; font-weight: 600; }
+    .alloc-stat { display: flex; flex-direction: column; align-items: flex-end; gap: 0.1rem; }
+    .alloc-stat span { font-size: 0.75rem; color: var(--brand-muted); text-transform: uppercase; }
+    .alloc-stat strong { font-size: 0.95rem; color: var(--brand-ink); }
+    .credit .alloc-stat strong, .credit strong { color: #1a8c5b; }
 
+    /* Form footer */
+    .form-footer {
+      display: flex; justify-content: flex-end;
+      padding-top: 1rem; border-top: 1px solid rgba(20,54,61,0.1);
+    }
+    .form-actions { display: flex; gap: 0.75rem; }
+
+    /* Receipt panel */
     .receipt-panel {
-      border: 2px solid var(--p-primary-color, #3b82f6);
-      border-radius: 8px;
-      padding: 1rem;
-      margin: 1rem 0;
-      background: var(--p-surface-0, #fff);
-      max-width: 480px;
+      border: 2px solid #1a8c5b; border-radius: 16px;
+      padding: 1.25rem 1.5rem; margin-bottom: 1.25rem;
+      background: rgba(240,252,246,0.7); max-width: 520px;
     }
     .receipt-header {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      margin-bottom: 0.75rem;
+      display: flex; align-items: center; gap: 0.6rem; margin-bottom: 1rem;
     }
-    .receipt-title { font-weight: 700; font-size: 1.05em; flex: 1; }
-    .receipt-body { display: flex; flex-direction: column; gap: 0.4rem; }
-    .receipt-row { display: flex; justify-content: space-between; font-size: 0.9em; }
-    .receipt-allocations { margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid #e5e7eb; }
-    .alloc-title { font-size: 0.85em; color: #6b7280; display: block; margin-bottom: 0.3rem; }
-    .alloc-row { display: flex; justify-content: space-between; font-size: 0.88em; padding: 0.15rem 0; }
-    .credit-row strong { color: #059669; }
+    .receipt-icon { font-size: 1.3rem; color: #1a8c5b; }
+    .receipt-title { font-weight: 700; font-size: 1rem; color: var(--brand-ink); flex: 1; }
+    .receipt-body { display: flex; flex-direction: column; gap: 0.45rem; }
+    .receipt-row { display: flex; justify-content: space-between; font-size: 0.9rem; color: var(--brand-ink); }
+    .receipt-row span { color: var(--brand-muted); }
+    .receipt-amount strong { font-size: 1.1rem; color: #1a8c5b; }
+    .receipt-allocations { margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid rgba(26,140,91,0.2); }
+    .alloc-title { font-size: 0.78rem; color: var(--brand-muted); text-transform: uppercase; display: block; margin-bottom: 0.4rem; }
+    .alloc-row { display: flex; justify-content: space-between; font-size: 0.88rem; padding: 0.2rem 0; color: var(--brand-ink); }
+    .credit-row strong { color: #1a8c5b; }
 
+    /* List */
+    .payments-grid { grid-template-columns: 0.7fr 1.2fr 0.7fr 0.8fr 0.8fr 0.9fr 0.5fr; }
+    .actions-head { text-align: right; }
     .partial { color: #f59e0b; }
     .unallocated { color: #9ca3af; }
     small { font-size: 0.8em; color: #6b7280; }
 
     @media (max-width: 900px) {
-      .filters-grid { grid-template-columns: 1fr; }
+      .filters-bar { flex-direction: column; align-items: stretch; }
+      .payment-form { grid-template-columns: 1fr; }
+      .wide2 { grid-column: span 1; }
     }
   `]
 })
@@ -330,13 +406,19 @@ export class PaymentsPageComponent implements OnInit {
   showForm = false;
   editingId: string | null = null;
   readonly methods: PaymentMethod[] = ['Cash', 'BankTransfer', 'Card', 'Check', 'Other'];
-  filters = { buildingId: '', expensePeriodId: '' };
+  filters = { buildingId: '', expensePeriodId: '', unitId: '' };
   form = this.createInitialForm();
 
   get filteredPeriodsForSelector(): ExpensePeriod[] {
     return this.filters.buildingId
       ? this.periods.filter((p) => p.buildingId === this.filters.buildingId)
       : this.periods;
+  }
+
+  get filteredUnitsForSelector(): Unit[] {
+    return this.filters.buildingId
+      ? this.units.filter((u) => u.buildingId === this.filters.buildingId)
+      : this.units;
   }
 
   get availableUnits(): Unit[] {
@@ -409,10 +491,10 @@ export class PaymentsPageComponent implements OnInit {
   }
 
   onBuildingFilterChange(): void {
-    const periodStillMatches = this.filteredPeriodsForSelector.some((p) => p.id === this.filters.expensePeriodId);
-    if (!periodStillMatches) {
+    if (!this.filteredPeriodsForSelector.some((p) => p.id === this.filters.expensePeriodId))
       this.filters.expensePeriodId = '';
-    }
+    if (!this.filteredUnitsForSelector.some((u) => u.id === this.filters.unitId))
+      this.filters.unitId = '';
     this.applyFilters();
   }
 
@@ -420,7 +502,8 @@ export class PaymentsPageComponent implements OnInit {
     this.loading = true;
     this.paymentsApi.getAll({
       buildingId: this.filters.buildingId || undefined,
-      expensePeriodId: this.filters.expensePeriodId || undefined
+      expensePeriodId: this.filters.expensePeriodId || undefined,
+      unitId: this.filters.unitId || undefined
     })
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
@@ -439,7 +522,7 @@ export class PaymentsPageComponent implements OnInit {
   }
 
   resetFilters(): void {
-    this.filters = { buildingId: '', expensePeriodId: '' };
+    this.filters = { buildingId: '', expensePeriodId: '', unitId: '' };
     this.applyFilters();
   }
 
@@ -494,8 +577,8 @@ export class PaymentsPageComponent implements OnInit {
     this.cdr.markForCheck();
   }
 
-  printReceipt(): void {
-    window.print();
+  getReceiptPdfUrl(paymentId: string): string {
+    return this.paymentsApi.getReceiptPdfUrl(paymentId, this.auth.getToken() ?? '');
   }
 
   deletePayment(item: Payment): void {
@@ -531,7 +614,7 @@ export class PaymentsPageComponent implements OnInit {
   }
 
   formatCurrency(value: number): string {
-    return new Intl.NumberFormat('es-PY', { style: 'currency', currency: 'PYG', maximumFractionDigits: 0 }).format(value ?? 0);
+    return '₲ ' + new Intl.NumberFormat('es-PY', { maximumFractionDigits: 0 }).format(value ?? 0);
   }
 
   private loadPendingCharges(preSelected?: { chargeId: string; amount: number }[]): void {

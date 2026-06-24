@@ -4,6 +4,7 @@ import { Observable } from 'rxjs';
 import { API_BASE_URL } from '../config/api.config';
 import { AccountStatementDetail, AccountStatementPeriod, ExpenseReceipt } from './models';
 
+
 @Injectable({ providedIn: 'root' })
 export class AccountStatementsApiService {
   private readonly http = inject(HttpClient);
@@ -22,5 +23,9 @@ export class AccountStatementsApiService {
     return this.http.get<ExpenseReceipt>(
       `${API_BASE_URL}/account-statements/units/${unitId}/periods/${expensePeriodId}/receipt`
     );
+  }
+
+  getReceiptPdfUrl(unitId: string, expensePeriodId: string, token: string): string {
+    return `${API_BASE_URL}/account-statements/units/${unitId}/periods/${expensePeriodId}/receipt-pdf?access_token=${token}`;
   }
 }

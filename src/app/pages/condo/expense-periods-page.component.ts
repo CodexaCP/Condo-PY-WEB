@@ -8,6 +8,7 @@ import { Card } from 'primeng/card';
 import { MessageService } from 'primeng/api';
 import { Tag } from 'primeng/tag';
 import { Tooltip } from 'primeng/tooltip';
+import { InputNumber } from 'primeng/inputnumber';
 import { extractApiErrorMessage } from '../../api/api-error.util';
 import { BuildingsApiService } from '../../api/buildings-api.service';
 import { ExpensePeriodsApiService } from '../../api/expense-periods-api.service';
@@ -30,7 +31,7 @@ import {
 @Component({
   standalone: true,
   selector: 'app-expense-periods-page',
-  imports: [CommonModule, FormsModule, Button, Card, Tag, Tooltip],
+  imports: [CommonModule, FormsModule, Button, Card, Tag, Tooltip, InputNumber],
   template: `
     <p-card styleClass="app-page-card">
       <div class="app-toolbar">
@@ -40,365 +41,273 @@ import {
             <p>Apertura, cierre y control de ciclos mensuales por edificio.</p>
           </div>
         </div>
-
-        <div style="display:flex;gap:0.5rem;" *ngIf="!isReadOnly">
-          <p-button
-            label="Crear para todos"
-            icon="pi pi-th-large"
-            severity="secondary"
-            (onClick)="toggleBulkForm()">
-          </p-button>
-          <p-button
-            [label]="showForm ? 'Cerrar formulario' : 'Nuevo periodo'"
-            [icon]="showForm ? 'pi pi-times' : 'pi pi-plus'"
-            (onClick)="toggleForm()">
-          </p-button>
+        <div class="toolbar-btns" *ngIf="!isReadOnly">
+          <p-button label="Crear para todos" icon="pi pi-th-large" severity="secondary" (onClick)="toggleBulkForm()"></p-button>
+          <p-button [label]="showForm ? 'Cerrar' : 'Nuevo periodo'" [icon]="showForm ? 'pi pi-times' : 'pi pi-plus'" (onClick)="toggleForm()"></p-button>
         </div>
       </div>
 
-      <form class="app-form-grid" *ngIf="showForm" (ngSubmit)="submitPeriod()">
-        <label class="wide">
-          <span>Edificio</span>
-          <select [(ngModel)]="form.buildingId" name="buildingId" required>
-            <option value="" disabled>Selecciona un edificio</option>
-            <option *ngFor="let building of buildings" [value]="building.id">{{ building.name }}</option>
-          </select>
-        </label>
-
-        <label>
-          <span>Anio</span>
-          <input [(ngModel)]="form.year" name="year" type="number" min="2000" max="2100" required />
-        </label>
-
-        <label>
-          <span>Mes</span>
-          <input [(ngModel)]="form.month" name="month" type="number" min="1" max="12" required />
-        </label>
-
-        <label>
-          <span>Nombre</span>
-          <input [(ngModel)]="form.name" name="name" type="text" required maxlength="120" />
-        </label>
-
-        <label>
-          <span>Inicio</span>
-          <input [(ngModel)]="form.startDate" name="startDate" type="date" required />
-        </label>
-
-        <label>
-          <span>Fin</span>
-          <input [(ngModel)]="form.endDate" name="endDate" type="date" required />
-        </label>
-
-        <label>
-          <span>Vencimiento</span>
-          <input [(ngModel)]="form.dueDate" name="dueDate" type="date" required />
-        </label>
-
-        <label>
-          <span>Fecha corte mora <small>(opcional)</small></span>
-          <input [(ngModel)]="form.lateFeeDate" name="lateFeeDate" type="date" />
-        </label>
-
-        <label>
-          <span>Estado inicial</span>
-          <input value="Draft" type="text" readonly />
-        </label>
-
-        <label class="wide">
-          <span>Notas</span>
-          <input [(ngModel)]="form.notes" name="notes" type="text" maxlength="500" />
-        </label>
-
-        <div class="wide form-actions">
-          <p-button
-            type="submit"
-            [disabled]="!buildings.length"
-            [loading]="isSaving"
-            [label]="editingId ? 'Guardar cambios' : 'Guardar periodo'">
-          </p-button>
-          <p-button
-            *ngIf="editingId"
-            type="button"
-            label="Cancelar"
-            icon="pi pi-times"
-            severity="secondary"
-            [text]="true"
-            (onClick)="cancelEdit()">
-          </p-button>
-        </div>
-      </form>
-
-      <div class="action-box" *ngIf="showBulkForm">
-        <div class="action-head">
-          <div>
-            <strong>Crear periodos para todos los edificios</strong>
-            <span>Crea el mismo periodo en varios edificios a la vez. Se omiten los que ya existen.</span>
+      <!-- New / Edit period form -->
+      <div class="panel-box form-panel" *ngIf="showForm">
+        <div class="panel-head">
+          <div class="panel-title">
+            <span class="panel-icon pi pi-calendar-plus"></span>
+            <div>
+              <strong>{{ editingId ? 'Editar periodo' : 'Nuevo periodo' }}</strong>
+              <small>Completá los datos del ciclo mensual</small>
+            </div>
           </div>
-          <p-button type="button" label="Cerrar" icon="pi pi-times" severity="secondary" [text]="true" (onClick)="toggleBulkForm()"></p-button>
+          <p-button *ngIf="editingId" type="button" icon="pi pi-times" severity="secondary" [rounded]="true" [text]="true" (onClick)="cancelEdit()"></p-button>
         </div>
-
-        <form class="app-form-grid compact" (ngSubmit)="submitBulkCreate()">
-          <label>
-            <span>Anio</span>
-            <input [(ngModel)]="bulkForm.year" name="bulkYear" type="number" min="2000" max="2100" required />
-          </label>
-
-          <label>
-            <span>Mes</span>
-            <input [(ngModel)]="bulkForm.month" name="bulkMonth" type="number" min="1" max="12" required />
-          </label>
-
-          <label>
-            <span>Nombre <small>(opcional, auto si vacío)</small></span>
-            <input [(ngModel)]="bulkForm.name" name="bulkName" type="text" maxlength="120" />
-          </label>
-
-          <label>
-            <span>Inicio</span>
-            <input [(ngModel)]="bulkForm.startDate" name="bulkStart" type="date" required />
-          </label>
-
-          <label>
-            <span>Fin</span>
-            <input [(ngModel)]="bulkForm.endDate" name="bulkEnd" type="date" required />
-          </label>
-
-          <label>
-            <span>Vencimiento</span>
-            <input [(ngModel)]="bulkForm.dueDate" name="bulkDue" type="date" required />
-          </label>
-
-          <label>
-            <span>Fecha corte mora <small>(opcional)</small></span>
-            <input [(ngModel)]="bulkForm.lateFeeDate" name="bulkLateFee" type="date" />
-          </label>
-
-          <label class="wide">
-            <span>Notas</span>
-            <input [(ngModel)]="bulkForm.notes" name="bulkNotes" type="text" maxlength="500" />
-          </label>
-
-          <div class="wide form-actions">
-            <p-button type="submit" [loading]="isBulkCreating" label="Crear periodos"></p-button>
+        <form class="period-form" (ngSubmit)="submitPeriod()">
+          <div class="form-row-wide">
+            <label class="field-block">
+              <span>Edificio *</span>
+              <select [(ngModel)]="form.buildingId" name="buildingId" required>
+                <option value="" disabled>— Seleccionar edificio —</option>
+                <option *ngFor="let b of buildings" [value]="b.id">{{ b.name }}</option>
+              </select>
+            </label>
+          </div>
+          <div class="form-row">
+            <label class="field-block">
+              <span>Año *</span>
+              <input [(ngModel)]="form.year" name="year" type="number" min="2000" max="2100" required />
+            </label>
+            <label class="field-block">
+              <span>Mes *</span>
+              <input [(ngModel)]="form.month" name="month" type="number" min="1" max="12" required />
+            </label>
+            <label class="field-block">
+              <span>Nombre *</span>
+              <input [(ngModel)]="form.name" name="name" type="text" required maxlength="120" />
+            </label>
+          </div>
+          <div class="form-row">
+            <label class="field-block">
+              <span>Inicio *</span>
+              <input [(ngModel)]="form.startDate" name="startDate" type="date" required />
+            </label>
+            <label class="field-block">
+              <span>Fin *</span>
+              <input [(ngModel)]="form.endDate" name="endDate" type="date" required />
+            </label>
+            <label class="field-block">
+              <span>Vencimiento *</span>
+              <input [(ngModel)]="form.dueDate" name="dueDate" type="date" required />
+            </label>
+            <label class="field-block">
+              <span>Corte mora <small>(opcional)</small></span>
+              <input [(ngModel)]="form.lateFeeDate" name="lateFeeDate" type="date" />
+            </label>
+          </div>
+          <div class="form-row-wide">
+            <label class="field-block">
+              <span>Notas</span>
+              <input [(ngModel)]="form.notes" name="notes" type="text" maxlength="500" placeholder="Observaciones opcionales..." />
+            </label>
+          </div>
+          <div class="form-actions">
+            <p-button type="submit" [disabled]="!buildings.length" [loading]="isSaving" [label]="editingId ? 'Guardar cambios' : 'Crear periodo'" icon="pi pi-check"></p-button>
           </div>
         </form>
       </div>
 
-      <div class="action-box" *ngIf="alerts.length">
-        <div class="action-head">
-          <div>
-            <strong>Alertas operativas</strong>
-            <span>{{ alerts.length }} alertas activas de vencimiento, mora o publicacion pendiente</span>
+      <!-- Bulk create -->
+      <div class="panel-box bulk-panel" *ngIf="showBulkForm">
+        <div class="panel-head">
+          <div class="panel-title">
+            <span class="panel-icon pi pi-th-large"></span>
+            <div>
+              <strong>Crear para todos los edificios</strong>
+              <small>Se omiten los que ya tienen periodo para ese mes</small>
+            </div>
+          </div>
+          <p-button type="button" icon="pi pi-times" severity="secondary" [rounded]="true" [text]="true" (onClick)="toggleBulkForm()"></p-button>
+        </div>
+        <form class="period-form" (ngSubmit)="submitBulkCreate()">
+          <div class="form-row">
+            <label class="field-block">
+              <span>Año *</span>
+              <input [(ngModel)]="bulkForm.year" name="bulkYear" type="number" min="2000" max="2100" required />
+            </label>
+            <label class="field-block">
+              <span>Mes *</span>
+              <input [(ngModel)]="bulkForm.month" name="bulkMonth" type="number" min="1" max="12" required />
+            </label>
+            <label class="field-block">
+              <span>Nombre <small>(auto si vacío)</small></span>
+              <input [(ngModel)]="bulkForm.name" name="bulkName" type="text" maxlength="120" />
+            </label>
+          </div>
+          <div class="form-row">
+            <label class="field-block">
+              <span>Inicio *</span>
+              <input [(ngModel)]="bulkForm.startDate" name="bulkStart" type="date" required />
+            </label>
+            <label class="field-block">
+              <span>Fin *</span>
+              <input [(ngModel)]="bulkForm.endDate" name="bulkEnd" type="date" required />
+            </label>
+            <label class="field-block">
+              <span>Vencimiento *</span>
+              <input [(ngModel)]="bulkForm.dueDate" name="bulkDue" type="date" required />
+            </label>
+            <label class="field-block">
+              <span>Corte mora <small>(opcional)</small></span>
+              <input [(ngModel)]="bulkForm.lateFeeDate" name="bulkLateFee" type="date" />
+            </label>
+          </div>
+          <div class="form-actions">
+            <p-button type="submit" [loading]="isBulkCreating" label="Crear periodos" icon="pi pi-check"></p-button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Operational alerts -->
+      <div class="panel-box alerts-panel" *ngIf="alerts.length">
+        <div class="panel-head">
+          <div class="panel-title">
+            <span class="panel-icon alert-icon pi pi-bell"></span>
+            <div>
+              <strong>Alertas operativas</strong>
+              <small>{{ alerts.length }} alertas activas</small>
+            </div>
           </div>
         </div>
-
         <div class="app-list">
           <div class="app-row header alerts-grid">
-            <span>Tipo</span>
-            <span>Periodo</span>
-            <span>Edificio</span>
-            <span>Vencimiento</span>
-            <span>Saldo</span>
+            <span>Tipo</span><span>Periodo</span><span>Edificio</span><span>Vence</span><span>Saldo</span>
           </div>
-
-          <div class="app-row alerts-grid" *ngFor="let alert of alerts">
-            <p-tag [value]="alertTypeLabel(alert)" [severity]="alertSeverity(alert)"></p-tag>
-            <div class="alert-copy">
-              <strong>{{ alert.expensePeriodName }}</strong>
-              <span>{{ alert.message }}</span>
-            </div>
-            <span>{{ alert.buildingName }}</span>
-            <span>{{ alert.dueDate }}</span>
-            <span>{{ formatCurrency(alert.pendingAmount) }}</span>
+          <div class="app-row alerts-grid" *ngFor="let a of alerts">
+            <p-tag [value]="alertTypeLabel(a)" [severity]="alertSeverity(a)"></p-tag>
+            <div><strong>{{ a.expensePeriodName }}</strong><br><small style="color:#6b878d">{{ a.message }}</small></div>
+            <span>{{ a.buildingName }}</span>
+            <span>{{ a.dueDate }}</span>
+            <span>{{ formatCurrency(a.pendingAmount) }}</span>
           </div>
         </div>
       </div>
 
-      <div class="action-box" *ngIf="generatorPeriod">
-        <div class="action-head">
-          <div>
-            <strong>Liquidacion masiva</strong>
-            <span>{{ generatorPeriod.name }} - {{ generatorPeriod.buildingName }}</span>
+      <!-- Charge generator -->
+      <div class="panel-box generator-panel" *ngIf="generatorPeriod">
+        <div class="panel-head">
+          <div class="panel-title">
+            <span class="panel-icon gen-icon pi pi-bolt"></span>
+            <div>
+              <strong>Generar cargos masivos</strong>
+              <small>{{ generatorPeriod.name }} · {{ generatorPeriod.buildingName }}</small>
+            </div>
           </div>
-          <p-button type="button" label="Cerrar" icon="pi pi-times" severity="secondary" [text]="true" (onClick)="cancelGenerator()"></p-button>
+          <p-button type="button" icon="pi pi-times" severity="secondary" [rounded]="true" [text]="true" (onClick)="cancelGenerator()"></p-button>
         </div>
-
-        <form class="app-form-grid compact" (ngSubmit)="generateCharges()">
-          <label>
-            <span>Modo</span>
-            <select [(ngModel)]="generatorForm.mode" name="generatorMode" required>
-              <option *ngFor="let mode of generationModes" [value]="mode">{{ generationModeLabel(mode) }}</option>
-            </select>
-          </label>
-
-          <label>
-            <span>{{ generatorForm.mode === 'FixedAmount' ? 'Monto por unidad' : 'Monto total a distribuir' }}</span>
-            <input [(ngModel)]="generatorForm.amount" name="generatorAmount" type="number" min="1" step="0.01" required />
-          </label>
-
-          <label class="wide">
-            <span>Concepto</span>
-            <input [(ngModel)]="generatorForm.concept" name="generatorConcept" type="text" required />
-          </label>
-
-          <label class="wide">
-            <span>Notas</span>
-            <input [(ngModel)]="generatorForm.notes" name="generatorNotes" type="text" />
-          </label>
-
-          <div class="wide form-actions">
-            <p-button type="submit" [loading]="isGenerating" label="Generar cargos"></p-button>
+        <form class="period-form" (ngSubmit)="generateCharges()">
+          <div class="form-row">
+            <label class="field-block">
+              <span>Modo</span>
+              <select [(ngModel)]="generatorForm.mode" name="generatorMode" required>
+                <option *ngFor="let mode of generationModes" [value]="mode">{{ generationModeLabel(mode) }}</option>
+              </select>
+            </label>
+            <label class="field-block">
+              <span>{{ generatorForm.mode === 'FixedAmount' ? 'Monto por unidad' : 'Monto total a distribuir' }}</span>
+              <p-inputnumber [(ngModel)]="generatorForm.amount" name="generatorAmount" [useGrouping]="true" prefix="₲ " [min]="1" [minFractionDigits]="0" [maxFractionDigits]="0" [required]="true" styleClass="w-full"></p-inputnumber>
+            </label>
+            <label class="field-block">
+              <span>Concepto *</span>
+              <input [(ngModel)]="generatorForm.concept" name="generatorConcept" type="text" required />
+            </label>
+          </div>
+          <div class="form-actions">
+            <p-button type="submit" severity="success" [loading]="isGenerating" label="Generar cargos" icon="pi pi-bolt"></p-button>
           </div>
         </form>
       </div>
 
-      <div class="action-box" *ngIf="settlementPeriod && settlementSummary">
-        <div class="action-head">
-          <div>
-            <strong>Liquidacion consolidada</strong>
-            <span>{{ settlementPeriod.name }} - {{ settlementPeriod.buildingName }}</span>
+      <!-- Settlement panel -->
+      <div class="panel-box settlement-panel" *ngIf="settlementPeriod && settlementSummary">
+        <div class="panel-head">
+          <div class="panel-title">
+            <span class="panel-icon settle-icon pi pi-calculator"></span>
+            <div>
+              <strong>Liquidación consolidada</strong>
+              <small>{{ settlementPeriod.name }} · {{ settlementPeriod.buildingName }}</small>
+            </div>
           </div>
-          <p-button type="button" label="Cerrar" icon="pi pi-times" severity="secondary" [text]="true" (onClick)="closeSettlement()"></p-button>
+          <p-button type="button" icon="pi pi-times" severity="secondary" [rounded]="true" [text]="true" (onClick)="closeSettlement()"></p-button>
         </div>
 
-        <div class="settlement-grid">
-          <div class="settlement-item">
-            <span>Estado del periodo</span>
+        <div class="settlement-metrics">
+          <div class="metric-card">
+            <span>Estado periodo</span>
             <strong>{{ statusLabel(settlementSummary.periodStatus) }}</strong>
           </div>
-          <div class="settlement-item">
-            <span>Estado</span>
+          <div class="metric-card">
+            <span>Liquidación</span>
             <strong>{{ settlementStatusLabel(settlementSummary.status, settlementSummary.isCalculated) }}</strong>
           </div>
-          <div class="settlement-item">
+          <div class="metric-card highlight">
             <span>Total gastos</span>
             <strong>{{ formatCurrency(settlementSummary.totalBuildingExpenses) }}</strong>
           </div>
-          <div class="settlement-item">
+          <div class="metric-card">
             <span>Total ingresos</span>
             <strong>{{ formatCurrency(settlementSummary.totalBuildingIncomes) }}</strong>
           </div>
-          <div class="settlement-item">
-            <span>Neto comun</span>
+          <div class="metric-card highlight">
+            <span>Neto común</span>
             <strong>{{ formatCurrency(settlementSummary.netCommonAmount) }}</strong>
           </div>
-          <div class="settlement-item">
-            <span>Fondo de reserva</span>
+          <div class="metric-card">
+            <span>Fondo reserva</span>
             <strong>{{ formatCurrency(settlementSummary.reserveFundAmount) }}</strong>
           </div>
-          <div class="settlement-item">
+          <div class="metric-card">
             <span>Extraordinarios</span>
             <strong>{{ formatCurrency(settlementSummary.extraordinaryAmount) }}</strong>
           </div>
-          <div class="settlement-item">
+          <div class="metric-card">
             <span>Cargos emitidos</span>
             <strong>{{ settlementSummary.generatedChargeCount }}</strong>
           </div>
         </div>
 
-        <p class="settlement-meta" *ngIf="settlementSummary.generatedAtUtc">
-          Ultimo calculo: {{ settlementSummary.generatedAtUtc }}<span *ngIf="settlementSummary.generatedByUserName"> por {{ settlementSummary.generatedByUserName }}</span>
-        </p>
-        <p class="settlement-meta" *ngIf="settlementSummary.approvedAtUtc">
-          Aprobada: {{ settlementSummary.approvedAtUtc }}<span *ngIf="settlementSummary.approvedByUserName"> por {{ settlementSummary.approvedByUserName }}</span>
-        </p>
-        <p class="settlement-meta" *ngIf="settlementSummary.publishedAtUtc">
-          Publicada: {{ settlementSummary.publishedAtUtc }}<span *ngIf="settlementSummary.publishedByUserName"> por {{ settlementSummary.publishedByUserName }}</span>
-        </p>
-        <p class="settlement-meta" *ngIf="!settlementSummary.generatedAtUtc">
-          Resumen preliminar. Aun no existe una liquidacion consolidada persistida para este periodo.
-        </p>
-
-        <div class="form-actions">
-          <p-button
-            *ngIf="!isReadOnly"
-            type="button"
-            [label]="settlementSummary.isCalculated ? 'Recalcular liquidacion' : 'Calcular liquidacion'"
-            [loading]="isCalculatingSettlement"
-            [disabled]="settlementPeriod.status !== 'Draft'"
-            (onClick)="calculateSettlement()">
-          </p-button>
-          <p-button
-            *ngIf="!isReadOnly"
-            type="button"
-            label="Aprobar liquidacion"
-            severity="info"
-            [loading]="isApprovingSettlement"
-            [disabled]="!canApproveSettlement()"
-            (onClick)="approveSettlement()">
-          </p-button>
-          <p-button
-            type="button"
-            label="Ver vista previa"
-            severity="secondary"
-            [text]="true"
-            [loading]="isLoadingSettlementPreview"
-            [disabled]="!settlementSummary.isCalculated"
-            (onClick)="loadSettlementPreview()">
-          </p-button>
-          <p-button
-            *ngIf="!isReadOnly"
-            type="button"
-            label="Publicar comprobantes"
-            severity="contrast"
-            [loading]="isPublishingSettlement"
-            [disabled]="!canPublishSettlement()"
-            (onClick)="publishSettlement()">
-          </p-button>
-          <p-button
-            *ngIf="!isReadOnly"
-            type="button"
-            label="Registrar recargos"
-            severity="warn"
-            [text]="true"
-            [disabled]="!canApplyLateFees()"
-            (onClick)="toggleLateFeeForm()">
-          </p-button>
-          <a *ngIf="settlementSummary.isCalculated" [href]="getSettlementPdfUrl()" target="_blank" style="display:contents">
-            <p-button
-              type="button"
-              label="Descargar PDF"
-              icon="pi pi-file-pdf"
-              severity="secondary"
-              [text]="true">
-            </p-button>
-          </a>
-          <p-button
-            *ngIf="!isReadOnly && canVoidSettlement()"
-            type="button"
-            label="Anular liquidacion"
-            icon="pi pi-undo"
-            severity="danger"
-            [text]="true"
-            [loading]="isVoidingSettlement"
-            (onClick)="voidSettlement()">
-          </p-button>
+        <div class="settlement-trail" *ngIf="settlementSummary.generatedAtUtc || settlementSummary.approvedAtUtc || settlementSummary.publishedAtUtc || !settlementSummary.generatedAtUtc">
+          <span *ngIf="!settlementSummary.generatedAtUtc" class="trail-item pending"><span class="pi pi-info-circle"></span> Resumen preliminar — sin liquidación persistida aún.</span>
+          <span *ngIf="settlementSummary.generatedAtUtc" class="trail-item"><span class="pi pi-check-circle"></span> Calculada: {{ settlementSummary.generatedAtUtc }}<span *ngIf="settlementSummary.generatedByUserName"> por {{ settlementSummary.generatedByUserName }}</span></span>
+          <span *ngIf="settlementSummary.approvedAtUtc" class="trail-item"><span class="pi pi-check-circle"></span> Aprobada: {{ settlementSummary.approvedAtUtc }}<span *ngIf="settlementSummary.approvedByUserName"> por {{ settlementSummary.approvedByUserName }}</span></span>
+          <span *ngIf="settlementSummary.publishedAtUtc" class="trail-item"><span class="pi pi-check-circle"></span> Publicada: {{ settlementSummary.publishedAtUtc }}<span *ngIf="settlementSummary.publishedByUserName"> por {{ settlementSummary.publishedByUserName }}</span></span>
         </div>
 
-        <form class="app-form-grid compact late-fee-box" *ngIf="showLateFeeForm" (ngSubmit)="applyLateFees()">
-          <label>
-            <span>% recargo</span>
-            <input [(ngModel)]="lateFeeForm.ratePercentage" name="lateFeeRate" type="number" min="0.01" step="0.01" required />
-          </label>
+        <div class="settlement-actions">
+          <p-button *ngIf="!isReadOnly" type="button" [label]="settlementSummary.isCalculated ? 'Recalcular' : 'Calcular liquidación'" icon="pi pi-calculator" [loading]="isCalculatingSettlement" [disabled]="settlementPeriod.status !== 'Draft'" (onClick)="calculateSettlement()"></p-button>
+          <p-button *ngIf="!isReadOnly" type="button" label="Aprobar" icon="pi pi-check" severity="info" [loading]="isApprovingSettlement" [disabled]="!canApproveSettlement()" (onClick)="approveSettlement()"></p-button>
+          <p-button *ngIf="!isReadOnly" type="button" label="Publicar comprobantes" icon="pi pi-send" severity="contrast" [loading]="isPublishingSettlement" [disabled]="!canPublishSettlement()" (onClick)="publishSettlement()"></p-button>
+          <p-button type="button" label="Vista previa" icon="pi pi-eye" severity="secondary" [text]="true" [loading]="isLoadingSettlementPreview" [disabled]="!settlementSummary.isCalculated" (onClick)="loadSettlementPreview()"></p-button>
+          <a *ngIf="settlementSummary.isCalculated" [href]="getSettlementPdfUrl()" target="_blank" style="display:contents">
+            <p-button type="button" label="PDF" icon="pi pi-file-pdf" severity="secondary" [text]="true"></p-button>
+          </a>
+          <p-button *ngIf="!isReadOnly" type="button" label="Recargos por mora" icon="pi pi-percentage" severity="warn" [text]="true" [disabled]="!canApplyLateFees()" (onClick)="toggleLateFeeForm()"></p-button>
+          <p-button *ngIf="!isReadOnly && canVoidSettlement()" type="button" label="Anular" icon="pi pi-undo" severity="danger" [text]="true" [loading]="isVoidingSettlement" (onClick)="voidSettlement()"></p-button>
+        </div>
 
-          <label>
-            <span>Fecha de referencia</span>
-            <input [(ngModel)]="lateFeeForm.referenceDate" name="lateFeeReferenceDate" type="date" />
-          </label>
-
-          <label class="wide">
-            <span>Concepto</span>
-            <input [(ngModel)]="lateFeeForm.concept" name="lateFeeConcept" type="text" required />
-          </label>
-
-          <label class="wide">
-            <span>Notas</span>
-            <input [(ngModel)]="lateFeeForm.notes" name="lateFeeNotes" type="text" />
-          </label>
-
-          <div class="wide form-actions">
-            <p-button type="submit" severity="warn" [loading]="isApplyingLateFees" label="Aplicar recargos"></p-button>
+        <form class="period-form late-fee-form" *ngIf="showLateFeeForm" (ngSubmit)="applyLateFees()">
+          <div class="form-row">
+            <label class="field-block">
+              <span>% recargo *</span>
+              <input [(ngModel)]="lateFeeForm.ratePercentage" name="lateFeeRate" type="number" min="0.01" step="0.01" required />
+            </label>
+            <label class="field-block">
+              <span>Fecha de referencia</span>
+              <input [(ngModel)]="lateFeeForm.referenceDate" name="lateFeeReferenceDate" type="date" />
+            </label>
+            <label class="field-block">
+              <span>Concepto *</span>
+              <input [(ngModel)]="lateFeeForm.concept" name="lateFeeConcept" type="text" required />
+            </label>
+          </div>
+          <div class="form-actions">
+            <p-button type="submit" severity="warn" [loading]="isApplyingLateFees" label="Aplicar recargos" icon="pi pi-percentage"></p-button>
           </div>
         </form>
 
@@ -407,14 +316,8 @@ import {
             <strong>Vista previa de cargos</strong>
             <span>{{ settlementPreview.chargeCount }} cargos · {{ settlementPreview.unitsAffected }} unidades · {{ formatCurrency(settlementPreview.totalGeneratedAmount) }}</span>
           </div>
-
           <div class="app-list" *ngIf="settlementPreview.items.length">
-            <div class="app-row header preview-grid">
-              <span>Unidad</span>
-              <span>Concepto</span>
-              <span>Monto</span>
-            </div>
-
+            <div class="app-row header preview-grid"><span>Unidad</span><span>Concepto</span><span>Monto</span></div>
             <div class="app-row preview-grid" *ngFor="let item of settlementPreview.items">
               <strong>{{ item.unitCode }}</strong>
               <span>{{ item.concept }}</span>
@@ -424,26 +327,30 @@ import {
         </div>
       </div>
 
+      <!-- Period cards -->
       <p class="app-state" *ngIf="loading">Cargando periodos...</p>
-      <p class="app-state" *ngIf="!loading && !items.length">No hay periodos cargados.</p>
+      <p class="app-state" *ngIf="!loading && !items.length">No hay periodos creados todavía.</p>
 
-      <div class="app-list" *ngIf="items.length">
-        <div class="app-row header periods-grid">
-          <span>Periodo</span>
-          <span>Edificio</span>
-          <span>Vigencia</span>
-          <span>Vencimiento</span>
-          <span>Estado</span>
-          <span class="actions-head">Operacion</span>
-        </div>
-
-        <div class="app-row periods-grid" *ngFor="let item of items">
-          <strong>{{ item.name }}</strong>
-          <span>{{ item.buildingName }}</span>
-          <span>{{ item.startDate }} al {{ item.endDate }}</span>
-          <span>{{ item.dueDate }}</span>
-          <p-tag [value]="statusLabel(item.status)" [severity]="statusSeverity(item.status)"></p-tag>
-          <div class="app-actions">
+      <div class="period-cards" *ngIf="items.length">
+        <div class="period-card" *ngFor="let item of items" [class.card-published]="item.status === 'Published'" [class.card-closed]="item.status === 'Closed'">
+          <div class="card-top">
+            <div class="card-period-name">{{ item.name }}</div>
+            <p-tag [value]="statusLabel(item.status)" [severity]="statusSeverity(item.status)"></p-tag>
+          </div>
+          <div class="card-building">
+            <span class="pi pi-building"></span> {{ item.buildingName }}
+          </div>
+          <div class="card-dates">
+            <div class="card-date-item">
+              <small>Vigencia</small>
+              <span>{{ item.startDate }} — {{ item.endDate }}</span>
+            </div>
+            <div class="card-date-item">
+              <small>Vencimiento</small>
+              <span>{{ item.dueDate }}</span>
+            </div>
+          </div>
+          <div class="card-actions">
             <p-button type="button" icon="pi pi-calculator" severity="info" [rounded]="true" [text]="true" [disabled]="isSaving || isGenerating || isCalculatingSettlement" (onClick)="openSettlement(item)" pTooltip="Liquidación"></p-button>
             <p-button *ngIf="!isReadOnly" type="button" icon="pi pi-bolt" severity="success" [rounded]="true" [text]="true" [disabled]="item.status !== 'Draft' || isSaving || isGenerating" (onClick)="openGenerator(item)" pTooltip="Generar cargos"></p-button>
             <p-button *ngIf="!isReadOnly" type="button" icon="pi pi-copy" severity="secondary" [rounded]="true" [text]="true" [disabled]="isSaving || isCloning" (onClick)="clonePeriod(item)" pTooltip="Clonar al mes siguiente"></p-button>
@@ -455,78 +362,196 @@ import {
     </p-card>
   `,
   styles: [`
-    .periods-grid { grid-template-columns: 1fr 1fr 1.1fr 0.8fr 0.7fr 0.55fr; }
-    .form-actions { display:flex; gap:0.75rem; justify-content:flex-end; }
-    .actions-head { text-align:right; }
-    .compact { margin-top: 0.8rem; }
-    .action-box {
-      margin-bottom: 1rem;
-      padding: 1.1rem;
+    .toolbar-btns { display: flex; gap: 0.5rem; }
+
+    /* Shared panel box */
+    .panel-box {
+      margin-bottom: 1.25rem;
+      padding: 1.5rem;
       border-radius: 22px;
-      background: #f5faf9;
-      border: 1px solid #dbe7e3;
+      background: white;
+      border: 1.5px solid #dbe7e3;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.04);
     }
-    .action-head {
-      display:flex;
-      justify-content:space-between;
-      gap:1rem;
-      align-items:start;
-      margin-bottom:0.4rem;
+    .form-panel { border-color: rgba(19,133,182,0.25); background: rgba(19,133,182,0.02); }
+    .bulk-panel { border-color: rgba(108,117,125,0.25); }
+    .alerts-panel { border-color: rgba(220,160,0,0.3); background: rgba(255,248,230,0.6); }
+    .generator-panel { border-color: rgba(34,197,94,0.3); background: rgba(240,253,244,0.8); }
+    .settlement-panel { border-color: rgba(59,130,246,0.25); background: rgba(239,246,255,0.6); }
+
+    .panel-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 1.25rem;
     }
-    .action-head strong { display:block; color:#14363d; }
-    .action-head span { color:#6b878d; }
-    .settlement-grid {
-      display:grid;
-      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-      gap: 0.9rem;
-      margin-top: 0.8rem;
-      margin-bottom: 0.8rem;
+    .panel-title {
+      display: flex;
+      align-items: center;
+      gap: 0.85rem;
     }
-    .settlement-item {
-      padding: 0.9rem 1rem;
-      border-radius: 18px;
+    .panel-icon {
+      width: 42px;
+      height: 42px;
+      border-radius: 14px;
+      background: rgba(19,133,182,0.1);
+      color: #1385b6;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.1rem;
+    }
+    .alert-icon { background: rgba(220,160,0,0.12); color: #b08000; }
+    .gen-icon { background: rgba(34,197,94,0.12); color: #16a34a; }
+    .settle-icon { background: rgba(59,130,246,0.12); color: #2563eb; }
+    .panel-title strong { display: block; color: #14363d; font-size: 1rem; }
+    .panel-title small { color: #6b878d; font-size: 0.82rem; }
+
+    /* Form layout */
+    .period-form { display: grid; gap: 1rem; }
+    .form-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; }
+    .form-row-wide { display: grid; }
+    .field-block { display: grid; gap: 0.4rem; }
+    .field-block > span { font-weight: 700; color: #29484f; font-size: 0.85rem; }
+    .field-block > span small { font-weight: 400; color: #6b878d; }
+    .field-block select,
+    .field-block input {
+      border: 1.5px solid #d7e5e1;
+      border-radius: 12px;
+      padding: 0.75rem 1rem;
+      font: inherit;
+      background: white;
+      color: #18353a;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    .field-block select:focus,
+    .field-block input:focus {
+      outline: none;
+      border-color: #1385b6;
+      box-shadow: 0 0 0 3px rgba(19,133,182,0.12);
+    }
+    .form-actions { display: flex; justify-content: flex-end; gap: 0.75rem; padding-top: 0.25rem; }
+
+    .late-fee-form {
+      margin-top: 1.25rem;
+      padding-top: 1.25rem;
+      border-top: 1px dashed #c5ddd8;
+    }
+
+    /* Alerts list */
+    .alerts-grid { grid-template-columns: 0.8fr 1.5fr 1fr 0.7fr 0.8fr; }
+
+    /* Settlement metrics */
+    .settlement-metrics {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 0.75rem;
+      margin-bottom: 1rem;
+    }
+    .metric-card {
+      padding: 0.85rem 1rem;
+      border-radius: 16px;
       background: white;
       border: 1px solid #dbe7e3;
     }
-    .settlement-item span {
-      display:block;
-      color:#6b878d;
-      font-size:0.85rem;
-      margin-bottom:0.3rem;
+    .metric-card.highlight {
+      border-color: rgba(19,133,182,0.3);
+      background: rgba(19,133,182,0.04);
     }
-    .settlement-item strong {
-      color:#14363d;
-      font-size:1.05rem;
+    .metric-card span { display: block; color: #6b878d; font-size: 0.78rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 0.3rem; }
+    .metric-card strong { color: #14363d; font-size: 1rem; }
+
+    .settlement-trail {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
     }
-    .settlement-meta {
-      margin: 0 0 0.9rem;
-      color:#5f787d;
+    .trail-item {
+      font-size: 0.82rem;
+      color: #4a7a72;
+      background: rgba(15,160,144,0.08);
+      border-radius: 20px;
+      padding: 0.3rem 0.75rem;
     }
+    .trail-item.pending { color: #8a6800; background: rgba(220,160,0,0.1); }
+    .trail-item .pi { margin-right: 0.3rem; }
+
+    .settlement-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-bottom: 0.5rem;
+    }
+
     .preview-box {
-      margin-top: 1rem;
-      padding-top: 1rem;
-      border-top: 1px solid #dbe7e3;
-    }
-    .late-fee-box {
-      margin-top: 1rem;
-      padding-top: 1rem;
-      border-top: 1px solid #dbe7e3;
+      margin-top: 1.25rem;
+      padding-top: 1.25rem;
+      border-top: 1px dashed #c5ddd8;
     }
     .preview-head {
-      display:flex;
-      justify-content:space-between;
-      gap:1rem;
-      margin-bottom:0.75rem;
-      color:#5f787d;
+      display: flex;
+      justify-content: space-between;
+      gap: 1rem;
+      margin-bottom: 0.75rem;
+      color: #14363d;
+      font-weight: 600;
     }
+    .preview-head span { font-weight: 400; color: #6b878d; }
     .preview-grid { grid-template-columns: 0.7fr 1.5fr 0.8fr; }
-    .alerts-grid { grid-template-columns: 0.8fr 1.5fr 1fr 0.7fr 0.7fr; }
-    .alert-copy {
-      display:grid;
-      gap:0.2rem;
+
+    /* Period cards */
+    .period-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 1rem;
     }
-    .alert-copy span {
-      color:#6b878d;
+    .period-card {
+      background: white;
+      border: 1.5px solid #dbe7e3;
+      border-radius: 20px;
+      padding: 1.25rem;
+      display: grid;
+      gap: 0.75rem;
+      transition: box-shadow 0.15s, border-color 0.15s;
+    }
+    .period-card:hover { box-shadow: 0 6px 20px rgba(0,0,0,0.08); border-color: #b0ccca; }
+    .card-published { border-color: rgba(34,197,94,0.3); background: rgba(240,253,244,0.6); }
+    .card-closed { border-color: rgba(59,130,246,0.25); background: rgba(239,246,255,0.5); }
+
+    .card-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 0.5rem;
+    }
+    .card-period-name {
+      font-size: 1.15rem;
+      font-weight: 800;
+      color: #14363d;
+      line-height: 1.2;
+    }
+    .card-building {
+      font-size: 0.88rem;
+      color: #6b878d;
+      font-weight: 600;
+    }
+    .card-building .pi { margin-right: 0.3rem; font-size: 0.82rem; }
+    .card-dates {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.5rem;
+    }
+    .card-date-item { display: grid; gap: 0.15rem; }
+    .card-date-item small { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: #9ab0ae; }
+    .card-date-item span { font-size: 0.83rem; color: #2a4e55; }
+    .card-actions {
+      display: flex;
+      gap: 0.25rem;
+      border-top: 1px solid #edf2f1;
+      padding-top: 0.75rem;
+      margin-top: 0.25rem;
     }
   `]
 })
@@ -1067,7 +1092,7 @@ export class ExpensePeriodsPageComponent implements OnInit {
   }
 
   formatCurrency(value: number): string {
-    return new Intl.NumberFormat('es-PY', { style: 'currency', currency: 'PYG', maximumFractionDigits: 0 }).format(value ?? 0);
+    return '₲ ' + new Intl.NumberFormat('es-PY', { maximumFractionDigits: 0 }).format(value ?? 0);
   }
 
   private loadData(): void {

@@ -82,6 +82,25 @@ export interface Unit {
   isActive: boolean;
 }
 
+export interface UnitOwnerAssignment {
+  id: string;
+  unitId: string;
+  unitCode: string;
+  buildingId: string;
+  buildingName: string;
+  ownerId: string;
+  ownerName: string;
+  isPrimary: boolean;
+  startDate: string;
+}
+
+export interface CreateUnitOwnerRequest {
+  unitId: string;
+  ownerId: string;
+  isPrimary: boolean;
+  startDate: string;
+}
+
 export interface CreateUnitRequest {
   buildingId: string;
   code: string;

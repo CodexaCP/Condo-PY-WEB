@@ -6,6 +6,7 @@ import { forkJoin } from 'rxjs';
 import { Button } from 'primeng/button';
 import { Card } from 'primeng/card';
 import { MessageService } from 'primeng/api';
+import { InputNumber } from 'primeng/inputnumber';
 import { extractApiErrorMessage } from '../../api/api-error.util';
 import { BuildingIncomesApiService } from '../../api/building-incomes-api.service';
 import { BuildingsApiService } from '../../api/buildings-api.service';
@@ -23,7 +24,7 @@ import {
 @Component({
   standalone: true,
   selector: 'app-building-incomes-page',
-  imports: [CommonModule, FormsModule, Button, Card],
+  imports: [CommonModule, FormsModule, Button, Card, InputNumber],
   template: `
     <p-card styleClass="app-page-card">
       <div class="app-toolbar">
@@ -175,7 +176,7 @@ import {
 
         <label>
           <span>Monto</span>
-          <input [(ngModel)]="form.amount" name="amount" type="number" min="1" step="0.01" required />
+          <p-inputnumber [(ngModel)]="form.amount" name="amount" [useGrouping]="true" prefix="₲ " [min]="1" [minFractionDigits]="0" [maxFractionDigits]="0" [required]="true" styleClass="w-full"></p-inputnumber>
         </label>
 
         <label class="wide">
@@ -526,7 +527,7 @@ export class BuildingIncomesPageComponent implements OnInit {
   }
 
   formatCurrency(value: number): string {
-    return new Intl.NumberFormat('es-PY', { style: 'currency', currency: 'PYG', maximumFractionDigits: 0 }).format(value ?? 0);
+    return '₲ ' + new Intl.NumberFormat('es-PY', { maximumFractionDigits: 0 }).format(value ?? 0);
   }
 
   private loadData(): void {

@@ -8,6 +8,7 @@ import { Button } from 'primeng/button';
 import { Card } from 'primeng/card';
 import { Tag } from 'primeng/tag';
 import { Tooltip } from 'primeng/tooltip';
+import { InputNumber } from 'primeng/inputnumber';
 import { extractApiErrorMessage } from '../../api/api-error.util';
 import { BuildingExpensesApiService } from '../../api/building-expenses-api.service';
 import { RecurringBuildingExpensesApiService } from '../../api/recurring-building-expenses-api.service';
@@ -32,116 +33,104 @@ import { API_BASE_URL } from '../../config/api.config';
 @Component({
   standalone: true,
   selector: 'app-building-expenses-page',
-  imports: [CommonModule, FormsModule, Button, Card, Tag, Tooltip],
+  imports: [CommonModule, FormsModule, Button, Card, Tag, Tooltip, InputNumber],
   template: `
     <p-card styleClass="app-page-card">
       <div class="app-toolbar">
         <div class="app-page-head">
           <div>
             <h1>Gastos del edificio</h1>
-            <p>Registro formal de facturas, servicios y egresos a distribuir por periodo.</p>
+            <p>Registro de facturas, servicios y egresos por periodo.</p>
           </div>
         </div>
-
-        <div style="display:flex;gap:0.5rem;" *ngIf="!isReadOnly">
-          <p-button
-            label="Plantillas recurrentes"
-            icon="pi pi-sync"
-            severity="secondary"
-            (onClick)="toggleRecurringSection()">
-          </p-button>
-          <p-button
-            [label]="showForm ? 'Cerrar formulario' : 'Nuevo gasto'"
-            [icon]="showForm ? 'pi pi-times' : 'pi pi-plus'"
-            (onClick)="toggleForm()">
-          </p-button>
+        <div class="toolbar-btns" *ngIf="!isReadOnly">
+          <p-button label="Plantillas recurrentes" icon="pi pi-sync" severity="secondary" (onClick)="toggleRecurringSection()"></p-button>
+          <p-button [label]="showForm ? 'Cerrar' : 'Nuevo gasto'" [icon]="showForm ? 'pi pi-times' : 'pi pi-plus'" (onClick)="toggleForm()"></p-button>
         </div>
       </div>
 
       <!-- PLANTILLAS RECURRENTES -->
-      <div class="action-box" *ngIf="showRecurringSection">
-        <div class="action-head">
-          <div>
-            <strong>Plantillas de gastos recurrentes</strong>
-            <span>Gastos fijos mensuales del edificio. Aplicalos a cualquier periodo con un clic.</span>
+      <div class="panel-box recurring-panel" *ngIf="showRecurringSection">
+        <div class="panel-head">
+          <div class="panel-title">
+            <span class="panel-icon rec-icon pi pi-sync"></span>
+            <div>
+              <strong>Plantillas recurrentes</strong>
+              <small>Gastos fijos mensuales — aplicalos a un periodo con un clic</small>
+            </div>
           </div>
-          <p-button type="button" label="Cerrar" icon="pi pi-times" severity="secondary" [text]="true" (onClick)="toggleRecurringSection()"></p-button>
+          <p-button type="button" icon="pi pi-times" severity="secondary" [rounded]="true" [text]="true" (onClick)="toggleRecurringSection()"></p-button>
         </div>
 
-        <div style="display:flex;gap:0.5rem;margin-bottom:0.75rem;align-items:center;">
-          <select [(ngModel)]="recurringBuildingFilter" name="recurringBuildingFilter" style="flex:1;" (ngModelChange)="onRecurringBuildingChange()">
-            <option value="">Todos los edificios</option>
-            <option *ngFor="let b of buildings" [value]="b.id">{{ b.name }}</option>
-          </select>
+        <div class="rec-toolbar">
+          <div class="field-block" style="flex:1">
+            <span>Filtrar por edificio</span>
+            <select [(ngModel)]="recurringBuildingFilter" name="recurringBuildingFilter" (ngModelChange)="onRecurringBuildingChange()">
+              <option value="">Todos los edificios</option>
+              <option *ngFor="let b of buildings" [value]="b.id">{{ b.name }}</option>
+            </select>
+          </div>
           <p-button *ngIf="!isReadOnly" label="Nueva plantilla" icon="pi pi-plus" severity="secondary" (onClick)="toggleRecurringForm()"></p-button>
         </div>
 
-        <form class="app-form-grid compact" *ngIf="showRecurringForm" (ngSubmit)="submitRecurring()">
-          <label>
-            <span>Edificio</span>
-            <select [(ngModel)]="recurringForm.buildingId" name="recBuildingId" required>
-              <option value="" disabled>Selecciona un edificio</option>
-              <option *ngFor="let b of buildings" [value]="b.id">{{ b.name }}</option>
-            </select>
-          </label>
+        <div class="panel-box inner-form" *ngIf="showRecurringForm">
+          <form class="expense-form" (ngSubmit)="submitRecurring()">
+            <div class="form-row">
+              <label class="field-block">
+                <span>Edificio *</span>
+                <select [(ngModel)]="recurringForm.buildingId" name="recBuildingId" required>
+                  <option value="" disabled>— Seleccionar —</option>
+                  <option *ngFor="let b of buildings" [value]="b.id">{{ b.name }}</option>
+                </select>
+              </label>
+              <label class="field-block">
+                <span>Categoría *</span>
+                <select [(ngModel)]="recurringForm.category" name="recCategory" required>
+                  <option *ngFor="let c of categories" [value]="c">{{ categoryLabel(c) }}</option>
+                </select>
+              </label>
+              <label class="field-block">
+                <span>Distribución *</span>
+                <select [(ngModel)]="recurringForm.distributionType" name="recDistribution" required>
+                  <option *ngFor="let d of distributionTypes" [value]="d">{{ distributionTypeLabel(d) }}</option>
+                </select>
+              </label>
+              <label class="field-block">
+                <span>Activa</span>
+                <select [(ngModel)]="recurringForm.isActive" name="recIsActive">
+                  <option [ngValue]="true">Sí</option>
+                  <option [ngValue]="false">No</option>
+                </select>
+              </label>
+            </div>
+            <div class="form-row">
+              <label class="field-block wide2">
+                <span>Descripción *</span>
+                <input [(ngModel)]="recurringForm.description" name="recDescription" type="text" required maxlength="200" placeholder="Ej: Sueldo encargado, Servicio de limpieza..." />
+              </label>
+              <label class="field-block">
+                <span>Proveedor</span>
+                <input [(ngModel)]="recurringForm.supplierName" name="recSupplier" type="text" maxlength="160" />
+              </label>
+              <label class="field-block">
+                <span>Monto *</span>
+                <p-inputnumber [(ngModel)]="recurringForm.amount" name="recAmount" [useGrouping]="true" prefix="₲ " [min]="1" [minFractionDigits]="0" [maxFractionDigits]="0" [required]="true" styleClass="w-full"></p-inputnumber>
+              </label>
+            </div>
+            <div class="form-actions">
+              <p-button *ngIf="editingRecurringId" type="button" label="Cancelar" severity="secondary" [text]="true" (onClick)="cancelRecurringEdit()"></p-button>
+              <p-button type="submit" [loading]="isSavingRecurring" [label]="editingRecurringId ? 'Guardar plantilla' : 'Agregar plantilla'" icon="pi pi-check"></p-button>
+            </div>
+          </form>
+        </div>
 
-          <label>
-            <span>Categoria</span>
-            <select [(ngModel)]="recurringForm.category" name="recCategory" required>
-              <option *ngFor="let c of categories" [value]="c">{{ categoryLabel(c) }}</option>
-            </select>
-          </label>
-
-          <label>
-            <span>Proveedor</span>
-            <input [(ngModel)]="recurringForm.supplierName" name="recSupplier" type="text" maxlength="160" />
-          </label>
-
-          <label>
-            <span>Monto</span>
-            <input [(ngModel)]="recurringForm.amount" name="recAmount" type="number" min="1" step="0.01" required />
-          </label>
-
-          <label class="wide">
-            <span>Descripcion</span>
-            <input [(ngModel)]="recurringForm.description" name="recDescription" type="text" required maxlength="200" />
-          </label>
-
-          <label>
-            <span>Distribucion</span>
-            <select [(ngModel)]="recurringForm.distributionType" name="recDistribution" required>
-              <option *ngFor="let d of distributionTypes" [value]="d">{{ distributionTypeLabel(d) }}</option>
-            </select>
-          </label>
-
-          <label>
-            <span>Activa</span>
-            <select [(ngModel)]="recurringForm.isActive" name="recIsActive">
-              <option [ngValue]="true">Sí</option>
-              <option [ngValue]="false">No</option>
-            </select>
-          </label>
-
-          <div class="wide form-actions">
-            <p-button type="submit" [loading]="isSavingRecurring" [label]="editingRecurringId ? 'Guardar plantilla' : 'Agregar plantilla'"></p-button>
-            <p-button *ngIf="editingRecurringId" type="button" label="Cancelar" severity="secondary" [text]="true" (onClick)="cancelRecurringEdit()"></p-button>
-          </div>
-        </form>
-
-        <p class="app-state" *ngIf="!recurringItems.length && !loadingRecurring">No hay plantillas cargadas para este edificio.</p>
+        <p class="app-state" *ngIf="!recurringItems.length && !loadingRecurring">No hay plantillas para este edificio.</p>
         <p class="app-state" *ngIf="loadingRecurring">Cargando plantillas...</p>
 
         <div class="app-list" *ngIf="recurringItems.length">
           <div class="app-row header recurring-grid">
-            <span>Descripcion</span>
-            <span>Proveedor</span>
-            <span>Categoria</span>
-            <span>Distribucion</span>
-            <span>Monto</span>
-            <span>Activa</span>
-            <span class="actions-head">Acciones</span>
+            <span>Descripción</span><span>Proveedor</span><span>Categoría</span><span>Distribución</span><span>Monto</span><span>Estado</span><span class="txt-right">Acciones</span>
           </div>
-
           <div class="app-row recurring-grid" *ngFor="let item of recurringItems">
             <strong>{{ item.description }}</strong>
             <span>{{ item.supplierName || '—' }}</span>
@@ -156,171 +145,142 @@ import { API_BASE_URL } from '../../config/api.config';
           </div>
         </div>
 
-        <div class="apply-recurring-box" *ngIf="recurringItems.length">
-          <strong>Aplicar al periodo</strong>
-          <select [(ngModel)]="applyRecurringPeriodId" name="applyPeriodId">
-            <option value="">Selecciona un periodo Draft</option>
-            <option *ngFor="let p of draftPeriodsByBuilding" [value]="p.id">{{ p.name }} – {{ p.buildingName }}</option>
-          </select>
-          <p-button
-            label="Aplicar recurrentes"
-            icon="pi pi-play"
-            severity="success"
-            [loading]="isApplyingRecurring"
-            [disabled]="!applyRecurringPeriodId"
-            (onClick)="applyRecurring()">
-          </p-button>
+        <div class="apply-box" *ngIf="recurringItems.length">
+          <span class="pi pi-play-circle apply-icon"></span>
+          <div class="field-block" style="flex:1">
+            <span>Aplicar al periodo</span>
+            <select [(ngModel)]="applyRecurringPeriodId" name="applyPeriodId">
+              <option value="">— Seleccionar periodo borrador —</option>
+              <option *ngFor="let p of draftPeriodsByBuilding" [value]="p.id">{{ p.name }} · {{ p.buildingName }}</option>
+            </select>
+          </div>
+          <p-button label="Aplicar" icon="pi pi-play" severity="success" [loading]="isApplyingRecurring" [disabled]="!applyRecurringPeriodId" (onClick)="applyRecurring()"></p-button>
         </div>
       </div>
 
       <!-- FILTROS -->
-      <div class="filters-grid">
-        <label>
-          <span>Filtrar por edificio</span>
+      <div class="filters-bar">
+        <div class="field-block">
+          <span>Edificio</span>
           <select [(ngModel)]="filters.buildingId" name="filterBuildingId" (ngModelChange)="onBuildingFilterChange()">
             <option value="">Todos los edificios</option>
-            <option *ngFor="let building of buildings" [value]="building.id">{{ building.name }}</option>
+            <option *ngFor="let b of buildings" [value]="b.id">{{ b.name }}</option>
           </select>
-        </label>
-
-        <label>
-          <span>Filtrar por periodo</span>
+        </div>
+        <div class="field-block">
+          <span>Periodo</span>
           <select [(ngModel)]="filters.expensePeriodId" name="filterExpensePeriodId" (ngModelChange)="applyFilters()">
             <option value="">Todos los periodos</option>
-            <option *ngFor="let period of filteredPeriodsForSelector" [value]="period.id">{{ period.name }} - {{ period.buildingName }}</option>
+            <option *ngFor="let p of filteredPeriodsForSelector" [value]="p.id">{{ p.name }} · {{ p.buildingName }}</option>
           </select>
-        </label>
-
-        <div class="filter-actions">
-          <p-button type="button" label="Limpiar filtros" severity="secondary" [text]="true" (onClick)="resetFilters()"></p-button>
         </div>
+        <p-button type="button" label="Limpiar" icon="pi pi-filter-slash" severity="secondary" [text]="true" (onClick)="resetFilters()"></p-button>
       </div>
 
       <!-- FORMULARIO NUEVO GASTO -->
-      <form class="app-form-grid" *ngIf="showForm" (ngSubmit)="submitExpense()">
-        <label>
-          <span>Edificio</span>
-          <select [(ngModel)]="form.buildingId" name="buildingId" required (ngModelChange)="onFormBuildingChange()">
-            <option value="" disabled>Selecciona un edificio</option>
-            <option *ngFor="let building of buildings" [value]="building.id">{{ building.name }}</option>
-          </select>
-        </label>
-
-        <label>
-          <span>Periodo</span>
-          <select [(ngModel)]="form.expensePeriodId" name="expensePeriodId" required>
-            <option value="" disabled>Selecciona un periodo</option>
-            <option *ngFor="let period of availablePeriods" [value]="period.id">{{ period.name }}</option>
-          </select>
-        </label>
-
-        <label>
-          <span>Categoria</span>
-          <select [(ngModel)]="form.category" name="category" required>
-            <option *ngFor="let category of categories" [value]="category">{{ categoryLabel(category) }}</option>
-          </select>
-        </label>
-
-        <label>
-          <span>Fecha del gasto</span>
-          <input [(ngModel)]="form.expenseDate" name="expenseDate" type="date" required />
-        </label>
-
-        <label>
-          <span>Proveedor</span>
-          <input [(ngModel)]="form.supplierName" name="supplierName" type="text" maxlength="160" />
-        </label>
-
-        <label>
-          <span>Monto</span>
-          <input [(ngModel)]="form.amount" name="amount" type="number" min="1" step="0.01" required />
-        </label>
-
-        <label class="wide">
-          <span>Descripcion</span>
-          <input [(ngModel)]="form.description" name="description" type="text" required maxlength="200" />
-        </label>
-
-        <label>
-          <span>Distribucion</span>
-          <select [(ngModel)]="form.distributionType" name="distributionType" required (ngModelChange)="onDistributionTypeChange()">
-            <option *ngFor="let distribution of distributionTypes" [value]="distribution">{{ distributionTypeLabel(distribution) }}</option>
-          </select>
-        </label>
-
-        <label>
-          <span>Unidad destino</span>
-          <select [(ngModel)]="form.targetUnitId" name="targetUnitId" [required]="requiresTargetUnit">
-            <option value="">Sin unidad</option>
-            <option *ngFor="let unit of availableUnits" [value]="unit.id">{{ unit.code }}</option>
-          </select>
-        </label>
-
-        <label class="wide">
-          <span>Notas</span>
-          <input [(ngModel)]="form.notes" name="notes" type="text" maxlength="500" />
-        </label>
-
-        <div class="wide form-actions">
-          <p-button
-            type="submit"
-            [disabled]="!buildings.length || !periods.length"
-            [loading]="isSaving"
-            [label]="editingId ? 'Guardar cambios' : 'Guardar gasto'">
-          </p-button>
-          <p-button *ngIf="editingId" type="button" label="Cancelar" icon="pi pi-times" severity="secondary" [text]="true" (onClick)="cancelEdit()"></p-button>
+      <div class="panel-box form-panel" *ngIf="showForm">
+        <div class="panel-head">
+          <div class="panel-title">
+            <span class="panel-icon pi pi-receipt"></span>
+            <div>
+              <strong>{{ editingId ? 'Editar gasto' : 'Registrar gasto' }}</strong>
+              <small>Completá los datos del egreso del edificio</small>
+            </div>
+          </div>
+          <p-button *ngIf="editingId" type="button" icon="pi pi-times" severity="secondary" [rounded]="true" [text]="true" (onClick)="cancelEdit()"></p-button>
         </div>
-      </form>
+        <form class="expense-form" (ngSubmit)="submitExpense()">
+          <div class="form-row">
+            <label class="field-block">
+              <span>Edificio *</span>
+              <select [(ngModel)]="form.buildingId" name="buildingId" required (ngModelChange)="onFormBuildingChange()">
+                <option value="" disabled>— Seleccionar —</option>
+                <option *ngFor="let b of buildings" [value]="b.id">{{ b.name }}</option>
+              </select>
+            </label>
+            <label class="field-block">
+              <span>Periodo *</span>
+              <select [(ngModel)]="form.expensePeriodId" name="expensePeriodId" required>
+                <option value="" disabled>— Seleccionar —</option>
+                <option *ngFor="let p of availablePeriods" [value]="p.id">{{ p.name }}</option>
+              </select>
+            </label>
+            <label class="field-block">
+              <span>Categoría *</span>
+              <select [(ngModel)]="form.category" name="category" required>
+                <option *ngFor="let c of categories" [value]="c">{{ categoryLabel(c) }}</option>
+              </select>
+            </label>
+            <label class="field-block">
+              <span>Fecha *</span>
+              <input [(ngModel)]="form.expenseDate" name="expenseDate" type="date" required />
+            </label>
+          </div>
+          <div class="form-row">
+            <label class="field-block wide2">
+              <span>Descripción *</span>
+              <input [(ngModel)]="form.description" name="description" type="text" required maxlength="200" placeholder="Ej: Factura luz mes de junio..." />
+            </label>
+            <label class="field-block">
+              <span>Proveedor</span>
+              <input [(ngModel)]="form.supplierName" name="supplierName" type="text" maxlength="160" placeholder="Nombre del proveedor..." />
+            </label>
+            <label class="field-block">
+              <span>Monto *</span>
+              <p-inputnumber [(ngModel)]="form.amount" name="amount" [useGrouping]="true" prefix="₲ " [min]="1" [minFractionDigits]="0" [maxFractionDigits]="0" [required]="true" styleClass="w-full"></p-inputnumber>
+            </label>
+          </div>
+          <div class="form-row">
+            <label class="field-block">
+              <span>Distribución *</span>
+              <select [(ngModel)]="form.distributionType" name="distributionType" required (ngModelChange)="onDistributionTypeChange()">
+                <option *ngFor="let d of distributionTypes" [value]="d">{{ distributionTypeLabel(d) }}</option>
+              </select>
+            </label>
+            <label class="field-block" *ngIf="requiresTargetUnit">
+              <span>Unidad destino *</span>
+              <select [(ngModel)]="form.targetUnitId" name="targetUnitId" [required]="requiresTargetUnit">
+                <option value="">— Sin unidad —</option>
+                <option *ngFor="let u of availableUnits" [value]="u.id">{{ u.code }}</option>
+              </select>
+            </label>
+            <label class="field-block wide2">
+              <span>Notas</span>
+              <input [(ngModel)]="form.notes" name="notes" type="text" maxlength="500" placeholder="Observaciones opcionales..." />
+            </label>
+          </div>
+          <div class="form-actions">
+            <p-button type="submit" [disabled]="!buildings.length || !periods.length" [loading]="isSaving" [label]="editingId ? 'Guardar cambios' : 'Registrar gasto'" icon="pi pi-check"></p-button>
+          </div>
+        </form>
+      </div>
 
-      <p class="app-state" *ngIf="loading">Cargando gastos del edificio...</p>
-      <p class="app-state" *ngIf="!loading && !items.length">No hay gastos cargados.</p>
+      <p class="app-state" *ngIf="loading">Cargando gastos...</p>
+      <p class="app-state" *ngIf="!loading && !items.length">No hay gastos registrados.</p>
 
       <!-- LISTA DE GASTOS -->
       <div class="app-list" *ngIf="items.length">
         <div class="app-row header expenses-grid">
-          <span>Fecha</span>
-          <span>Descripcion</span>
-          <span>Periodo</span>
-          <span>Distribucion</span>
-          <span>Monto</span>
-          <span class="actions-head">Acciones</span>
+          <span>Fecha</span><span>Descripción</span><span>Periodo · Edificio</span><span>Distribución</span><span>Monto</span><span class="txt-right">Acciones</span>
         </div>
-
         <div class="app-row expenses-grid" *ngFor="let item of items">
-          <strong>{{ item.expenseDate }}</strong>
-          <span>{{ item.description }}<small *ngIf="item.supplierName"> – {{ item.supplierName }}</small></span>
-          <span>{{ item.expensePeriodName }} - {{ item.buildingName }}</span>
+          <span class="expense-date">{{ item.expenseDate }}</span>
+          <div>
+            <strong>{{ item.description }}</strong>
+            <small *ngIf="item.supplierName" class="supplier-tag">{{ item.supplierName }}</small>
+          </div>
+          <div>
+            <span>{{ item.expensePeriodName }}</span>
+            <small class="building-tag">{{ item.buildingName }}</small>
+          </div>
           <span>{{ distributionSummary(item) }}</span>
-          <span>{{ formatCurrency(item.amount) }}</span>
+          <strong class="amount">{{ formatCurrency(item.amount) }}</strong>
           <div class="app-actions">
-            <a
-              *ngIf="item.hasReceipt"
-              [href]="getReceiptUrl(item.id)"
-              target="_blank"
-              title="{{ item.receiptFileName }}"
-              class="receipt-link">
-              <p-button type="button" icon="pi pi-file" severity="info" [rounded]="true" [text]="true" pTooltip="{{ item.receiptFileName }}"></p-button>
+            <a *ngIf="item.hasReceipt" [href]="getReceiptUrl(item.id)" target="_blank" class="receipt-link">
+              <p-button type="button" icon="pi pi-file-pdf" severity="info" [rounded]="true" [text]="true" [pTooltip]="item.receiptFileName ?? 'Ver comprobante'"></p-button>
             </a>
-            <p-button
-              *ngIf="!isReadOnly && !item.hasReceipt"
-              type="button"
-              icon="pi pi-paperclip"
-              severity="secondary"
-              [rounded]="true"
-              [text]="true"
-              pTooltip="Adjuntar comprobante"
-              (onClick)="triggerReceiptUpload(item)">
-            </p-button>
-            <p-button
-              *ngIf="!isReadOnly && item.hasReceipt"
-              type="button"
-              icon="pi pi-times-circle"
-              severity="warn"
-              [rounded]="true"
-              [text]="true"
-              pTooltip="Quitar comprobante"
-              (onClick)="removeReceipt(item)">
-            </p-button>
+            <p-button *ngIf="!isReadOnly && !item.hasReceipt" type="button" icon="pi pi-paperclip" severity="secondary" [rounded]="true" [text]="true" pTooltip="Adjuntar comprobante" (onClick)="triggerReceiptUpload(item)"></p-button>
+            <p-button *ngIf="!isReadOnly && item.hasReceipt" type="button" icon="pi pi-times-circle" severity="warn" [rounded]="true" [text]="true" pTooltip="Quitar comprobante" (onClick)="removeReceipt(item)"></p-button>
             <p-button *ngIf="!isReadOnly" type="button" icon="pi pi-pencil" severity="secondary" [rounded]="true" [text]="true" [disabled]="!isDraftPeriod(item.expensePeriodId)" (onClick)="startEdit(item)" pTooltip="Editar"></p-button>
             <p-button *ngIf="!isReadOnly" type="button" icon="pi pi-trash" severity="danger" [rounded]="true" [text]="true" [disabled]="isSaving || !isDraftPeriod(item.expensePeriodId)" (onClick)="deleteExpense(item)" pTooltip="Eliminar"></p-button>
           </div>
@@ -331,49 +291,89 @@ import { API_BASE_URL } from '../../config/api.config';
     </p-card>
   `,
   styles: [`
-    .filters-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr auto;
-      gap: 1rem;
-      align-items: end;
-      margin-bottom: 1rem;
-    }
-    .expenses-grid { grid-template-columns: 0.65fr 1.4fr 1.2fr 1fr 0.65fr 0.6fr; }
-    .recurring-grid { grid-template-columns: 1.2fr 1fr 0.9fr 1fr 0.7fr 0.5fr 0.45fr; }
-    .form-actions { display:flex; gap:0.75rem; justify-content:flex-end; }
-    .filter-actions { display:flex; justify-content:flex-end; }
-    .actions-head { text-align:right; }
-    small { color:#6d8487; }
-    .compact { margin-top: 0.8rem; }
-    .action-box {
-      margin-bottom: 1rem;
-      padding: 1.1rem;
+    .toolbar-btns { display: flex; gap: 0.5rem; }
+
+    /* Panel boxes */
+    .panel-box {
+      margin-bottom: 1.25rem;
+      padding: 1.5rem;
       border-radius: 22px;
-      background: #f5faf9;
-      border: 1px solid #dbe7e3;
+      background: white;
+      border: 1.5px solid #dbe7e3;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.04);
     }
-    .action-head {
-      display:flex;
-      justify-content:space-between;
-      gap:1rem;
-      align-items:start;
-      margin-bottom:0.75rem;
+    .form-panel { border-color: rgba(19,133,182,0.25); background: rgba(19,133,182,0.02); }
+    .recurring-panel { border-color: rgba(108,117,125,0.2); }
+    .inner-form { margin: 1rem 0 0; padding: 1.25rem; background: #f8fbfa; border-color: #dbe7e3; box-shadow: none; }
+
+    .panel-head { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.25rem; }
+    .panel-title { display: flex; align-items: center; gap: 0.85rem; }
+    .panel-icon {
+      width: 42px; height: 42px; border-radius: 14px;
+      background: rgba(19,133,182,0.1); color: #1385b6;
+      display: flex; align-items: center; justify-content: center; font-size: 1.1rem;
     }
-    .action-head strong { display:block; color:#14363d; }
-    .action-head span { color:#6b878d; }
-    .apply-recurring-box {
+    .rec-icon { background: rgba(108,117,125,0.1); color: #495057; }
+    .panel-title strong { display: block; color: #14363d; font-size: 1rem; }
+    .panel-title small { color: #6b878d; font-size: 0.82rem; }
+
+    /* Filters bar */
+    .filters-bar {
       display: flex;
-      gap: 0.75rem;
-      align-items: center;
-      padding-top: 0.9rem;
-      margin-top: 0.9rem;
-      border-top: 1px solid #dbe7e3;
+      gap: 1rem;
+      align-items: flex-end;
+      margin-bottom: 1.25rem;
+      padding: 1rem 1.25rem;
+      background: #f5faf9;
+      border-radius: 16px;
+      border: 1px solid #e5eeec;
     }
-    .apply-recurring-box strong { color:#14363d; white-space:nowrap; }
-    .apply-recurring-box select { flex:1; }
-    .receipt-link { display:contents; }
-    @media (max-width: 900px) {
-      .filters-grid { grid-template-columns: 1fr; }
+    .filters-bar .field-block { flex: 1; }
+
+    /* Recurring toolbar */
+    .rec-toolbar { display: flex; gap: 1rem; align-items: flex-end; margin-bottom: 1rem; }
+
+    /* Form */
+    .expense-form { display: grid; gap: 1rem; }
+    .form-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 1rem; align-items: end; }
+    .wide2 { grid-column: span 2; }
+
+    .field-block { display: grid; gap: 0.4rem; }
+    .field-block > span { font-weight: 700; color: #29484f; font-size: 0.85rem; }
+    .field-block select,
+    .field-block input {
+      border: 1.5px solid #d7e5e1; border-radius: 12px;
+      padding: 0.75rem 1rem; font: inherit;
+      background: white; color: #18353a; width: 100%; box-sizing: border-box;
+    }
+    .field-block select:focus, .field-block input:focus {
+      outline: none; border-color: #1385b6; box-shadow: 0 0 0 3px rgba(19,133,182,0.12);
+    }
+    .form-actions { display: flex; justify-content: flex-end; gap: 0.75rem; padding-top: 0.25rem; }
+
+    /* Apply recurring box */
+    .apply-box {
+      display: flex; gap: 1rem; align-items: flex-end;
+      margin-top: 1rem; padding-top: 1rem;
+      border-top: 1px dashed #c5ddd8;
+    }
+    .apply-icon { font-size: 1.5rem; color: #16a34a; align-self: center; }
+
+    /* Expense list */
+    .expenses-grid { grid-template-columns: 0.6fr 1.6fr 1.2fr 1fr 0.8fr 0.55fr; }
+    .recurring-grid { grid-template-columns: 1.3fr 1fr 0.9fr 1fr 0.7fr 0.5fr 0.4fr; }
+    .txt-right { text-align: right; }
+
+    .expense-date { font-size: 0.88rem; color: #5f787d; font-weight: 600; }
+    .supplier-tag { display: block; font-size: 0.78rem; color: #6b878d; margin-top: 0.15rem; }
+    .building-tag { display: block; font-size: 0.78rem; color: #6b878d; margin-top: 0.15rem; }
+    .amount { color: #14363d; }
+    .receipt-link { display: contents; }
+
+    @media (max-width: 860px) {
+      .filters-bar { flex-direction: column; align-items: stretch; }
+      .form-row { grid-template-columns: 1fr; }
+      .wide2 { grid-column: span 1; }
     }
   `]
 })
@@ -822,7 +822,7 @@ export class BuildingExpensesPageComponent implements OnInit {
   }
 
   formatCurrency(value: number): string {
-    return new Intl.NumberFormat('es-PY', { style: 'currency', currency: 'PYG', maximumFractionDigits: 0 }).format(value ?? 0);
+    return '₲ ' + new Intl.NumberFormat('es-PY', { maximumFractionDigits: 0 }).format(value ?? 0);
   }
 
   private loadData(): void {

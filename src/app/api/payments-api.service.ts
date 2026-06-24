@@ -34,4 +34,8 @@ export class PaymentsApiService {
   delete(id: string): Observable<void> {
     return this.http.delete<void>(`${API_BASE_URL}/payments/${id}`);
   }
+
+  getReceiptPdfUrl(id: string, token: string): string {
+    return `${API_BASE_URL}/payments/${id}/receipt-pdf?access_token=${token}`;
+  }
 }
