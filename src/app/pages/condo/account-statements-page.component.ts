@@ -59,7 +59,9 @@ import { AuthService } from '../../auth/auth.service';
           <strong>{{ formatCurrency(totalPaid) }}</strong>
         </div>
         <div class="balance-actions">
-          <p-button label="Exportar CSV" icon="pi pi-download" severity="secondary" [outlined]="true" (onClick)="exportCsv()"></p-button>
+          <a [href]="statementPdfUrl" target="_blank" style="display:contents">
+            <p-button label="Exportar PDF" icon="pi pi-file-pdf" severity="secondary" [outlined]="true"></p-button>
+          </a>
         </div>
       </section>
 
@@ -112,23 +114,18 @@ import { AuthService } from '../../auth/auth.service';
               </div>
             </div>
 
-            <div class="receipt-actions" *ngIf="receipt">
-              <a [href]="getReceiptPdfUrl()" target="_blank" style="display:contents">
-                <p-button type="button" label="Descargar PDF" icon="pi pi-file-pdf" severity="secondary" [outlined]="true"></p-button>
-              </a>
-            </div>
-
             <div class="detail-grid">
               <div>
                 <h3>Cargos</h3>
                 <div class="line-list" *ngIf="detail.charges.length; else noCharges">
-                  <div class="line-item" *ngFor="let charge of detail.charges">
+                  <div class="line-item" [class.reversal-row]="charge.isReversal" *ngFor="let charge of detail.charges">
                     <div>
                       <strong>{{ charge.concept }}</strong>
-                      <small class="charge-type">{{ chargeTypeLabel(charge.chargeType) }}</small>
-                      <span *ngIf="charge.notes">{{ charge.notes }}</span>
+                      <span class="reversal-badge" *ngIf="charge.isReversal">REVERSIÓN</span>
+                      <small class="charge-type" *ngIf="!charge.isReversal">{{ chargeTypeLabel(charge.chargeType) }}</small>
+                      <span *ngIf="charge.notes && !isGuidNote(charge.notes)">{{ charge.notes }}</span>
                     </div>
-                    <strong [class.negative-amount]="charge.amount < 0">{{ formatCurrency(charge.amount) }}</strong>
+                    <strong [class.negative-amount]="charge.isReversal">{{ formatCurrency(charge.amount) }}</strong>
                   </div>
                 </div>
                 <ng-template #noCharges>
@@ -139,13 +136,14 @@ import { AuthService } from '../../auth/auth.service';
               <div>
                 <h3>Pagos</h3>
                 <div class="line-list" *ngIf="detail.payments.length; else noPayments">
-                  <div class="line-item" *ngFor="let payment of detail.payments">
+                  <div class="line-item" [class.reversed-payment]="payment.isReversed" *ngFor="let payment of detail.payments">
                     <div>
                       <strong>{{ payment.paymentDate }} · {{ paymentMethodLabel(payment.method) }}</strong>
+                      <span class="revertido-badge" *ngIf="payment.isReversed">REVERTIDO</span>
                       <span *ngIf="payment.reference">{{ payment.reference }}</span>
                       <span *ngIf="payment.notes">{{ payment.notes }}</span>
                     </div>
-                    <strong class="paid-text">{{ formatCurrency(payment.amount) }}</strong>
+                    <strong [class.paid-text]="!payment.isReversed" [class.reversed-amount]="payment.isReversed">{{ formatCurrency(payment.amount) }}</strong>
                   </div>
                 </div>
                 <ng-template #noPayments>
@@ -185,10 +183,10 @@ import { AuthService } from '../../auth/auth.service';
             <span>Concepto</span>
             <span>Monto</span>
           </div>
-          <div class="receipt-line" *ngFor="let charge of receipt.charges">
-            <span>{{ chargeTypeLabel(charge.chargeType) }}</span>
-            <span>{{ charge.concept }}</span>
-            <strong [class.negative-amount]="charge.amount < 0">{{ formatCurrency(charge.amount) }}</strong>
+          <div class="receipt-line" [class.reversal-row]="charge.isReversal" *ngFor="let charge of receipt.charges">
+            <span>{{ charge.isReversal ? 'Reversión' : chargeTypeLabel(charge.chargeType) }}</span>
+            <span>{{ charge.concept }} <span class="reversal-badge" *ngIf="charge.isReversal">REVERSIÓN</span></span>
+            <strong [class.negative-amount]="charge.isReversal">{{ formatCurrency(charge.amount) }}</strong>
           </div>
         </div>
 
@@ -210,10 +208,10 @@ import { AuthService } from '../../auth/auth.service';
               <span>Metodo / Referencia</span>
               <span>Importe</span>
             </div>
-            <div class="receipt-line" *ngFor="let p of receipt.payments">
+            <div class="receipt-line" [class.reversed-payment]="p.isReversed" *ngFor="let p of receipt.payments">
               <span>{{ p.paymentDate }}</span>
-              <span>{{ paymentMethodLabel(p.method) }}{{ p.reference ? ' — ' + p.reference : '' }}</span>
-              <strong class="paid-text">{{ formatCurrency(p.amount) }}</strong>
+              <span>{{ paymentMethodLabel(p.method) }}{{ p.reference ? ' — ' + p.reference : '' }}<span class="revertido-badge" *ngIf="p.isReversed">REVERTIDO</span></span>
+              <strong [class.paid-text]="!p.isReversed" [class.reversed-amount]="p.isReversed">{{ formatCurrency(p.amount) }}</strong>
             </div>
           </div>
           <div class="receipt-balance-row" [class.balance-debt]="receipt.balance > 0" [class.balance-ok]="receipt.balance <= 0">
@@ -323,7 +321,27 @@ import { AuthService } from '../../auth/auth.service';
     .line-item .charge-type { display:block; color:var(--brand-blue); margin-top:0.2rem; font-weight:600; }
     .empty-copy { color:var(--brand-muted); margin:0; }
     .negative-amount { color:#c94d3f; }
+    .reversal-row { background: #fff7ed !important; }
+    .reversal-badge {
+      display: inline-block;
+      font-size: 0.6rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      background: #ea580c;
+      color: #fff;
+      border-radius: 4px;
+      padding: 1px 5px;
+      vertical-align: middle;
+      margin-left: 6px;
+    }
     .paid-text { color:#1a7f37; }
+    .reversed-payment { opacity: 0.55; background: #fff7ed !important; }
+    .reversed-amount { color: #b45309; text-decoration: line-through; }
+    .revertido-badge {
+      display: inline-block; font-size: 0.6rem; font-weight: 700; letter-spacing: 0.05em;
+      background: #b45309; color: #fff; border-radius: 4px; padding: 1px 5px;
+      vertical-align: middle; margin-left: 6px;
+    }
     /* Receipt */
     .receipt-sheet {
       margin-top:1.5rem;
@@ -360,7 +378,7 @@ import { AuthService } from '../../auth/auth.service';
     .receipt-lines { display:grid; gap:0.5rem; margin-bottom:1rem; }
     .receipt-line {
       display:grid;
-      grid-template-columns:0.9fr 1.6fr 0.7fr;
+      grid-template-columns:0.9fr 1.6fr 1fr;
       gap:1rem;
       align-items:center;
       padding:0.85rem 1rem;
@@ -500,30 +518,12 @@ export class AccountStatementsPageComponent implements OnInit {
     });
   }
 
-  exportCsv(): void {
-    if (!this.statements.length) return;
-    const unit = this.units.find(u => u.id === this.selectedUnitId);
-    const headers = ['Periodo', 'Año', 'Mes', 'Estado', 'Total cargado', 'Total pagado', 'Saldo periodo', 'Saldo anterior', 'Saldo acumulado'];
-    const rows = [...this.statements].reverse().map(s => [
-      s.expensePeriodName,
-      s.year,
-      s.month,
-      this.statusLabel(s.status),
-      s.totalCharges,
-      s.totalPayments,
-      s.balance,
-      s.previousBalance,
-      s.runningBalance
-    ]);
-
-    const csv = [headers, ...rows].map(r => r.map(v => `"${v}"`).join(',')).join('\n');
-    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `estado-cuenta-${unit?.code ?? 'unidad'}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+  get statementPdfUrl(): string {
+    if (!this.selectedUnitId) return '';
+    return this.accountStatementsApi.getStatementPdfUrl(
+      this.selectedUnitId,
+      this.auth.getToken() ?? ''
+    );
   }
 
   getReceiptPdfUrl(): string {
@@ -561,5 +561,9 @@ export class AccountStatementsPageComponent implements OnInit {
 
   formatCurrency(value: number): string {
     return '₲ ' + new Intl.NumberFormat('es-PY', { maximumFractionDigits: 0 }).format(value ?? 0);
+  }
+
+  isGuidNote(note: string): boolean {
+    return /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i.test(note);
   }
 }

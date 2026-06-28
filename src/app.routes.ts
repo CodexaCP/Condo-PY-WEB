@@ -3,23 +3,10 @@ import { AppLayout } from './app/layout/component/app.layout';
 import { authGuard, guestGuard, homeRedirectGuard, passwordChangeGuard } from './app/auth/auth.guard';
 
 export const appRoutes: Routes = [
-    // Login de la plantilla (sin layout, sin auth requerido)
     {
         path: 'login',
         loadComponent: () => import('./app/pages/auth/login').then(m => m.Login),
         canActivate: [guestGuard]
-    },
-
-    // Landing pública de la plantilla
-    {
-        path: 'landing',
-        loadComponent: () => import('./app/pages/landing/landing').then(m => m.Landing)
-    },
-
-    // Auth pages de la plantilla (access, error, etc.)
-    {
-        path: 'auth',
-        loadChildren: () => import('./app/pages/auth/auth.routes')
     },
 
     // Cambio de contraseña (protegido, sin requerir layout completo)
@@ -38,15 +25,6 @@ export const appRoutes: Routes = [
             // Redirige / al home según el rol
             { path: '', canActivate: [homeRedirectGuard], children: [] },
 
-            // ── Demo pages de la plantilla (UIKit, Pages, etc.) ──────────
-            {
-                path: 'uikit',
-                loadChildren: () => import('./app/pages/uikit/uikit.routes')
-            },
-            {
-                path: 'pages',
-                loadChildren: () => import('./app/pages/pages.routes')
-            },
             // ── Condo: SuperAdmin ─────────────────────────────────────────
             {
                 path: 'superadmin',
@@ -178,6 +156,22 @@ export const appRoutes: Routes = [
             {
                 path: 'collections',
                 loadComponent: () => import('./app/pages/condo/collections-page.component').then(m => m.CollectionsPageComponent)
+            },
+
+            // ── Comunicados ───────────────────────────────────────────────
+            {
+                path: 'comunicados',
+                loadComponent: () => import('./app/pages/condo/comunicados-page.component').then(m => m.ComunicadosPageComponent)
+            },
+
+            // ── Votaciones ────────────────────────────────────────────────
+            {
+                path: 'claims',
+                loadComponent: () => import('./app/pages/condo/claims-page.component').then(m => m.ClaimsPageComponent)
+            },
+            {
+                path: 'votaciones',
+                loadComponent: () => import('./app/pages/condo/votaciones-page.component').then(m => m.VotacionesPageComponent)
             }
         ]
     },

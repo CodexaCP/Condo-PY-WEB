@@ -227,12 +227,15 @@ import {
           <span>Metodo</span>
           <span>Monto</span>
           <span>Asignado</span>
-          <span class="actions-head" *ngIf="!isReadOnly">Acciones</span>
+          <span class="actions-head" *ngIf="!isReadOnly || canRevert">Acciones</span>
         </div>
 
-        <div class="app-row payments-grid" *ngFor="let item of items">
+        <div class="app-row payments-grid" [class.reversed-row]="item.isReversed" *ngFor="let item of items">
           <strong>{{ item.paymentDate }}</strong>
-          <span>{{ item.expensePeriodName }} · {{ item.buildingName }}</span>
+          <span>
+            {{ item.expensePeriodName }} · {{ item.buildingName }}
+            <span class="badge-reversed" *ngIf="item.isReversed">REVERTIDO</span>
+          </span>
           <span>{{ item.unitCode }}</span>
           <span>{{ paymentMethodLabel(item.method) }}</span>
           <span>{{ formatCurrency(item.amount) }}</span>
@@ -241,13 +244,16 @@ import {
             {{ formatCurrency(item.allocatedAmount) }}
             <small *ngIf="item.allocations.length > 0"> ({{ item.allocations.length }} cargos)</small>
           </span>
-          <div class="app-actions" *ngIf="!isReadOnly">
+          <div class="app-actions" *ngIf="!isReadOnly || canRevert">
             <p-button type="button" icon="pi pi-file" severity="secondary" [rounded]="true" [text]="true" pTooltip="Ver comprobante" (onClick)="showReceipt(item)"></p-button>
             <a [href]="getReceiptPdfUrl(item.id)" target="_blank" style="display:contents">
               <p-button type="button" icon="pi pi-file-pdf" severity="secondary" [rounded]="true" [text]="true" pTooltip="Descargar PDF"></p-button>
             </a>
-            <p-button type="button" icon="pi pi-pencil" severity="secondary" [rounded]="true" [text]="true" (onClick)="startEdit(item)"></p-button>
-            <p-button type="button" icon="pi pi-trash" severity="danger" [rounded]="true" [text]="true" [disabled]="isSaving" (onClick)="deletePayment(item)"></p-button>
+            <p-button *ngIf="!isReadOnly && !item.isReversed" type="button" icon="pi pi-pencil" severity="secondary" [rounded]="true" [text]="true" (onClick)="startEdit(item)"></p-button>
+            <p-button *ngIf="canRevert" type="button" icon="pi pi-undo" severity="warn" [rounded]="true" [text]="true"
+              [disabled]="isSaving || item.isReversed"
+              [pTooltip]="item.isReversed ? 'Ya revertido' : 'Revertir pago'"
+              (onClick)="revertPayment(item)"></p-button>
           </div>
         </div>
       </div>
@@ -374,6 +380,14 @@ import {
     .partial { color: #f59e0b; }
     .unallocated { color: #9ca3af; }
     small { font-size: 0.8em; color: #6b7280; }
+    .reversed-row { opacity: 0.55; }
+    .badge-reversed {
+      display: inline-block; margin-left: 0.4rem;
+      font-size: 0.68rem; font-weight: 700; letter-spacing: 0.04em;
+      color: #b45309; background: #fef3c7;
+      border: 1px solid #f59e0b; border-radius: 6px;
+      padding: 0.05rem 0.4rem; vertical-align: middle;
+    }
 
     @media (max-width: 900px) {
       .filters-bar { flex-direction: column; align-items: stretch; }
@@ -393,6 +407,7 @@ export class PaymentsPageComponent implements OnInit {
   private readonly msg = inject(MessageService);
 
   get isReadOnly(): boolean { return this.auth.hasRole('CompanyAdmin'); }
+  get canRevert(): boolean { return !this.auth.hasRole('Resident') && !this.auth.hasRole('Owner') && !this.auth.hasRole('Porter'); }
 
   items: Payment[] = [];
   buildings: Building[] = [];
@@ -581,12 +596,14 @@ export class PaymentsPageComponent implements OnInit {
     return this.paymentsApi.getReceiptPdfUrl(paymentId, this.auth.getToken() ?? '');
   }
 
-  deletePayment(item: Payment): void {
+  revertPayment(item: Payment): void {
     this.isSaving = true;
 
     this.paymentsApi.delete(item.id).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: () => {
-        this.items = this.items.filter((current) => current.id !== item.id);
+        this.items = this.items.map((current) =>
+          current.id === item.id ? { ...current, isReversed: true, reversedAt: new Date().toISOString() } : current
+        );
         if (this.editingId === item.id) {
           this.cancelEdit();
         }
@@ -594,11 +611,21 @@ export class PaymentsPageComponent implements OnInit {
           this.receipt = null;
         }
         this.isSaving = false;
-        this.msg.add({ severity: 'success', summary: 'Éxito', detail: 'Pago eliminado correctamente.', life: 4000 });
+        this.msg.add({ severity: 'warn', summary: 'Revertido', detail: 'El pago fue revertido. Los cargos imputados quedaron liberados.', life: 5000 });
         this.cdr.markForCheck();
       },
       error: (error) => {
-        this.msg.add({ severity: 'error', summary: 'Error', detail: extractApiErrorMessage(error, 'No se pudo eliminar el pago.'), life: 5000 });
+        const status = (error as any)?.status;
+        const detail = status === 409
+          ? 'Este pago ya fue revertido anteriormente.'
+          : extractApiErrorMessage(error, 'No se pudo revertir el pago.');
+        this.msg.add({ severity: 'error', summary: 'Error', detail, life: 5000 });
+        if (status === 409) {
+          this.items = this.items.map((current) =>
+            current.id === item.id ? { ...current, isReversed: true } : current
+          );
+          this.cdr.markForCheck();
+        }
         this.isSaving = false;
         this.cdr.markForCheck();
       }

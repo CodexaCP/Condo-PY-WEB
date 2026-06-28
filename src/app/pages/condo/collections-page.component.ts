@@ -10,6 +10,7 @@ import { extractApiErrorMessage } from '../../api/api-error.util';
 import { Building, CollectionReport } from '../../api/models';
 import { BuildingsApiService } from '../../api/buildings-api.service';
 import { CollectionsApiService } from '../../api/collections-api.service';
+import { AuthService } from '../../auth/auth.service';
 
 const MONTHS = [
   { value: 1, label: 'Ene' }, { value: 2, label: 'Feb' }, { value: 3, label: 'Mar' },
@@ -62,7 +63,9 @@ const MONTHS = [
             </select>
           </label>
           <p-button label="Actualizar" icon="pi pi-refresh" (onClick)="loadReport()"></p-button>
-          <p-button label="Exportar CSV" icon="pi pi-download" severity="secondary" [outlined]="true" (onClick)="exportCsv()" [disabled]="!report || !report.items.length"></p-button>
+          <a [href]="pdfUrl" target="_blank" style="display:contents" *ngIf="report?.items?.length">
+            <p-button label="Exportar PDF" icon="pi pi-file-pdf" severity="secondary" [outlined]="true"></p-button>
+          </a>
         </div>
       </div>
 
@@ -209,6 +212,7 @@ const MONTHS = [
 export class CollectionsPageComponent implements OnInit {
   private readonly collectionsApi = inject(CollectionsApiService);
   private readonly buildingsApi = inject(BuildingsApiService);
+  private readonly auth = inject(AuthService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly msg = inject(MessageService);
@@ -263,32 +267,16 @@ export class CollectionsPageComponent implements OnInit {
     });
   }
 
-  exportCsv(): void {
-    if (!this.report?.items.length) return;
-
-    const headers = ['Periodo', 'Edificio', 'Estado', 'Emitido', 'Cobrado', 'Pendiente', 'Recuperacion %', 'Recuperacion anterior %', 'Variacion %'];
-    const rows = this.report.items.map(item => [
-      item.expensePeriodName,
-      item.buildingName,
-      this.statusLabel(item.status),
-      item.totalChargedAmount,
-      item.totalCollectedAmount,
-      item.pendingAmount,
-      item.collectionRatePercentage,
-      item.previousPeriodCollectionRatePercentage ?? '',
-      item.previousPeriodCollectionRatePercentage != null
-        ? (item.collectionRatePercentage - item.previousPeriodCollectionRatePercentage).toFixed(2)
-        : ''
-    ]);
-
-    const csv = [headers, ...rows].map(r => r.map(v => `"${v}"`).join(',')).join('\n');
-    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `cobranza_${this.selectedYear ?? 'todos'}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+  get pdfUrl(): string {
+    return this.collectionsApi.getReportPdfUrl(
+      {
+        buildingId: this.selectedBuildingId || undefined,
+        year: this.selectedYear ?? undefined,
+        fromMonth: this.selectedFromMonth ?? undefined,
+        toMonth: this.selectedToMonth ?? undefined
+      },
+      this.auth.getToken() ?? ''
+    );
   }
 
   statusLabel(status: string): string {

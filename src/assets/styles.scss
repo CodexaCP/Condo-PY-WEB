@@ -9,9 +9,17 @@
   --brand-ink-soft: var(--p-text-muted-color, #214c60);
   --brand-muted: var(--p-text-muted-color, #5f7b88);
   --brand-border: var(--p-content-border-color, rgba(0,0,0,0.1));
-  --brand-gradient-soft: rgba(var(--p-primary-400-rgb, 99 163 210) / 0.1);
   --app-muted: var(--p-text-muted-color, #5f7b88);
   --app-primary: var(--primary-color);
+
+  /* Paleta de marca CONDOPY */
+  --brand-c1: #1AB7AF;
+  --brand-c2: #1385B6;
+  --brand-c3: #6AC64A;
+  --brand-gradient: linear-gradient(135deg, #1AB7AF 0%, #1385B6 55%, #6AC64A 100%);
+  --brand-gradient-v: linear-gradient(180deg, #1AB7AF 0%, #1385B6 55%, #6AC64A 100%);
+  --brand-gradient-soft: linear-gradient(135deg, rgba(26,183,175,.12) 0%, rgba(19,133,182,.1) 55%, rgba(106,198,74,.08) 100%);
+  --brand-on-gradient: #ffffff;
 }
 
 // Condo page utility classes
@@ -132,4 +140,469 @@
   .app-form-grid {
     grid-template-columns: 1fr;
   }
+}
+
+/* ══════════════════════════════════════════════════
+   LOGIN PAGE v2 — diseño dividido marca / formulario
+   ══════════════════════════════════════════════════ */
+
+/* Fuente para elementos de marca */
+.lp-brand, .lp-mobile-logo, .lp-brand-name,
+.lp-mobile-brand-name, .lp-form-head h2 {
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+}
+
+/* Raíz: pantalla completa dividida */
+.lp-root {
+  display: flex;
+  min-height: 100vh;
+  min-width: 100vw;
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(135deg, #0d2d3e 0%, #0e3a50 50%, #0d3325 100%);
+}
+
+/* Orbs decorativos */
+.lp-orb {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+  filter: blur(80px);
+}
+.lp-orb-a {
+  width: 600px; height: 600px;
+  background: radial-gradient(circle, rgba(26,183,175,.45) 0%, transparent 70%);
+  top: -180px; left: -180px;
+}
+.lp-orb-b {
+  width: 500px; height: 500px;
+  background: radial-gradient(circle, rgba(19,133,182,.35) 0%, transparent 70%);
+  bottom: -150px; right: 35%;
+}
+.lp-orb-c {
+  width: 380px; height: 380px;
+  background: radial-gradient(circle, rgba(106,198,74,.3) 0%, transparent 70%);
+  bottom: -100px; right: -100px;
+}
+
+/* ── PANEL IZQUIERDO — Marca ──────────────────────── */
+.lp-brand {
+  flex: 0 0 55%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 4rem 5rem;
+  position: relative;
+  z-index: 1;
+}
+
+/* Logo + nombre en fila */
+.lp-brand-top {
+  display: flex;
+  align-items: center;
+  gap: 1.1rem;
+  margin-bottom: 3.5rem;
+}
+
+.lp-logo-ring {
+  width: 64px; height: 64px;
+  border-radius: 18px;
+  background: linear-gradient(135deg, #1AB7AF 0%, #1385B6 55%, #6AC64A 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8px 28px rgba(26,183,175,.5);
+  flex-shrink: 0;
+}
+.lp-logo-svg { width: 38px; height: 36px; }
+
+.lp-brand-name {
+  font-size: 1.9rem;
+  font-weight: 900;
+  letter-spacing: -0.03em;
+  color: #ffffff;
+}
+
+/* Slogan */
+.lp-slogan-block {
+  margin-bottom: 3rem;
+}
+
+.lp-slogan-eyebrow {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(26,183,175,.85);
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+
+  &::before {
+    content: '';
+    display: inline-block;
+    width: 24px; height: 2px;
+    background: #1AB7AF;
+    border-radius: 2px;
+  }
+}
+
+.lp-slogan {
+  font-size: 3.1rem;
+  font-weight: 900;
+  line-height: 1.1;
+  letter-spacing: -0.03em;
+  color: #ffffff;
+  margin: 0 0 1.4rem;
+  text-wrap: balance;
+}
+
+.lp-slogan-accent {
+  background: linear-gradient(90deg, #1AB7AF 0%, #6AC64A 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.lp-slogan-sub {
+  font-size: 1.02rem;
+  color: rgba(255,255,255,.72);
+  line-height: 1.75;
+  max-width: 420px;
+  margin: 0;
+  font-weight: 400;
+
+  strong {
+    color: rgba(255,255,255,.95);
+    font-weight: 600;
+  }
+}
+
+/* Divisor */
+.lp-divider {
+  height: 1px;
+  background: linear-gradient(90deg, rgba(26,183,175,.5) 0%, rgba(255,255,255,.08) 100%);
+  margin: 1.75rem 0;
+}
+
+/* Pilares en grid 2x2 */
+.lp-pillars {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.85rem;
+  margin-bottom: 1.75rem;
+}
+
+.lp-pillar {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  background: rgba(255,255,255,.05);
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 12px;
+  padding: 0.9rem 1rem;
+  transition: background .2s;
+
+  &:hover { background: rgba(255,255,255,.08); }
+}
+
+.lp-pillar-icon {
+  width: 34px; height: 34px;
+  border-radius: 9px;
+  background: rgba(26,183,175,.18);
+  border: 1px solid rgba(26,183,175,.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.9rem;
+  color: #1AB7AF;
+  flex-shrink: 0;
+}
+
+.lp-pillar strong {
+  display: block;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: rgba(255,255,255,.92);
+  margin-bottom: 0.2rem;
+}
+
+.lp-pillar p {
+  font-size: 0.74rem;
+  color: rgba(255,255,255,.42);
+  margin: 0;
+  line-height: 1.45;
+}
+
+/* Trust strip */
+.lp-trust-strip {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  background: rgba(255,255,255,.04);
+  border: 1px solid rgba(255,255,255,.07);
+  border-radius: 10px;
+  padding: 0.7rem 1.2rem;
+  margin-bottom: 1.5rem;
+}
+
+.lp-trust-item {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex: 1;
+  justify-content: center;
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: rgba(255,255,255,.5);
+
+  i { font-size: 0.82rem; color: #1AB7AF; }
+}
+
+.lp-trust-sep {
+  width: 1px; height: 20px;
+  background: rgba(255,255,255,.1);
+}
+
+/* Badge de versión */
+.lp-brand-footer { margin-top: auto; }
+.lp-version-badge {
+  font-size: 0.72rem;
+  color: rgba(255,255,255,.25);
+  font-weight: 500;
+  letter-spacing: 0.04em;
+}
+
+/* ── PANEL DERECHO — Formulario ──────────────────── */
+.lp-form-side {
+  flex: 0 0 45%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  position: relative;
+  z-index: 1;
+
+  /* línea divisoria sutil */
+  &::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 10%; bottom: 10%;
+    width: 1px;
+    background: linear-gradient(180deg, transparent, rgba(255,255,255,.1) 30%, rgba(255,255,255,.1) 70%, transparent);
+  }
+}
+
+.lp-form-card {
+  background: rgba(255,255,255,.97);
+  border-radius: 24px;
+  padding: 2.6rem 2.8rem;
+  width: 100%;
+  max-width: 400px;
+  box-shadow:
+    0 40px 100px rgba(0,0,0,.35),
+    0 0 0 1px rgba(255,255,255,.06);
+  display: flex;
+  flex-direction: column;
+  gap: 1.2rem;
+}
+
+/* Mobile logo (hidden on desktop) */
+.lp-mobile-logo { display: none; }
+
+/* Encabezado del form */
+.lp-form-head {
+  margin-bottom: 0.25rem;
+
+  h2 {
+    font-size: 1.65rem;
+    font-weight: 800;
+    letter-spacing: -0.025em;
+    color: #0d2d3e;
+    margin: 0 0 0.3rem;
+  }
+
+  p {
+    font-size: 0.85rem;
+    color: #5f7b88;
+    margin: 0;
+    line-height: 1.5;
+  }
+}
+
+/* Campos */
+.lp-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.lp-label {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #334155;
+  letter-spacing: 0.01em;
+}
+
+.lp-input {
+  width: 100% !important;
+  padding: 0.72rem 0.9rem !important;
+  border-radius: 10px !important;
+  border: 1.5px solid #d1dde8 !important;
+  background: #f8fafd !important;
+  font-size: 0.92rem !important;
+  color: #0d2d3e !important;
+  box-sizing: border-box !important;
+  transition: border-color .15s, box-shadow .15s !important;
+  font-family: inherit !important;
+
+  &:focus {
+    outline: none !important;
+    border-color: #1AB7AF !important;
+    background: #fff !important;
+    box-shadow: 0 0 0 3px rgba(26,183,175,.15) !important;
+  }
+}
+
+/* p-password wrapper */
+.lp-password {
+  width: 100% !important;
+
+  input {
+    width: 100% !important;
+    padding: 0.72rem 0.9rem !important;
+    border-radius: 10px !important;
+    border: 1.5px solid #d1dde8 !important;
+    background: #f8fafd !important;
+    font-size: 0.92rem !important;
+    box-sizing: border-box !important;
+    transition: border-color .15s, box-shadow .15s !important;
+
+    &:focus {
+      outline: none !important;
+      border-color: #1AB7AF !important;
+      background: #fff !important;
+      box-shadow: 0 0 0 3px rgba(26,183,175,.15) !important;
+    }
+  }
+}
+
+/* Botón submit */
+.lp-submit-btn {
+  width: 100%;
+  padding: 0.85rem 1.5rem;
+  border-radius: 12px;
+  border: none;
+  background: linear-gradient(135deg, #1AB7AF 0%, #1385B6 60%, #0e9b6a 100%);
+  color: #ffffff;
+  font-size: 1rem;
+  font-weight: 700;
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+  box-shadow: 0 6px 24px rgba(26,183,175,.4);
+  transition: opacity .18s, transform .15s, box-shadow .18s;
+  letter-spacing: 0.01em;
+  margin-top: 0.25rem;
+
+  &:hover:not(:disabled) {
+    opacity: 0.92;
+    transform: translateY(-1px);
+    box-shadow: 0 10px 32px rgba(26,183,175,.5);
+  }
+
+  &:active:not(:disabled) { transform: translateY(0); }
+
+  &:disabled { opacity: 0.6; cursor: not-allowed; }
+}
+
+/* Pie del form */
+.lp-form-footer {
+  text-align: center;
+  font-size: 0.72rem;
+  color: #94a3b8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding-top: 0.25rem;
+}
+
+/* ── RESPONSIVE ─────────────────────────────────── */
+@media (max-width: 860px) {
+  .lp-root { flex-direction: column; }
+
+  .lp-brand {
+    flex: 0 0 auto;
+    padding: 2.5rem 2rem 2rem;
+    align-items: center;
+    text-align: center;
+  }
+
+  .lp-brand-top { justify-content: center; margin-bottom: 1.5rem; }
+
+  .lp-slogan { font-size: 2rem; }
+
+  .lp-slogan-eyebrow { justify-content: center; }
+
+  .lp-slogan-sub { font-size: 0.85rem; }
+
+  .lp-pillars { display: none; }
+
+  .lp-brand-footer { display: none; }
+
+  .lp-slogan-block { margin-bottom: 1rem; }
+
+  .lp-form-side {
+    flex: 1;
+    padding: 1.5rem;
+    align-items: flex-start;
+
+    &::before { display: none; }
+  }
+
+  .lp-form-card { padding: 2rem 1.75rem; }
+
+  .lp-mobile-logo {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.25rem;
+  }
+
+  .lp-logo-ring-sm {
+    width: 42px; height: 42px;
+    border-radius: 12px;
+  }
+  .lp-logo-svg-sm { width: 24px; height: 22px; }
+
+  .lp-mobile-brand-name {
+    font-size: 1.3rem;
+    font-weight: 900;
+    letter-spacing: -0.02em;
+    background: linear-gradient(135deg, #1AB7AF, #1385B6);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .lp-brand { display: none; }
+}
+
+/* ──────────────────────────────────────────────
+   BADGE con gradiente de marca
+   ────────────────────────────────────────────── */
+.app-badge-brand {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.3rem 0.8rem;
+  border-radius: 999px;
+  background: var(--brand-gradient);
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 0.8rem;
 }

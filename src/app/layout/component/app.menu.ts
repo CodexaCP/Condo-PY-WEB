@@ -25,117 +25,82 @@ export class AppMenu {
     readonly menuItems = computed<MenuItem[]>(() => {
         const isSuperAdmin = this.auth.hasRole('SuperAdmin');
         const isCompanyAdmin = this.auth.hasRole('CompanyAdmin');
-        const isManager = this.auth.hasRole('BuildingManager');
         const isAdmin = this.auth.hasRole('CompanyAdmin', 'CompanyOperator', 'BuildingManager');
 
-        // ── Secciones de la plantilla (siempre visibles) ──────────────────
-        const templateItems: MenuItem[] = [
-            {
-                label: 'Home',
-                items: [
-                    { label: 'Dashboard', icon: 'pi pi-fw pi-home', routerLink: ['/dashboard'] }
-                ]
-            },
-            {
-                label: 'UI Kit',
-                items: [
-                    { label: 'Form Layout', icon: 'pi pi-fw pi-id-card', routerLink: ['/uikit/formlayout'] },
-                    { label: 'Input', icon: 'pi pi-fw pi-check-square', routerLink: ['/uikit/input'] },
-                    { label: 'Button', icon: 'pi pi-fw pi-mobile', class: 'rotated-icon', routerLink: ['/uikit/button'] },
-                    { label: 'Table', icon: 'pi pi-fw pi-table', routerLink: ['/uikit/table'] },
-                    { label: 'List', icon: 'pi pi-fw pi-list', routerLink: ['/uikit/list'] },
-                    { label: 'Tree', icon: 'pi pi-fw pi-share-alt', routerLink: ['/uikit/tree'] },
-                    { label: 'Panel', icon: 'pi pi-fw pi-tablet', routerLink: ['/uikit/panel'] },
-                    { label: 'Overlay', icon: 'pi pi-fw pi-clone', routerLink: ['/uikit/overlay'] },
-                    { label: 'Media', icon: 'pi pi-fw pi-image', routerLink: ['/uikit/media'] },
-                    { label: 'Menu', icon: 'pi pi-fw pi-bars', routerLink: ['/uikit/menu'] },
-                    { label: 'Messages', icon: 'pi pi-fw pi-comment', routerLink: ['/uikit/message'] },
-                    { label: 'Misc', icon: 'pi pi-fw pi-circle', routerLink: ['/uikit/misc'] },
-                    { label: 'Charts', icon: 'pi pi-fw pi-chart-bar', routerLink: ['/uikit/charts'] },
-                    { label: 'File', icon: 'pi pi-fw pi-file', routerLink: ['/uikit/file'] },
-                    { label: 'Timeline', icon: 'pi pi-fw pi-calendar', routerLink: ['/uikit/timeline'] }
-                ]
-            },
-            {
-                label: 'Pages',
-                items: [
-                    { label: 'Landing', icon: 'pi pi-fw pi-globe', routerLink: ['/landing'] },
-                    { label: 'Auth', icon: 'pi pi-fw pi-sign-in', routerLink: ['/auth/login'] },
-                    { label: 'Crud', icon: 'pi pi-fw pi-pencil', routerLink: ['/pages/crud'] },
-                    { label: 'Not Found', icon: 'pi pi-fw pi-exclamation-circle', routerLink: ['/notfound'] },
-                    { label: 'Empty', icon: 'pi pi-fw pi-circle-off', routerLink: ['/pages/empty'] }
-                ]
-            },
-            {
-                label: 'Utilities',
-                items: [
-                    { label: 'Documentation', icon: 'pi pi-fw pi-question', routerLink: ['/pages/documentation'] }
-                ]
-            },
-            { separator: true }
-        ];
+        if (isSuperAdmin) {
+            return [
+                {
+                    label: 'Administración',
+                    items: [
+                        { label: 'Panel', icon: 'pi pi-fw pi-shield', routerLink: ['/superadmin'] },
+                        { label: 'Empresas', icon: 'pi pi-fw pi-building', routerLink: ['/companies'] },
+                        { label: 'Condominios', icon: 'pi pi-fw pi-map', routerLink: ['/condominiums'] },
+                        { label: 'Usuarios', icon: 'pi pi-fw pi-users', routerLink: ['/users'] },
+                        { label: 'Edificios', icon: 'pi pi-fw pi-home', routerLink: ['/buildings'] }
+                    ]
+                }
+            ];
+        }
 
-        // ── Secciones del condo (según rol) ───────────────────────────────
-        const superAdminItems: MenuItem[] = isSuperAdmin
-            ? [
-                  {
-                      label: 'Administración',
-                      items: [
-                          { label: 'Panel SuperAdmin', icon: 'pi pi-fw pi-shield', routerLink: ['/superadmin'] },
-                          { label: 'Empresas', icon: 'pi pi-fw pi-building', routerLink: ['/companies'] },
-                          { label: 'Condominios', icon: 'pi pi-fw pi-map', routerLink: ['/condominiums'] },
-                          { label: 'Usuarios', icon: 'pi pi-fw pi-users', routerLink: ['/users'] },
-                          { label: 'Edificios', icon: 'pi pi-fw pi-home', routerLink: ['/buildings'] }
-                      ]
-                  }
-              ]
-            : [];
+        if (isAdmin) {
+            return [
+                {
+                    label: 'General',
+                    items: [
+                        { label: 'Resumen', icon: 'pi pi-fw pi-chart-pie', routerLink: ['/dashboard'] },
+                        { label: 'Edificios', icon: 'pi pi-fw pi-home', routerLink: ['/buildings'] },
+                        ...(isCompanyAdmin ? [{ label: 'Condominios', icon: 'pi pi-fw pi-map', routerLink: ['/condominiums'] }] : []),
+                        ...(isCompanyAdmin ? [{ label: 'Usuarios', icon: 'pi pi-fw pi-users', routerLink: ['/users'] }] : [])
+                    ]
+                },
+                {
+                    label: 'Finanzas',
+                    items: [
+                        { label: 'Gastos', icon: 'pi pi-fw pi-arrow-circle-down', routerLink: ['/building-expenses'] },
+                        { label: 'Ingresos', icon: 'pi pi-fw pi-arrow-circle-up', routerLink: ['/building-incomes'] },
+                        { label: 'Periodos', icon: 'pi pi-fw pi-calendar', routerLink: ['/expense-periods'] },
+                        { label: 'Cargos', icon: 'pi pi-fw pi-tags', routerLink: ['/expense-charges'] },
+                        { label: 'Pagos', icon: 'pi pi-fw pi-credit-card', routerLink: ['/payments'] }
+                    ]
+                },
+                {
+                    label: 'Propietarios',
+                    items: [
+                        { label: 'Propietarios', icon: 'pi pi-fw pi-id-card', routerLink: ['/propietarios'] }
+                    ]
+                },
+                {
+                    label: 'Residentes',
+                    items: [
+                        { label: 'Unidades', icon: 'pi pi-fw pi-th-large', routerLink: ['/units'] },
+                        { label: 'Residentes', icon: 'pi pi-fw pi-user', routerLink: ['/residents'] },
+                        { label: 'Asignaciones', icon: 'pi pi-fw pi-link', routerLink: ['/assignments'] }
+                    ]
+                },
+                {
+                    label: 'Cobranza',
+                    items: [
+                        { label: 'Estado de cuenta', icon: 'pi pi-fw pi-file-pdf', routerLink: ['/account-statements'] },
+                        { label: 'Morosidad', icon: 'pi pi-fw pi-exclamation-triangle', routerLink: ['/morosity'] },
+                        { label: 'Cobranza', icon: 'pi pi-fw pi-dollar', routerLink: ['/collections'] }
+                    ]
+                },
+                {
+                    label: 'Comunicados',
+                    items: [
+                        { label: 'Comunicados', icon: 'pi pi-fw pi-bell', routerLink: ['/comunicados'] },
+                        { label: 'Reclamos', icon: 'pi pi-fw pi-comments', routerLink: ['/claims'] }
+                    ]
+                },
+                {
+                    label: 'Votaciones',
+                    items: [
+                        { label: 'Votaciones', icon: 'pi pi-fw pi-check-square', routerLink: ['/votaciones'] }
+                    ]
+                }
+            ];
+        }
 
-        const adminItems: MenuItem[] = isAdmin || isSuperAdmin
-            ? [
-                  {
-                      label: 'General',
-                      items: [
-                          { label: 'Edificios', icon: 'pi pi-fw pi-home', routerLink: ['/buildings'] },
-                          ...(isCompanyAdmin ? [{ label: 'Condominios', icon: 'pi pi-fw pi-map', routerLink: ['/condominiums'] }] : []),
-                          ...(isCompanyAdmin ? [{ label: 'Usuarios', icon: 'pi pi-fw pi-users', routerLink: ['/users'] }] : [])
-                      ]
-                  },
-                  {
-                      label: 'Finanzas',
-                      items: [
-                          { label: 'Gastos', icon: 'pi pi-fw pi-arrow-circle-down', routerLink: ['/building-expenses'] },
-                          { label: 'Ingresos', icon: 'pi pi-fw pi-arrow-circle-up', routerLink: ['/building-incomes'] },
-                          { label: 'Periodos', icon: 'pi pi-fw pi-calendar', routerLink: ['/expense-periods'] },
-                          { label: 'Cargos', icon: 'pi pi-fw pi-tags', routerLink: ['/expense-charges'] },
-                          { label: 'Pagos', icon: 'pi pi-fw pi-credit-card', routerLink: ['/payments'] }
-                      ]
-                  },
-                  {
-                      label: 'Propietarios',
-                      items: [
-                          { label: 'Propietarios', icon: 'pi pi-fw pi-id-card', routerLink: ['/propietarios'] }
-                      ]
-                  },
-                  {
-                      label: 'Residentes',
-                      items: [
-                          { label: 'Unidades', icon: 'pi pi-fw pi-th-large', routerLink: ['/units'] },
-                          { label: 'Residentes', icon: 'pi pi-fw pi-user', routerLink: ['/residents'] },
-                          { label: 'Asignaciones', icon: 'pi pi-fw pi-link', routerLink: ['/assignments'] }
-                      ]
-                  },
-                  {
-                      label: 'Cobranza',
-                      items: [
-                          { label: 'Estado de cuenta', icon: 'pi pi-fw pi-file-pdf', routerLink: ['/account-statements'] },
-                          { label: 'Morosidad', icon: 'pi pi-fw pi-exclamation-triangle', routerLink: ['/morosity'] },
-                          { label: 'Cobranza', icon: 'pi pi-fw pi-dollar', routerLink: ['/collections'] }
-                      ]
-                  }
-              ]
-            : [];
-
-        return [...templateItems, ...superAdminItems, ...adminItems];
+        return [];
     });
 }

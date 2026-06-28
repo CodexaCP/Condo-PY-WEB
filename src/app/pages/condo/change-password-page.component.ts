@@ -62,7 +62,7 @@ export class ChangePasswordPageComponent {
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly msg = inject(MessageService);
 
-  currentPassword = '123456';
+  currentPassword = '';
   newPassword = '';
   confirmPassword = '';
   isSubmitting = false;

@@ -28,4 +28,8 @@ export class AccountStatementsApiService {
   getReceiptPdfUrl(unitId: string, expensePeriodId: string, token: string): string {
     return `${API_BASE_URL}/account-statements/units/${unitId}/periods/${expensePeriodId}/receipt-pdf?access_token=${token}`;
   }
+
+  getStatementPdfUrl(unitId: string, token: string): string {
+    return `${API_BASE_URL}/account-statements/units/${unitId}/statement-pdf?access_token=${encodeURIComponent(token)}`;
+  }
 }

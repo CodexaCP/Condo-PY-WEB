@@ -156,6 +156,7 @@ export interface DashboardSummary {
   totalResidents: number;
   activeResidents: number;
   activeAssignments: number;
+  unitsWithOwners: number;
   occupiedUnits: number;
   unitsWithoutPrimaryResident: number;
   totalExpensePeriods: number;
@@ -166,6 +167,8 @@ export interface DashboardSummary {
   pendingBalanceAmount: number;
   overdueBalanceAmount: number;
   collectionRatePercentage: number;
+  totalReversedAmount: number;
+  totalReversedPayments: number;
 }
 
 export type ExpensePeriodStatus = 'Draft' | 'Closed' | 'Published';
@@ -535,6 +538,8 @@ export interface Payment {
   reference: string;
   notes: string;
   allocations: PaymentAllocation[];
+  isReversed: boolean;
+  reversedAt: string | null;
 }
 
 export interface AllocationRequest {
@@ -575,6 +580,7 @@ export interface AccountStatementCharge {
   concept: string;
   amount: number;
   notes: string;
+  isReversal: boolean;
 }
 
 export interface AccountStatementPayment {
@@ -584,6 +590,8 @@ export interface AccountStatementPayment {
   method: PaymentMethod;
   reference: string;
   notes: string;
+  isReversed: boolean;
+  reversedAt: string | null;
 }
 
 export interface AccountStatementDetail {
@@ -612,6 +620,7 @@ export interface ExpenseReceiptCharge {
   concept: string;
   amount: number;
   notes: string;
+  isReversal: boolean;
 }
 
 export interface ExpenseReceipt {
@@ -813,4 +822,125 @@ export interface CreateUserRequest {
   role: string;
   isActive: boolean;
   buildingIds: string[];
+}
+
+export type VoteStatus = 'Draft' | 'Open' | 'Closed';
+export type VoteWeightType = 'ByUnit' | 'ByCoefficient';
+
+export interface VoteOptionDto {
+  id: string;
+  label: string;
+  displayOrder: number;
+  castCount: number;
+  castWeight: number;
+  percentage: number;
+}
+
+export interface VoteUnitSummary {
+  unitId: string;
+  unitCode: string;
+  coefficient: number;
+  castId: string | null;
+  votedOptionId: string | null;
+  votedOptionLabel: string | null;
+  castAtUtc: string | null;
+}
+
+export interface Vote {
+  id: string;
+  buildingId: string;
+  buildingName: string;
+  title: string;
+  description: string | null;
+  quorumPercentage: number;
+  weightType: VoteWeightType;
+  status: VoteStatus;
+  openedAtUtc: string | null;
+  closedAtUtc: string | null;
+  createdByName: string;
+  createdAtUtc: string;
+  totalUnits: number;
+  participatingUnits: number;
+  quorumReached: boolean;
+  options: VoteOptionDto[];
+  units: VoteUnitSummary[];
+}
+
+export interface VoteUpsertRequest {
+  buildingId: string;
+  title: string;
+  description: string | null;
+  quorumPercentage: number;
+  weightType: VoteWeightType;
+  optionLabels: string[];
+}
+
+export interface VoteCastRequest {
+  unitId: string;
+  voteOptionId: string;
+}
+
+export type ClaimCategory = 'Ruido' | 'Limpieza' | 'Mantenimiento' | 'Otro';
+export type ClaimStatus = 'Pendiente' | 'EnProceso' | 'Resuelto';
+
+export interface Claim {
+  id: string;
+  condominiumId: string;
+  condominiumName: string;
+  buildingId: string;
+  buildingName: string;
+  unitId: string;
+  unitCode: string;
+  category: ClaimCategory;
+  description: string;
+  status: ClaimStatus;
+  createdByUserId: string;
+  createdByName: string;
+  createdAtUtc: string;
+  updatedAtUtc: string;
+  resolvedAtUtc: string | null;
+  resolvedByUserId: string | null;
+  resolvedByUserName: string;
+}
+
+export interface ClaimStatusUpdateRequest {
+  status: ClaimStatus;
+}
+
+export type AnnouncementCategory = 'General' | 'Mantenimiento' | 'Seguridad' | 'Financiero' | 'Convocatoria' | 'Otro';
+
+export interface Announcement {
+  id: string;
+  buildingId: string;
+  buildingName: string;
+  title: string;
+  body: string;
+  category: AnnouncementCategory;
+  publishedAt: string | null;
+  expiresAt: string | null;
+  isActive: boolean;
+  createdByUserId: string | null;
+  createdByName: string;
+  createdAtUtc: string;
+  updatedAtUtc: string;
+}
+
+export interface AnnouncementUpsertRequest {
+  buildingId: string;
+  title: string;
+  body: string;
+  category: AnnouncementCategory;
+  publishedAt: string | null;
+  expiresAt: string | null;
+  isActive: boolean;
+}
+
+export interface AnnouncementBroadcastRequest {
+  buildingIds: string[];
+  title: string;
+  body: string;
+  category: AnnouncementCategory;
+  publishedAt: string | null;
+  expiresAt: string | null;
+  isActive: boolean;
 }

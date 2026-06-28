@@ -8,7 +8,8 @@
     top: 0;
     width: 100%;
     padding: 0 2rem;
-    background-color: var(--surface-card);
+    background: var(--brand-gradient);
+    box-shadow: 0 2px 16px rgba(19, 133, 182, 0.25);
     transition: left var(--layout-section-transition-duration);
     display: flex;
     align-items: center;
@@ -24,9 +25,10 @@
         align-items: center;
         font-size: 1.5rem;
         border-radius: var(--content-border-radius);
-        color: var(--text-color);
-        font-weight: 500;
+        color: #ffffff;
+        font-weight: 700;
         gap: 0.5rem;
+        letter-spacing: -0.01em;
 
         svg {
             width: 3rem;
@@ -44,12 +46,12 @@
         border-radius: 50%;
         width: 2.5rem;
         height: 2.5rem;
-        color: var(--text-color);
+        color: rgba(255, 255, 255, 0.9);
         transition: background-color var(--element-transition-duration);
         cursor: pointer;
 
         &:hover {
-            background-color: var(--surface-hover);
+            background-color: rgba(255, 255, 255, 0.18);
         }
 
         &:focus-visible {
@@ -66,8 +68,8 @@
         }
 
         &.layout-topbar-action-highlight {
-            background-color: var(--primary-color);
-            color: var(--primary-contrast-color);
+            background-color: rgba(255, 255, 255, 0.25);
+            color: #ffffff;
         }
     }
 
@@ -118,9 +120,8 @@
             background-color: var(--surface-overlay);
             transform-origin: top;
             box-shadow:
-                0px 3px 5px rgba(0, 0, 0, 0.02),
-                0px 0px 2px rgba(0, 0, 0, 0.05),
-                0px 1px 4px rgba(0, 0, 0, 0.08);
+                0px 8px 24px rgba(19, 133, 182, 0.15),
+                0px 0px 2px rgba(0, 0, 0, 0.05);
             border-radius: var(--content-border-radius);
             padding: 1rem;
             right: 2rem;
@@ -139,6 +140,11 @@
                 justify-content: flex-start;
                 border-radius: var(--content-border-radius);
                 padding: 0.5rem 1rem;
+                color: var(--text-color);
+
+                &:hover {
+                    background-color: var(--surface-hover);
+                }
 
                 i {
                     font-size: 1rem;

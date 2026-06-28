@@ -23,4 +23,13 @@ export class CollectionsApiService {
     if (filters?.toMonth) params = params.set('toMonth', filters.toMonth.toString());
     return this.http.get<CollectionReport>(`${API_BASE_URL}/collections`, { params });
   }
+
+  getReportPdfUrl(filters: CollectionReportFilters, token: string): string {
+    let params = `access_token=${encodeURIComponent(token)}`;
+    if (filters.buildingId) params += `&buildingId=${encodeURIComponent(filters.buildingId)}`;
+    if (filters.year)       params += `&year=${filters.year}`;
+    if (filters.fromMonth)  params += `&fromMonth=${filters.fromMonth}`;
+    if (filters.toMonth)    params += `&toMonth=${filters.toMonth}`;
+    return `${API_BASE_URL}/collections/report-pdf?${params}`;
+  }
 }

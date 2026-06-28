@@ -1,4 +1,4 @@
-import { CommonModule } from '@angular/common';
+﻿import { CommonModule } from '@angular/common';
 import { ChangeDetectorRef, Component, DestroyRef, inject, OnInit } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
@@ -21,11 +21,11 @@ import { roleOptions } from '../../auth/role-labels';
 
 interface PhonePrefix { label: string; value: string; flag: string; }
 const PHONE_PREFIXES: PhonePrefix[] = [
-  { label: 'PY +595', value: '+595', flag: '🇵🇾' },
-  { label: 'USA +1',  value: '+1',   flag: '🇺🇸' },
-  { label: 'BR +55',  value: '+55',  flag: '🇧🇷' },
-  { label: 'ARG +54', value: '+54',  flag: '🇦🇷' },
-  { label: 'VE +58',  value: '+58',  flag: '🇻🇪' },
+  { label: 'PY +595', value: '+595', flag: 'ðŸ‡µðŸ‡¾' },
+  { label: 'USA +1',  value: '+1',   flag: 'ðŸ‡ºðŸ‡¸' },
+  { label: 'BR +55',  value: '+55',  flag: 'ðŸ‡§ðŸ‡·' },
+  { label: 'ARG +54', value: '+54',  flag: 'ðŸ‡¦ðŸ‡·' },
+  { label: 'VE +58',  value: '+58',  flag: 'ðŸ‡»ðŸ‡ª' },
 ];
 
 interface RoleCard { value: string; label: string; desc: string; icon: string; note: string; }
@@ -57,6 +57,7 @@ const ALL_ROLE_CARDS: RoleCard[] = [
   standalone: true,
   selector: 'app-user-create-page',
   imports: [CommonModule, FormsModule, Button, Card, Message, Select, Tooltip],
+  styleUrl: './user-create-page.component.css',
   template: `
     <p-card styleClass="app-page-card">
 
@@ -76,7 +77,7 @@ const ALL_ROLE_CARDS: RoleCard[] = [
 
       <form class="create-form" (ngSubmit)="save()" *ngIf="!loading && !loadError">
 
-        <!-- ══ DATOS PERSONALES ══════════════════════════════════════ -->
+        <!-- â•â• DATOS PERSONALES â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
         <section class="form-section">
           <h2 class="section-title">Datos personales</h2>
 
@@ -89,18 +90,18 @@ const ALL_ROLE_CARDS: RoleCard[] = [
             <div class="field">
               <label for="lastName">Apellidos <span class="required">*</span></label>
               <input id="lastName" type="text" [(ngModel)]="form.lastName" name="lastName"
-                     placeholder="Ej. Pérez García" maxlength="100" autocomplete="off" />
+                     placeholder="Ej. PÃ©rez GarcÃ­a" maxlength="100" autocomplete="off" />
             </div>
           </div>
 
           <div class="field">
-            <label for="address">Dirección <span class="optional">(opcional)</span></label>
+            <label for="address">DirecciÃ³n <span class="optional">(opcional)</span></label>
             <input id="address" type="text" [(ngModel)]="form.address" name="address"
-                   placeholder="Calle, número, ciudad" maxlength="200" autocomplete="off" />
+                   placeholder="Calle, nÃºmero, ciudad" maxlength="200" autocomplete="off" />
           </div>
         </section>
 
-        <!-- ══ ACCESO AL SISTEMA ════════════════════════════════════ -->
+        <!-- â•â• ACCESO AL SISTEMA â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
         <section class="form-section">
           <h2 class="section-title">Acceso al sistema</h2>
 
@@ -111,12 +112,12 @@ const ALL_ROLE_CARDS: RoleCard[] = [
                      placeholder="ej. juan.perez" maxlength="60" autocomplete="off"
                      (input)="onUsernameInput()" />
               <small class="field-hint">
-                Solo minúsculas, números, puntos y guiones.
-                Único dentro de su empresa o condominio.
+                Solo minÃºsculas, nÃºmeros, puntos y guiones.
+                Ãšnico dentro de su empresa o condominio.
               </small>
             </div>
             <div class="field">
-              <label for="email">Correo electrónico <span class="required">*</span></label>
+              <label for="email">Correo electrÃ³nico <span class="required">*</span></label>
               <input id="email" type="email" [(ngModel)]="form.email" name="email"
                      placeholder="usuario@ejemplo.com" maxlength="160" autocomplete="off" />
             </div>
@@ -128,13 +129,13 @@ const ALL_ROLE_CARDS: RoleCard[] = [
               <i class="pi pi-at"></i>
               <span><strong>Correo</strong> usuario&#64;ejemplo.com</span>
             </div>
-            <div class="login-sep">ó</div>
+            <div class="login-sep">Ã³</div>
             <div class="login-method">
               <i class="pi pi-user"></i>
               <span><strong>Usuario</strong> juan.perez</span>
             </div>
             <p class="login-note" *ngIf="!isEditing">
-              Clave inicial: <code>123456</code> — se debe cambiar en el primer ingreso.
+              Clave inicial: <code>123456</code> â€” se debe cambiar en el primer ingreso.
             </p>
           </div>
 
@@ -146,7 +147,7 @@ const ALL_ROLE_CARDS: RoleCard[] = [
           </div>
         </section>
 
-        <!-- ══ ROL ═══════════════════════════════════════════════════ -->
+        <!-- â•â• ROL â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
         <section class="form-section">
           <h2 class="section-title">Rol <span class="required">*</span></h2>
           <p class="section-desc">Selecciona el nivel de acceso del usuario.</p>
@@ -172,26 +173,26 @@ const ALL_ROLE_CARDS: RoleCard[] = [
           </div>
         </section>
 
-        <!-- ══ ALCANCE DE ACCESO ══════════════════════════════════════ -->
+        <!-- â•â• ALCANCE DE ACCESO â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
         <section class="form-section">
           <h2 class="section-title">Alcance de acceso</h2>
-          <p class="section-desc">Define qué recursos puede ver y gestionar este usuario al iniciar sesión.</p>
+          <p class="section-desc">Define quÃ© recursos puede ver y gestionar este usuario al iniciar sesiÃ³n.</p>
 
-          <!-- Caja de alcance según rol seleccionado -->
+          <!-- Caja de alcance segÃºn rol seleccionado -->
           <div class="scope-summary" *ngIf="form.role">
             <div class="scope-level" [class.active]="form.role === 'CompanyAdmin'">
               <i class="pi pi-briefcase"></i>
-              <span>Empresa → todos los condominios y edificios</span>
+              <span>Empresa â†’ todos los condominios y edificios</span>
             </div>
-            <div class="scope-arrow">›</div>
+            <div class="scope-arrow">â€º</div>
             <div class="scope-level" [class.active]="form.role === 'CompanyOperator'">
               <i class="pi pi-building"></i>
-              <span>Condominio → todos los edificios</span>
+              <span>Condominio â†’ todos los edificios</span>
             </div>
-            <div class="scope-arrow">›</div>
+            <div class="scope-arrow">â€º</div>
             <div class="scope-level" [class.active]="form.role === 'BuildingManager'">
               <i class="pi pi-home"></i>
-              <span>Edificios → unidades y residentes</span>
+              <span>Edificios â†’ unidades y residentes</span>
             </div>
           </div>
 
@@ -207,7 +208,7 @@ const ALL_ROLE_CARDS: RoleCard[] = [
             </p-select>
           </div>
 
-          <!-- Condominio + Teléfono en la misma fila -->
+          <!-- Condominio + TelÃ©fono en la misma fila -->
           <div class="field-row">
             <div class="field">
               <label for="condominium">
@@ -221,11 +222,11 @@ const ALL_ROLE_CARDS: RoleCard[] = [
                         (onChange)="onCondominiumChange()">
               </p-select>
               <small class="field-hint" *ngIf="form.condominiumId">
-                El usuario podrá ver y editar todos los edificios de este condominio.
+                El usuario podrÃ¡ ver y editar todos los edificios de este condominio.
               </small>
             </div>
             <div class="field">
-              <label>Teléfono <span class="optional">(opcional)</span></label>
+              <label>TelÃ©fono <span class="optional">(opcional)</span></label>
               <div class="phone-row">
                 <p-select [options]="prefixOptions" [(ngModel)]="form.phonePrefix" name="phonePrefix"
                           optionLabel="label" optionValue="value" styleClass="phone-prefix-select">
@@ -243,7 +244,7 @@ const ALL_ROLE_CARDS: RoleCard[] = [
             </div>
           </div>
 
-          <!-- Edificios (requerido ≥ 1) -->
+          <!-- Edificios (requerido â‰¥ 1) -->
           <div class="field">
             <label>
               Edificios <span class="required">*</span>
@@ -252,16 +253,16 @@ const ALL_ROLE_CARDS: RoleCard[] = [
               </span>
             </label>
             <small class="field-hint" *ngIf="!singleBuildingLocked">
-              Mínimo un edificio requerido. El usuario podrá ver y gestionar las unidades de los
+              MÃ­nimo un edificio requerido. El usuario podrÃ¡ ver y gestionar las unidades de los
               edificios seleccionados.
             </small>
 
-            <!-- Edificio único bloqueado (CompanyAdmin con solo 1 edificio) -->
+            <!-- Edificio Ãºnico bloqueado (CompanyAdmin con solo 1 edificio) -->
             <div class="locked-badge" *ngIf="singleBuildingLocked">
               <i class="pi pi-home"></i>
               <span>{{ filteredBuildings[0]?.name }}</span>
               <span class="locked-badge-sub">{{ filteredBuildings[0]?.code }}</span>
-              <span class="locked-tag">Asignado automáticamente</span>
+              <span class="locked-tag">Asignado automÃ¡ticamente</span>
             </div>
 
             <div class="building-grid" *ngIf="!singleBuildingLocked && filteredBuildings.length; else noBuildings">
@@ -298,7 +299,7 @@ const ALL_ROLE_CARDS: RoleCard[] = [
           </div>
         </section>
 
-        <!-- ══ ACCIONES ══════════════════════════════════════════════ -->
+        <!-- â•â• ACCIONES â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
         <section class="form-actions">
           <div class="form-actions-left">
             <p-button *ngIf="isEditing" type="button" label="Eliminar usuario"
@@ -324,12 +325,12 @@ const ALL_ROLE_CARDS: RoleCard[] = [
     <div class="ov-backdrop" *ngIf="confirmVisible" (click)="cancelDelete()"></div>
     <div class="ov-panel-sm" *ngIf="confirmVisible" (click)="$event.stopPropagation()">
       <div class="ov-header">
-        <strong>Confirmar eliminación</strong>
-        <button class="ov-close" (click)="cancelDelete()">✕</button>
+        <strong>Confirmar eliminaciÃ³n</strong>
+        <button class="ov-close" (click)="cancelDelete()">âœ•</button>
       </div>
       <p class="confirm-text">
-        ¿Eliminar al usuario <strong>{{ editingFullName }}</strong> de forma permanente?
-        Esta acción no se puede deshacer.
+        Â¿Eliminar al usuario <strong>{{ editingFullName }}</strong> de forma permanente?
+        Esta acciÃ³n no se puede deshacer.
       </p>
       <div class="confirm-footer">
         <p-button label="Cancelar" severity="secondary" [outlined]="true" (onClick)="cancelDelete()"></p-button>
@@ -338,190 +339,6 @@ const ALL_ROLE_CARDS: RoleCard[] = [
       </div>
     </div>
   `,
-  styles: [`
-    /* ── HEADER ── */
-    .create-header { display:flex; align-items:flex-start; gap:1rem; margin-bottom:2rem; }
-    .create-header h1 { margin:0 0 0.25rem; }
-    .create-header p  { margin:0; color:var(--brand-muted); }
-    .back-btn {
-      background:none; border:1px solid rgba(19,133,182,0.2); border-radius:50%;
-      width:40px; height:40px; display:grid; place-items:center; cursor:pointer;
-      color:var(--brand-muted); transition:background 0.15s,color 0.15s; flex-shrink:0; margin-top:4px;
-    }
-    .back-btn:hover { background:rgba(19,133,182,0.08); color:var(--brand-blue); }
-
-    /* ── FORM LAYOUT ── */
-    .create-form { display:flex; flex-direction:column; gap:2.5rem; }
-    .form-section { display:flex; flex-direction:column; gap:1.25rem; }
-    .section-title {
-      font-size:0.88rem; font-weight:700; text-transform:uppercase; letter-spacing:0.07em;
-      color:var(--brand-muted); margin:0 0 0.1rem; padding-bottom:0.5rem;
-      border-bottom:1px solid rgba(19,133,182,0.1);
-    }
-    .section-desc { margin:0; color:var(--brand-muted); font-size:0.88rem; }
-
-    /* ── FIELDS ── */
-    .field { display:flex; flex-direction:column; gap:0.4rem; }
-    .field label { font-weight:500; font-size:0.92rem; color:var(--brand-ink); }
-    .field-row { display:grid; grid-template-columns:1fr 1fr; gap:1rem; }
-    .field input {
-      width:100%; padding:0.6rem 0.85rem; border:1px solid rgba(19,133,182,0.25);
-      border-radius:10px; font:inherit; font-size:0.95rem; color:var(--brand-ink);
-      background:#fff; transition:border-color 0.15s,box-shadow 0.15s; box-sizing:border-box;
-    }
-    .field input:focus {
-      outline:none; border-color:var(--brand-blue);
-      box-shadow:0 0 0 3px rgba(19,133,182,0.12);
-    }
-    .field-hint  { color:var(--brand-muted); font-size:0.8rem; line-height:1.4; }
-    .field-count { font-weight:600; color:var(--brand-blue); font-size:0.82rem; margin-left:0.5rem; }
-    .required  { color:#e74c3c; font-weight:600; }
-    .optional  { font-weight:400; font-size:0.82rem; color:var(--brand-muted); }
-    .checkbox-label { display:flex; align-items:center; gap:0.5rem; cursor:pointer; font-weight:500; }
-    .checkbox-label input[type=checkbox] { width:16px; height:16px; cursor:pointer; accent-color:var(--brand-blue); }
-
-    /* ── PHONE ── */
-    .phone-row { display:flex; gap:0.6rem; align-items:stretch; }
-    .phone-input { flex:1; padding:0.6rem 0.85rem; border:1px solid rgba(19,133,182,0.25);
-      border-radius:10px; font:inherit; font-size:0.95rem; color:var(--brand-ink); background:#fff; }
-    .phone-input:focus { outline:none; border-color:var(--brand-blue); box-shadow:0 0 0 3px rgba(19,133,182,0.12); }
-    :host ::ng-deep .phone-prefix-select { width:145px; flex-shrink:0; }
-    :host ::ng-deep .phone-prefix-select .p-select { border-radius:10px; border:1px solid rgba(19,133,182,0.25); height:100%; }
-    :host ::ng-deep .full-select { width:100%; }
-    :host ::ng-deep .full-select .p-select { border-radius:10px; border:1px solid rgba(19,133,182,0.25); }
-
-    /* ── LOGIN INFO BOX ── */
-    .login-info-box {
-      display:flex; align-items:center; flex-wrap:wrap; gap:0.75rem 1.25rem;
-      padding:0.9rem 1.1rem; border-radius:14px;
-      background:#f0f8ff; border:1px solid rgba(19,133,182,0.2);
-    }
-    .login-method { display:flex; align-items:center; gap:0.5rem; font-size:0.9rem; color:var(--brand-ink); }
-    .login-method i { color:var(--brand-blue); font-size:1rem; }
-    .login-sep { font-size:1.1rem; color:var(--brand-muted); font-weight:600; }
-    .login-note { width:100%; margin:0; font-size:0.82rem; color:var(--brand-muted); }
-    .login-note code { background:rgba(19,133,182,0.1); color:var(--brand-blue); padding:0.1rem 0.4rem; border-radius:6px; font-size:0.85rem; }
-
-    /* ── ROLE CARDS ── */
-    .role-cards { display:grid; grid-template-columns:repeat(auto-fit, minmax(190px, 1fr)); gap:0.75rem; }
-    .role-card {
-      display:flex; flex-direction:column; gap:0.6rem; padding:1rem 1.1rem;
-      border:2px solid rgba(19,133,182,0.15); border-radius:16px; background:#fff;
-      cursor:pointer; transition:border-color 0.15s, background 0.15s, box-shadow 0.15s;
-    }
-    .role-card:hover { border-color:rgba(19,133,182,0.35); background:#f7fbfe; }
-    .role-card.selected {
-      border-color:var(--brand-blue); background:#eef7fd;
-      box-shadow:0 0 0 3px rgba(19,133,182,0.1);
-    }
-    .role-card-head { display:flex; justify-content:space-between; align-items:center; }
-    .role-card-icon {
-      width:38px; height:38px; border-radius:12px;
-      background:rgba(19,133,182,0.1); display:grid; place-items:center;
-    }
-    .role-card.selected .role-card-icon { background:rgba(19,133,182,0.18); }
-    .role-card-icon i { color:var(--brand-blue); font-size:1.05rem; }
-    .role-card-body { display:flex; flex-direction:column; gap:0.25rem; }
-    .role-card-body strong { font-size:0.93rem; color:var(--brand-ink); }
-    .role-card-body p { margin:0; font-size:0.81rem; color:var(--brand-muted); line-height:1.45; }
-    .role-scope-note { font-size:0.76rem; color:rgba(19,133,182,0.8); display:flex; align-items:center; gap:0.3rem; }
-    .role-check { color:var(--brand-blue); font-size:1.2rem; }
-
-    /* ── SCOPE SUMMARY ── */
-    .scope-summary {
-      display:flex; align-items:center; gap:0.5rem; padding:0.85rem 1rem;
-      border-radius:14px; background:#f8fbfd; border:1px solid rgba(19,133,182,0.12);
-      flex-wrap:wrap;
-    }
-    .scope-level {
-      display:flex; align-items:center; gap:0.4rem; padding:0.3rem 0.7rem;
-      border-radius:20px; font-size:0.82rem; color:var(--brand-muted);
-      background:rgba(19,133,182,0.05); border:1px solid transparent;
-      transition:all 0.2s;
-    }
-    .scope-level.active {
-      color:var(--brand-blue); background:rgba(19,133,182,0.12);
-      border-color:rgba(19,133,182,0.25); font-weight:600;
-    }
-    .scope-level i { font-size:0.85rem; }
-    .scope-arrow { color:var(--brand-muted); font-size:1.1rem; font-weight:300; }
-
-    /* ── BUILDING GRID ── */
-    .building-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(200px, 1fr)); gap:0.6rem; }
-    .building-card {
-      display:flex; align-items:center; gap:0.7rem; padding:0.7rem 0.9rem;
-      border:1.5px solid rgba(19,133,182,0.15); border-radius:12px; background:#fff;
-      cursor:pointer; transition:border-color 0.15s, background 0.15s;
-    }
-    .building-card:hover { border-color:rgba(19,133,182,0.3); background:#f7fbfe; }
-    .building-card.selected { border-color:var(--brand-blue); background:#eef7fd; }
-    .building-card input[type=checkbox] { width:auto; accent-color:var(--brand-blue); cursor:pointer; }
-    .building-card-info { display:flex; flex-direction:column; flex:1; gap:0.05rem; }
-    .building-name { font-size:0.9rem; font-weight:600; color:var(--brand-ink); }
-    .building-code { font-size:0.75rem; color:var(--brand-muted); font-family:monospace; }
-    .building-card-check { color:var(--brand-blue); font-size:0.9rem; margin-left:auto; }
-    .no-items-hint { margin:0; color:var(--brand-muted); font-size:0.85rem; font-style:italic; }
-    .building-card.at-capacity { opacity:0.55; cursor:not-allowed; }
-    .building-card.at-capacity:hover { border-color:rgba(19,133,182,0.15); background:#fff; }
-    .capacity-badges { display:flex; gap:0.3rem; flex-wrap:wrap; margin-top:0.2rem; }
-    .cap-badge {
-      display:inline-flex; align-items:center; gap:0.25rem;
-      font-size:0.7rem; padding:0.1rem 0.4rem; border-radius:20px;
-      background:rgba(19,133,182,0.08); color:var(--brand-muted); font-weight:600;
-    }
-    .cap-badge i { font-size:0.65rem; }
-    .cap-badge.cap-full { background:rgba(231,76,60,0.1); color:#c0392b; }
-    .locked-badge {
-      display:inline-flex; align-items:center; gap:0.6rem; padding:0.7rem 1rem;
-      border:1.5px solid rgba(19,133,182,0.25); border-radius:12px; background:#f0f8ff;
-      font-size:0.9rem; color:var(--brand-ink); font-weight:600; width:fit-content;
-    }
-    .locked-badge i { color:var(--brand-blue); font-size:1rem; }
-    .locked-badge-sub { font-size:0.75rem; color:var(--brand-muted); font-family:monospace; font-weight:400; }
-    .locked-tag {
-      font-size:0.72rem; padding:0.15rem 0.5rem; border-radius:20px;
-      background:rgba(19,133,182,0.12); color:var(--brand-blue); font-weight:600;
-    }
-
-    /* ── FORM ACTIONS ── */
-    .form-actions {
-      display:flex; justify-content:space-between; align-items:center;
-      padding-top:0.75rem; border-top:1px solid rgba(19,133,182,0.08);
-    }
-    .form-actions-left {}
-    .form-actions-right { display:flex; gap:0.75rem; }
-
-    /* ── CONFIRM DIALOG ── */
-    .ov-backdrop {
-      position:fixed; inset:0; background:rgba(15,35,50,0.45);
-      z-index:1000; backdrop-filter:blur(2px); animation:fadeIn 0.15s ease;
-    }
-    .ov-panel-sm {
-      position:fixed; top:50%; left:50%; transform:translate(-50%,-50%);
-      width:min(420px, calc(100vw - 2rem)); background:#fff; border-radius:24px;
-      z-index:1001; box-shadow:0 32px 80px rgba(15,40,60,0.28);
-      padding:1.6rem; animation:slideUp 0.2s cubic-bezier(.4,0,.2,1);
-    }
-    @keyframes fadeIn  { from { opacity:0; } to { opacity:1; } }
-    @keyframes slideUp {
-      from { opacity:0; transform:translate(-50%, calc(-50% + 16px)); }
-      to   { opacity:1; transform:translate(-50%, -50%); }
-    }
-    .ov-header {
-      display:flex; justify-content:space-between; align-items:center;
-      margin-bottom:1.2rem; padding-bottom:1rem;
-      border-bottom:1px solid rgba(19,133,182,0.1);
-    }
-    .ov-header strong { font-size:1.1rem; color:var(--brand-ink); }
-    .ov-close {
-      background:none; border:none; cursor:pointer; font-size:1.1rem;
-      color:var(--brand-muted); width:32px; height:32px; border-radius:50%;
-      display:grid; place-items:center; transition:background 0.15s;
-    }
-    .ov-close:hover { background:rgba(19,133,182,0.08); color:var(--brand-ink); }
-    .confirm-text { margin:0 0 1.2rem; color:var(--brand-ink); line-height:1.6; }
-    .confirm-footer { display:flex; justify-content:flex-end; gap:0.75rem; margin-top:1rem; }
-  `]
 })
 export class UserCreatePageComponent implements OnInit {
   private readonly api             = inject(UsersApiService);
@@ -580,8 +397,8 @@ export class UserCreatePageComponent implements OnInit {
 
   capacityLimitLabel(buildingId: string): string {
     const cap = this.getCapacity(buildingId);
-    if (this.form.role === 'BuildingManager')  return `Máximo de encargados alcanzado (${cap.buildingManagerCount}/2)`;
-    if (this.form.role === 'CompanyOperator') return `Máximo de operadores alcanzado (${cap.companyOperatorCount}/5)`;
+    if (this.form.role === 'BuildingManager')  return `MÃ¡ximo de encargados alcanzado (${cap.buildingManagerCount}/2)`;
+    if (this.form.role === 'CompanyOperator') return `MÃ¡ximo de operadores alcanzado (${cap.companyOperatorCount}/5)`;
     return '';
   }
 
@@ -606,7 +423,7 @@ export class UserCreatePageComponent implements OnInit {
         this.capacityMap = new Map(capacity.items.map(i => [i.buildingId, i]));
 
         if (id && !entity) {
-          this.loadError = 'No se encontró el usuario solicitado.';
+          this.loadError = 'No se encontrÃ³ el usuario solicitado.';
           this.loading   = false;
           this.cdr.markForCheck();
           return;
@@ -659,14 +476,14 @@ export class UserCreatePageComponent implements OnInit {
 
   onCompanyChange(): void {
     this.form.condominiumId = '';
-    this.form.buildingIds   = [];     // el usuario cambió empresa → limpiar selección
+    this.form.buildingIds   = [];     // el usuario cambiÃ³ empresa â†’ limpiar selecciÃ³n
     this.refreshCondominiumOptions();
     this.refreshBuildings();
     this.cdr.markForCheck();
   }
 
   onCondominiumChange(): void {
-    this.form.buildingIds = [];       // el usuario cambió condominio → limpiar selección
+    this.form.buildingIds = [];       // el usuario cambiÃ³ condominio â†’ limpiar selecciÃ³n
     this.refreshBuildings();
     this.cdr.markForCheck();
   }
@@ -731,10 +548,10 @@ export class UserCreatePageComponent implements OnInit {
     if (!lastName)  { this.msg.add({ severity: 'error', summary: 'Error', detail: 'Los apellidos son obligatorios.', life: 5000 }); return; }
     if (!username)  { this.msg.add({ severity: 'error', summary: 'Error', detail: 'El nombre de usuario es obligatorio.', life: 5000 }); return; }
     if (!/^[a-z0-9][a-z0-9.\-_]*$/.test(username)) {
-      this.msg.add({ severity: 'error', summary: 'Error', detail: 'Nombre de usuario inválido. Solo minúsculas, números, puntos y guiones.', life: 5000 }); return;
+      this.msg.add({ severity: 'error', summary: 'Error', detail: 'Nombre de usuario invÃ¡lido. Solo minÃºsculas, nÃºmeros, puntos y guiones.', life: 5000 }); return;
     }
     if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      this.msg.add({ severity: 'error', summary: 'Error', detail: 'Correo electrónico inválido.', life: 5000 }); return;
+      this.msg.add({ severity: 'error', summary: 'Error', detail: 'Correo electrÃ³nico invÃ¡lido.', life: 5000 }); return;
     }
     if (!this.form.role) { this.msg.add({ severity: 'error', summary: 'Error', detail: 'Debes seleccionar un rol.', life: 5000 }); return; }
     if (buildingIds.length === 0) { this.msg.add({ severity: 'error', summary: 'Error', detail: 'Debes asignar al menos un edificio.', life: 5000 }); return; }
@@ -764,9 +581,9 @@ export class UserCreatePageComponent implements OnInit {
         if (!this.isEditing) {
           this.isEditing = true;
           this.editingId = saved.id;
-          this.msg.add({ severity: 'success', summary: 'Éxito', detail: 'Usuario creado. Clave inicial: 123456', life: 4000 });
+          this.msg.add({ severity: 'success', summary: 'Ã‰xito', detail: 'Usuario creado. Clave inicial: 123456', life: 4000 });
         } else {
-          this.msg.add({ severity: 'success', summary: 'Éxito', detail: 'Cambios guardados correctamente.', life: 4000 });
+          this.msg.add({ severity: 'success', summary: 'Ã‰xito', detail: 'Cambios guardados correctamente.', life: 4000 });
         }
         this.cdr.markForCheck();
       },
