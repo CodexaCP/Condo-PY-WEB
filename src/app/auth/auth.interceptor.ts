@@ -18,12 +18,12 @@ export const authInterceptor: HttpInterceptorFn = (
   const token = auth.getToken();
   const isAuthRequest = request.url.endsWith('/auth/login');
 
-  const authorizedRequest =
-    token && !isAuthRequest
-      ? request.clone({
-          setHeaders: { Authorization: `Bearer ${token}` }
-        })
-      : request;
+  const headers: Record<string, string> = {
+    'ngrok-skip-browser-warning': 'true'
+  };
+  if (token && !isAuthRequest) headers['Authorization'] = `Bearer ${token}`;
+
+  const authorizedRequest = request.clone({ setHeaders: headers });
 
   return next(authorizedRequest).pipe(
     catchError((error: unknown) => {
