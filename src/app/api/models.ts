@@ -944,3 +944,82 @@ export interface AnnouncementBroadcastRequest {
   expiresAt: string | null;
   isActive: boolean;
 }
+
+// ── Owner Payments ──────────────────────────────────────────────────────────
+
+export type OwnerPaymentStatus = 'Pending' | 'UnderReview' | 'Approved' | 'Rejected';
+
+export interface OwnerPaymentUnit {
+  unitId: string;
+  unitCode: string;
+  buildingName: string;
+  allocatedAmount: number;
+}
+
+export interface OwnerPayment {
+  id: string;
+  ownerId: string;
+  ownerFullName: string;
+  paymentDate: string;
+  comprobanteUrl: string;
+  declaredAmount: number;
+  reviewedAmount: number | null;
+  status: OwnerPaymentStatus;
+  reference: string;
+  rejectionReason: string;
+  reviewedByUserFullName: string | null;
+  reviewedAt: string | null;
+  resolvedAt: string | null;
+  createdAtUtc: string;
+  units: OwnerPaymentUnit[];
+}
+
+export interface OwnerPaymentCreateRequest {
+  paymentDate: string;
+  comprobanteUrl: string;
+  declaredAmount: number;
+  unitIds: string[];
+}
+
+export interface OwnerPaymentReviewRequest {
+  reviewedAmount: number;
+}
+
+export interface OwnerPaymentRejectRequest {
+  rejectionReason: string;
+}
+
+export interface OwnerDebtCharge {
+  chargeId: string;
+  concept: string;
+  chargeType: string;
+  periodYear: number;
+  periodMonth: number;
+  amount: number;
+  pendingAmount: number;
+}
+
+export interface OwnerDebtUnit {
+  unitId: string;
+  unitCode: string;
+  buildingName: string;
+  totalDebt: number;
+  charges: OwnerDebtCharge[];
+}
+
+// ── Notifications ───────────────────────────────────────────────────────────
+
+export interface AppNotification {
+  id: string;
+  type: string;
+  title: string;
+  body: string;
+  isRead: boolean;
+  entityType: string;
+  entityId: string | null;
+  createdAtUtc: string;
+}
+
+export interface UnreadCountDto {
+  count: number;
+}

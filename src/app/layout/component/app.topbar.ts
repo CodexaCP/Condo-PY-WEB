@@ -1,8 +1,11 @@
-import { Component, inject } from '@angular/core';
+import { Component, DestroyRef, inject, OnInit, signal } from '@angular/core';
 import { Router, RouterModule } from '@angular/router';
 import { CommonModule } from '@angular/common';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { interval, startWith, switchMap } from 'rxjs';
 import { LayoutService } from '@/app/layout/service/layout.service';
 import { AuthService } from '@/app/auth/auth.service';
+import { NotificationsApiService } from '@/app/api/notifications-api.service';
 
 @Component({
     selector: 'app-topbar',
@@ -52,19 +55,58 @@ import { AuthService } from '@/app/auth/auth.service';
                 <span style="color:#ffffff; font-size:0.9rem; font-weight:500; opacity:0.9">
                     Hola, {{ currentUser()!.fullName.split(' ')[0] }}
                 </span>
+                <button
+                    type="button"
+                    class="layout-topbar-action notif-btn"
+                    (click)="goToNotificaciones()"
+                    title="Notificaciones">
+                    <i class="pi pi-bell"></i>
+                    @if (unreadCount() > 0) {
+                        <span class="notif-badge">{{ unreadCount() > 9 ? '9+' : unreadCount() }}</span>
+                    }
+                </button>
                 <button type="button" class="layout-topbar-action" (click)="logout()" title="Cerrar sesión">
                     <i class="pi pi-sign-out"></i>
                 </button>
             }
         </div>
-    </div>`
+    </div>`,
+    styles: [`
+        .notif-btn  { position: relative; }
+        .notif-badge {
+            position: absolute; top: 4px; right: 4px;
+            background: #ef4444; color: #fff;
+            font-size: 0.65rem; font-weight: 700; line-height: 1;
+            min-width: 1.1rem; height: 1.1rem; border-radius: 0.55rem;
+            display: flex; align-items: center; justify-content: center;
+            padding: 0 0.25rem; pointer-events: none;
+        }
+    `]
 })
-export class AppTopbar {
+export class AppTopbar implements OnInit {
     layoutService = inject(LayoutService);
-    private readonly auth = inject(AuthService);
-    private readonly router = inject(Router);
+    private readonly auth       = inject(AuthService);
+    private readonly router     = inject(Router);
+    private readonly notifSvc   = inject(NotificationsApiService);
+    private readonly destroyRef = inject(DestroyRef);
 
     readonly currentUser = this.auth.currentUser;
+    readonly unreadCount = signal(0);
+
+    ngOnInit(): void {
+        interval(30_000).pipe(
+            startWith(0),
+            switchMap(() => this.notifSvc.getUnreadCount()),
+            takeUntilDestroyed(this.destroyRef)
+        ).subscribe({
+            next: dto  => this.unreadCount.set(dto.count),
+            error: ()  => { /* silencioso — el badge queda en 0 si el endpoint falla */ }
+        });
+    }
+
+    goToNotificaciones(): void {
+        void this.router.navigate(['/notificaciones']);
+    }
 
     logout() {
         this.auth.logout();

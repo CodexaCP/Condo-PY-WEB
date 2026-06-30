@@ -158,6 +158,22 @@ export const appRoutes: Routes = [
                 loadComponent: () => import('./app/pages/condo/collections-page.component').then(m => m.CollectionsPageComponent)
             },
 
+            // ── Notificaciones ────────────────────────────────────────────
+            {
+                path: 'notificaciones',
+                loadComponent: () => import('./app/pages/condo/notificaciones-page.component').then(m => m.NotificacionesPageComponent)
+            },
+
+            // ── Pagos de propietarios ─────────────────────────────────────
+            {
+                path: 'owner-payments',
+                loadComponent: () => import('./app/pages/condo/owner-payments-page.component').then(m => m.OwnerPaymentsPageComponent)
+            },
+            {
+                path: 'owner-payments/:id',
+                loadComponent: () => import('./app/pages/condo/owner-payment-detail-page.component').then(m => m.OwnerPaymentDetailPageComponent)
+            },
+
             // ── Comunicados ───────────────────────────────────────────────
             {
                 path: 'comunicados',
