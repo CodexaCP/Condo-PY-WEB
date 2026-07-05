@@ -1,3 +1,5 @@
+export type LateFeeFrequency = 'Daily' | 'Weekly' | 'Biweekly';
+
 export interface Building {
   id: string;
   companyId: string;
@@ -11,6 +13,8 @@ export interface Building {
   contactPhonePrefix?: string | null;
   contactPhone?: string | null;
   contactEmail?: string | null;
+  lateFeeRatePercentage?: number | null;
+  lateFeeFrequency?: LateFeeFrequency | null;
 }
 
 export interface CreateBuildingRequest {
@@ -24,6 +28,8 @@ export interface CreateBuildingRequest {
   contactPhonePrefix?: string | null;
   contactPhone?: string | null;
   contactEmail?: string | null;
+  lateFeeRatePercentage?: number | null;
+  lateFeeFrequency?: LateFeeFrequency | null;
 }
 
 export interface Company {
@@ -411,6 +417,13 @@ export interface ExpenseSettlementSummary {
   periodStatus: ExpensePeriodStatus;
   generatedChargeCount: number;
   isCalculated: boolean;
+  categoryTotals: SettlementCategoryTotal[];
+}
+
+export interface SettlementCategoryTotal {
+  category: BuildingExpenseCategory;
+  expenseCount: number;
+  amount: number;
 }
 
 export interface ExpenseSettlementChargePreviewItem {
@@ -885,7 +898,7 @@ export type ClaimStatus = 'Pendiente' | 'EnProceso' | 'Resuelto';
 
 export interface Claim {
   id: string;
-  condominiumId: string;
+  condominiumId: string | null;
   condominiumName: string;
   buildingId: string;
   buildingName: string;
@@ -1022,4 +1035,49 @@ export interface AppNotification {
 
 export interface UnreadCountDto {
   count: number;
+}
+
+// ── Amenities ──────────────────────────────────────────────────────────
+
+export type AmenityReservationStatus = 'PendingPayment' | 'PendingReview' | 'Confirmed' | 'Rejected' | 'Cancelled';
+
+export interface Amenity {
+  id: string;
+  buildingId: string;
+  buildingName: string;
+  name: string;
+  description: string;
+  reservationPrice: number;
+  isActive: boolean;
+}
+
+export interface AmenityUpsertRequest {
+  buildingId: string;
+  name: string;
+  description: string;
+  reservationPrice: number;
+  isActive: boolean;
+}
+
+export interface AmenityReservation {
+  id: string;
+  amenityId: string;
+  amenityName: string;
+  buildingId: string;
+  buildingName: string;
+  startsAt: string;
+  endsAt: string;
+  price: number;
+  status: AmenityReservationStatus;
+  notes: string;
+  comprobanteUrl: string | null;
+  reservedByName: string;
+  rejectionReason: string | null;
+  createdAtUtc: string;
+}
+
+export interface AmenityScheduleSlot {
+  startsAt: string;
+  endsAt: string;
+  status: AmenityReservationStatus;
 }

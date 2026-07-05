@@ -180,6 +180,12 @@ export const appRoutes: Routes = [
                 loadComponent: () => import('./app/pages/condo/comunicados-page.component').then(m => m.ComunicadosPageComponent)
             },
 
+            // ── Amenities ─────────────────────────────────────────────────
+            {
+                path: 'amenities',
+                loadComponent: () => import('./app/pages/condo/amenities-page.component').then(m => m.AmenitiesPageComponent)
+            },
+
             // ── Votaciones ────────────────────────────────────────────────
             {
                 path: 'claims',

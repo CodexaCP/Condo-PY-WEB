@@ -15,7 +15,7 @@ import { extractApiErrorMessage } from '../../api/api-error.util';
 import { BuildingsApiService } from '../../api/buildings-api.service';
 import { CompaniesApiService } from '../../api/companies-api.service';
 import { CondominiumsApiService } from '../../api/condominiums-api.service';
-import { Company, Condominium } from '../../api/models';
+import { Company, Condominium, LateFeeFrequency } from '../../api/models';
 import { AuthService } from '../../auth/auth.service';
 
 interface PhonePrefix { label: string; value: string; flag: string; pattern: RegExp; hint: string; }
@@ -147,6 +147,27 @@ const PHONE_PREFIXES: PhonePrefix[] = [
           </div>
         </section>
 
+        <section class="form-section">
+          <h2 class="section-title">Interés por mora</h2>
+          <div class="field-row">
+            <div class="field">
+              <label for="lateFeeRate">Tasa de interés por mora (%) <span class="optional">(opcional)</span></label>
+              <input id="lateFeeRate" type="number" [(ngModel)]="form.lateFeeRatePercentage" name="lateFeeRatePercentage"
+                     placeholder="Ej: 2" min="0" max="100" step="0.01" />
+              <small class="field-hint">Interés simple sobre la expensa original vencida. Vacío = sin mora.</small>
+            </div>
+            <div class="field">
+              <label for="lateFeeFrequency">Incremento</label>
+              <p-select id="lateFeeFrequency" [options]="lateFeeFrequencyOptions" [(ngModel)]="form.lateFeeFrequency"
+                        name="lateFeeFrequency" optionLabel="label" optionValue="value"
+                        placeholder="Seleccionar..." styleClass="full-select"
+                        [disabled]="!form.lateFeeRatePercentage">
+              </p-select>
+              <small class="field-hint">Cada intervalo suma la tasa sobre el monto original adeudado. Al cambiar esta configuración se notifica a todos los miembros del edificio.</small>
+            </div>
+          </div>
+        </section>
+
         <section class="form-actions">
           <p-button type="button" label="Cancelar" [text]="true" [rounded]="true" severity="secondary"
                     (onClick)="cancel()" pTooltip="Cancelar y volver al listado" tooltipPosition="top">
@@ -222,7 +243,14 @@ export class BuildingCreatePageComponent implements OnInit {
   phoneError = '';
   emailError = '';
 
-  form = { companyId:'', condominiumId:'', name:'', code:'', address:'', description:'', phonePrefix:'+595', phoneNumber:'', email:'', isActive:true };
+  form = { companyId:'', condominiumId:'', name:'', code:'', address:'', description:'', phonePrefix:'+595', phoneNumber:'', email:'', isActive:true,
+           lateFeeRatePercentage: null as number | null, lateFeeFrequency: '' as '' | LateFeeFrequency };
+
+  readonly lateFeeFrequencyOptions = [
+    { label: 'Diario', value: 'Daily' },
+    { label: 'Semanal', value: 'Weekly' },
+    { label: 'Quincenal', value: 'Biweekly' }
+  ];
 
   get isSuperAdmin()       { return this.auth.hasRole('SuperAdmin'); }
   get isCompanyAdmin()     { return this.auth.hasRole('CompanyAdmin'); }
@@ -258,7 +286,9 @@ export class BuildingCreatePageComponent implements OnInit {
             phonePrefix: entity.contactPhonePrefix ?? '+595',
             phoneNumber: entity.contactPhone ?? '',
             email: entity.contactEmail ?? '',
-            isActive: entity.isActive
+            isActive: entity.isActive,
+            lateFeeRatePercentage: entity.lateFeeRatePercentage ?? null,
+            lateFeeFrequency: entity.lateFeeFrequency ?? ''
           };
         }
         this.refreshCondominiumOptions();
@@ -315,7 +345,12 @@ export class BuildingCreatePageComponent implements OnInit {
     }
     if (email && !/^[^\s@]+@gmail\.com$/i.test(email)) { this.emailError = 'Por ahora solo se aceptan correos @gmail.com.'; return; }
 
-    const req = { companyId, condominiumId, name, code, address, isActive: this.form.isActive, description, contactPhonePrefix: phonePrefix, contactPhone: phoneNumber, contactEmail: email };
+    const lateFeeRate = this.form.lateFeeRatePercentage || null;
+    const lateFeeFrequency = (lateFeeRate && this.form.lateFeeFrequency) ? this.form.lateFeeFrequency : null;
+    if (lateFeeRate && !lateFeeFrequency) { this.msg.add({ severity: 'error', summary: 'Error', detail: 'Definí el incremento de la mora (diario, semanal o quincenal).', life: 5000 }); return; }
+
+    const req = { companyId, condominiumId, name, code, address, isActive: this.form.isActive, description, contactPhonePrefix: phonePrefix, contactPhone: phoneNumber, contactEmail: email,
+                  lateFeeRatePercentage: lateFeeRate, lateFeeFrequency };
     this.isSaving = true;
     const op = this.isEditing ? this.api.update(this.editingId, req) : this.api.create(req);
     op.pipe(takeUntilDestroyed(this.destroyRef)).subscribe({

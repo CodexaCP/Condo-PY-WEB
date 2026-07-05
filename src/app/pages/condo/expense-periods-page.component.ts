@@ -21,7 +21,7 @@ import {
   ExpensePeriod,
   ExpensePeriodOperationalAlertItem,
   ExpensePeriodStatus,
-  ExpenseSettlementChargePreview,
+  BuildingExpenseCategory,
   ExpenseSettlementStatus,
   ExpenseSettlementSummary,
   GenerateExpenseChargesMode,
@@ -283,7 +283,6 @@ import {
           <p-button *ngIf="!isReadOnly" type="button" [label]="settlementSummary.isCalculated ? 'Recalcular' : 'Calcular liquidación'" icon="pi pi-calculator" [loading]="isCalculatingSettlement" [disabled]="settlementPeriod.status !== 'Draft'" (onClick)="calculateSettlement()"></p-button>
           <p-button *ngIf="!isReadOnly" type="button" label="Aprobar" icon="pi pi-check" severity="info" [loading]="isApprovingSettlement" [disabled]="!canApproveSettlement()" (onClick)="approveSettlement()"></p-button>
           <p-button *ngIf="!isReadOnly" type="button" label="Publicar comprobantes" icon="pi pi-send" severity="contrast" [loading]="isPublishingSettlement" [disabled]="!canPublishSettlement()" (onClick)="publishSettlement()"></p-button>
-          <p-button type="button" label="Vista previa" icon="pi pi-eye" severity="secondary" [text]="true" [loading]="isLoadingSettlementPreview" [disabled]="!settlementSummary.isCalculated" (onClick)="loadSettlementPreview()"></p-button>
           <a *ngIf="settlementSummary.isCalculated" [href]="getSettlementPdfUrl()" target="_blank" style="display:contents">
             <p-button type="button" label="PDF" icon="pi pi-file-pdf" severity="secondary" [text]="true"></p-button>
           </a>
@@ -311,17 +310,22 @@ import {
           </div>
         </form>
 
-        <div class="preview-box" *ngIf="settlementPreview">
+        <div class="preview-box" *ngIf="settlementSummary.categoryTotals?.length">
           <div class="preview-head">
-            <strong>Vista previa de cargos</strong>
-            <span>{{ settlementPreview.chargeCount }} cargos · {{ settlementPreview.unitsAffected }} unidades · {{ formatCurrency(settlementPreview.totalGeneratedAmount) }}</span>
+            <strong>Gastos comunes por categoría</strong>
+            <span>{{ settlementCategoryExpenseCount }} gastos · {{ settlementSummary.categoryTotals.length }} categorías · {{ formatCurrency(settlementCategoryTotalAmount) }}</span>
           </div>
-          <div class="app-list" *ngIf="settlementPreview.items.length">
-            <div class="app-row header preview-grid"><span>Unidad</span><span>Concepto</span><span>Monto</span></div>
-            <div class="app-row preview-grid" *ngFor="let item of settlementPreview.items">
-              <strong>{{ item.unitCode }}</strong>
-              <span>{{ item.concept }}</span>
-              <span>{{ formatCurrency(item.amount) }}</span>
+          <div class="app-list">
+            <div class="app-row header preview-grid"><span>Categoría</span><span>Gastos</span><span>Monto</span></div>
+            <div class="app-row preview-grid" *ngFor="let row of settlementSummary.categoryTotals">
+              <strong>{{ settlementCategoryLabel(row.category) }}</strong>
+              <span>{{ row.expenseCount }}</span>
+              <span>{{ formatCurrency(row.amount) }}</span>
+            </div>
+            <div class="app-row preview-grid">
+              <strong>Total gastos comunes</strong>
+              <strong>{{ settlementCategoryExpenseCount }}</strong>
+              <strong>{{ formatCurrency(settlementCategoryTotalAmount) }}</strong>
             </div>
           </div>
         </div>
@@ -571,7 +575,6 @@ export class ExpensePeriodsPageComponent implements OnInit {
   isSaving = false;
   isGenerating = false;
   isCalculatingSettlement = false;
-  isLoadingSettlementPreview = false;
   isApplyingSettlement = false;
   isApprovingSettlement = false;
   isPublishingSettlement = false;
@@ -588,7 +591,6 @@ export class ExpensePeriodsPageComponent implements OnInit {
   generatorPeriod: ExpensePeriod | null = null;
   settlementPeriod: ExpensePeriod | null = null;
   settlementSummary: ExpenseSettlementSummary | null = null;
-  settlementPreview: ExpenseSettlementChargePreview | null = null;
   form = this.createInitialForm();
   bulkForm = this.createInitialBulkForm();
   generatorForm = this.createInitialGeneratorForm();
@@ -718,7 +720,6 @@ export class ExpensePeriodsPageComponent implements OnInit {
   openSettlement(item: ExpensePeriod): void {
     this.settlementPeriod = item;
     this.settlementSummary = null;
-    this.settlementPreview = null;
     this.showLateFeeForm = false;
     this.lateFeeForm = this.createInitialLateFeeForm(item);
     this.isCalculatingSettlement = true;
@@ -743,7 +744,6 @@ export class ExpensePeriodsPageComponent implements OnInit {
   closeSettlement(): void {
     this.settlementPeriod = null;
     this.settlementSummary = null;
-    this.settlementPreview = null;
     this.showLateFeeForm = false;
   }
 
@@ -836,8 +836,7 @@ export class ExpensePeriodsPageComponent implements OnInit {
         next: (summary) => {
           this.settlementSummary = summary;
           this.syncPeriodStatus(summary.expensePeriodId, summary.periodStatus);
-          this.settlementPreview = null;
-          this.msg.add({ severity: 'success', summary: 'Éxito', detail: `Liquidacion consolidada calculada por ${this.formatCurrency(summary.netCommonAmount)} en ${summary.expensePeriodName}.`, life: 4000 });
+                this.msg.add({ severity: 'success', summary: 'Éxito', detail: `Liquidacion consolidada calculada por ${this.formatCurrency(summary.netCommonAmount)} en ${summary.expensePeriodName}.`, life: 4000 });
           this.isCalculatingSettlement = false;
           this.cdr.markForCheck();
         },
@@ -849,27 +848,30 @@ export class ExpensePeriodsPageComponent implements OnInit {
       });
   }
 
-  loadSettlementPreview(): void {
-    if (!this.settlementPeriod) {
-      return;
-    }
+  get settlementCategoryExpenseCount(): number {
+    return (this.settlementSummary?.categoryTotals ?? []).reduce((acc, x) => acc + x.expenseCount, 0);
+  }
 
-    this.isLoadingSettlementPreview = true;
+  get settlementCategoryTotalAmount(): number {
+    return (this.settlementSummary?.categoryTotals ?? []).reduce((acc, x) => acc + x.amount, 0);
+  }
 
-    this.periodsApi.getSettlementChargePreview(this.settlementPeriod.id)
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: (preview) => {
-          this.settlementPreview = preview;
-          this.isLoadingSettlementPreview = false;
-          this.cdr.markForCheck();
-        },
-        error: (error) => {
-          this.msg.add({ severity: 'error', summary: 'Error', detail: extractApiErrorMessage(error, 'No se pudo generar la vista previa de cargos.'), life: 5000 });
-          this.isLoadingSettlementPreview = false;
-          this.cdr.markForCheck();
-        }
-      });
+  settlementCategoryLabel(category: BuildingExpenseCategory): string {
+    return ({
+      Utilities: 'Servicios',
+      Cleaning: 'Limpieza',
+      Security: 'Seguridad',
+      Maintenance: 'Mantenimiento',
+      Elevator: 'Ascensor',
+      Insurance: 'Seguro',
+      Payroll: 'Salarios',
+      Taxes: 'Impuestos',
+      Administration: 'Administracion',
+      ReserveFund: 'Fondo de reserva',
+      Extraordinary: 'Extraordinario',
+      Supplies: 'Insumos',
+      Other: 'Otro'
+    })[category] ?? category;
   }
 
   deletePeriod(item: ExpensePeriod): void {

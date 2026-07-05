@@ -13,7 +13,7 @@ import { extractApiErrorMessage } from '../../api/api-error.util';
 import { BuildingsApiService } from '../../api/buildings-api.service';
 import { CompaniesApiService } from '../../api/companies-api.service';
 import { CondominiumsApiService } from '../../api/condominiums-api.service';
-import { Building, Company, Condominium } from '../../api/models';
+import { Building, Company, Condominium, LateFeeFrequency } from '../../api/models';
 import { AuthService } from '../../auth/auth.service';
 
 @Component({
@@ -94,6 +94,22 @@ import { AuthService } from '../../auth/auth.service';
         <label>
           <span>Direccion</span>
           <input [(ngModel)]="form.address" name="address" required maxlength="200" />
+        </label>
+        <label>
+          <span>Tasa de interés por mora (%) <small>(opcional)</small></span>
+          <input [(ngModel)]="form.lateFeeRatePercentage" name="lateFeeRatePercentage"
+                 type="number" min="0" max="100" step="0.01" placeholder="Ej: 2" />
+          <small>Interés simple sobre la expensa original vencida. Vacío = sin mora.</small>
+        </label>
+        <label *ngIf="form.lateFeeRatePercentage">
+          <span>Incremento de la mora</span>
+          <select [(ngModel)]="form.lateFeeFrequency" name="lateFeeFrequency">
+            <option value="" disabled>— Seleccionar —</option>
+            <option value="Daily">Diario</option>
+            <option value="Weekly">Semanal</option>
+            <option value="Biweekly">Quincenal</option>
+          </select>
+          <small>Cada intervalo suma la tasa sobre el monto original adeudado. Al cambiar la config se notifica a todos los miembros del edificio.</small>
         </label>
         <label class="checkbox">
           <input [(ngModel)]="form.isActive" name="isActive" type="checkbox" />
@@ -228,7 +244,9 @@ export class BuildingsPageComponent implements OnInit {
   openFicha(item: Building): void {
     this.selected = item;
     this.form = { companyId: item.companyId ?? '', condominiumId: item.condominiumId ?? '',
-                  name: item.name, code: item.code, address: item.address, isActive: item.isActive };
+                  name: item.name, code: item.code, address: item.address, isActive: item.isActive,
+                  lateFeeRatePercentage: item.lateFeeRatePercentage ?? null,
+                  lateFeeFrequency: item.lateFeeFrequency ?? '' };
     this.dialogVisible = true;
   }
 
@@ -238,8 +256,13 @@ export class BuildingsPageComponent implements OnInit {
     const req = {
       companyId: this.form.companyId || null, condominiumId: this.form.condominiumId || null,
       name: this.form.name.trim(), code: this.form.code.trim().toUpperCase(),
-      address: this.form.address.trim(), isActive: this.form.isActive
+      address: this.form.address.trim(), isActive: this.form.isActive,
+      lateFeeRatePercentage: this.form.lateFeeRatePercentage || null,
+      lateFeeFrequency: (this.form.lateFeeRatePercentage && this.form.lateFeeFrequency) ? this.form.lateFeeFrequency : null
     };
+    if (req.lateFeeRatePercentage && !req.lateFeeFrequency) {
+      this.msg.add({ severity: 'error', summary: 'Error', detail: 'Definí el incremento de la mora (diario, semanal o quincenal).', life: 5000 }); return;
+    }
     if (this.isSuperAdmin && !req.companyId) { this.msg.add({ severity: 'error', summary: 'Error', detail: 'La empresa es obligatoria.', life: 5000 }); return; }
     if (!req.name) { this.msg.add({ severity: 'error', summary: 'Error', detail: 'El nombre es obligatorio.', life: 5000 }); return; }
     if (!req.code) { this.msg.add({ severity: 'error', summary: 'Error', detail: 'El codigo es obligatorio.', life: 5000 }); return; }
@@ -278,5 +301,8 @@ export class BuildingsPageComponent implements OnInit {
     });
   }
 
-  private emptyForm() { return { companyId: '', condominiumId: '', name: '', code: '', address: '', isActive: true }; }
+  private emptyForm() {
+    return { companyId: '', condominiumId: '', name: '', code: '', address: '', isActive: true,
+             lateFeeRatePercentage: null as number | null, lateFeeFrequency: '' as '' | LateFeeFrequency };
+  }
 }

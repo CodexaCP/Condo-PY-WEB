@@ -70,7 +70,7 @@ const CATEGORY_SEVERITY: Record<AnnouncementCategory, TagSeverity> = {
       <p class="app-state" *ngIf="!loading && !pageError && !filteredItems.length">No hay comunicados para mostrar.</p>
 
       <div class="app-list" *ngIf="filteredItems.length">
-        <div class="app-row header comm-grid">
+        <div class="app-row header comm-grid" [class.with-building]="buildings.length > 1">
           <span>Título</span>
           <span>Categoría</span>
           <span *ngIf="buildings.length > 1">Edificio</span>
@@ -78,7 +78,7 @@ const CATEGORY_SEVERITY: Record<AnnouncementCategory, TagSeverity> = {
           <span>Vence</span>
           <span>Estado</span>
         </div>
-        <div class="app-row comm-grid" *ngFor="let item of filteredItems">
+        <div class="app-row comm-grid" [class.with-building]="buildings.length > 1" *ngFor="let item of filteredItems">
           <button class="row-link" (click)="openEdit(item)">{{ item.title }}</button>
           <p-tag [value]="item.category" [severity]="categorySeverity(item.category)"></p-tag>
           <span *ngIf="buildings.length > 1" class="building-label">{{ item.buildingName }}</span>
@@ -262,6 +262,7 @@ const CATEGORY_SEVERITY: Record<AnnouncementCategory, TagSeverity> = {
     .filter-select { min-width: 220px; }
 
     .comm-grid { grid-template-columns: 2fr 1fr 1fr 1fr 0.8fr; }
+    .comm-grid.with-building { grid-template-columns: 2fr 1fr 1.2fr 1fr 1fr 0.8fr; }
 
     .row-link { background: none; border: none; padding: 0; font: inherit; font-weight: 700;
                 color: var(--brand-blue); cursor: pointer; text-align: left;
@@ -607,7 +608,7 @@ export class ComunicadosPageComponent implements OnInit {
       this.api.broadcast({
         buildingIds: [],
         title: this.form.title.trim(), body: this.form.body.trim(), category: this.form.category,
-        publishedAt: this.form.publishedAt || null, expiresAt: this.form.expiresAt || null,
+        publishedAt: this.toUtcIso(this.form.publishedAt), expiresAt: this.toUtcIso(this.form.expiresAt),
         isActive: this.form.isActive
       }).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
         next: created => {
@@ -625,8 +626,8 @@ export class ComunicadosPageComponent implements OnInit {
 
     const req: AnnouncementUpsertRequest = {
       buildingId: this.form.buildingId, title: this.form.title.trim(), body: this.form.body.trim(),
-      category: this.form.category, publishedAt: this.form.publishedAt || null,
-      expiresAt: this.form.expiresAt || null, isActive: this.form.isActive
+      category: this.form.category, publishedAt: this.toUtcIso(this.form.publishedAt),
+      expiresAt: this.toUtcIso(this.form.expiresAt), isActive: this.form.isActive
     };
 
     const op = this.selected ? this.api.update(this.selected.id, req) : this.api.create(req);
@@ -660,6 +661,11 @@ export class ComunicadosPageComponent implements OnInit {
         this.isDeleting = false; this.confirmVisible = false; this.cdr.markForCheck();
       }
     });
+  }
+
+  private toUtcIso(datetimeLocal: string): string | null {
+    if (!datetimeLocal) return null;
+    return new Date(datetimeLocal).toISOString();
   }
 
   private toDatetimeLocal(iso: string): string {

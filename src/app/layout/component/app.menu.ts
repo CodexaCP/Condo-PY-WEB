@@ -95,6 +95,12 @@ export class AppMenu {
                     ]
                 },
                 {
+                    label: 'Amenities',
+                    items: [
+                        { label: 'Amenities y reservas', icon: 'pi pi-fw pi-calendar-plus', routerLink: ['/amenities'] }
+                    ]
+                },
+                {
                     label: 'Votaciones',
                     items: [
                         { label: 'Votaciones', icon: 'pi pi-fw pi-check-square', routerLink: ['/votaciones'] }
