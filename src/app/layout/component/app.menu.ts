@@ -38,6 +38,14 @@ export class AppMenu {
                         { label: 'Usuarios', icon: 'pi pi-fw pi-users', routerLink: ['/users'] },
                         { label: 'Edificios', icon: 'pi pi-fw pi-home', routerLink: ['/buildings'] }
                     ]
+                },
+                {
+                    label: 'Planes',
+                    items: [
+                        { label: 'Planes', icon: 'pi pi-fw pi-list-check', routerLink: ['/plans'] },
+                        { label: 'Asignaciones', icon: 'pi pi-fw pi-sitemap', routerLink: ['/building-plans'] },
+                        { label: 'Pagos de planes', icon: 'pi pi-fw pi-credit-card', routerLink: ['/building-plan-payments'] }
+                    ]
                 }
             ];
         }
@@ -104,6 +112,12 @@ export class AppMenu {
                     label: 'Votaciones',
                     items: [
                         { label: 'Votaciones', icon: 'pi pi-fw pi-check-square', routerLink: ['/votaciones'] }
+                    ]
+                },
+                {
+                    label: 'Plan',
+                    items: [
+                        { label: 'Mi plan', icon: 'pi pi-fw pi-bookmark', routerLink: ['/my-plan'] }
                     ]
                 }
             ];

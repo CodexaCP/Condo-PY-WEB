@@ -1081,3 +1081,152 @@ export interface AmenityScheduleSlot {
   endsAt: string;
   status: AmenityReservationStatus;
 }
+
+// ── Planes ────────────────────────────────────────────────────────────────────
+
+export type BillingCycle = 'Monthly' | 'Quarterly' | 'SemiAnnual' | 'Annual';
+
+export type PlanAssignmentScope = 'Building' | 'Condominium' | 'Company';
+
+export type BuildingPlanPaymentStatus = 'Pending' | 'Approved' | 'Rejected';
+
+export type BuildingPlanStatus = 'Active' | 'ExpiringSoon' | 'Expired' | 'Suspended' | 'Archived';
+
+export interface Plan {
+  id: string;
+  name: string;
+  description: string;
+  isDefault: boolean;
+  price: number;
+  billingCycle: BillingCycle;
+  gracePeriodDays: number;
+  isActive: boolean;
+  isAssigned: boolean;
+  assignedBuildingsCount: number;
+  createdAtUtc: string;
+  updatedAtUtc: string;
+}
+
+export interface PlanCreateRequest {
+  name: string;
+  description: string;
+  price: number;
+  billingCycle: BillingCycle;
+  gracePeriodDays: number;
+}
+
+export interface PlanUpdateRequest extends PlanCreateRequest {
+  isActive: boolean;
+}
+
+export interface PlanCloneResult {
+  newPlanId: string;
+  newPlanName: string;
+}
+
+export interface BuildingPlan {
+  id: string;
+  planId: string;
+  planName: string;
+  planIsDefault: boolean;
+  planPrice: number;
+  planBillingCycle: BillingCycle;
+  planGracePeriodDays: number;
+  buildingId: string;
+  buildingName: string;
+  companyName: string;
+  assignmentScope: PlanAssignmentScope;
+  scopeEntityId: string;
+  startDate: string;
+  endDate: string;
+  renewalStartDate: string | null;
+  renewalEndDate: string | null;
+  isPaid: boolean;
+  paidAt: string | null;
+  paidByFullName: string | null;
+  isActive: boolean;
+  isArchived: boolean;
+  assignedByFullName: string;
+  createdAtUtc: string;
+  status: BuildingPlanStatus;
+  daysUntilExpiry: number;
+  hasPendingPayment: boolean;
+}
+
+export interface BuildingPlanSummary {
+  id: string;
+  buildingId: string;
+  buildingName: string;
+  planName: string;
+  startDate: string;
+  endDate: string;
+  hasRenewal: boolean;
+  isPaid: boolean;
+  isActive: boolean;
+  status: BuildingPlanStatus;
+  daysUntilExpiry: number;
+}
+
+export interface BuildingPlanAssignRequest {
+  planId: string;
+  buildingId: string;
+  startDate: string;
+  endDate: string;
+}
+
+export interface BuildingPlanBulkAssignRequest {
+  planId: string;
+  scope: 'Company' | 'Condominium';
+  scopeEntityId: string;
+  startDate: string;
+  endDate: string;
+}
+
+export interface BuildingPlanSetRenewalRequest {
+  renewalStartDate: string;
+  renewalEndDate: string;
+}
+
+export interface BuildingPlanPayment {
+  id: string;
+  buildingPlanId: string;
+  assignmentScope: PlanAssignmentScope;
+  scopeEntityId: string;
+  companyId: string;
+  companyName: string;
+  buildingName: string;
+  planName: string;
+  declaredAmount: number;
+  paymentDate: string;
+  comprobanteUrl: string;
+  reference: string;
+  status: BuildingPlanPaymentStatus;
+  rejectionReason: string;
+  submittedByFullName: string;
+  createdAtUtc: string;
+  reviewedByFullName: string | null;
+  reviewedAt: string | null;
+}
+
+export interface BuildingPlanPaymentCreateRequest {
+  buildingPlanId: string;
+  declaredAmount: number;
+  paymentDate: string;
+  comprobanteUrl?: string;
+  reference?: string;
+}
+
+export interface BuildingPlanPaymentRejectRequest {
+  rejectionReason: string;
+}
+
+export interface BulkAssignError {
+  buildingId: string;
+  buildingName: string;
+  error: string;
+}
+
+export interface BulkAssignErrorResponse {
+  message: string;
+  failedBuildings: BulkAssignError[];
+}

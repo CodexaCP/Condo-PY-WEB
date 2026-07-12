@@ -180,6 +180,24 @@ export const appRoutes: Routes = [
                 loadComponent: () => import('./app/pages/condo/comunicados-page.component').then(m => m.ComunicadosPageComponent)
             },
 
+            // ── Planes ───────────────────────────────────────────────────
+            {
+                path: 'plans',
+                loadComponent: () => import('./app/pages/condo/plans-page.component').then(m => m.PlansPageComponent)
+            },
+            {
+                path: 'building-plans',
+                loadComponent: () => import('./app/pages/condo/building-plans-page.component').then(m => m.BuildingPlansPageComponent)
+            },
+            {
+                path: 'building-plan-payments',
+                loadComponent: () => import('./app/pages/condo/building-plan-payments-page.component').then(m => m.BuildingPlanPaymentsPageComponent)
+            },
+            {
+                path: 'my-plan',
+                loadComponent: () => import('./app/pages/condo/my-plan-page.component').then(m => m.MyPlanPageComponent)
+            },
+
             // ── Amenities ─────────────────────────────────────────────────
             {
                 path: 'amenities',
