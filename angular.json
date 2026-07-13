@@ -61,7 +61,7 @@
                 "serve": {
                     "builder": "@angular-devkit/build-angular:dev-server",
                     "options": {
-                        "allowedHosts": ["clumsily-snide-grove.ngrok-free.dev"]
+                        "allowedHosts": ["clumsily-snide-grove.ngrok-free.dev", "ophthalmometrical-zainab-irredeemable.ngrok-free.dev"]
                     },
                     "configurations": {
                         "production": {
