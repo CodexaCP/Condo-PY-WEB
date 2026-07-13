@@ -299,6 +299,7 @@ export class BuildingIncomesPageComponent implements OnInit {
   get isReadOnly(): boolean { return this.auth.hasRole('CompanyAdmin'); }
 
   items: BuildingIncome[] = [];
+  private allItems: BuildingIncome[] = [];
   buildings: Building[] = [];
   periods: ExpensePeriod[] = [];
   loading = true;
@@ -405,23 +406,12 @@ export class BuildingIncomesPageComponent implements OnInit {
   }
 
   applyFilters(): void {
-    this.loading = true;
-    this.incomesApi.getAll({
-      buildingId: this.filters.buildingId || undefined,
-      expensePeriodId: this.filters.expensePeriodId || undefined
-    }).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-      next: (items) => {
-        this.items = items;
-        this.sortItems();
-        this.loading = false;
-        this.cdr.markForCheck();
-      },
-      error: (error) => {
-        this.msg.add({ severity: 'error', summary: 'Error', detail: extractApiErrorMessage(error, 'No se pudo cargar el listado de ingresos del edificio.'), life: 5000 });
-        this.loading = false;
-        this.cdr.markForCheck();
-      }
-    });
+    this.items = this.allItems.filter(item =>
+      (!this.filters.buildingId || item.buildingId === this.filters.buildingId) &&
+      (!this.filters.expensePeriodId || item.expensePeriodId === this.filters.expensePeriodId)
+    );
+    this.sortItems();
+    this.cdr.markForCheck();
   }
 
   resetFilters(): void {
@@ -442,13 +432,8 @@ export class BuildingIncomesPageComponent implements OnInit {
         this.isRollingOver = false;
         if (result.rolloverCreated && result.createdIncome) {
           const income = result.createdIncome;
-          const matchesFilters =
-            (!this.filters.buildingId || income.buildingId === this.filters.buildingId) &&
-            (!this.filters.expensePeriodId || income.expensePeriodId === this.filters.expensePeriodId);
-          if (matchesFilters) {
-            this.items = [income, ...this.items];
-            this.sortItems();
-          }
+          this.allItems = [income, ...this.allItems];
+          this.applyFilters();
           this.msg.add({ severity: 'success', summary: 'Éxito', detail: `Rollover aplicado: ${this.formatCurrency(result.saldo)} al periodo "${result.targetPeriodName}".`, life: 5000 });
         }
         this.cdr.markForCheck();
@@ -537,12 +522,11 @@ export class BuildingIncomesPageComponent implements OnInit {
       periods: this.periodsApi.getAll()
     }).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: ({ incomes, buildings, periods }) => {
-        this.items = incomes;
+        this.allItems = incomes;
         this.buildings = buildings;
         this.periods = periods;
-        this.sortItems();
         this.loading = false;
-        this.cdr.markForCheck();
+        this.applyFilters();
       },
       error: (error) => {
         this.msg.add({ severity: 'error', summary: 'Error', detail: extractApiErrorMessage(error, 'No se pudo cargar el listado de ingresos del edificio.'), life: 5000 });
@@ -553,20 +537,10 @@ export class BuildingIncomesPageComponent implements OnInit {
   }
 
   private upsertLocalItem(income: BuildingIncome): void {
-    const matchesFilters =
-      (!this.filters.buildingId || income.buildingId === this.filters.buildingId) &&
-      (!this.filters.expensePeriodId || income.expensePeriodId === this.filters.expensePeriodId);
-
-    if (!matchesFilters) {
-      this.items = this.items.filter((item) => item.id !== income.id);
-      return;
-    }
-
-    this.items = this.editingId
-      ? this.items.map((item) => item.id === income.id ? income : item)
-      : [income, ...this.items];
-
-    this.sortItems();
+    this.allItems = this.editingId
+      ? this.allItems.map(item => item.id === income.id ? income : item)
+      : [income, ...this.allItems];
+    this.applyFilters();
   }
 
   private sortItems(): void {

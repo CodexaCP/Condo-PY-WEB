@@ -1,6 +1,6 @@
 import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
-import { Observable } from 'rxjs';
+import { Observable, shareReplay, tap } from 'rxjs';
 import { API_BASE_URL } from '../config/api.config';
 import {
   ApplyLateFeesRequest,
@@ -21,21 +21,30 @@ import {
 @Injectable({ providedIn: 'root' })
 export class ExpensePeriodsApiService {
   private readonly http = inject(HttpClient);
+  private cache$: Observable<ExpensePeriod[]> | null = null;
+  private cacheExpiry = 0;
+  private readonly CACHE_TTL_MS = 30_000;
 
   getAll(): Observable<ExpensePeriod[]> {
-    return this.http.get<ExpensePeriod[]>(`${API_BASE_URL}/expense-periods`);
+    if (!this.cache$ || Date.now() > this.cacheExpiry) {
+      this.cacheExpiry = Date.now() + this.CACHE_TTL_MS;
+      this.cache$ = this.http.get<ExpensePeriod[]>(`${API_BASE_URL}/expense-periods`).pipe(shareReplay(1));
+    }
+    return this.cache$;
   }
 
+  private invalidateCache(): void { this.cache$ = null; }
+
   create(request: CreateExpensePeriodRequest): Observable<ExpensePeriod> {
-    return this.http.post<ExpensePeriod>(`${API_BASE_URL}/expense-periods`, request);
+    return this.http.post<ExpensePeriod>(`${API_BASE_URL}/expense-periods`, request).pipe(tap(() => this.invalidateCache()));
   }
 
   update(id: string, request: CreateExpensePeriodRequest): Observable<ExpensePeriod> {
-    return this.http.put<ExpensePeriod>(`${API_BASE_URL}/expense-periods/${id}`, request);
+    return this.http.put<ExpensePeriod>(`${API_BASE_URL}/expense-periods/${id}`, request).pipe(tap(() => this.invalidateCache()));
   }
 
   delete(id: string): Observable<void> {
-    return this.http.delete<void>(`${API_BASE_URL}/expense-periods/${id}`);
+    return this.http.delete<void>(`${API_BASE_URL}/expense-periods/${id}`).pipe(tap(() => this.invalidateCache()));
   }
 
   generateCharges(id: string, request: GenerateExpenseChargesRequest): Observable<GenerateExpenseChargesResult> {

@@ -410,6 +410,7 @@ export class PaymentsPageComponent implements OnInit {
   get canRevert(): boolean { return !this.auth.hasRole('Resident') && !this.auth.hasRole('Owner') && !this.auth.hasRole('Porter'); }
 
   items: Payment[] = [];
+  private allItems: Payment[] = [];
   buildings: Building[] = [];
   periods: ExpensePeriod[] = [];
   units: Unit[] = [];
@@ -514,26 +515,13 @@ export class PaymentsPageComponent implements OnInit {
   }
 
   applyFilters(): void {
-    this.loading = true;
-    this.paymentsApi.getAll({
-      buildingId: this.filters.buildingId || undefined,
-      expensePeriodId: this.filters.expensePeriodId || undefined,
-      unitId: this.filters.unitId || undefined
-    })
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: (items) => {
-          this.items = items;
-          this.sortItems();
-          this.loading = false;
-          this.cdr.markForCheck();
-        },
-        error: (error) => {
-          this.msg.add({ severity: 'error', summary: 'Error', detail: extractApiErrorMessage(error, 'No se pudo cargar los pagos.'), life: 5000 });
-          this.loading = false;
-          this.cdr.markForCheck();
-        }
-      });
+    this.items = this.allItems.filter(item =>
+      (!this.filters.buildingId || item.buildingId === this.filters.buildingId) &&
+      (!this.filters.expensePeriodId || item.expensePeriodId === this.filters.expensePeriodId) &&
+      (!this.filters.unitId || item.unitId === this.filters.unitId)
+    );
+    this.sortItems();
+    this.cdr.markForCheck();
   }
 
   resetFilters(): void {
@@ -565,10 +553,10 @@ export class PaymentsPageComponent implements OnInit {
 
     operation.pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (payment) => {
-        this.items = this.editingId
-          ? this.items.map((item) => item.id === payment.id ? payment : item)
-          : [payment, ...this.items];
-        this.sortItems();
+        this.allItems = this.editingId
+          ? this.allItems.map((item) => item.id === payment.id ? payment : item)
+          : [payment, ...this.allItems];
+        this.applyFilters();
         this.receipt = payment;
         this.form = this.createInitialForm();
         this.pendingCharges = [];
@@ -601,7 +589,7 @@ export class PaymentsPageComponent implements OnInit {
 
     this.paymentsApi.delete(item.id).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: () => {
-        this.items = this.items.map((current) =>
+        this.allItems = this.allItems.map((current) =>
           current.id === item.id ? { ...current, isReversed: true, reversedAt: new Date().toISOString() } : current
         );
         if (this.editingId === item.id) {
@@ -612,7 +600,7 @@ export class PaymentsPageComponent implements OnInit {
         }
         this.isSaving = false;
         this.msg.add({ severity: 'warn', summary: 'Revertido', detail: 'El pago fue revertido. Los cargos imputados quedaron liberados.', life: 5000 });
-        this.cdr.markForCheck();
+        this.applyFilters();
       },
       error: (error) => {
         const status = (error as any)?.status;
@@ -621,10 +609,10 @@ export class PaymentsPageComponent implements OnInit {
           : extractApiErrorMessage(error, 'No se pudo revertir el pago.');
         this.msg.add({ severity: 'error', summary: 'Error', detail, life: 5000 });
         if (status === 409) {
-          this.items = this.items.map((current) =>
+          this.allItems = this.allItems.map((current) =>
             current.id === item.id ? { ...current, isReversed: true } : current
           );
-          this.cdr.markForCheck();
+          this.applyFilters();
         }
         this.isSaving = false;
         this.cdr.markForCheck();
@@ -681,13 +669,12 @@ export class PaymentsPageComponent implements OnInit {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: ({ payments, buildings, periods, units }) => {
-          this.items = payments;
+          this.allItems = payments;
           this.buildings = buildings;
           this.periods = periods;
           this.units = units;
-          this.sortItems();
           this.loading = false;
-          this.cdr.markForCheck();
+          this.applyFilters();
         },
         error: (error) => {
           this.msg.add({ severity: 'error', summary: 'Error', detail: extractApiErrorMessage(error, 'No se pudo cargar los pagos.'), life: 5000 });

@@ -290,6 +290,7 @@ export class ExpenseChargesPageComponent implements OnInit {
   get isReadOnly(): boolean { return this.auth.hasRole('CompanyAdmin'); }
 
   items: ExpenseCharge[] = [];
+  private allItems: ExpenseCharge[] = [];
   buildings: Building[] = [];
   periods: ExpensePeriod[] = [];
   units: Unit[] = [];
@@ -366,25 +367,12 @@ export class ExpenseChargesPageComponent implements OnInit {
   }
 
   applyFilters(): void {
-    this.loading = true;
-    this.chargesApi.getAll({
-      buildingId: this.filters.buildingId || undefined,
-      expensePeriodId: this.filters.expensePeriodId || undefined
-    })
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: (items) => {
-          this.items = items;
-          this.sortItems();
-          this.loading = false;
-          this.cdr.markForCheck();
-        },
-        error: (error) => {
-          this.msg.add({ severity: 'error', summary: 'Error', detail: extractApiErrorMessage(error, 'No se pudo cargar el listado de cargos.'), life: 5000 });
-          this.loading = false;
-          this.cdr.markForCheck();
-        }
-      });
+    this.items = this.allItems.filter(item =>
+      (!this.filters.buildingId || item.buildingId === this.filters.buildingId) &&
+      (!this.filters.expensePeriodId || item.expensePeriodId === this.filters.expensePeriodId)
+    );
+    this.sortItems();
+    this.cdr.markForCheck();
   }
 
   resetFilters(): void {
@@ -410,10 +398,10 @@ export class ExpenseChargesPageComponent implements OnInit {
 
     operation.pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (charge) => {
-        this.items = this.editingId
-          ? this.items.map((item) => item.id === charge.id ? charge : item)
-          : [charge, ...this.items];
-        this.sortItems();
+        this.allItems = this.editingId
+          ? this.allItems.map((item) => item.id === charge.id ? charge : item)
+          : [charge, ...this.allItems];
+        this.applyFilters();
         this.form = this.createInitialForm();
         this.isSaving = false;
         this.showForm = false;
@@ -435,8 +423,9 @@ export class ExpenseChargesPageComponent implements OnInit {
     this.chargesApi.reverse(item.id).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (reversal) => {
         const updatedOriginal: ExpenseCharge = { ...item, isReversed: true };
-        this.items = this.items.map((c) => c.id === item.id ? updatedOriginal : c);
-        this.items = [reversal, ...this.items];
+        this.allItems = this.allItems.map((c) => c.id === item.id ? updatedOriginal : c);
+        this.allItems = [reversal, ...this.allItems];
+        this.applyFilters();
         this.sortItems();
         this.isSaving = false;
         this.msg.add({ severity: 'success', summary: 'Éxito', detail: 'Cargo revertido. Se creó un ajuste negativo en el mismo periodo.', life: 5000 });
@@ -499,13 +488,12 @@ export class ExpenseChargesPageComponent implements OnInit {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: ({ charges, buildings, periods, units }) => {
-          this.items = charges;
+          this.allItems = charges;
           this.buildings = buildings;
           this.periods = periods;
           this.units = units;
-          this.sortItems();
           this.loading = false;
-          this.cdr.markForCheck();
+          this.applyFilters();
         },
         error: (error) => {
           this.msg.add({ severity: 'error', summary: 'Error', detail: extractApiErrorMessage(error, 'No se pudo cargar el listado de cargos.'), life: 5000 });

@@ -391,6 +391,7 @@ export class BuildingExpensesPageComponent implements OnInit {
   get isReadOnly(): boolean { return this.auth.hasRole('CompanyAdmin'); }
 
   items: BuildingExpense[] = [];
+  private allItems: BuildingExpense[] = [];
   buildings: Building[] = [];
   periods: ExpensePeriod[] = [];
   units: Unit[] = [];
@@ -545,23 +546,12 @@ export class BuildingExpensesPageComponent implements OnInit {
   }
 
   applyFilters(): void {
-    this.loading = true;
-    this.expensesApi.getAll({
-      buildingId: this.filters.buildingId || undefined,
-      expensePeriodId: this.filters.expensePeriodId || undefined
-    }).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-      next: (items) => {
-        this.items = items;
-        this.sortItems();
-        this.loading = false;
-        this.cdr.markForCheck();
-      },
-      error: (error) => {
-        this.msg.add({ severity: 'error', summary: 'Error', detail: extractApiErrorMessage(error, 'No se pudo cargar el listado de gastos.'), life: 5000 });
-        this.loading = false;
-        this.cdr.markForCheck();
-      }
-    });
+    this.items = this.allItems.filter(item =>
+      (!this.filters.buildingId || item.buildingId === this.filters.buildingId) &&
+      (!this.filters.expensePeriodId || item.expensePeriodId === this.filters.expensePeriodId)
+    );
+    this.sortItems();
+    this.cdr.markForCheck();
   }
 
   resetFilters(): void {
@@ -695,7 +685,7 @@ export class BuildingExpensesPageComponent implements OnInit {
           this.isApplyingRecurring = false;
           this.applyRecurringPeriodId = '';
           this.msg.add({ severity: 'success', summary: 'Éxito', detail: `Se aplicaron ${result.applied} gasto(s) recurrentes al periodo "${result.expensePeriodName}".`, life: 5000 });
-          this.applyFilters();
+          this.reloadExpenses();
           this.cdr.markForCheck();
         },
         error: (error) => {
@@ -710,13 +700,13 @@ export class BuildingExpensesPageComponent implements OnInit {
     this.isSaving = true;
     this.expensesApi.delete(item.id).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: () => {
-        this.items = this.items.filter((current) => current.id !== item.id);
+        this.allItems = this.allItems.filter((current) => current.id !== item.id);
         if (this.editingId === item.id) {
           this.cancelEdit();
         }
         this.isSaving = false;
         this.msg.add({ severity: 'success', summary: 'Éxito', detail: 'Gasto eliminado.', life: 4000 });
-        this.cdr.markForCheck();
+        this.applyFilters();
       },
       error: (error) => {
         this.msg.add({ severity: 'error', summary: 'Error', detail: extractApiErrorMessage(error, 'No se pudo eliminar el gasto.'), life: 5000 });
@@ -747,9 +737,9 @@ export class BuildingExpensesPageComponent implements OnInit {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (updated) => {
-          this.items = this.items.map((item) => item.id === updated.id ? updated : item);
+          this.allItems = this.allItems.map((item) => item.id === updated.id ? updated : item);
+          this.applyFilters();
           this.msg.add({ severity: 'success', summary: 'Éxito', detail: `Comprobante "${file.name}" adjuntado.`, life: 4000 });
-          this.cdr.markForCheck();
         },
         error: (error) => {
           this.msg.add({ severity: 'error', summary: 'Error', detail: extractApiErrorMessage(error, 'No se pudo adjuntar el comprobante.'), life: 5000 });
@@ -766,11 +756,11 @@ export class BuildingExpensesPageComponent implements OnInit {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: () => {
-          this.items = this.items.map((current) =>
+          this.allItems = this.allItems.map((current) =>
             current.id === item.id ? { ...current, hasReceipt: false, receiptFileName: null } : current
           );
+          this.applyFilters();
           this.msg.add({ severity: 'success', summary: 'Éxito', detail: 'Comprobante eliminado.', life: 4000 });
-          this.cdr.markForCheck();
         },
         error: (error) => {
           this.msg.add({ severity: 'error', summary: 'Error', detail: extractApiErrorMessage(error, 'No se pudo quitar el comprobante.'), life: 5000 });
@@ -825,6 +815,22 @@ export class BuildingExpensesPageComponent implements OnInit {
     return '₲ ' + new Intl.NumberFormat('es-PY', { maximumFractionDigits: 0 }).format(value ?? 0);
   }
 
+  private reloadExpenses(): void {
+    this.loading = true;
+    this.expensesApi.getAll().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: (items) => {
+        this.allItems = items;
+        this.loading = false;
+        this.applyFilters();
+      },
+      error: (error) => {
+        this.msg.add({ severity: 'error', summary: 'Error', detail: extractApiErrorMessage(error, 'No se pudo cargar el listado de gastos.'), life: 5000 });
+        this.loading = false;
+        this.cdr.markForCheck();
+      }
+    });
+  }
+
   private loadData(): void {
     forkJoin({
       expenses: this.expensesApi.getAll(),
@@ -833,13 +839,12 @@ export class BuildingExpensesPageComponent implements OnInit {
       units: this.unitsApi.getAll()
     }).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: ({ expenses, buildings, periods, units }) => {
-        this.items = expenses;
+        this.allItems = expenses;
         this.buildings = buildings;
         this.periods = periods;
         this.units = units;
-        this.sortItems();
         this.loading = false;
-        this.cdr.markForCheck();
+        this.applyFilters();
       },
       error: (error) => {
         this.msg.add({ severity: 'error', summary: 'Error', detail: extractApiErrorMessage(error, 'No se pudo cargar el listado de gastos.'), life: 5000 });
@@ -867,20 +872,10 @@ export class BuildingExpensesPageComponent implements OnInit {
   }
 
   private upsertLocalItem(expense: BuildingExpense): void {
-    const matchesFilters =
-      (!this.filters.buildingId || expense.buildingId === this.filters.buildingId) &&
-      (!this.filters.expensePeriodId || expense.expensePeriodId === this.filters.expensePeriodId);
-
-    if (!matchesFilters) {
-      this.items = this.items.filter((item) => item.id !== expense.id);
-      return;
-    }
-
-    this.items = this.editingId
-      ? this.items.map((item) => item.id === expense.id ? expense : item)
-      : [expense, ...this.items];
-
-    this.sortItems();
+    this.allItems = this.editingId
+      ? this.allItems.map(item => item.id === expense.id ? expense : item)
+      : [expense, ...this.allItems];
+    this.applyFilters();
   }
 
   private sortItems(): void {
