@@ -2,7 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { API_BASE_URL } from '../config/api.config';
-import { Amenity, AmenityReservation, AmenityUpsertRequest } from './models';
+import { Amenity, AmenityReservation, AmenityReservationComprobanteRequest, AmenityUpsertRequest } from './models';
 
 @Injectable({ providedIn: 'root' })
 export class AmenitiesApiService {
@@ -31,6 +31,10 @@ export class AmenitiesApiService {
     if (buildingId) params['buildingId'] = buildingId;
     if (status) params['status'] = status;
     return this.http.get<AmenityReservation[]>(`${this.baseUrl}/reservations`, { params });
+  }
+
+  submitComprobante(id: string, request: AmenityReservationComprobanteRequest): Observable<AmenityReservation> {
+    return this.http.post<AmenityReservation>(`${this.baseUrl}/reservations/${id}/comprobante`, request);
   }
 
   review(id: string, approve: boolean, rejectionReason?: string): Observable<AmenityReservation> {

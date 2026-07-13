@@ -244,17 +244,22 @@ const ALL_ROLE_CARDS: RoleCard[] = [
             </div>
           </div>
 
-          <!-- Edificios (requerido â‰¥ 1) -->
-          <div class="field">
+          <!-- Edificios (requerido solo para BuildingManager) -->
+          <div class="field" *ngIf="form.role !== 'CompanyAdmin'">
             <label>
-              Edificios <span class="required">*</span>
+              Edificios
+              <span class="required" *ngIf="form.role === 'BuildingManager'">*</span>
+              <span class="optional" *ngIf="form.role !== 'BuildingManager'">(opcional)</span>
               <span class="field-count" *ngIf="!singleBuildingLocked && form.buildingIds.length">
                 {{ form.buildingIds.length }} seleccionado{{ form.buildingIds.length !== 1 ? 's' : '' }}
               </span>
             </label>
-            <small class="field-hint" *ngIf="!singleBuildingLocked">
-              MÃ­nimo un edificio requerido. El usuario podrÃ¡ ver y gestionar las unidades de los
+            <small class="field-hint" *ngIf="!singleBuildingLocked && form.role === 'BuildingManager'">
+              Mínimo un edificio requerido. El usuario podrá ver y gestionar las unidades de los
               edificios seleccionados.
+            </small>
+            <small class="field-hint" *ngIf="!singleBuildingLocked && form.role !== 'BuildingManager'">
+              Podés asignar edificios específicos o dejar vacío para acceso según condominio.
             </small>
 
             <!-- Edificio Ãºnico bloqueado (CompanyAdmin con solo 1 edificio) -->
@@ -554,7 +559,7 @@ export class UserCreatePageComponent implements OnInit {
       this.msg.add({ severity: 'error', summary: 'Error', detail: 'Correo electrÃ³nico invÃ¡lido.', life: 5000 }); return;
     }
     if (!this.form.role) { this.msg.add({ severity: 'error', summary: 'Error', detail: 'Debes seleccionar un rol.', life: 5000 }); return; }
-    if (buildingIds.length === 0) { this.msg.add({ severity: 'error', summary: 'Error', detail: 'Debes asignar al menos un edificio.', life: 5000 }); return; }
+    if (buildingIds.length === 0 && this.form.role === 'BuildingManager') { this.msg.add({ severity: 'error', summary: 'Error', detail: 'Debes asignar al menos un edificio.', life: 5000 }); return; }
 
     const req = {
       companyId, condominiumId, firstName, lastName,

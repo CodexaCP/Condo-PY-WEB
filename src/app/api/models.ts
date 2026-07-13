@@ -1082,6 +1082,10 @@ export interface AmenityScheduleSlot {
   status: AmenityReservationStatus;
 }
 
+export interface AmenityReservationComprobanteRequest {
+  comprobanteUrl: string;
+}
+
 // ── Planes ────────────────────────────────────────────────────────────────────
 
 export type BillingCycle = 'Monthly' | 'Quarterly' | 'SemiAnnual' | 'Annual';
