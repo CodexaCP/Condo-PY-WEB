@@ -310,7 +310,7 @@ import {
           </div>
         </form>
 
-        <div class="preview-box" *ngIf="settlementSummary.categoryTotals?.length">
+        <div class="preview-box" *ngIf="settlementSummary.categoryTotals.length">
           <div class="preview-head">
             <strong>Gastos comunes por categoría</strong>
             <span>{{ settlementCategoryExpenseCount }} gastos · {{ settlementSummary.categoryTotals.length }} categorías · {{ formatCurrency(settlementCategoryTotalAmount) }}</span>
