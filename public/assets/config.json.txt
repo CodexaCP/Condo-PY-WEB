@@ -1,0 +1,3 @@
+{
+    "apiUrl": "https://preston-brave-alerts-colon.trycloudflare.com/api"
+}
