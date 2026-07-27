@@ -98,7 +98,7 @@ import { Amenity, AmenityReservation, AmenityReservationStatus, Building } from 
               <p-button *ngIf="canReview(r)" icon="pi pi-check" size="small" [text]="true" severity="success"
                         pTooltip="Aprobar" (onClick)="review(r, true)"></p-button>
               <p-button *ngIf="canReview(r)" icon="pi pi-times" size="small" [text]="true" severity="danger"
-                        pTooltip="Rechazar" (onClick)="review(r, false)"></p-button>
+                        pTooltip="Rechazar" (onClick)="openReject(r)"></p-button>
             </span>
           </div>
         </div>
@@ -152,6 +152,49 @@ import { Amenity, AmenityReservation, AmenityReservationStatus, Building } from 
                     label="Enviar comprobante"></p-button>
         </div>
       </form>
+    </div>
+
+    <!-- MODAL RECHAZO -->
+    <div class="ov-backdrop" *ngIf="rejectVisible" (click)="closeReject()"></div>
+    <div class="ov-panel reject-panel" *ngIf="rejectVisible" (click)="$event.stopPropagation()">
+      <div class="ov-header">
+        <div class="am-header-info">
+          <div class="am-icon-badge" style="background:var(--red-500)">
+            <i class="pi pi-times-circle"></i>
+          </div>
+          <div class="am-header-text">
+            <strong>Rechazar reserva</strong>
+            <span class="am-subtitle" *ngIf="pendingRejectReservation">
+              {{ pendingRejectReservation.amenityName }} — {{ pendingRejectReservation.reservedByName }}
+            </span>
+          </div>
+        </div>
+        <button class="ov-close" (click)="closeReject()">✕</button>
+      </div>
+      <div class="am-form">
+        <div class="am-section">
+          <div class="am-section-title">
+            <i class="pi pi-comment"></i>
+            Motivo del rechazo
+          </div>
+          <div class="am-field">
+            <div class="am-label-row">
+              <label class="am-label">Motivo</label>
+              <span class="am-opt-badge">opcional</span>
+            </div>
+            <textarea [(ngModel)]="rejectReason" name="rejectReason" maxlength="500"
+                      class="am-textarea" rows="3"
+                      placeholder="Ej: El espacio no está disponible por mantenimiento…"></textarea>
+            <div class="am-hint">Este motivo le será notificado al solicitante.</div>
+          </div>
+        </div>
+        <div class="am-footer">
+          <p-button type="button" label="Cancelar" severity="secondary" [outlined]="true"
+                    (onClick)="closeReject()"></p-button>
+          <p-button type="button" icon="pi pi-times" label="Confirmar rechazo" severity="danger"
+                    (onClick)="confirmReject()"></p-button>
+        </div>
+      </div>
     </div>
 
     <!-- BACKDROP + PANEL -->
@@ -434,6 +477,9 @@ import { Amenity, AmenityReservation, AmenityReservationStatus, Building } from 
 
     /* ── Comprobante modal ─────────────────────────────────────── */
     .comp-panel { width:460px; max-width:96vw; }
+
+    /* ── Rechazo modal ─────────────────────────────────────────── */
+    .reject-panel { width:460px; max-width:96vw; }
     .comp-link { display:inline-flex; align-items:center; gap:0.25rem; font-size:0.82rem; }
     .comp-price-info {
       display:flex;
@@ -472,6 +518,10 @@ export class AmenitiesPageComponent implements OnInit {
   comprobanteReservation: AmenityReservation | null = null;
   comprobanteUrl = '';
   isSavingComprobante = false;
+
+  rejectVisible = false;
+  pendingRejectReservation: AmenityReservation | null = null;
+  rejectReason = '';
 
   ngOnInit(): void { this.loadData(); }
 
@@ -595,13 +645,40 @@ export class AmenitiesPageComponent implements OnInit {
   }
 
   review(r: AmenityReservation, approve: boolean): void {
-    const rejectionReason = approve ? undefined : (prompt('Motivo del rechazo (opcional):') ?? undefined);
-    this.api.review(r.id, approve, rejectionReason).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+    this.api.review(r.id, approve, undefined).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: updated => {
         this.reservations = this.reservations.map(x => x.id === updated.id ? updated : x);
         this.applyFilters();
         this.msg.add({ severity: 'success', summary: 'Éxito',
-          detail: approve ? 'Reserva confirmada. Se publicó el comunicado para el edificio.' : 'Reserva rechazada.', life: 4000 });
+          detail: 'Reserva confirmada. Se publicó el comunicado para el edificio.', life: 4000 });
+        this.cdr.markForCheck();
+      },
+      error: err => this.msg.add({ severity: 'error', summary: 'Error', detail: extractApiErrorMessage(err, 'No se pudo procesar.'), life: 5000 })
+    });
+  }
+
+  openReject(r: AmenityReservation): void {
+    this.pendingRejectReservation = r;
+    this.rejectReason = '';
+    this.rejectVisible = true;
+  }
+
+  closeReject(): void {
+    this.rejectVisible = false;
+    this.pendingRejectReservation = null;
+    this.rejectReason = '';
+  }
+
+  confirmReject(): void {
+    if (!this.pendingRejectReservation) return;
+    const r = this.pendingRejectReservation;
+    const reason = this.rejectReason.trim() || undefined;
+    this.closeReject();
+    this.api.review(r.id, false, reason).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: updated => {
+        this.reservations = this.reservations.map(x => x.id === updated.id ? updated : x);
+        this.applyFilters();
+        this.msg.add({ severity: 'success', summary: 'Éxito', detail: 'Reserva rechazada.', life: 4000 });
         this.cdr.markForCheck();
       },
       error: err => this.msg.add({ severity: 'error', summary: 'Error', detail: extractApiErrorMessage(err, 'No se pudo procesar.'), life: 5000 })
