@@ -1,0 +1,577 @@
+<title>Guía VPS — Referencia rápida</title>
+<style>
+  :root {
+    --bg: #F6F8FA;
+    --surface: #FFFFFF;
+    --surface2: #EEF1F5;
+    --ink: #1C2128;
+    --ink-muted: #57606A;
+    --border: #D0D7DE;
+    --pc-bg: #EAF3FF;
+    --pc-border: #3B82F6;
+    --pc-label: #1D4ED8;
+    --srv-bg: #F0FDF4;
+    --srv-border: #22C55E;
+    --srv-label: #15803D;
+    --code-bg: #161B22;
+    --code-fg: #E6EDF3;
+    --accent: #F0A500;
+    --tag-pc: #DBEAFE;
+    --tag-srv: #DCFCE7;
+    --tag-pc-ink: #1D4ED8;
+    --tag-srv-ink: #15803D;
+    --note-bg: #FFFBEB;
+    --note-border: #F59E0B;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0D1117;
+      --surface: #161B22;
+      --surface2: #1C2128;
+      --ink: #E6EDF3;
+      --ink-muted: #8B949E;
+      --border: #30363D;
+      --pc-bg: #0D1B2E;
+      --pc-border: #3B82F6;
+      --pc-label: #60A5FA;
+      --srv-bg: #0A1F0F;
+      --srv-border: #22C55E;
+      --srv-label: #4ADE80;
+      --code-bg: #010409;
+      --code-fg: #E6EDF3;
+      --accent: #F0A500;
+      --tag-pc: #1D3561;
+      --tag-srv: #14532D;
+      --tag-pc-ink: #93C5FD;
+      --tag-srv-ink: #86EFAC;
+      --note-bg: #1A1200;
+      --note-border: #B45309;
+    }
+  }
+  :root[data-theme="light"] {
+    --bg: #F6F8FA; --surface: #FFFFFF; --surface2: #EEF1F5; --ink: #1C2128; --ink-muted: #57606A; --border: #D0D7DE;
+    --pc-bg: #EAF3FF; --pc-border: #3B82F6; --pc-label: #1D4ED8; --srv-bg: #F0FDF4; --srv-border: #22C55E; --srv-label: #15803D;
+    --code-bg: #161B22; --code-fg: #E6EDF3; --accent: #F0A500; --tag-pc: #DBEAFE; --tag-srv: #DCFCE7; --tag-pc-ink: #1D4ED8; --tag-srv-ink: #15803D;
+    --note-bg: #FFFBEB; --note-border: #F59E0B;
+  }
+  :root[data-theme="dark"] {
+    --bg: #0D1117; --surface: #161B22; --surface2: #1C2128; --ink: #E6EDF3; --ink-muted: #8B949E; --border: #30363D;
+    --pc-bg: #0D1B2E; --pc-border: #3B82F6; --pc-label: #60A5FA; --srv-bg: #0A1F0F; --srv-border: #22C55E; --srv-label: #4ADE80;
+    --code-bg: #010409; --code-fg: #E6EDF3; --accent: #F0A500; --tag-pc: #1D3561; --tag-srv: #14532D; --tag-pc-ink: #93C5FD; --tag-srv-ink: #86EFAC;
+    --note-bg: #1A1200; --note-border: #B45309;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: system-ui, -apple-system, sans-serif;
+    font-size: 0.9rem;
+    line-height: 1.6;
+    padding: 2rem 1rem 4rem;
+    max-width: 860px;
+    margin: 0 auto;
+    transition: background 0.2s, color 0.2s;
+  }
+
+  header {
+    border-bottom: 2px solid var(--accent);
+    padding-bottom: 1.2rem;
+    margin-bottom: 2rem;
+  }
+  header h1 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: var(--ink);
+  }
+  header p {
+    color: var(--ink-muted);
+    font-size: 0.82rem;
+    margin-top: 0.3rem;
+  }
+
+  .legend {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    margin-bottom: 2rem;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.78rem;
+    font-weight: 600;
+  }
+  .dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .dot-pc { background: #3B82F6; }
+  .dot-srv { background: #22C55E; }
+  .dot-any { background: var(--accent); }
+
+  section {
+    margin-bottom: 2.5rem;
+  }
+  .section-title {
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-muted);
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+  }
+  .section-title::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  .step {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    margin-bottom: 0.75rem;
+  }
+  .step-head {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface2);
+  }
+  .step-num {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: #000;
+    font-size: 0.7rem;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .step-title {
+    font-weight: 600;
+    font-size: 0.85rem;
+    flex: 1;
+  }
+  .tag {
+    font-size: 0.68rem;
+    font-weight: 700;
+    padding: 0.2rem 0.55rem;
+    border-radius: 999px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+  .tag-pc { background: var(--tag-pc); color: var(--tag-pc-ink); }
+  .tag-srv { background: var(--tag-srv); color: var(--tag-srv-ink); }
+
+  .step-body {
+    padding: 0.85rem 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+  }
+  .step-desc {
+    color: var(--ink-muted);
+    font-size: 0.8rem;
+  }
+
+  .cmd-block {
+    border-radius: 7px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+  }
+  .cmd-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.35rem 0.75rem;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+  .cmd-label.pc { background: var(--pc-bg); color: var(--pc-label); border-bottom: 1px solid var(--pc-border); }
+  .cmd-label.srv { background: var(--srv-bg); color: var(--srv-label); border-bottom: 1px solid var(--srv-border); }
+  .cmd-label svg { width: 12px; height: 12px; flex-shrink: 0; }
+
+  pre {
+    background: var(--code-bg);
+    color: var(--code-fg);
+    padding: 0.75rem 1rem;
+    font-family: 'Courier New', 'Consolas', monospace;
+    font-size: 0.8rem;
+    line-height: 1.55;
+    overflow-x: auto;
+    margin: 0;
+    white-space: pre;
+  }
+  .comment { color: #6E7681; }
+  .cmd-str { color: #A5D6FF; }
+  .cmd-flag { color: #FFA657; }
+  .cmd-path { color: #7EE787; }
+
+  .note {
+    background: var(--note-bg);
+    border-left: 3px solid var(--note-border);
+    padding: 0.6rem 0.85rem;
+    border-radius: 0 6px 6px 0;
+    font-size: 0.78rem;
+    color: var(--ink-muted);
+  }
+  .note strong { color: var(--ink); }
+
+  .quick-ref {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  .quick-ref table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.78rem;
+  }
+  .quick-ref th {
+    background: var(--surface2);
+    padding: 0.55rem 1rem;
+    text-align: left;
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--ink-muted);
+    border-bottom: 1px solid var(--border);
+  }
+  .quick-ref td {
+    padding: 0.55rem 1rem;
+    border-bottom: 1px solid var(--border);
+    vertical-align: middle;
+  }
+  .quick-ref tr:last-child td { border-bottom: none; }
+  .quick-ref td:first-child { color: var(--ink-muted); font-size: 0.75rem; }
+  .quick-ref code {
+    background: var(--code-bg);
+    color: var(--code-fg);
+    padding: 0.15rem 0.45rem;
+    border-radius: 4px;
+    font-family: 'Courier New', monospace;
+    font-size: 0.75rem;
+  }
+  .where-tag { font-size: 0.65rem; font-weight: 700; padding: 0.15rem 0.4rem; border-radius: 4px; }
+  .where-pc { background: var(--tag-pc); color: var(--tag-pc-ink); }
+  .where-srv { background: var(--tag-srv); color: var(--tag-srv-ink); }
+
+  @media (max-width: 600px) {
+    body { padding: 1rem 0.75rem 3rem; }
+    header h1 { font-size: 1.2rem; }
+  }
+</style>
+
+<header>
+  <h1>🖥️ Guía VPS — Deploy y administración</h1>
+  <p>Referencia rápida para gestionar proyectos en el servidor · IP: 2.25.187.20</p>
+</header>
+
+<div class="legend">
+  <div class="legend-item"><div class="dot dot-pc"></div> En tu PC (PowerShell / CMD)</div>
+  <div class="legend-item"><div class="dot dot-srv"></div> En el servidor (SSH)</div>
+</div>
+
+<!-- SECCIÓN 1: Conectarse -->
+<section>
+  <div class="section-title">Conectarse al servidor</div>
+
+  <div class="step">
+    <div class="step-head">
+      <div class="step-num">1</div>
+      <div class="step-title">Detectar puerto SSH (si el 22 no funciona)</div>
+      <span class="tag tag-srv">Servidor</span>
+    </div>
+    <div class="step-body">
+      <div class="step-desc">Si ya estás conectado por otro medio, ejecutá esto para ver en qué puerto escucha SSH:</div>
+      <div class="cmd-block">
+        <div class="cmd-label srv">▸ SSH — Servidor</div>
+        <pre><span class="comment"># Ver puerto SSH activo</span>
+ss -tlnp | grep ssh
+
+<span class="comment"># O también</span>
+grep Port /etc/ssh/sshd_config</pre>
+      </div>
+      <div class="note"><strong>Tip:</strong> Si el puerto es 2222 en vez de 22, usás <code>ssh -p 2222 root@2.25.187.20</code></div>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-head">
+      <div class="step-num">2</div>
+      <div class="step-title">Conectarse al servidor</div>
+      <span class="tag tag-pc">Tu PC</span>
+    </div>
+    <div class="step-body">
+      <div class="cmd-block">
+        <div class="cmd-label pc">▸ PowerShell / CMD — Tu PC</div>
+        <pre><span class="comment"># Puerto estándar (22)</span>
+ssh root@2.25.187.20
+
+<span class="comment"># Si usa otro puerto (ej: 2222)</span>
+ssh <span class="cmd-flag">-p</span> 2222 root@2.25.187.20</pre>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SECCIÓN 2: Ver proyectos -->
+<section>
+  <div class="section-title">Explorar el servidor</div>
+
+  <div class="step">
+    <div class="step-head">
+      <div class="step-num">3</div>
+      <div class="step-title">Ver todos los proyectos corriendo</div>
+      <span class="tag tag-srv">Servidor</span>
+    </div>
+    <div class="step-body">
+      <div class="cmd-block">
+        <div class="cmd-label srv">▸ SSH — Servidor</div>
+        <pre><span class="comment"># Ver todos los servicios activos</span>
+systemctl list-units --type=service --state=running
+
+<span class="comment"># Ver solo los procesos .NET</span>
+ps aux | grep dotnet
+
+<span class="comment"># Ver qué escucha en cada puerto</span>
+ss -tlnp</pre>
+      </div>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-head">
+      <div class="step-num">4</div>
+      <div class="step-title">Ver carpetas de un proyecto</div>
+      <span class="tag tag-srv">Servidor</span>
+    </div>
+    <div class="step-body">
+      <div class="cmd-block">
+        <div class="cmd-label srv">▸ SSH — Servidor</div>
+        <pre><span class="comment"># Ver contenido de un servicio (ruta, puerto, etc.)</span>
+systemctl cat condo-py-api.service
+
+<span class="comment"># Listar archivos del proyecto</span>
+ls /opt/condo-py-api/
+
+<span class="comment"># Ver logs del servicio</span>
+journalctl -u condo-py-api.service -n 50</pre>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SECCIÓN 3: Deploy -->
+<section>
+  <div class="section-title">Subir actualizaciones (deploy)</div>
+
+  <div class="step">
+    <div class="step-head">
+      <div class="step-num">5</div>
+      <div class="step-title">Compilar el proyecto</div>
+      <span class="tag tag-pc">Tu PC</span>
+    </div>
+    <div class="step-body">
+      <div class="step-desc">Siempre primero en tu PC. Reemplazá la ruta con la de tu proyecto.</div>
+      <div class="cmd-block">
+        <div class="cmd-label pc">▸ PowerShell — Tu PC</div>
+        <pre>cd <span class="cmd-path">"C:\Users\jalvarez\Documents\GitHub\Condo-PY-BACK\Condo.Api"</span>
+
+dotnet publish <span class="cmd-flag">-c</span> Release <span class="cmd-flag">-o</span> ./publish</pre>
+      </div>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-head">
+      <div class="step-num">6</div>
+      <div class="step-title">Copiar archivos al servidor</div>
+      <span class="tag tag-pc">Tu PC</span>
+    </div>
+    <div class="step-body">
+      <div class="step-desc">Esto se ejecuta desde tu PC, no desde el SSH. El <code>scp</code> se conecta solo.</div>
+      <div class="cmd-block">
+        <div class="cmd-label pc">▸ PowerShell — Tu PC</div>
+        <pre><span class="comment"># Puerto 22 (estándar)</span>
+scp <span class="cmd-flag">-r</span> <span class="cmd-path">"C:\...\Condo.Api\publish\."</span> root@2.25.187.20:/opt/condo-py-api/
+
+<span class="comment"># Si SSH usa otro puerto (ej: 2222)</span>
+scp <span class="cmd-flag">-r -P</span> 2222 <span class="cmd-path">"C:\...\Condo.Api\publish\."</span> root@2.25.187.20:/opt/condo-py-api/</pre>
+      </div>
+      <div class="note"><strong>Ojo:</strong> en <code>ssh</code> el flag de puerto es <code>-p</code> minúscula, en <code>scp</code> es <code>-P</code> mayúscula.</div>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-head">
+      <div class="step-num">7</div>
+      <div class="step-title">Reiniciar el servicio</div>
+      <span class="tag tag-srv">Servidor</span>
+    </div>
+    <div class="step-body">
+      <div class="cmd-block">
+        <div class="cmd-label srv">▸ SSH — Servidor</div>
+        <pre><span class="comment"># Reiniciar</span>
+systemctl restart condo-py-api.service
+
+<span class="comment"># Verificar que quedó corriendo</span>
+systemctl status condo-py-api.service
+
+<span class="comment"># Ver logs en tiempo real</span>
+journalctl -u condo-py-api.service -f</pre>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SECCIÓN 4: Varios proyectos / puertos -->
+<section>
+  <div class="section-title">Gestionar varios proyectos</div>
+
+  <div class="step">
+    <div class="step-head">
+      <div class="step-num">8</div>
+      <div class="step-title">Ver qué proyecto usa cada puerto</div>
+      <span class="tag tag-srv">Servidor</span>
+    </div>
+    <div class="step-body">
+      <div class="cmd-block">
+        <div class="cmd-label srv">▸ SSH — Servidor</div>
+        <pre><span class="comment"># Ver todos los puertos ocupados con su proceso</span>
+ss -tlnp
+
+<span class="comment"># Buscar quién usa un puerto específico (ej: 5071)</span>
+ss -tlnp | grep 5071</pre>
+      </div>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-head">
+      <div class="step-num">9</div>
+      <div class="step-title">Levantar instancia de prueba en otro puerto</div>
+      <span class="tag tag-srv">Servidor</span>
+    </div>
+    <div class="step-body">
+      <div class="step-desc">Para testear una versión nueva sin bajar la que está en producción:</div>
+      <div class="cmd-block">
+        <div class="cmd-label srv">▸ SSH — Servidor</div>
+        <pre><span class="comment"># Copiá los archivos nuevos a una carpeta separada</span>
+cp -r /opt/condo-py-api/ /opt/condo-py-api-test/
+
+<span class="comment"># Levantá manualmente en otro puerto (ej: 5099)</span>
+ASPNETCORE_URLS=http://0.0.0.0:5099 \
+  dotnet /opt/condo-py-api-test/Condo.Api.dll
+
+<span class="comment"># Ctrl+C para detenerlo cuando termines</span></pre>
+      </div>
+      <div class="note"><strong>Tip:</strong> Mientras prueba en :5099, el servicio oficial en :5071 sigue sin interrupciones.</div>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-head">
+      <div class="step-num">10</div>
+      <div class="step-title">Ver y editar configuración de un servicio</div>
+      <span class="tag tag-srv">Servidor</span>
+    </div>
+    <div class="step-body">
+      <div class="cmd-block">
+        <div class="cmd-label srv">▸ SSH — Servidor</div>
+        <pre><span class="comment"># Ver la configuración actual</span>
+systemctl cat condo-py-api.service
+
+<span class="comment"># Editar (abre nano)</span>
+nano /etc/systemd/system/condo-py-api.service
+
+<span class="comment"># Después de editar, recargar y reiniciar</span>
+systemctl daemon-reload
+systemctl restart condo-py-api.service</pre>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- REFERENCIA RÁPIDA -->
+<section>
+  <div class="section-title">Referencia rápida de comandos</div>
+  <div class="quick-ref">
+    <table>
+      <thead>
+        <tr>
+          <th>Qué querés hacer</th>
+          <th>Comando</th>
+          <th>Dónde</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Conectarte al server</td>
+          <td><code>ssh root@2.25.187.20</code></td>
+          <td><span class="where-tag where-pc">Tu PC</span></td>
+        </tr>
+        <tr>
+          <td>Ver servicios activos</td>
+          <td><code>systemctl list-units --type=service --state=running</code></td>
+          <td><span class="where-tag where-srv">Servidor</span></td>
+        </tr>
+        <tr>
+          <td>Ver configuración de un servicio</td>
+          <td><code>systemctl cat nombre.service</code></td>
+          <td><span class="where-tag where-srv">Servidor</span></td>
+        </tr>
+        <tr>
+          <td>Ver puertos en uso</td>
+          <td><code>ss -tlnp</code></td>
+          <td><span class="where-tag where-srv">Servidor</span></td>
+        </tr>
+        <tr>
+          <td>Ver logs de un servicio</td>
+          <td><code>journalctl -u nombre.service -n 50</code></td>
+          <td><span class="where-tag where-srv">Servidor</span></td>
+        </tr>
+        <tr>
+          <td>Compilar proyecto .NET</td>
+          <td><code>dotnet publish -c Release -o ./publish</code></td>
+          <td><span class="where-tag where-pc">Tu PC</span></td>
+        </tr>
+        <tr>
+          <td>Subir archivos al server</td>
+          <td><code>scp -r ./publish/. root@IP:/opt/carpeta/</code></td>
+          <td><span class="where-tag where-pc">Tu PC</span></td>
+        </tr>
+        <tr>
+          <td>Reiniciar servicio</td>
+          <td><code>systemctl restart nombre.service</code></td>
+          <td><span class="where-tag where-srv">Servidor</span></td>
+        </tr>
+        <tr>
+          <td>Ver estado del servicio</td>
+          <td><code>systemctl status nombre.service</code></td>
+          <td><span class="where-tag where-srv">Servidor</span></td>
+        </tr>
+        <tr>
+          <td>Puerto SSH activo</td>
+          <td><code>grep Port /etc/ssh/sshd_config</code></td>
+          <td><span class="where-tag where-srv">Servidor</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>

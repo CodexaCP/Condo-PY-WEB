@@ -870,6 +870,9 @@ export class ExpensePeriodsPageComponent implements OnInit {
       ReserveFund: 'Fondo de reserva',
       Extraordinary: 'Extraordinario',
       Supplies: 'Insumos',
+      Ande: 'ANDE',
+      Essap: 'ESSAP',
+      InternetPhone: 'Internet y telefonía',
       Other: 'Otro'
     })[category] ?? category;
   }

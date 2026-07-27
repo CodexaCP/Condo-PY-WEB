@@ -410,7 +410,7 @@ export class BuildingExpensesPageComponent implements OnInit {
   applyRecurringPeriodId = '';
   pendingReceiptExpense: BuildingExpense | null = null;
 
-  readonly categories: BuildingExpenseCategory[] = ['Utilities', 'Cleaning', 'Security', 'Maintenance', 'Elevator', 'Insurance', 'Payroll', 'Taxes', 'Administration', 'ReserveFund', 'Extraordinary', 'Supplies', 'Other'];
+  readonly categories: BuildingExpenseCategory[] = ['Utilities', 'Cleaning', 'Security', 'Maintenance', 'Elevator', 'Insurance', 'Payroll', 'Taxes', 'Administration', 'ReserveFund', 'Extraordinary', 'Supplies', 'Ande', 'Essap', 'InternetPhone', 'Other'];
   readonly distributionTypes: BuildingExpenseDistributionType[] = ['ByCoefficient', 'FixedPerUnit', 'IndividualUnit', 'NonDistributed'];
   filters = { buildingId: '', expensePeriodId: '' };
   form = this.createInitialForm();
@@ -788,6 +788,9 @@ export class BuildingExpensesPageComponent implements OnInit {
       ReserveFund: 'Fondo de reserva',
       Extraordinary: 'Extraordinario',
       Supplies: 'Insumos',
+      Ande: 'ANDE',
+      Essap: 'ESSAP',
+      InternetPhone: 'Internet y telefonía',
       Other: 'Otro'
     })[category];
   }

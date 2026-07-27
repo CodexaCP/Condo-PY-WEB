@@ -374,11 +374,11 @@ export class PropietarioCreatePageComponent implements OnInit {
         this.isSaving        = false;
         this.editingFullName = saved.fullName || `${saved.firstName} ${saved.lastName}`;
         if (!this.isEditing) {
-          this.isEditing = true;
-          this.editingId = saved.id;
           this.msg.add({ severity: 'success', summary: 'Éxito', detail: 'Propietario creado. Clave inicial: 123456', life: 4000 });
+          this.router.navigate(['/propietarios']);
         } else {
           this.msg.add({ severity: 'success', summary: 'Éxito', detail: 'Cambios guardados correctamente.', life: 4000 });
+          this.router.navigate(['/propietarios']);
         }
         this.cdr.markForCheck();
       },

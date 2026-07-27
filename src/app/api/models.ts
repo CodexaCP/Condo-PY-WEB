@@ -210,6 +210,9 @@ export type BuildingExpenseCategory =
   | 'ReserveFund'
   | 'Extraordinary'
   | 'Supplies'
+  | 'Ande'
+  | 'Essap'
+  | 'InternetPhone'
   | 'Other';
 
 export type BuildingExpenseDistributionType =
@@ -706,6 +709,7 @@ export interface MorosityItem {
   isOccupied: boolean;
   responsibleType: string;
   responsibleName: string;
+  ownerName: string;
   agingBucket: string;
 }
 

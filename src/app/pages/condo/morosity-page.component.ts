@@ -132,6 +132,7 @@ const AGING_BUCKETS = [
             <span>Unidad</span>
             <span>Edificio</span>
             <span>Periodo</span>
+            <span>Propietario</span>
             <span>Responsable</span>
             <span>Vencimiento</span>
             <span>Antiguedad</span>
@@ -143,6 +144,7 @@ const AGING_BUCKETS = [
             <strong>{{ item.unitCode }}</strong>
             <span>{{ item.buildingName }}</span>
             <span>{{ item.expensePeriodName }}</span>
+            <span class="detail-copy">{{ item.ownerName || '—' }}</span>
             <span class="detail-copy">{{ responsibilityLabel(item) }}</span>
             <span>{{ item.dueDate }}</span>
             <p-tag [value]="agingBucketLabel(item)" [severity]="agingBucketSeverity(item)"></p-tag>
@@ -205,7 +207,7 @@ const AGING_BUCKETS = [
     .summary-card strong { color:var(--brand-ink); font-size:1.8rem; }
     .summary-card.danger strong, .danger-text { color:#c94d3f; }
     .occupancy-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-    .morosity-grid { grid-template-columns: 0.7fr 1.1fr 0.9fr 1.1fr 0.7fr 0.7fr 1.3fr 0.8fr; }
+    .morosity-grid { grid-template-columns: 0.6fr 1fr 0.9fr 1fr 1fr 0.7fr 0.7fr 1.2fr 0.8fr; }
     .detail-copy { color:var(--brand-muted); }
     @media (max-width: 900px) {
       .stats-grid, .aging-grid { grid-template-columns: 1fr 1fr; }
@@ -273,11 +275,12 @@ export class MorosityPageComponent implements OnInit {
   exportCsv(): void {
     if (!this.report?.items.length) return;
 
-    const headers = ['Unidad', 'Edificio', 'Periodo', 'Responsable', 'Tipo responsable', 'Vencimiento', 'Dias vencido', 'Antiguedad', 'Total cargos', 'Total pagado', 'Saldo pendiente'];
+    const headers = ['Unidad', 'Edificio', 'Periodo', 'Propietario', 'Responsable', 'Tipo responsable', 'Vencimiento', 'Dias vencido', 'Antiguedad', 'Total cargos', 'Total pagado', 'Saldo pendiente'];
     const rows = this.report.items.map(item => [
       item.unitCode,
       item.buildingName,
       item.expensePeriodName,
+      item.ownerName || '',
       item.responsibleName,
       item.responsibleType === 'ResidentAssigned' ? 'Residente asignado' : 'Propietario / administracion',
       item.dueDate,
