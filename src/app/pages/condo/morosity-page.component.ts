@@ -1,3 +1,4 @@
+import * as XLSX from 'xlsx';
 import { CommonModule } from '@angular/common';
 import { ChangeDetectorRef, Component, DestroyRef, inject, OnInit } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -48,7 +49,7 @@ const AGING_BUCKETS = [
             </select>
           </label>
           <p-button label="Actualizar" icon="pi pi-refresh" (onClick)="loadReport()"></p-button>
-          <p-button label="Exportar CSV" icon="pi pi-download" severity="secondary" [outlined]="true" (onClick)="exportCsv()" [disabled]="!report || !report.items.length"></p-button>
+          <p-button label="Exportar Excel" icon="pi pi-download" severity="secondary" [outlined]="true" (onClick)="exportCsv()" [disabled]="!report || !report.items.length"></p-button>
         </div>
       </div>
 
@@ -275,30 +276,25 @@ export class MorosityPageComponent implements OnInit {
   exportCsv(): void {
     if (!this.report?.items.length) return;
 
-    const headers = ['Unidad', 'Edificio', 'Periodo', 'Propietario', 'Responsable', 'Tipo responsable', 'Vencimiento', 'Dias vencido', 'Antiguedad', 'Total cargos', 'Total pagado', 'Saldo pendiente'];
-    const rows = this.report.items.map(item => [
-      item.unitCode,
-      item.buildingName,
-      item.expensePeriodName,
-      item.ownerName || '',
-      item.responsibleName,
-      item.responsibleType === 'ResidentAssigned' ? 'Residente asignado' : 'Propietario / administracion',
-      item.dueDate,
-      item.daysOverdue,
-      item.agingBucket,
-      item.totalCharges,
-      item.totalPayments,
-      item.balance
-    ]);
+    const rows = this.report.items.map(item => ({
+      'Unidad':            item.unitCode,
+      'Edificio':          item.buildingName,
+      'Periodo':           item.expensePeriodName,
+      'Propietario':       item.ownerName || '',
+      'Responsable':       item.responsibleName,
+      'Tipo responsable':  item.responsibleType === 'ResidentAssigned' ? 'Residente asignado' : 'Propietario / administracion',
+      'Vencimiento':       item.dueDate,
+      'Dias vencido':      item.daysOverdue,
+      'Antiguedad':        item.agingBucket,
+      'Total cargos':      item.totalCharges,
+      'Total pagado':      item.totalPayments,
+      'Saldo pendiente':   item.balance
+    }));
 
-    const csv = [headers, ...rows].map(r => r.map(v => `"${v}"`).join(',')).join('\n');
-    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'morosidad.csv';
-    a.click();
-    URL.revokeObjectURL(url);
+    const ws = XLSX.utils.json_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Morosidad');
+    XLSX.writeFile(wb, 'morosidad.xlsx');
   }
 
   agingBucketLabel(item: MorosityReport['items'][number]): string {
