@@ -33,59 +33,98 @@ import { AuthService } from '../../auth/auth.service';
         </p-button>
       </div>
 
-      <form class="app-form-grid" *ngIf="showForm" (ngSubmit)="submitResident()">
-        <label *ngIf="isSuperAdmin">
-          <span>Empresa</span>
-          <select [(ngModel)]="form.companyId" name="companyId" required>
-            <option value="" disabled>Selecciona una empresa</option>
-            <option *ngFor="let company of companies" [value]="company.id">{{ company.name }}</option>
-          </select>
-        </label>
+      <form class="create-form" *ngIf="showForm" (ngSubmit)="submitResident()">
 
-        <label>
-          <span>Nombre completo</span>
-          <input [(ngModel)]="form.fullName" name="fullName" type="text" required maxlength="160" />
-        </label>
+        <!-- Empresa (solo SuperAdmin) -->
+        <section class="form-section" *ngIf="isSuperAdmin">
+          <h2 class="section-title">Empresa</h2>
+          <div class="field">
+            <label for="companyId">Empresa <span class="required">*</span></label>
+            <select id="companyId" [(ngModel)]="form.companyId" name="companyId" required>
+              <option value="" disabled>Selecciona una empresa</option>
+              <option *ngFor="let company of companies" [value]="company.id">{{ company.name }}</option>
+            </select>
+          </div>
+        </section>
 
-        <label>
-          <span>Documento</span>
-          <input [(ngModel)]="form.documentNumber" name="documentNumber" type="text" required maxlength="40" />
-          <small>Usa letras, numeros, puntos o guiones.</small>
-        </label>
+        <!-- Datos personales -->
+        <section class="form-section">
+          <h2 class="section-title">Datos personales</h2>
+          <div class="field-row">
+            <div class="field">
+              <label for="fullName">Nombre completo <span class="required">*</span></label>
+              <input id="fullName" [(ngModel)]="form.fullName" name="fullName" type="text"
+                     placeholder="Ej. María González" maxlength="160" />
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field">
+              <label for="documentType">Tipo de documento</label>
+              <select id="documentType" [(ngModel)]="form.documentType" name="documentType">
+                <option value="">— Sin especificar —</option>
+                <option value="CedulaParaguaya">Cédula paraguaya</option>
+                <option value="Pasaporte">Pasaporte</option>
+                <option value="DocumentoExtranjero">Documento extranjero</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="documentNumber">Número de documento <span class="required">*</span></label>
+              <input id="documentNumber" [(ngModel)]="form.documentNumber" name="documentNumber"
+                     type="text" placeholder="Ej. 1234567 o AB-123456" maxlength="40" />
+              <small class="field-hint">Letras, números o guiones.</small>
+            </div>
+          </div>
+        </section>
 
-        <label>
-          <span>Correo</span>
-          <input [(ngModel)]="form.email" name="email" type="email" required maxlength="160" />
-        </label>
+        <!-- Contacto -->
+        <section class="form-section">
+          <h2 class="section-title">Contacto</h2>
+          <div class="field-row">
+            <div class="field">
+              <label for="email">Correo electrónico <span class="required">*</span></label>
+              <input id="email" [(ngModel)]="form.email" name="email" type="email"
+                     placeholder="residente@ejemplo.com" maxlength="160" />
+            </div>
+            <div class="field">
+              <label for="phoneNumber">Teléfono <span class="required">*</span></label>
+              <input id="phoneNumber" [(ngModel)]="form.phoneNumber" name="phoneNumber"
+                     type="text" placeholder="0981 123 456" maxlength="20" />
+              <small class="field-hint">Números, +, ( ) o guiones.</small>
+            </div>
+          </div>
+        </section>
 
-        <label>
-          <span>Telefono</span>
-          <input [(ngModel)]="form.phoneNumber" name="phoneNumber" type="text" required maxlength="20" />
-          <small>Usa numeros y, si hace falta, + ( ) o guiones.</small>
-        </label>
+        <!-- Tipo y estado -->
+        <section class="form-section">
+          <h2 class="section-title">Tipo y estado</h2>
+          <div class="check-row">
+            <label class="checkbox-label">
+              <input [(ngModel)]="form.isOwner" name="isOwner" type="checkbox" />
+              <span>Es propietario</span>
+            </label>
+            <label class="checkbox-label">
+              <input [(ngModel)]="form.isActive" name="isActive" type="checkbox" />
+              <span>Residente activo</span>
+            </label>
+          </div>
+        </section>
 
-        <label class="checkbox">
-          <input [(ngModel)]="form.isOwner" name="isOwner" type="checkbox" />
-          <span>Es propietario</span>
-        </label>
+        <!-- Acciones -->
+        <section class="form-footer">
+          <div>
+            <p-button *ngIf="editingId" type="button" label="Cancelar edición"
+                      severity="secondary" [text]="true" [rounded]="true"
+                      icon="pi pi-times" (onClick)="cancelEdit()">
+            </p-button>
+          </div>
+          <div class="form-footer-right">
+            <p-button type="submit" [loading]="isSaving"
+                      [label]="editingId ? 'Guardar cambios' : 'Crear residente'"
+                      [rounded]="true" icon="pi pi-check">
+            </p-button>
+          </div>
+        </section>
 
-        <label class="checkbox">
-          <input [(ngModel)]="form.isActive" name="isActive" type="checkbox" />
-          <span>Residente activo</span>
-        </label>
-
-        <div class="wide form-actions">
-          <p-button type="submit" [loading]="isSaving" [label]="editingId ? 'Guardar cambios' : 'Guardar residente'"></p-button>
-          <p-button
-            *ngIf="editingId"
-            type="button"
-            label="Cancelar"
-            icon="pi pi-times"
-            severity="secondary"
-            [text]="true"
-            (onClick)="cancelEdit()">
-          </p-button>
-        </div>
       </form>
 
       <p class="app-state" *ngIf="loading">Cargando residentes...</p>
@@ -108,14 +147,66 @@ import { AuthService } from '../../auth/auth.service';
     </p-card>
   `,
   styles: [`
-    .form-actions { display:flex; gap:0.75rem; justify-content:flex-end; }
+    /* ── Formulario ──────────────────────────────────── */
+    .create-form {
+      display:flex; flex-direction:column; gap:2rem;
+      margin-top:1.5rem; padding:1.5rem;
+      background:rgba(19,133,182,0.025);
+      border-radius:18px; border:1px solid rgba(19,133,182,0.1);
+    }
+    .form-section { display:flex; flex-direction:column; gap:1.1rem; }
+    .section-title {
+      font-size:0.82rem; font-weight:700; text-transform:uppercase;
+      letter-spacing:0.07em; color:var(--brand-muted);
+      margin:0 0 0.1rem; padding-bottom:0.5rem;
+      border-bottom:1px solid rgba(19,133,182,0.1);
+    }
+    .field { display:flex; flex-direction:column; gap:0.4rem; }
+    .field label { font-weight:500; font-size:0.92rem; color:var(--brand-ink); }
+    .field-row { display:grid; grid-template-columns:1fr 1fr; gap:1rem; }
+    .field input, .field select {
+      width:100%; padding:0.6rem 0.85rem;
+      border:1px solid rgba(19,133,182,0.25);
+      border-radius:10px; font:inherit; font-size:0.95rem;
+      color:var(--brand-ink); background:#fff;
+      transition:border-color 0.15s, box-shadow 0.15s; box-sizing:border-box;
+    }
+    .field input:focus, .field select:focus {
+      outline:none; border-color:var(--brand-blue);
+      box-shadow:0 0 0 3px rgba(19,133,182,0.12);
+    }
+    .field-hint { color:var(--brand-muted); font-size:0.8rem; line-height:1.4; }
+    .required { color:#e74c3c; font-weight:600; }
+    .check-row { display:flex; gap:2rem; flex-wrap:wrap; }
+    .checkbox-label { display:flex; align-items:center; gap:0.5rem; cursor:pointer; font-weight:500; font-size:0.92rem; }
+    .checkbox-label input[type=checkbox] { width:16px; height:16px; cursor:pointer; accent-color:var(--brand-blue); }
+    .form-footer {
+      display:flex; justify-content:space-between; align-items:center;
+      padding-top:0.75rem; border-top:1px solid rgba(19,133,182,0.08);
+    }
+    .form-footer-right { display:flex; gap:0.75rem; }
+
+    /* ── Lista de residentes ─────────────────────────── */
     .resident-list { display:grid; gap:0.85rem; }
-    .resident-card { display:grid; grid-template-columns:auto 1fr auto; gap:0.9rem; align-items:center; padding:1rem; border-radius:18px; background:#f8fbfa; }
-    .avatar { width:48px; height:48px; border-radius:14px; display:grid; place-items:center; background:linear-gradient(145deg, #2bc8b3, #10756e); color:white; font-weight:800; }
+    .resident-card {
+      display:grid; grid-template-columns:auto 1fr auto;
+      gap:0.9rem; align-items:center; padding:1rem;
+      border-radius:18px; background:#f8fbfa;
+    }
+    .avatar {
+      width:48px; height:48px; border-radius:14px;
+      display:grid; place-items:center;
+      background:linear-gradient(145deg, #2bc8b3, #10756e);
+      color:white; font-weight:800;
+    }
     .resident-card strong, .resident-card span, .resident-card small { display:block; }
     .resident-card strong { color:#15373d; }
     .resident-card span, .resident-card small { color:#6b878d; }
-    @media (max-width: 860px) { .resident-card { grid-template-columns: 1fr; } }
+
+    @media (max-width: 860px) {
+      .field-row { grid-template-columns:1fr; }
+      .resident-card { grid-template-columns:1fr; }
+    }
   `]
 })
 export class ResidentsPageComponent implements OnInit {
@@ -164,6 +255,7 @@ export class ResidentsPageComponent implements OnInit {
     this.form = {
       companyId: '',
       fullName: item.fullName,
+      documentType: item.documentType || '',
       documentNumber: item.documentNumber,
       email: item.email,
       phoneNumber: item.phoneNumber,
@@ -182,6 +274,7 @@ export class ResidentsPageComponent implements OnInit {
     const request = {
       companyId: this.form.companyId || null,
       fullName: this.form.fullName.trim(),
+      documentType: this.form.documentType || null,
       documentNumber: this.form.documentNumber.trim(),
       email: this.form.email.trim().toLowerCase(),
       phoneNumber: this.form.phoneNumber.trim(),
@@ -293,6 +386,7 @@ export class ResidentsPageComponent implements OnInit {
     return {
       companyId: '',
       fullName: '',
+      documentType: '',
       documentNumber: '',
       email: '',
       phoneNumber: '',

@@ -61,6 +61,31 @@ const PHONE_PREFIXES: PhonePrefix[] = [
                      placeholder="Ej. Pérez García" maxlength="100" autocomplete="off" />
             </div>
           </div>
+
+          <div class="field-row">
+            <div class="field">
+              <label for="documentType">Tipo de documento</label>
+              <select id="documentType" [(ngModel)]="form.documentType" name="documentType">
+                <option value="">— Sin especificar —</option>
+                <option value="CedulaParaguaya">Cédula paraguaya</option>
+                <option value="Pasaporte">Pasaporte</option>
+                <option value="DocumentoExtranjero">Documento extranjero</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="documentNumber">Número de documento</label>
+              <input id="documentNumber" type="text" [(ngModel)]="form.documentNumber" name="documentNumber"
+                     placeholder="Ej. 1234567 o AB-123456" maxlength="40" autocomplete="off" />
+              <small class="field-hint">Letras, números o guiones.</small>
+            </div>
+          </div>
+
+          <div class="field">
+            <label class="checkbox-label">
+              <input type="checkbox" [(ngModel)]="form.isResident" name="isResident" />
+              <span>También es residente del edificio</span>
+            </label>
+          </div>
         </section>
 
         <!-- ══ ACCESO AL SISTEMA ════════════════════════════════════ -->
@@ -197,12 +222,12 @@ const PHONE_PREFIXES: PhonePrefix[] = [
     .field { display:flex; flex-direction:column; gap:0.4rem; }
     .field label { font-weight:500; font-size:0.92rem; color:var(--brand-ink); }
     .field-row { display:grid; grid-template-columns:1fr 1fr; gap:1rem; }
-    .field input {
+    .field input, .field select {
       width:100%; padding:0.6rem 0.85rem; border:1px solid rgba(19,133,182,0.25);
       border-radius:10px; font:inherit; font-size:0.95rem; color:var(--brand-ink);
       background:#fff; transition:border-color 0.15s,box-shadow 0.15s; box-sizing:border-box;
     }
-    .field input:focus {
+    .field input:focus, .field select:focus {
       outline:none; border-color:var(--brand-blue);
       box-shadow:0 0 0 3px rgba(19,133,182,0.12);
     }
@@ -306,14 +331,17 @@ export class PropietarioCreatePageComponent implements OnInit {
             || `${owner.firstName ?? ''} ${owner.lastName ?? ''}`.trim();
 
           this.form = {
-            firstName:   owner.firstName?.trim()  || '',
-            lastName:    owner.lastName?.trim()   || '',
-            username:    owner.username?.trim()   || '',
-            email:       owner.email?.trim()      || '',
-            phonePrefix: owner.phonePrefix        || '+595',
-            phone:       owner.phone              || '',
-            address:     owner.address            || '',
-            isActive:    owner.isActive           ?? true
+            firstName:      owner.firstName?.trim()  || '',
+            lastName:       owner.lastName?.trim()   || '',
+            username:       owner.username?.trim()   || '',
+            email:          owner.email?.trim()      || '',
+            documentType:   owner.documentType       || '',
+            documentNumber: owner.documentNumber     || '',
+            phonePrefix:    owner.phonePrefix        || '+595',
+            phone:          owner.phone              || '',
+            address:        owner.address            || '',
+            isResident:     owner.isResident         ?? false,
+            isActive:       owner.isActive           ?? true
           };
 
           this.loading = false;
@@ -357,11 +385,14 @@ export class PropietarioCreatePageComponent implements OnInit {
       firstName, lastName,
       fullName: `${firstName} ${lastName}`,
       username, email,
-      phonePrefix: this.form.phonePrefix || null,
-      phone:       this.form.phone.trim() || null,
-      address:     this.form.address.trim() || null,
-      isActive:    this.form.isActive,
-      password:    this.isEditing ? undefined : '123456'
+      documentType:   this.form.documentType   || null,
+      documentNumber: this.form.documentNumber.trim() || null,
+      phonePrefix:    this.form.phonePrefix    || null,
+      phone:          this.form.phone.trim()   || null,
+      address:        this.form.address.trim() || null,
+      isResident:     this.form.isResident,
+      isActive:       this.form.isActive,
+      password:       this.isEditing ? undefined : '123456'
     };
 
     this.isSaving = true;
@@ -415,14 +446,17 @@ export class PropietarioCreatePageComponent implements OnInit {
 
   private emptyForm() {
     return {
-      firstName:   '',
-      lastName:    '',
-      username:    '',
-      email:       '',
-      phonePrefix: '+595',
-      phone:       '',
-      address:     '',
-      isActive:    true
+      firstName:      '',
+      lastName:       '',
+      username:       '',
+      email:          '',
+      documentType:   '',
+      documentNumber: '',
+      phonePrefix:    '+595',
+      phone:          '',
+      address:        '',
+      isResident:     false,
+      isActive:       true
     };
   }
 }

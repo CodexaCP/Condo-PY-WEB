@@ -118,6 +118,7 @@ export interface CreateUnitRequest {
 export interface Resident {
   id: string;
   fullName: string;
+  documentType?: string | null;
   documentNumber: string;
   email: string;
   phoneNumber: string;
@@ -128,6 +129,7 @@ export interface Resident {
 export interface CreateResidentRequest {
   companyId?: string | null;
   fullName: string;
+  documentType?: string | null;
   documentNumber: string;
   email: string;
   phoneNumber: string;
@@ -778,9 +780,12 @@ export interface Owner {
   fullName: string;
   username: string;
   email: string;
+  documentType?: string | null;
+  documentNumber?: string | null;
   phonePrefix?: string | null;
   phone?: string | null;
   address?: string | null;
+  isResident: boolean;
   isActive: boolean;
 }
 
@@ -791,9 +796,12 @@ export interface OwnerUpsertRequest {
   username: string;
   email: string;
   password?: string;
+  documentType?: string | null;
+  documentNumber?: string | null;
   phonePrefix?: string | null;
   phone?: string | null;
   address?: string | null;
+  isResident: boolean;
   isActive: boolean;
 }
 
