@@ -651,8 +651,12 @@ export interface ExpenseReceipt {
   year: number;
   month: number;
   dueDate: string;
-  holderName: string;
-  holderDocumentNumber: string;
+  ownerName: string;
+  ownerDocumentType?: string;
+  ownerDocumentNumber?: string;
+  residentName: string;
+  residentDocumentType?: string;
+  residentDocumentNumber?: string;
   unitCoefficient: number;
   charges: ExpenseReceiptCharge[];
   payments: AccountStatementPayment[];

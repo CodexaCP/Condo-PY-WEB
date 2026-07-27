@@ -118,7 +118,7 @@ import { AuthService } from '../../auth/auth.service';
               <div>
                 <h3>Cargos</h3>
                 <div class="line-list" *ngIf="detail.charges.length; else noCharges">
-                  <div class="line-item" [class.reversal-row]="charge.isReversal" *ngFor="let charge of detail.charges">
+                  <div class="line-item" [class.reversal-row]="charge.isReversal" *ngFor="let charge of detailNonAdjCharges">
                     <div>
                       <strong>{{ charge.concept }}</strong>
                       <span class="reversal-badge" *ngIf="charge.isReversal">REVERSIÓN</span>
@@ -126,6 +126,24 @@ import { AuthService } from '../../auth/auth.service';
                       <span *ngIf="charge.notes && !isGuidNote(charge.notes)">{{ charge.notes }}</span>
                     </div>
                     <strong [class.negative-amount]="charge.isReversal">{{ formatCurrency(charge.amount) }}</strong>
+                  </div>
+                  <div class="adj-group" *ngIf="detailAdjCharges.length">
+                    <div class="adj-group-header" (click)="detailAdjExpanded = !detailAdjExpanded">
+                      <div class="adj-group-label">
+                        <strong>Ajustes</strong>
+                        <small class="charge-type">{{ detailAdjCharges.length }} cargo{{ detailAdjCharges.length !== 1 ? 's' : '' }}</small>
+                      </div>
+                      <div class="adj-group-right">
+                        <strong>{{ formatCurrency(detailAdjTotal) }}</strong>
+                        <span class="pi" [class.pi-chevron-down]="!detailAdjExpanded" [class.pi-chevron-up]="detailAdjExpanded"></span>
+                      </div>
+                    </div>
+                    <div class="adj-group-items" *ngIf="detailAdjExpanded">
+                      <div class="adj-item" *ngFor="let charge of detailAdjCharges">
+                        <span class="adj-item-concept">{{ charge.concept }}</span>
+                        <span>{{ formatCurrency(charge.amount) }}</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
                 <ng-template #noCharges>
@@ -169,8 +187,10 @@ import { AuthService } from '../../auth/auth.service';
         </div>
 
         <div class="receipt-meta-grid">
-          <div><span>Titular</span><strong>{{ receipt.holderName }}</strong></div>
-          <div><span>Documento</span><strong>{{ receipt.holderDocumentNumber || 'Sin dato' }}</strong></div>
+          <div><span>Propietario</span><strong>{{ receipt.ownerName }}</strong></div>
+          <div><span>Doc. propietario</span><strong>{{ receipt.ownerDocumentNumber || 'Sin dato' }}</strong></div>
+          <div><span>Residente</span><strong>{{ receipt.residentName }}</strong></div>
+          <div><span>Doc. residente</span><strong>{{ receipt.residentDocumentNumber || 'Sin dato' }}</strong></div>
           <div><span>Unidad</span><strong>{{ receipt.unitCode }}</strong></div>
           <div><span>Coeficiente</span><strong>{{ receipt.unitCoefficient.toFixed(6) }}</strong></div>
           <div><span>Vencimiento</span><strong>{{ receipt.dueDate }}</strong></div>
@@ -183,11 +203,26 @@ import { AuthService } from '../../auth/auth.service';
             <span>Concepto</span>
             <span>Monto</span>
           </div>
-          <div class="receipt-line" [class.reversal-row]="charge.isReversal" *ngFor="let charge of receipt.charges">
+          <div class="receipt-line" [class.reversal-row]="charge.isReversal" *ngFor="let charge of receiptNonAdjCharges">
             <span>{{ charge.isReversal ? 'Reversión' : chargeTypeLabel(charge.chargeType) }}</span>
             <span>{{ charge.concept }} <span class="reversal-badge" *ngIf="charge.isReversal">REVERSIÓN</span></span>
             <strong [class.negative-amount]="charge.isReversal">{{ formatCurrency(charge.amount) }}</strong>
           </div>
+          <ng-container *ngIf="receiptAdjCharges.length">
+            <div class="receipt-line receipt-adj-summary" (click)="receiptAdjExpanded = !receiptAdjExpanded">
+              <span class="adj-type-cell">Ajuste</span>
+              <span class="adj-group-concept">
+                {{ receiptAdjCharges.length }} cargo{{ receiptAdjCharges.length !== 1 ? 's' : '' }}
+                <span class="pi adj-toggle-icon" [class.pi-chevron-down]="!receiptAdjExpanded" [class.pi-chevron-up]="receiptAdjExpanded"></span>
+              </span>
+              <strong>{{ formatCurrency(receiptAdjTotal) }}</strong>
+            </div>
+            <div class="receipt-adj-item" *ngFor="let charge of (receiptAdjExpanded ? receiptAdjCharges : [])">
+              <span></span>
+              <span class="adj-item-concept">· {{ charge.concept }}</span>
+              <span>{{ formatCurrency(charge.amount) }}</span>
+            </div>
+          </ng-container>
         </div>
 
         <div class="receipt-summary">
@@ -358,7 +393,7 @@ import { AuthService } from '../../auth/auth.service';
     .receipt-total strong { font-size:1.5rem; color:var(--brand-ink); }
     .receipt-meta-grid {
       display:grid;
-      grid-template-columns:repeat(3, minmax(0, 1fr));
+      grid-template-columns:repeat(4, minmax(0, 1fr));
       gap:0.9rem;
       margin-bottom:1rem;
     }
@@ -410,9 +445,46 @@ import { AuthService } from '../../auth/auth.service';
     .balance-debt strong:last-child { color:#c94d3f; }
     .balance-ok { border-color:#86efac; }
     .balance-ok strong:last-child { color:#1a7f37; }
+    /* Adjustment group — detail panel */
+    .adj-group { border:1px solid rgba(19,133,182,0.12); border-radius:18px; overflow:hidden; }
+    .adj-group-header {
+      display:flex; justify-content:space-between; align-items:center; gap:1rem;
+      background:rgba(19,133,182,0.05); padding:0.9rem 1rem;
+      cursor:pointer; user-select:none;
+    }
+    .adj-group-header:hover { background:rgba(19,133,182,0.1); }
+    .adj-group-label { display:flex; flex-direction:column; gap:0.2rem; }
+    .adj-group-right { display:flex; align-items:center; gap:0.75rem; }
+    .adj-group-right .pi { color:var(--brand-blue); font-size:0.8rem; }
+    .adj-group-items { border-top:1px solid rgba(19,133,182,0.08); background:rgba(255,255,255,0.7); }
+    .adj-item {
+      display:flex; justify-content:space-between; gap:1rem;
+      padding:0.45rem 1rem 0.45rem 1.5rem;
+      color:var(--brand-muted); font-size:0.85rem;
+      border-bottom:1px dashed rgba(19,133,182,0.06);
+    }
+    .adj-item:last-child { border-bottom:none; }
+    .adj-item span:last-child { white-space:nowrap; font-weight:500; }
+    /* Adjustment group — receipt */
+    .receipt-adj-summary { cursor:pointer; user-select:none; background:rgba(19,133,182,0.05) !important; }
+    .receipt-adj-summary:hover { background:rgba(19,133,182,0.1) !important; }
+    .adj-type-cell { color:var(--brand-blue); font-weight:600; }
+    .adj-group-concept { display:flex; align-items:center; gap:0.5rem; color:var(--brand-muted); }
+    .adj-toggle-icon { font-size:0.75rem; color:var(--brand-blue); }
+    .receipt-adj-item {
+      display:grid; grid-template-columns:0.9fr 1.6fr 1fr;
+      gap:1rem; align-items:center;
+      padding:0.4rem 1rem 0.4rem 2.5rem;
+      color:var(--brand-muted); font-size:0.85rem;
+      border-top:1px dashed rgba(19,133,182,0.08);
+      background:rgba(255,255,255,0.7);
+    }
+    .receipt-adj-item span:last-child { text-align:right; }
+    .adj-item-concept { font-style:italic; }
     @media (max-width: 1080px) {
       .content-grid { grid-template-columns:1fr; }
-      .receipt-meta-grid,.receipt-summary { grid-template-columns:1fr 1fr; }
+      .receipt-meta-grid { grid-template-columns:1fr 1fr; }
+      .receipt-summary { grid-template-columns:1fr 1fr; }
     }
     @media (max-width: 720px) {
       .balance-header { flex-direction:column; }
@@ -444,6 +516,15 @@ export class AccountStatementsPageComponent implements OnInit {
   selectedUnitId = '';
   selectedExpensePeriodId = '';
   loading = true;
+  detailAdjExpanded = false;
+  receiptAdjExpanded = false;
+
+  get detailNonAdjCharges() { return this.detail?.charges.filter(c => c.chargeType !== 'Adjustment') ?? []; }
+  get detailAdjCharges() { return this.detail?.charges.filter(c => c.chargeType === 'Adjustment') ?? []; }
+  get detailAdjTotal(): number { return this.detailAdjCharges.reduce((s, c) => s + c.amount, 0); }
+  get receiptNonAdjCharges() { return this.receipt?.charges.filter(c => c.chargeType !== 'Adjustment') ?? []; }
+  get receiptAdjCharges() { return this.receipt?.charges.filter(c => c.chargeType === 'Adjustment') ?? []; }
+  get receiptAdjTotal(): number { return this.receiptAdjCharges.reduce((s, c) => s + c.amount, 0); }
 
   get totalRunningBalance(): number {
     if (!this.statements.length) return 0;
@@ -499,6 +580,8 @@ export class AccountStatementsPageComponent implements OnInit {
 
   selectPeriod(item: AccountStatementPeriod): void {
     this.selectedExpensePeriodId = item.expensePeriodId;
+    this.detailAdjExpanded = false;
+    this.receiptAdjExpanded = false;
     this.loading = true;
     forkJoin({
       detail: this.accountStatementsApi.getUnitStatementDetail(this.selectedUnitId, item.expensePeriodId),
