@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import { ChangeDetectorRef, Component, DestroyRef, inject, OnInit } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { MessageService } from 'primeng/api';
 import { Button } from 'primeng/button';
 import { Card } from 'primeng/card';
@@ -15,14 +16,18 @@ import { AuthService } from '../../auth/auth.service';
 @Component({
   standalone: true,
   selector: 'app-residents-page',
-  imports: [CommonModule, FormsModule, Button, Card, Tooltip],
+  imports: [CommonModule, FormsModule, RouterLink, Button, Card, Tooltip],
   template: `
     <p-card styleClass="app-page-card">
       <div class="app-toolbar">
         <div class="app-page-head">
           <div>
             <h1>Residentes</h1>
-            <p>Propietarios e inquilinos registrados para la operacion inicial.</p>
+            <p>
+              Propietarios e inquilinos registrados para la operacion inicial.
+              Para asignarlos a una unidad o finalizar su residencia, andá a
+              <a routerLink="/assignments">Asignaciones</a>.
+            </p>
           </div>
         </div>
 
@@ -404,6 +409,7 @@ export class ResidentsPageComponent implements OnInit {
       isActive: true
     };
   }
+
 
   private validateForm(form: {
     companyId: string | null;

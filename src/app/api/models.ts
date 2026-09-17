@@ -144,6 +144,8 @@ export interface Assignment {
   id: string;
   unitId: string;
   unitCode: string;
+  buildingId: string;
+  buildingName: string;
   residentId: string;
   residentName: string;
   isPrimary: boolean;

@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import { ChangeDetectorRef, Component, DestroyRef, inject, OnInit } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { forkJoin } from 'rxjs';
 import { AutoCompleteCompleteEvent, AutoComplete } from 'primeng/autocomplete';
 import { Button } from 'primeng/button';
@@ -11,21 +12,23 @@ import { MessageService } from 'primeng/api';
 import { UnitOwnersApiService } from '../../api/unit-owners-api.service';
 import { OwnersApiService } from '../../api/owners-api.service';
 import { UnitsApiService } from '../../api/units-api.service';
+import { ResidentsApiService } from '../../api/residents-api.service';
+import { AssignmentsApiService } from '../../api/assignments-api.service';
 import { extractApiErrorMessage } from '../../api/api-error.util';
-import { Owner, Unit, UnitOwnerAssignment } from '../../api/models';
+import { Assignment, Owner, Resident, Unit, UnitOwnerAssignment } from '../../api/models';
 import { AuthService } from '../../auth/auth.service';
 
 @Component({
   standalone: true,
   selector: 'app-assignments-page',
-  imports: [CommonModule, FormsModule, AutoComplete, Button, Card, Tag],
+  imports: [CommonModule, FormsModule, RouterLink, AutoComplete, Button, Card, Tag],
   template: `
     <p-card styleClass="app-page-card">
       <div class="app-toolbar">
         <div class="app-page-head">
           <div>
-            <h1>Propietarios</h1>
-            <p>Asignacion de propietarios a unidades. Cada unidad admite un propietario principal y uno opcional.</p>
+            <h1>Asignaciones</h1>
+            <p>Asignación de propietarios y residentes a unidades, todo desde la misma pantalla.</p>
           </div>
         </div>
       </div>
@@ -124,6 +127,61 @@ import { AuthService } from '../../auth/auth.service';
         <p class="max-owners" *ngIf="!isReadOnly && !canAddMore">
           <span class="pi pi-info-circle"></span> La unidad ya tiene sus 2 propietarios asignados. Quitá uno para agregar otro.
         </p>
+
+        <!-- Residentes de la unidad seleccionada -->
+        <div class="residents-block">
+          <h3 class="subsection-title">Residentes</h3>
+
+          <div class="current-residents" *ngIf="currentResidents.length">
+            <div class="resident-chip" *ngFor="let r of currentResidents" [class.ended-chip]="!!r.endDate">
+              <span class="dot" [class.dot-ended]="!!r.endDate"></span>
+              <div>
+                <small>{{ r.isPrimary ? 'Residente principal' : 'Residente' }}</small>
+                <strong>{{ r.residentName }}</strong>
+                <small class="since">
+                  Desde {{ r.startDate }}
+                  <span *ngIf="r.endDate"> · Finalizada el {{ r.endDate }}</span>
+                </small>
+              </div>
+              <button *ngIf="!r.endDate && !isReadOnly" type="button" class="remove-btn"
+                      title="Finalizar residencia" [disabled]="isSavingResident"
+                      (click)="endResidentResidency(r)">
+                <span class="pi pi-times"></span>
+              </button>
+            </div>
+          </div>
+          <p class="no-owners" *ngIf="!currentResidents.length">Esta unidad no tiene residentes asignados.</p>
+
+          <form class="add-form" *ngIf="!isReadOnly" (ngSubmit)="addResident()">
+            <div class="add-form-fields">
+              <label class="field-block">
+                <span>Residente</span>
+                <select [(ngModel)]="residentAddForm.residentId" name="residentId" required>
+                  <option value="">— Seleccionar residente —</option>
+                  <option *ngFor="let r of availableResidents" [value]="r.id">{{ r.fullName }}</option>
+                </select>
+              </label>
+              <label class="field-block">
+                <span>Vigente desde</span>
+                <input type="date" [(ngModel)]="residentAddForm.startDate" name="residentStartDate" required />
+              </label>
+            </div>
+            <div class="add-form-actions residents-form-actions">
+              <label class="checkbox-inline">
+                <input type="checkbox" [(ngModel)]="residentAddForm.isPrimary" name="residentIsPrimary" />
+                <span>Es el residente principal (aparece en comprobantes; no hace falta que sea el único con acceso a la app)</span>
+              </label>
+              <p-button type="submit" label="Asignar residente" icon="pi pi-user-plus"
+                        [loading]="isSavingResident" [disabled]="!residentAddForm.residentId">
+              </p-button>
+            </div>
+          </form>
+          <small class="field-hint">
+            Podés asignar varios residentes a la misma unidad (ej. familia conviviendo). Que tengan
+            acceso a la app depende de si tienen una cuenta de usuario creada con su mismo correo
+            desde <a routerLink="/users">Usuarios</a> — asignar la unidad aquí no crea esa cuenta.
+          </small>
+        </div>
       </div>
 
       <p class="app-state" *ngIf="loading">Cargando...</p>
@@ -166,6 +224,45 @@ import { AuthService } from '../../auth/auth.service';
       </ng-container>
 
       <p class="app-state" *ngIf="!loading && !assignments.length">No hay propietarios asignados.</p>
+
+      <!-- All resident assignments list -->
+      <ng-container *ngIf="!loading && residentAssignments.length">
+        <h3 class="section-title">Todas las asignaciones de residentes</h3>
+        <div class="app-list">
+          <div class="app-row header assign-grid">
+            <span>Unidad</span>
+            <span>Edificio</span>
+            <span>Residente</span>
+            <span>Tipo</span>
+            <span>Desde / Hasta</span>
+            <span *ngIf="!isReadOnly"></span>
+          </div>
+          <div class="app-row assign-grid" *ngFor="let item of residentAssignments" [class.ended-row]="!!item.endDate">
+            <strong>{{ item.unitCode }}</strong>
+            <span>{{ item.buildingName }}</span>
+            <span>{{ item.residentName }}</span>
+            <p-tag
+              [value]="item.isPrimary ? 'Principal' : 'Residente'"
+              [severity]="item.isPrimary ? 'info' : 'secondary'">
+            </p-tag>
+            <span>{{ item.startDate }}<span *ngIf="item.endDate"> — {{ item.endDate }}</span></span>
+            <div *ngIf="!isReadOnly">
+              <p-button
+                *ngIf="!item.endDate"
+                type="button"
+                icon="pi pi-times"
+                severity="danger"
+                [rounded]="true"
+                [text]="true"
+                size="small"
+                title="Finalizar residencia"
+                [disabled]="isSavingResident"
+                (onClick)="endResidentResidency(item)">
+              </p-button>
+            </div>
+          </div>
+        </div>
+      </ng-container>
     </p-card>
   `,
   styles: [`
@@ -332,6 +429,30 @@ import { AuthService } from '../../auth/auth.service';
     }
     .max-owners .pi { margin-right: 0.35rem; }
 
+    /* Residents block */
+    .residents-block {
+      border-top: 1px solid rgba(19,133,182,0.12);
+      margin-top: 1.5rem;
+      padding-top: 1.25rem;
+    }
+    .subsection-title { color: var(--brand-ink, #18353a); margin: 0 0 1rem; font-size: 0.95rem; font-weight: 700; }
+    .current-residents { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-bottom: 1.25rem; }
+    .resident-chip {
+      display: flex; align-items: center; gap: 0.75rem; padding: 0.85rem 1rem;
+      border-radius: 16px; flex: 1; min-width: 220px;
+      background: rgba(15,160,144,0.06); border: 1.5px solid rgba(15,160,144,0.2);
+    }
+    .resident-chip.ended-chip { background: rgba(148,163,184,0.08); border-color: rgba(148,163,184,0.25); opacity: 0.75; }
+    .dot-ended { background: #94a3b8; }
+    .resident-chip > div { flex: 1; display: grid; gap: 0.15rem; }
+    .resident-chip small { color: var(--brand-muted, #6b878d); font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; }
+    .resident-chip strong { color: var(--brand-ink, #18353a); font-size: 0.95rem; }
+    .residents-form-actions { display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; }
+    .checkbox-inline { display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; color: var(--brand-muted, #6b878d); cursor: pointer; }
+    .checkbox-inline input { accent-color: var(--brand-blue, #1385b6); }
+    .field-hint { display: block; color: var(--brand-muted, #6b878d); font-size: 0.8rem; margin-top: 0.9rem; line-height: 1.4; }
+    .ended-row { opacity: 0.6; }
+
     /* List */
     .section-title { color: var(--brand-ink, #18353a); margin: 0 0 0.75rem; font-size: 1rem; }
     .assign-grid { grid-template-columns: 0.7fr 1fr 1fr 0.7fr 0.8fr 48px; }
@@ -346,6 +467,8 @@ export class AssignmentsPageComponent implements OnInit {
   private readonly unitOwnersApi = inject(UnitOwnersApiService);
   private readonly ownersApi = inject(OwnersApiService);
   private readonly unitsApi = inject(UnitsApiService);
+  private readonly residentsApi = inject(ResidentsApiService);
+  private readonly assignmentsApi = inject(AssignmentsApiService);
   private readonly auth = inject(AuthService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly cdr = inject(ChangeDetectorRef);
@@ -357,6 +480,11 @@ export class AssignmentsPageComponent implements OnInit {
   owners: Owner[] = [];
   assignments: UnitOwnerAssignment[] = [];
   unitSuggestions: Unit[] = [];
+
+  residents: Resident[] = [];
+  residentAssignments: Assignment[] = [];
+  isSavingResident = false;
+  residentAddForm = this.emptyResidentAddForm();
 
   selectedUnit: Unit | null = null;
   loading = true;
@@ -385,16 +513,37 @@ export class AssignmentsPageComponent implements OnInit {
     return this.owners.filter(o => !usedIds.has(o.id));
   }
 
+  get currentResidents(): Assignment[] {
+    if (!this.selectedUnit) return [];
+    return this.residentAssignments
+      .filter(a => a.unitId === this.selectedUnit!.id)
+      .sort((a, b) => (a.endDate ? 1 : 0) - (b.endDate ? 1 : 0));
+  }
+
+  get availableResidents(): Resident[] {
+    if (!this.selectedUnit) return this.residents;
+    const activeIds = new Set(
+      this.residentAssignments
+        .filter(a => a.unitId === this.selectedUnit!.id && !a.endDate)
+        .map(a => a.residentId)
+    );
+    return this.residents.filter(r => !activeIds.has(r.id));
+  }
+
   ngOnInit(): void {
     forkJoin({
       assignments: this.unitOwnersApi.getAll(),
       units: this.unitsApi.getAll(),
-      owners: this.ownersApi.getAll(true)
+      owners: this.ownersApi.getAll(true),
+      residents: this.residentsApi.getAll(),
+      residentAssignments: this.assignmentsApi.getAll()
     }).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-      next: ({ assignments, units, owners }) => {
+      next: ({ assignments, units, owners, residents, residentAssignments }) => {
         this.assignments = assignments;
         this.units = units;
         this.owners = owners;
+        this.residents = residents;
+        this.residentAssignments = residentAssignments;
         this.loading = false;
         this.cdr.markForCheck();
       },
@@ -417,12 +566,14 @@ export class AssignmentsPageComponent implements OnInit {
 
   onUnitSelected(): void {
     this.addForm = this.emptyAddForm();
+    this.residentAddForm = this.emptyResidentAddForm();
     this.cdr.markForCheck();
   }
 
   clearUnit(): void {
     this.selectedUnit = null;
     this.addForm = this.emptyAddForm();
+    this.residentAddForm = this.emptyResidentAddForm();
     this.cdr.markForCheck();
   }
 
@@ -470,7 +621,54 @@ export class AssignmentsPageComponent implements OnInit {
     });
   }
 
+  addResident(): void {
+    if (!this.selectedUnit || !this.residentAddForm.residentId) return;
+
+    this.isSavingResident = true;
+    this.assignmentsApi.create({
+      unitId: this.selectedUnit.id,
+      residentId: this.residentAddForm.residentId,
+      isPrimary: this.residentAddForm.isPrimary,
+      startDate: this.residentAddForm.startDate,
+      endDate: null
+    }).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: (created) => {
+        this.residentAssignments = [...this.residentAssignments, created];
+        this.residentAddForm = this.emptyResidentAddForm();
+        this.isSavingResident = false;
+        this.msg.add({ severity: 'success', summary: 'Guardado', detail: 'Residente asignado correctamente.', life: 4000 });
+        this.cdr.markForCheck();
+      },
+      error: (error) => {
+        this.msg.add({ severity: 'error', summary: 'Error', detail: extractApiErrorMessage(error, 'No se pudo asignar el residente.'), life: 5000 });
+        this.isSavingResident = false;
+        this.cdr.markForCheck();
+      }
+    });
+  }
+
+  endResidentResidency(item: Assignment): void {
+    this.isSavingResident = true;
+    this.assignmentsApi.endResidency(item.id).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: (updated) => {
+        this.residentAssignments = this.residentAssignments.map(a => a.id === updated.id ? updated : a);
+        this.isSavingResident = false;
+        this.msg.add({ severity: 'success', summary: 'Guardado', detail: 'Residencia finalizada correctamente.', life: 4000 });
+        this.cdr.markForCheck();
+      },
+      error: (error) => {
+        this.msg.add({ severity: 'error', summary: 'Error', detail: extractApiErrorMessage(error, 'No se pudo finalizar la residencia.'), life: 5000 });
+        this.isSavingResident = false;
+        this.cdr.markForCheck();
+      }
+    });
+  }
+
   private emptyAddForm() {
     return { ownerId: '', startDate: new Date().toISOString().slice(0, 10) };
+  }
+
+  private emptyResidentAddForm() {
+    return { residentId: '', isPrimary: false, startDate: new Date().toISOString().slice(0, 10) };
   }
 }

@@ -85,6 +85,11 @@ const PHONE_PREFIXES: PhonePrefix[] = [
               <input type="checkbox" [(ngModel)]="form.isResident" name="isResident" />
               <span>También es residente del edificio</span>
             </label>
+            <small class="field-hint">
+              Al activarlo se crea automáticamente su registro de residente en la unidad que posee
+              (visible y editable desde Residentes) — cuenta en los contadores del dashboard. Al
+              desactivarlo, esa residencia se finaliza.
+            </small>
           </div>
         </section>
 
