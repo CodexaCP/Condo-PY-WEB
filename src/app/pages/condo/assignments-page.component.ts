@@ -189,15 +189,16 @@ type UnitOption = Unit & { display: string };
       <ng-container *ngIf="!loading && assignments.length">
         <h3 class="section-title">Todas las asignaciones</h3>
         <div class="app-list">
-          <div class="app-row header assign-grid">
+          <div class="app-row header owners-grid">
             <span>Unidad</span>
             <span>Edificio</span>
             <span>Propietario</span>
             <span>Tipo</span>
+            <span>Residente</span>
             <span>Desde</span>
             <span *ngIf="!isReadOnly"></span>
           </div>
-          <div class="app-row assign-grid" *ngFor="let item of assignments">
+          <div class="app-row owners-grid" *ngFor="let item of assignments">
             <strong>{{ item.unitCode }}</strong>
             <span>{{ item.buildingName }}</span>
             <span>{{ item.ownerName }}</span>
@@ -205,6 +206,9 @@ type UnitOption = Unit & { display: string };
               [value]="item.isPrimary ? 'Principal' : 'Secundario'"
               [severity]="item.isPrimary ? 'info' : 'secondary'">
             </p-tag>
+            <span [class.no-resident]="!residentNameForUnit(item.unitId)">
+              {{ residentNameForUnit(item.unitId) || 'Sin residente asociado' }}
+            </span>
             <span>{{ item.startDate }}</span>
             <div *ngIf="!isReadOnly">
               <p-button
@@ -455,10 +459,13 @@ type UnitOption = Unit & { display: string };
     /* List */
     .section-title { color: var(--brand-ink, #18353a); margin: 0 0 0.75rem; font-size: 1rem; }
     .assign-grid { grid-template-columns: 0.7fr 1fr 1fr 0.7fr 0.8fr 48px; }
+    .owners-grid { grid-template-columns: 0.7fr 1fr 1fr 0.7fr 1fr 0.8fr 48px; }
+    .no-resident { color: var(--brand-muted, #6b878d); font-style: italic; }
 
     @media (max-width: 860px) {
       .add-form-fields { grid-template-columns: 1fr; }
       .assign-grid { grid-template-columns: 1fr; }
+      .owners-grid { grid-template-columns: 1fr; }
     }
   `]
 })
@@ -527,6 +534,13 @@ export class AssignmentsPageComponent implements OnInit {
         .map(a => a.residentId)
     );
     return this.residents.filter(r => !activeIds.has(r.id));
+  }
+
+  residentNameForUnit(unitId: string): string {
+    const active = this.residentAssignments.filter(a => a.unitId === unitId && !a.endDate);
+    if (active.length === 0) return '';
+    const primary = active.find(a => a.isPrimary);
+    return (primary ?? active[0]).residentName;
   }
 
   ngOnInit(): void {
