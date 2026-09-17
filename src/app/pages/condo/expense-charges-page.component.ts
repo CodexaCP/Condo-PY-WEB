@@ -18,8 +18,18 @@ import { Building, ExpenseCharge, ExpenseChargeType, ExpensePeriod, Unit } from 
 
 type ChargeRow =
   | { kind: 'single'; charge: ExpenseCharge }
-  | { kind: 'group'; key: string; unitCode: string; buildingName: string; expensePeriodName: string;
+  | { kind: 'group'; key: string; unitId: string; unitCode: string; buildingName: string; expensePeriodName: string;
       expensePeriodId: string; charges: ExpenseCharge[]; totalAmount: number; expanded: boolean };
+
+interface UnitGroup {
+  unitId: string;
+  unitCode: string;
+  buildingName: string;
+  rows: ChargeRow[];
+  chargeCount: number;
+  totalAmount: number;
+  expanded: boolean;
+}
 
 @Component({
   standalone: true,
@@ -40,6 +50,16 @@ type ChargeRow =
           [icon]="showForm ? 'pi pi-times' : 'pi pi-plus'"
           (onClick)="toggleForm()">
         </p-button>
+      </div>
+
+      <!-- Quick search -->
+      <div class="quick-search">
+        <span class="pi pi-search quick-search-icon"></span>
+        <input type="text" [(ngModel)]="searchText" name="searchText" (ngModelChange)="applyFilters()"
+               placeholder="Buscar por unidad, edificio o concepto..." />
+        <button type="button" class="quick-search-clear" *ngIf="searchText" (click)="searchText=''; applyFilters()">
+          <span class="pi pi-times"></span>
+        </button>
       </div>
 
       <!-- Filters bar -->
@@ -125,8 +145,9 @@ type ChargeRow =
 
       <p class="app-state" *ngIf="loading">Cargando cargos...</p>
       <p class="app-state" *ngIf="!loading && !items.length">No hay cargos cargados.</p>
+      <p class="app-state" *ngIf="!loading && items.length && !unitGroups.length">Ningún resultado coincide con la búsqueda.</p>
 
-      <div class="app-list" *ngIf="items.length">
+      <div class="app-list" *ngIf="unitGroups.length">
         <div class="app-row header charges-grid">
           <span>Concepto</span>
           <span>Tipo</span>
@@ -136,10 +157,28 @@ type ChargeRow =
           <span class="actions-head" *ngIf="!isReadOnly">Acciones</span>
         </div>
 
-        <ng-container *ngFor="let row of displayRows">
+        <ng-container *ngFor="let unitGroup of pagedUnitGroups">
+
+          <!-- Fila resumen por unidad -->
+          <div class="app-row charges-grid unit-row" (click)="toggleUnitGroup(unitGroup)">
+            <span>
+              <strong>{{ unitGroup.unitCode }}</strong>
+              <small> · {{ unitGroup.chargeCount }} cargo{{ unitGroup.chargeCount !== 1 ? 's' : '' }}</small>
+            </span>
+            <span></span>
+            <span>{{ unitGroup.buildingName }}</span>
+            <span></span>
+            <span [class.negative-amount]="unitGroup.totalAmount < 0"><strong>{{ formatCurrency(unitGroup.totalAmount) }}</strong></span>
+            <div class="app-actions">
+              <span class="pi" [class.pi-chevron-down]="!unitGroup.expanded" [class.pi-chevron-up]="unitGroup.expanded"></span>
+            </div>
+          </div>
+
+          <ng-container *ngIf="unitGroup.expanded">
+          <ng-container *ngFor="let row of unitGroup.rows">
 
           <!-- Fila resumen para recargos de mora agrupados -->
-          <div class="app-row charges-grid group-row" *ngIf="row.kind === 'group'" (click)="toggleGroupRow(row)">
+          <div class="app-row charges-grid group-row" *ngIf="row.kind === 'group'" (click)="toggleGroupRow(row); $event.stopPropagation()">
             <span>
               <strong>Recargos por mora ({{ row.charges.length }} cuotas)</strong>
               <small> · clic para ver el detalle</small>
@@ -225,11 +264,61 @@ type ChargeRow =
               </p-button>
             </div>
           </div>
+          </ng-container>
+          </ng-container>
         </ng-container>
+      </div>
+
+      <!-- Pagination -->
+      <div class="pagination-bar" *ngIf="unitGroups.length">
+        <div class="page-size-picker">
+          <span>Por página:</span>
+          <select [(ngModel)]="pageSize" name="pageSize" (ngModelChange)="currentPage = 1">
+            <option [ngValue]="10">10</option>
+            <option [ngValue]="25">25</option>
+            <option [ngValue]="50">50</option>
+            <option [ngValue]="100">100</option>
+          </select>
+        </div>
+        <div class="page-nav">
+          <p-button type="button" icon="pi pi-angle-left" severity="secondary" [text]="true" [rounded]="true"
+                    [disabled]="currentPage <= 1" (onClick)="currentPage = currentPage - 1"></p-button>
+          <span class="page-indicator">Unidad {{ (currentPage - 1) * pageSize + 1 }}–{{ pageRangeEnd }} de {{ unitGroups.length }}</span>
+          <p-button type="button" icon="pi pi-angle-right" severity="secondary" [text]="true" [rounded]="true"
+                    [disabled]="currentPage >= totalPages" (onClick)="currentPage = currentPage + 1"></p-button>
+        </div>
       </div>
     </p-card>
   `,
   styles: [`
+    /* Quick search */
+    .quick-search {
+      display: flex; align-items: center; gap: 0.6rem;
+      padding: 0.6rem 1rem; margin-bottom: 0.75rem;
+      background: #fff; border: 1.5px solid rgba(20,54,61,0.15); border-radius: 12px;
+    }
+    .quick-search-icon { color: var(--brand-muted); }
+    .quick-search input {
+      flex: 1; border: none; outline: none; font-size: 0.95rem; color: var(--brand-ink); background: transparent;
+    }
+    .quick-search-clear { background: none; border: none; cursor: pointer; color: var(--brand-muted); padding: 0.2rem; }
+    .quick-search-clear:hover { color: var(--brand-ink); }
+
+    /* Unit grouping */
+    .unit-row { cursor: pointer; background: rgba(19,133,182,0.05); font-weight: 600; }
+    .unit-row:hover { background: rgba(19,133,182,0.1); }
+    .unit-row .pi-chevron-down, .unit-row .pi-chevron-up { color: var(--brand-muted); }
+
+    /* Pagination */
+    .pagination-bar {
+      display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;
+      padding: 0.9rem 0.25rem 0.25rem;
+    }
+    .page-size-picker { display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; color: var(--brand-muted); }
+    .page-size-picker select { border: 1.5px solid rgba(20,54,61,0.18); border-radius: 8px; padding: 0.3rem 0.5rem; font-size: 0.85rem; }
+    .page-nav { display: flex; align-items: center; gap: 0.5rem; }
+    .page-indicator { font-size: 0.85rem; color: var(--brand-muted); min-width: 160px; text-align: center; }
+
     /* Filters bar */
     .filters-bar {
       display: flex;
@@ -352,6 +441,7 @@ export class ExpenseChargesPageComponent implements OnInit {
 
   items: ExpenseCharge[] = [];
   displayRows: ChargeRow[] = [];
+  unitGroups: UnitGroup[] = [];
   private allItems: ExpenseCharge[] = [];
   buildings: Building[] = [];
   periods: ExpensePeriod[] = [];
@@ -362,7 +452,24 @@ export class ExpenseChargesPageComponent implements OnInit {
   editingId: string | null = null;
   readonly chargeTypes: ExpenseChargeType[] = ['Ordinary', 'ReserveFund', 'Extraordinary', 'Individual', 'Adjustment'];
   filters = { buildingId: '', expensePeriodId: '' };
+  searchText = '';
+  pageSize = 25;
+  currentPage = 1;
   form = this.createInitialForm();
+
+  get totalPages(): number {
+    return Math.max(1, Math.ceil(this.unitGroups.length / this.pageSize));
+  }
+
+  get pageRangeEnd(): number {
+    return Math.min(this.currentPage * this.pageSize, this.unitGroups.length);
+  }
+
+  get pagedUnitGroups(): UnitGroup[] {
+    if (this.currentPage > this.totalPages) this.currentPage = this.totalPages;
+    const start = (this.currentPage - 1) * this.pageSize;
+    return this.unitGroups.slice(start, start + this.pageSize);
+  }
 
   get filteredPeriodsForSelector(): ExpensePeriod[] {
     return this.filters.buildingId
@@ -429,12 +536,19 @@ export class ExpenseChargesPageComponent implements OnInit {
   }
 
   applyFilters(): void {
+    const search = this.searchText.trim().toLowerCase();
     this.items = this.allItems.filter(item =>
       (!this.filters.buildingId || item.buildingId === this.filters.buildingId) &&
-      (!this.filters.expensePeriodId || item.expensePeriodId === this.filters.expensePeriodId)
+      (!this.filters.expensePeriodId || item.expensePeriodId === this.filters.expensePeriodId) &&
+      (!search ||
+        item.unitCode.toLowerCase().includes(search) ||
+        item.buildingName.toLowerCase().includes(search) ||
+        item.concept.toLowerCase().includes(search))
     );
     this.sortItems();
     this.buildDisplayRows();
+    this.buildUnitGroups();
+    this.currentPage = 1;
     this.cdr.markForCheck();
   }
 
@@ -444,8 +558,14 @@ export class ExpenseChargesPageComponent implements OnInit {
     this.cdr.markForCheck();
   }
 
+  toggleUnitGroup(group: UnitGroup): void {
+    group.expanded = !group.expanded;
+    this.cdr.markForCheck();
+  }
+
   resetFilters(): void {
     this.filters = { buildingId: '', expensePeriodId: '' };
+    this.searchText = '';
     this.applyFilters();
   }
 
@@ -516,6 +636,7 @@ export class ExpenseChargesPageComponent implements OnInit {
         this.allItems = this.allItems.filter((current) => current.id !== item.id);
         this.items = this.items.filter((current) => current.id !== item.id);
         this.buildDisplayRows();
+        this.buildUnitGroups();
         if (this.editingId === item.id) {
           this.cancelEdit();
         }
@@ -595,6 +716,7 @@ export class ExpenseChargesPageComponent implements OnInit {
           rows.push({
             kind: 'group',
             key,
+            unitId: item.unitId,
             unitCode: item.unitCode,
             buildingName: item.buildingName,
             expensePeriodName: item.expensePeriodName,
@@ -610,6 +732,35 @@ export class ExpenseChargesPageComponent implements OnInit {
     }
 
     this.displayRows = rows;
+  }
+
+  private buildUnitGroups(): void {
+    const previousExpanded = new Set(this.unitGroups.filter((g) => g.expanded).map((g) => g.unitId));
+
+    const byUnit = new Map<string, ChargeRow[]>();
+    for (const row of this.displayRows) {
+      const unitId = row.kind === 'single' ? row.charge.unitId : row.unitId;
+      if (!byUnit.has(unitId)) byUnit.set(unitId, []);
+      byUnit.get(unitId)!.push(row);
+    }
+
+    const groups: UnitGroup[] = [];
+    for (const [unitId, rows] of byUnit) {
+      const first = rows[0].kind === 'single' ? rows[0].charge : rows[0];
+      const chargeCount = rows.reduce((sum, r) => sum + (r.kind === 'single' ? 1 : r.charges.length), 0);
+      const totalAmount = rows.reduce((sum, r) => sum + (r.kind === 'single' ? r.charge.amount : r.totalAmount), 0);
+      groups.push({
+        unitId,
+        unitCode: first.unitCode,
+        buildingName: first.buildingName,
+        rows,
+        chargeCount,
+        totalAmount,
+        expanded: previousExpanded.has(unitId)
+      });
+    }
+
+    this.unitGroups = groups;
   }
 
   private sortItems(): void {
