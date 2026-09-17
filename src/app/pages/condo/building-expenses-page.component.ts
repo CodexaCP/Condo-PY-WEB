@@ -241,7 +241,7 @@ import { API_BASE_URL } from '../../config/api.config';
               <span>Unidad destino *</span>
               <select [(ngModel)]="form.targetUnitId" name="targetUnitId" [required]="requiresTargetUnit">
                 <option value="">— Sin unidad —</option>
-                <option *ngFor="let u of availableUnits" [value]="u.id">{{ u.code }}</option>
+                <option *ngFor="let u of availableUnits" [value]="u.id">{{ u.code }} · {{ u.buildingName }}</option>
               </select>
             </label>
             <label class="field-block wide2">

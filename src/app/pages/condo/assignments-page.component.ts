@@ -18,6 +18,8 @@ import { extractApiErrorMessage } from '../../api/api-error.util';
 import { Assignment, Owner, Resident, Unit, UnitOwnerAssignment } from '../../api/models';
 import { AuthService } from '../../auth/auth.service';
 
+type UnitOption = Unit & { display: string };
+
 @Component({
   standalone: true,
   selector: 'app-assignments-page',
@@ -45,18 +47,15 @@ import { AuthService } from '../../auth/auth.service';
             (onClear)="clearUnit()"
             [forceSelection]="true"
             [dropdown]="true"
-            optionLabel="code"
+            optionLabel="display"
             placeholder="Escribi el codigo o edificio..."
             styleClass="unit-autocomplete"
             appendTo="body">
-            <ng-template #itemTemplate let-unit>
+            <ng-template #item let-unit>
               <div class="unit-option">
                 <span class="unit-option-code">{{ unit.code }}</span>
                 <span class="unit-option-building">{{ unit.buildingName }}</span>
               </div>
-            </ng-template>
-            <ng-template #selectedItemTemplate let-unit>
-              {{ unit?.code }} — {{ unit?.buildingName }}
             </ng-template>
           </p-autoComplete>
         </div>
@@ -476,17 +475,17 @@ export class AssignmentsPageComponent implements OnInit {
 
   get isReadOnly(): boolean { return this.auth.hasRole('CompanyAdmin'); }
 
-  units: Unit[] = [];
+  units: UnitOption[] = [];
   owners: Owner[] = [];
   assignments: UnitOwnerAssignment[] = [];
-  unitSuggestions: Unit[] = [];
+  unitSuggestions: UnitOption[] = [];
 
   residents: Resident[] = [];
   residentAssignments: Assignment[] = [];
   isSavingResident = false;
   residentAddForm = this.emptyResidentAddForm();
 
-  selectedUnit: Unit | null = null;
+  selectedUnit: UnitOption | null = null;
   loading = true;
   isSaving = false;
   addForm = this.emptyAddForm();
@@ -540,7 +539,7 @@ export class AssignmentsPageComponent implements OnInit {
     }).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: ({ assignments, units, owners, residents, residentAssignments }) => {
         this.assignments = assignments;
-        this.units = units;
+        this.units = units.map(u => ({ ...u, display: `${u.code} — ${u.buildingName}` }));
         this.owners = owners;
         this.residents = residents;
         this.residentAssignments = residentAssignments;
