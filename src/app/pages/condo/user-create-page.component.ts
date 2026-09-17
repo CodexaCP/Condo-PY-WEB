@@ -14,6 +14,7 @@ import { extractApiErrorMessage } from '../../api/api-error.util';
 import { BuildingsApiService } from '../../api/buildings-api.service';
 import { CompaniesApiService } from '../../api/companies-api.service';
 import { CondominiumsApiService } from '../../api/condominiums-api.service';
+import { UploadsApiService } from '../../api/uploads-api.service';
 import { UsersApiService } from '../../api/users-api.service';
 import { Building, BuildingCapacityItem, Company, Condominium } from '../../api/models';
 import { AuthService } from '../../auth/auth.service';
@@ -27,6 +28,9 @@ const PHONE_PREFIXES: PhonePrefix[] = [
   { label: 'ARG +54', value: '+54',  flag: 'ðŸ‡¦ðŸ‡·' },
   { label: 'VE +58',  value: '+58',  flag: 'ðŸ‡»ðŸ‡ª' },
 ];
+
+const BUILDING_MANAGER_LIMIT = 25;
+const COMPANY_OPERATOR_LIMIT = 25;
 
 interface RoleCard { value: string; label: string; desc: string; icon: string; note: string; }
 const ALL_ROLE_CARDS: RoleCard[] = [
@@ -285,11 +289,11 @@ const ALL_ROLE_CARDS: RoleCard[] = [
                   <span class="building-name">{{ b.name }}</span>
                   <span class="building-code">{{ b.code }}</span>
                   <span class="capacity-badges" *ngIf="isCompanyAdmin && form.role">
-                    <span class="cap-badge" [class.cap-full]="getCapacity(b.id).buildingManagerCount >= 2">
-                      <i class="pi pi-user"></i>{{ getCapacity(b.id).buildingManagerCount }}/2
+                    <span class="cap-badge" [class.cap-full]="getCapacity(b.id).buildingManagerCount >= buildingManagerLimit">
+                      <i class="pi pi-user"></i>{{ getCapacity(b.id).buildingManagerCount }}/{{ buildingManagerLimit }}
                     </span>
-                    <span class="cap-badge" [class.cap-full]="getCapacity(b.id).companyOperatorCount >= 5">
-                      <i class="pi pi-users"></i>{{ getCapacity(b.id).companyOperatorCount }}/5
+                    <span class="cap-badge" [class.cap-full]="getCapacity(b.id).companyOperatorCount >= companyOperatorLimit">
+                      <i class="pi pi-users"></i>{{ getCapacity(b.id).companyOperatorCount }}/{{ companyOperatorLimit }}
                     </span>
                   </span>
                 </div>
@@ -301,6 +305,37 @@ const ALL_ROLE_CARDS: RoleCard[] = [
                 No hay edificios disponibles.
               </p>
             </ng-template>
+          </div>
+        </section>
+
+        <!-- FIRMA DIGITAL -->
+        <section class="form-section" *ngIf="canHaveSignature">
+          <h2 class="section-title">Firma digital</h2>
+          <p class="section-desc">
+            Imagen de la firma manuscrita, usada para firmar documentos generados por el sistema
+            (recibos, liquidaciones, comprobantes) sin necesidad de escanearla cada vez.
+          </p>
+
+          <div class="field">
+            <label>Firma <span class="optional">(opcional)</span></label>
+            <div class="signature-upload-row">
+              <div class="signature-preview" *ngIf="form.signatureUrl">
+                <img [src]="form.signatureUrl" alt="Firma" />
+              </div>
+              <div class="signature-upload-area" (click)="signatureFileInput.click()">
+                <i class="pi pi-pencil"></i>
+                <span *ngIf="!uploadingSignature">
+                  {{ form.signatureUrl ? 'Cambiar firma' : 'Subir imagen de la firma (JPG/PNG, máx 10 MB)' }}
+                </span>
+                <span *ngIf="uploadingSignature"><i class="pi pi-spin pi-spinner"></i> Subiendo...</span>
+              </div>
+              <button type="button" class="signature-remove-btn" *ngIf="form.signatureUrl"
+                      (click)="removeSignature()" pTooltip="Quitar firma" tooltipPosition="top">
+                <i class="pi pi-times"></i>
+              </button>
+              <input #signatureFileInput type="file" accept=".jpg,.jpeg,.png,.webp,.gif" style="display:none"
+                     (change)="onSignatureFileChange($event)" />
+            </div>
           </div>
         </section>
 
@@ -350,6 +385,7 @@ export class UserCreatePageComponent implements OnInit {
   private readonly companiesApi    = inject(CompaniesApiService);
   private readonly condominiumsApi = inject(CondominiumsApiService);
   private readonly buildingsApi    = inject(BuildingsApiService);
+  private readonly uploadsApi      = inject(UploadsApiService);
   private readonly auth            = inject(AuthService);
   private readonly route           = inject(ActivatedRoute);
   private readonly router          = inject(Router);
@@ -373,11 +409,19 @@ export class UserCreatePageComponent implements OnInit {
   isSaving      = false;
   isDeleting    = false;
   confirmVisible = false;
+  uploadingSignature = false;
 
   form = this.emptyForm();
 
   get isSuperAdmin()   { return this.auth.hasRole('SuperAdmin'); }
   get isCompanyAdmin() { return this.auth.hasRole('CompanyAdmin'); }
+
+  get canHaveSignature(): boolean {
+    return this.form.role === 'BuildingManager' || this.form.role === 'CompanyAdmin';
+  }
+
+  readonly buildingManagerLimit = BUILDING_MANAGER_LIMIT;
+  readonly companyOperatorLimit = COMPANY_OPERATOR_LIMIT;
 
   get singleBuildingLocked(): boolean {
     return this.isCompanyAdmin && !this.isEditing && this.filteredBuildings.length === 1;
@@ -395,15 +439,15 @@ export class UserCreatePageComponent implements OnInit {
 
   isBuildingAtCapacity(buildingId: string): boolean {
     const cap = this.getCapacity(buildingId);
-    if (this.form.role === 'BuildingManager')  return cap.buildingManagerCount  >= 2;
-    if (this.form.role === 'CompanyOperator') return cap.companyOperatorCount >= 5;
+    if (this.form.role === 'BuildingManager')  return cap.buildingManagerCount  >= this.buildingManagerLimit;
+    if (this.form.role === 'CompanyOperator') return cap.companyOperatorCount >= this.companyOperatorLimit;
     return false;
   }
 
   capacityLimitLabel(buildingId: string): string {
     const cap = this.getCapacity(buildingId);
-    if (this.form.role === 'BuildingManager')  return `MÃ¡ximo de encargados alcanzado (${cap.buildingManagerCount}/2)`;
-    if (this.form.role === 'CompanyOperator') return `MÃ¡ximo de operadores alcanzado (${cap.companyOperatorCount}/5)`;
+    if (this.form.role === 'BuildingManager')  return `Máximo de encargados alcanzado (${cap.buildingManagerCount}/${this.buildingManagerLimit})`;
+    if (this.form.role === 'CompanyOperator') return `Máximo de operadores alcanzado (${cap.companyOperatorCount}/${this.companyOperatorLimit})`;
     return '';
   }
 
@@ -456,7 +500,8 @@ export class UserCreatePageComponent implements OnInit {
             address:     entity.address     ?? '',
             role:        entity.role        || this.visibleRoleCards[0]?.value || '',
             isActive:    entity.isActive    ?? true,
-            buildingIds: [...(entity.buildingIds ?? [])]
+            buildingIds: [...(entity.buildingIds ?? [])],
+            signatureUrl: entity.signatureUrl ?? ''
           };
         }
 
@@ -539,6 +584,37 @@ export class UserCreatePageComponent implements OnInit {
       : this.form.buildingIds.filter(x => x !== id);
   }
 
+  onSignatureFileChange(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    input.value = '';
+    if (!file) return;
+
+    if (file.size > 10 * 1024 * 1024) {
+      this.msg.add({ severity: 'error', summary: 'Error', detail: 'La imagen supera el límite de 10 MB.', life: 5000 });
+      return;
+    }
+
+    this.uploadingSignature = true;
+    this.cdr.markForCheck();
+    this.uploadsApi.upload(file).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: ({ url }) => {
+        this.form.signatureUrl = url;
+        this.uploadingSignature = false;
+        this.cdr.markForCheck();
+      },
+      error: err => {
+        this.msg.add({ severity: 'error', summary: 'Error', detail: extractApiErrorMessage(err, 'No se pudo subir la imagen.'), life: 5000 });
+        this.uploadingSignature = false;
+        this.cdr.markForCheck();
+      }
+    });
+  }
+
+  removeSignature(): void {
+    this.form.signatureUrl = '';
+  }
+
   save(): void {
     const firstName = this.form.firstName.trim();
     const lastName  = this.form.lastName.trim();
@@ -571,6 +647,7 @@ export class UserCreatePageComponent implements OnInit {
       role:        this.form.role,
       isActive:    this.form.isActive,
       buildingIds,
+      signatureUrl: this.canHaveSignature ? (this.form.signatureUrl || null) : null,
       password:    this.isEditing ? undefined : '123456'
     };
 
@@ -636,7 +713,8 @@ export class UserCreatePageComponent implements OnInit {
       address:       '',
       role:          roleOptions(this.auth.hasRole('SuperAdmin'))[0]?.value ?? 'CompanyOperator',
       isActive:      true,
-      buildingIds:   [] as string[]
+      buildingIds:   [] as string[],
+      signatureUrl:  ''
     };
   }
 }

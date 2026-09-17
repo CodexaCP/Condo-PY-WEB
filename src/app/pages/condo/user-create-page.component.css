@@ -142,6 +142,27 @@
   background:rgba(19,133,182,0.12); color:var(--brand-blue); font-weight:600;
 }
 
+/* ── FIRMA DIGITAL ── */
+.signature-upload-row { display:flex; align-items:center; gap:0.75rem; }
+.signature-preview {
+  width:110px; height:64px; border-radius:10px; border:1px solid rgba(19,133,182,0.15);
+  background:#fff; display:grid; place-items:center; flex-shrink:0; overflow:hidden;
+}
+.signature-preview img { max-width:100%; max-height:100%; object-fit:contain; }
+.signature-upload-area {
+  flex:1; display:flex; align-items:center; gap:0.5rem; justify-content:center;
+  padding:0.8rem 1rem; border:2px dashed rgba(19,133,182,0.3);
+  border-radius:12px; cursor:pointer; font-size:0.88rem; color:var(--brand-muted);
+  transition:border-color 0.15s, color 0.15s;
+}
+.signature-upload-area:hover { border-color:var(--brand-blue); color:var(--brand-blue); }
+.signature-remove-btn {
+  background:none; border:1px solid rgba(231,76,60,0.3); border-radius:50%;
+  width:36px; height:36px; display:grid; place-items:center; cursor:pointer;
+  color:#e74c3c; flex-shrink:0; transition:background 0.15s;
+}
+.signature-remove-btn:hover { background:rgba(231,76,60,0.08); }
+
 /* ── FORM ACTIONS ── */
 .form-actions {
   display:flex; justify-content:space-between; align-items:center;

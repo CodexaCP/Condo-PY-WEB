@@ -824,6 +824,7 @@ export interface ManagedUser {
   role: string;
   isActive: boolean;
   buildingIds: string[];
+  signatureUrl?: string | null;
 }
 
 export interface BuildingCapacityItem {
@@ -851,6 +852,7 @@ export interface CreateUserRequest {
   role: string;
   isActive: boolean;
   buildingIds: string[];
+  signatureUrl?: string | null;
 }
 
 export type VoteStatus = 'Draft' | 'Open' | 'Closed';
@@ -1249,4 +1251,67 @@ export interface BulkAssignError {
 export interface BulkAssignErrorResponse {
   message: string;
   failedBuildings: BulkAssignError[];
+}
+
+// ── Ad Campaigns ─────────────────────────────────────────────────────────────
+
+export type AdCampaignCategory =
+  | 'Gastronomia' | 'Supermercado' | 'Farmacia' | 'Lavanderia'
+  | 'ServiciosHogar' | 'BellezaBienestar' | 'Educacion' | 'Mascotas'
+  | 'Tecnologia' | 'Inmobiliaria' | 'Otro';
+
+export interface AdCampaign {
+  id: string;
+  companyId: string;
+  companyName: string;
+  createdByUserId: string;
+  advertiserName: string;
+  description: string | null;
+  ctaText: string;
+  ctaUrl: string | null;
+  imageUrl: string;
+  category: AdCampaignCategory;
+  position: number;
+  startDate: string;
+  endDate: string;
+  monthlyAmount: number | null;
+  isActive: boolean;
+  notifyBeforeExpiry: boolean;
+  buildingIds: string[];
+  buildingCount: number;
+  createdAtUtc: string;
+  updatedAtUtc: string;
+}
+
+export interface AdCampaignCreateRequest {
+  companyId: string;
+  advertiserName: string;
+  description?: string | null;
+  ctaText: string;
+  ctaUrl?: string | null;
+  imageUrl: string;
+  category: string;
+  position: number;
+  startDate: string;
+  endDate: string;
+  monthlyAmount?: number | null;
+  isActive: boolean;
+  notifyBeforeExpiry: boolean;
+  buildingIds: string[];
+}
+
+export interface AdCampaignUpdateRequest {
+  advertiserName: string;
+  description?: string | null;
+  ctaText: string;
+  ctaUrl?: string | null;
+  imageUrl: string;
+  category: string;
+  position: number;
+  startDate: string;
+  endDate: string;
+  monthlyAmount?: number | null;
+  isActive: boolean;
+  notifyBeforeExpiry: boolean;
+  buildingIds: string[];
 }
