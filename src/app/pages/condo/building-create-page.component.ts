@@ -168,6 +168,21 @@ const PHONE_PREFIXES: PhonePrefix[] = [
           </div>
         </section>
 
+        <section class="form-section">
+          <h2 class="section-title">Reservas de amenities</h2>
+          <div class="field checkbox-field">
+            <label class="checkbox-label">
+              <input type="checkbox" [(ngModel)]="form.blockOverdueAmenityReservations" name="blockOverdueAmenityReservations" />
+              <span>Bloquear reservas de amenities a unidades en mora</span>
+            </label>
+            <small class="field-hint">
+              Si está activo, los propietarios/residentes con pagos vencidos no podrán crear nuevas reservas
+              (solo podrán pagar su deuda) y sus reservas pendientes de pago se cancelan automáticamente al entrar en mora.
+              Opcional — desactivado por defecto.
+            </small>
+          </div>
+        </section>
+
         <section class="form-actions">
           <p-button type="button" label="Cancelar" [text]="true" [rounded]="true" severity="secondary"
                     (onClick)="cancel()" pTooltip="Cancelar y volver al listado" tooltipPosition="top">
@@ -244,7 +259,8 @@ export class BuildingCreatePageComponent implements OnInit {
   emailError = '';
 
   form = { companyId:'', condominiumId:'', name:'', code:'', address:'', description:'', phonePrefix:'+595', phoneNumber:'', email:'', isActive:true,
-           lateFeeRatePercentage: null as number | null, lateFeeFrequency: '' as '' | LateFeeFrequency };
+           lateFeeRatePercentage: null as number | null, lateFeeFrequency: '' as '' | LateFeeFrequency,
+           blockOverdueAmenityReservations: false };
 
   readonly lateFeeFrequencyOptions = [
     { label: 'Diario', value: 'Daily' },
@@ -288,7 +304,8 @@ export class BuildingCreatePageComponent implements OnInit {
             email: entity.contactEmail ?? '',
             isActive: entity.isActive,
             lateFeeRatePercentage: entity.lateFeeRatePercentage ?? null,
-            lateFeeFrequency: entity.lateFeeFrequency ?? ''
+            lateFeeFrequency: entity.lateFeeFrequency ?? '',
+            blockOverdueAmenityReservations: entity.blockOverdueAmenityReservations ?? false
           };
         }
         this.refreshCondominiumOptions();
@@ -350,7 +367,8 @@ export class BuildingCreatePageComponent implements OnInit {
     if (lateFeeRate && !lateFeeFrequency) { this.msg.add({ severity: 'error', summary: 'Error', detail: 'Definí el incremento de la mora (diario, semanal o quincenal).', life: 5000 }); return; }
 
     const req = { companyId, condominiumId, name, code, address, isActive: this.form.isActive, description, contactPhonePrefix: phonePrefix, contactPhone: phoneNumber, contactEmail: email,
-                  lateFeeRatePercentage: lateFeeRate, lateFeeFrequency };
+                  lateFeeRatePercentage: lateFeeRate, lateFeeFrequency,
+                  blockOverdueAmenityReservations: this.form.blockOverdueAmenityReservations };
     this.isSaving = true;
     const op = this.isEditing ? this.api.update(this.editingId, req) : this.api.create(req);
     op.pipe(takeUntilDestroyed(this.destroyRef)).subscribe({

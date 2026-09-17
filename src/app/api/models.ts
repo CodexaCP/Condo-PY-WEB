@@ -15,6 +15,7 @@ export interface Building {
   contactEmail?: string | null;
   lateFeeRatePercentage?: number | null;
   lateFeeFrequency?: LateFeeFrequency | null;
+  blockOverdueAmenityReservations: boolean;
 }
 
 export interface CreateBuildingRequest {
@@ -30,6 +31,7 @@ export interface CreateBuildingRequest {
   contactEmail?: string | null;
   lateFeeRatePercentage?: number | null;
   lateFeeFrequency?: LateFeeFrequency | null;
+  blockOverdueAmenityReservations: boolean;
 }
 
 export interface Company {

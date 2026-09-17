@@ -115,6 +115,10 @@ import { AuthService } from '../../auth/auth.service';
           <input [(ngModel)]="form.isActive" name="isActive" type="checkbox" />
           <span>Edificio activo</span>
         </label>
+        <label class="checkbox">
+          <input [(ngModel)]="form.blockOverdueAmenityReservations" name="blockOverdueAmenityReservations" type="checkbox" />
+          <span>Bloquear reservas de amenities a unidades en mora</span>
+        </label>
         <div class="ficha-footer">
           <p-button type="submit" [loading]="isSaving" [label]="selected ? 'Guardar cambios' : 'Crear edificio'"></p-button>
           <p-button *ngIf="selected" type="button" label="Eliminar" severity="danger"
@@ -246,7 +250,8 @@ export class BuildingsPageComponent implements OnInit {
     this.form = { companyId: item.companyId ?? '', condominiumId: item.condominiumId ?? '',
                   name: item.name, code: item.code, address: item.address, isActive: item.isActive,
                   lateFeeRatePercentage: item.lateFeeRatePercentage ?? null,
-                  lateFeeFrequency: item.lateFeeFrequency ?? '' };
+                  lateFeeFrequency: item.lateFeeFrequency ?? '',
+                  blockOverdueAmenityReservations: item.blockOverdueAmenityReservations ?? false };
     this.dialogVisible = true;
   }
 
@@ -258,7 +263,8 @@ export class BuildingsPageComponent implements OnInit {
       name: this.form.name.trim(), code: this.form.code.trim().toUpperCase(),
       address: this.form.address.trim(), isActive: this.form.isActive,
       lateFeeRatePercentage: this.form.lateFeeRatePercentage || null,
-      lateFeeFrequency: (this.form.lateFeeRatePercentage && this.form.lateFeeFrequency) ? this.form.lateFeeFrequency : null
+      lateFeeFrequency: (this.form.lateFeeRatePercentage && this.form.lateFeeFrequency) ? this.form.lateFeeFrequency : null,
+      blockOverdueAmenityReservations: this.form.blockOverdueAmenityReservations
     };
     if (req.lateFeeRatePercentage && !req.lateFeeFrequency) {
       this.msg.add({ severity: 'error', summary: 'Error', detail: 'Definí el incremento de la mora (diario, semanal o quincenal).', life: 5000 }); return;
@@ -303,6 +309,7 @@ export class BuildingsPageComponent implements OnInit {
 
   private emptyForm() {
     return { companyId: '', condominiumId: '', name: '', code: '', address: '', isActive: true,
-             lateFeeRatePercentage: null as number | null, lateFeeFrequency: '' as '' | LateFeeFrequency };
+             lateFeeRatePercentage: null as number | null, lateFeeFrequency: '' as '' | LateFeeFrequency,
+             blockOverdueAmenityReservations: false };
   }
 }
