@@ -129,33 +129,45 @@ import {
 
         <!-- Pending charges allocation -->
         <div class="charges-panel" *ngIf="pendingCharges.length > 0">
-          <div class="charges-panel-header">
+          <div class="charges-panel-header charges-panel-header-clickable" (click)="chargesExpanded = !chargesExpanded">
             <span class="pi pi-list-check"></span>
-            <strong>Imputar a cargos pendientes</strong>
+            <strong>Imputar a cargos pendientes ({{ pendingCharges.length }})</strong>
             <span class="pending-total">Pendiente total: <strong>{{ formatCurrency(totalPending) }}</strong></span>
+            <span class="pi" [class.pi-chevron-down]="!chargesExpanded" [class.pi-chevron-up]="chargesExpanded"></span>
           </div>
-          <div class="charge-row" *ngFor="let charge of pendingCharges">
-            <label class="charge-check">
-              <input type="checkbox" [(ngModel)]="charge['_selected']" [ngModelOptions]="{standalone: true}"
-                (ngModelChange)="onChargeSelectionChange()" />
-              <div class="charge-info">
-                <span>{{ charge.concept }}</span>
-                <small>{{ chargeTypeLabel(charge.chargeType) }}</small>
-              </div>
+
+          <div class="charges-body" *ngIf="chargesExpanded">
+            <label class="select-all-row">
+              <input type="checkbox" [checked]="allChargesSelected" (change)="toggleSelectAll($any($event.target).checked)" />
+              <span>Seleccionar todos</span>
             </label>
-            <div class="charge-amounts">
-              <span class="charge-pending">{{ formatCurrency(charge.pendingAmount) }}</span>
-              <input *ngIf="charge['_selected']"
-                type="number"
-                [(ngModel)]="charge['_allocAmount']"
-                [ngModelOptions]="{standalone: true}"
-                min="1"
-                [max]="charge.pendingAmount"
-                class="alloc-input"
-                placeholder="Importe"
-                (ngModelChange)="onChargeSelectionChange()" />
+            <div class="charge-row" *ngFor="let charge of pendingCharges">
+              <label class="charge-check">
+                <input type="checkbox" [(ngModel)]="charge['_selected']" [ngModelOptions]="{standalone: true}"
+                  (ngModelChange)="onChargeSelectionChange()" />
+                <div class="charge-info">
+                  <span>{{ charge.concept }}</span>
+                  <small>{{ chargeTypeLabel(charge.chargeType) }}</small>
+                </div>
+              </label>
+              <div class="charge-amounts">
+                <span class="charge-pending">{{ formatCurrency(charge.pendingAmount) }}</span>
+                <input *ngIf="charge['_selected']"
+                  type="number"
+                  [(ngModel)]="charge['_allocAmount']"
+                  [ngModelOptions]="{standalone: true}"
+                  min="1"
+                  [max]="charge.pendingAmount"
+                  class="alloc-input"
+                  placeholder="Importe"
+                  (ngModelChange)="onChargeSelectionChange()" />
+              </div>
             </div>
           </div>
+          <p class="charges-collapsed-hint" *ngIf="!chargesExpanded">
+            {{ selectedChargesCount }} de {{ pendingCharges.length }} seleccionados — clic arriba para ver el detalle.
+          </p>
+
           <div class="charges-panel-footer">
             <div class="alloc-stat">
               <span>Imputado</span>
@@ -315,10 +327,18 @@ import {
       display: flex; align-items: center; gap: 0.6rem;
       margin-bottom: 0.75rem; font-size: 0.9rem;
     }
+    .charges-panel-header-clickable { cursor: pointer; user-select: none; }
     .charges-panel-header .pi { color: #1a8c5b; }
     .charges-panel-header strong { color: var(--brand-ink); flex: 1; }
     .pending-total { font-size: 0.85rem; color: var(--brand-muted); }
     .pending-total strong { color: var(--brand-ink); }
+    .charges-collapsed-hint { margin: 0 0 0.5rem; font-size: 0.85rem; color: var(--brand-muted); font-style: italic; }
+    .select-all-row {
+      display: flex; align-items: center; gap: 0.5rem; cursor: pointer;
+      padding: 0.4rem 0; font-size: 0.85rem; font-weight: 600; color: var(--brand-ink);
+      border-bottom: 1px solid rgba(26,140,91,0.15); margin-bottom: 0.25rem;
+    }
+    .select-all-row input[type="checkbox"] { width: 16px; height: 16px; accent-color: #1a8c5b; cursor: pointer; }
     .charge-row {
       display: flex; justify-content: space-between; align-items: center;
       padding: 0.5rem 0; border-bottom: 1px solid rgba(26,140,91,0.12); gap: 1rem;
@@ -416,6 +436,7 @@ export class PaymentsPageComponent implements OnInit {
   units: Unit[] = [];
   pendingCharges: (ExpenseCharge & { _selected?: boolean; _allocAmount?: number })[] = [];
   loadingCharges = false;
+  chargesExpanded = false;
   receipt: Payment | null = null;
   loading = true;
   isSaving = false;
@@ -450,6 +471,22 @@ export class PaymentsPageComponent implements OnInit {
     return this.pendingCharges
       .filter((c) => c['_selected'])
       .reduce((sum, c) => sum + Number(c['_allocAmount'] || 0), 0);
+  }
+
+  get selectedChargesCount(): number {
+    return this.pendingCharges.filter((c) => c['_selected']).length;
+  }
+
+  get allChargesSelected(): boolean {
+    return this.pendingCharges.length > 0 && this.pendingCharges.every((c) => c['_selected']);
+  }
+
+  toggleSelectAll(checked: boolean): void {
+    for (const charge of this.pendingCharges) {
+      charge['_selected'] = checked;
+      charge['_allocAmount'] = checked ? (charge['_allocAmount'] || charge.pendingAmount) : charge['_allocAmount'];
+    }
+    this.onChargeSelectionChange();
   }
 
   ngOnInit(): void {
@@ -635,6 +672,7 @@ export class PaymentsPageComponent implements OnInit {
   private loadPendingCharges(preSelected?: { chargeId: string; amount: number }[]): void {
     if (!this.form.expensePeriodId || !this.form.unitId) return;
     this.loadingCharges = true;
+    this.chargesExpanded = false;
 
     this.paymentsApi.getPendingCharges(this.form.expensePeriodId, this.form.unitId)
       .pipe(takeUntilDestroyed(this.destroyRef))
