@@ -5,6 +5,7 @@ import { FormsModule } from '@angular/forms';
 import { MessageService } from 'primeng/api';
 import { Button } from 'primeng/button';
 import { Card } from 'primeng/card';
+import { Tooltip } from 'primeng/tooltip';
 import { CompaniesApiService } from '../../api/companies-api.service';
 import { extractApiErrorMessage } from '../../api/api-error.util';
 import { Company, Resident } from '../../api/models';
@@ -14,7 +15,7 @@ import { AuthService } from '../../auth/auth.service';
 @Component({
   standalone: true,
   selector: 'app-residents-page',
-  imports: [CommonModule, FormsModule, Button, Card],
+  imports: [CommonModule, FormsModule, Button, Card, Tooltip],
   template: `
     <p-card styleClass="app-page-card">
       <div class="app-toolbar">
@@ -137,6 +138,9 @@ import { AuthService } from '../../auth/auth.service';
             <strong>{{ item.fullName }}</strong>
             <span>{{ item.email }}</span>
             <small>{{ item.isOwner ? 'Propietario' : 'Inquilino' }} · {{ item.phoneNumber }}</small>
+            <small class="linked-badge" *ngIf="item.hasLinkedAccount" pTooltip="Este residente tiene una cuenta de acceso vinculada (puede ser un propietario u otro usuario del sistema)">
+              <i class="pi pi-link"></i> Vinculado a cuenta de acceso
+            </small>
           </div>
           <div class="app-actions" *ngIf="!isReadOnly">
             <p-button type="button" icon="pi pi-pencil" severity="secondary" [rounded]="true" [text]="true" (onClick)="startEdit(item)"></p-button>
@@ -202,6 +206,12 @@ import { AuthService } from '../../auth/auth.service';
     .resident-card strong, .resident-card span, .resident-card small { display:block; }
     .resident-card strong { color:#15373d; }
     .resident-card span, .resident-card small { color:#6b878d; }
+    .linked-badge {
+      display:inline-flex !important; align-items:center; gap:0.3rem; width:fit-content;
+      margin-top:0.2rem; padding:0.1rem 0.5rem; border-radius:20px;
+      background:rgba(16,117,110,0.1); color:#10756e; font-weight:600; font-size:0.72rem;
+    }
+    .linked-badge i { font-size:0.68rem; }
 
     @media (max-width: 860px) {
       .field-row { grid-template-columns:1fr; }

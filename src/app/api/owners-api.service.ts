@@ -8,8 +8,8 @@ import { Owner, OwnerUpsertRequest } from './models';
 export class OwnersApiService {
   private readonly http = inject(HttpClient);
 
-  getAll(): Observable<Owner[]> {
-    return this.http.get<Owner[]>(`${API_BASE_URL}/owners`);
+  getAll(includeResidents = false): Observable<Owner[]> {
+    return this.http.get<Owner[]>(`${API_BASE_URL}/owners`, { params: { includeResidents } });
   }
 
   getById(id: string): Observable<Owner> {

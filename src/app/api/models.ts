@@ -126,6 +126,7 @@ export interface Resident {
   phoneNumber: string;
   isOwner: boolean;
   isActive: boolean;
+  hasLinkedAccount: boolean;
 }
 
 export interface CreateResidentRequest {

@@ -389,7 +389,7 @@ export class AssignmentsPageComponent implements OnInit {
     forkJoin({
       assignments: this.unitOwnersApi.getAll(),
       units: this.unitsApi.getAll(),
-      owners: this.ownersApi.getAll()
+      owners: this.ownersApi.getAll(true)
     }).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: ({ assignments, units, owners }) => {
         this.assignments = assignments;
