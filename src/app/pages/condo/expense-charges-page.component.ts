@@ -16,6 +16,11 @@ import { UnitsApiService } from '../../api/units-api.service';
 import { AuthService } from '../../auth/auth.service';
 import { Building, ExpenseCharge, ExpenseChargeType, ExpensePeriod, Unit } from '../../api/models';
 
+type ChargeRow =
+  | { kind: 'single'; charge: ExpenseCharge }
+  | { kind: 'group'; key: string; unitCode: string; buildingName: string; expensePeriodName: string;
+      expensePeriodId: string; charges: ExpenseCharge[]; totalAmount: number; expanded: boolean };
+
 @Component({
   standalone: true,
   selector: 'app-expense-charges-page',
@@ -131,44 +136,96 @@ import { Building, ExpenseCharge, ExpenseChargeType, ExpensePeriod, Unit } from 
           <span class="actions-head" *ngIf="!isReadOnly">Acciones</span>
         </div>
 
-        <div class="app-row charges-grid" [class.is-reversal]="item.isReversal" [class.is-reversed]="item.isReversed" *ngFor="let item of items">
-          <span>
-            <strong>{{ item.concept }}</strong>
-            <small *ngIf="item.sourceBuildingExpenseDescription"> · Origen: {{ item.sourceBuildingExpenseDescription }}</small>
-            <small *ngIf="item.sourceSettlementName && !item.sourceBuildingExpenseDescription"> · Liquidación: {{ item.sourceSettlementName }}</small>
-            <span class="badge-reversal" *ngIf="item.isReversal">REVERSIÓN</span>
-            <span class="badge-reversed" *ngIf="item.isReversed">REVERTIDO</span>
-          </span>
-          <span>{{ chargeTypeLabel(item.chargeType) }}</span>
-          <span>{{ item.expensePeriodName }} · {{ item.buildingName }}</span>
-          <span>{{ item.unitCode }}</span>
-          <span [class.negative-amount]="item.amount < 0">{{ formatCurrency(item.amount) }}</span>
-          <div class="app-actions" *ngIf="!isReadOnly">
-            <p-button
-              *ngIf="!item.isReversal && !item.isReversed"
-              type="button" icon="pi pi-pencil" severity="secondary"
-              [rounded]="true" [text]="true"
-              [disabled]="!isDraftPeriod(item.expensePeriodId)"
-              (onClick)="startEdit(item)">
-            </p-button>
-            <p-button
-              *ngIf="!item.isReversal && !item.isReversed"
-              type="button" icon="pi pi-replay" severity="warn"
-              [rounded]="true" [text]="true"
-              pTooltip="Revertir cargo — genera un ajuste negativo que anula este importe en el mismo periodo"
-              tooltipPosition="top"
-              [disabled]="isSaving"
-              (onClick)="reverseCharge(item)">
-            </p-button>
-            <p-button
-              *ngIf="!item.isReversal"
-              type="button" icon="pi pi-trash" severity="danger"
-              [rounded]="true" [text]="true"
-              [disabled]="isSaving || !isDraftPeriod(item.expensePeriodId)"
-              (onClick)="deleteCharge(item)">
-            </p-button>
+        <ng-container *ngFor="let row of displayRows">
+
+          <!-- Fila resumen para recargos de mora agrupados -->
+          <div class="app-row charges-grid group-row" *ngIf="row.kind === 'group'" (click)="toggleGroupRow(row)">
+            <span>
+              <strong>Recargos por mora ({{ row.charges.length }} cuotas)</strong>
+              <small> · clic para ver el detalle</small>
+            </span>
+            <span>Ajuste</span>
+            <span>{{ row.expensePeriodName }} · {{ row.buildingName }}</span>
+            <span>{{ row.unitCode }}</span>
+            <span [class.negative-amount]="row.totalAmount < 0">{{ formatCurrency(row.totalAmount) }}</span>
+            <div class="app-actions">
+              <span class="pi" [class.pi-chevron-down]="!row.expanded" [class.pi-chevron-up]="row.expanded"></span>
+            </div>
           </div>
-        </div>
+
+          <!-- Cuotas individuales del grupo, solo si está expandido -->
+          <div class="app-row charges-grid group-detail-row"
+               [class.is-reversal]="charge.isReversal" [class.is-reversed]="charge.isReversed"
+               *ngFor="let charge of (row.kind === 'group' && row.expanded ? row.charges : [])">
+            <span>
+              <strong>{{ charge.concept }}</strong>
+              <span class="badge-reversal" *ngIf="charge.isReversal">REVERSIÓN</span>
+              <span class="badge-reversed" *ngIf="charge.isReversed">REVERTIDO</span>
+            </span>
+            <span>{{ chargeTypeLabel(charge.chargeType) }}</span>
+            <span>{{ charge.expensePeriodName }} · {{ charge.buildingName }}</span>
+            <span>{{ charge.unitCode }}</span>
+            <span [class.negative-amount]="charge.amount < 0">{{ formatCurrency(charge.amount) }}</span>
+            <div class="app-actions" *ngIf="!isReadOnly">
+              <p-button
+                *ngIf="!charge.isReversal && !charge.isReversed"
+                type="button" icon="pi pi-replay" severity="warn"
+                [rounded]="true" [text]="true"
+                pTooltip="Revertir cargo — genera un ajuste negativo que anula este importe en el mismo periodo"
+                tooltipPosition="top"
+                [disabled]="isSaving"
+                (onClick)="reverseCharge(charge)">
+              </p-button>
+              <p-button
+                *ngIf="!charge.isReversal"
+                type="button" icon="pi pi-trash" severity="danger"
+                [rounded]="true" [text]="true"
+                [disabled]="isSaving || !isDraftPeriod(charge.expensePeriodId)"
+                (onClick)="deleteCharge(charge)">
+              </p-button>
+            </div>
+          </div>
+
+          <!-- Fila normal (no es parte de un grupo de mora) -->
+          <div class="app-row charges-grid" [class.is-reversal]="row.charge.isReversal" [class.is-reversed]="row.charge.isReversed" *ngIf="row.kind === 'single'">
+            <span>
+              <strong>{{ row.charge.concept }}</strong>
+              <small *ngIf="row.charge.sourceBuildingExpenseDescription"> · Origen: {{ row.charge.sourceBuildingExpenseDescription }}</small>
+              <small *ngIf="row.charge.sourceSettlementName && !row.charge.sourceBuildingExpenseDescription"> · Liquidación: {{ row.charge.sourceSettlementName }}</small>
+              <span class="badge-reversal" *ngIf="row.charge.isReversal">REVERSIÓN</span>
+              <span class="badge-reversed" *ngIf="row.charge.isReversed">REVERTIDO</span>
+            </span>
+            <span>{{ chargeTypeLabel(row.charge.chargeType) }}</span>
+            <span>{{ row.charge.expensePeriodName }} · {{ row.charge.buildingName }}</span>
+            <span>{{ row.charge.unitCode }}</span>
+            <span [class.negative-amount]="row.charge.amount < 0">{{ formatCurrency(row.charge.amount) }}</span>
+            <div class="app-actions" *ngIf="!isReadOnly">
+              <p-button
+                *ngIf="!row.charge.isReversal && !row.charge.isReversed"
+                type="button" icon="pi pi-pencil" severity="secondary"
+                [rounded]="true" [text]="true"
+                [disabled]="!isDraftPeriod(row.charge.expensePeriodId)"
+                (onClick)="startEdit(row.charge)">
+              </p-button>
+              <p-button
+                *ngIf="!row.charge.isReversal && !row.charge.isReversed"
+                type="button" icon="pi pi-replay" severity="warn"
+                [rounded]="true" [text]="true"
+                pTooltip="Revertir cargo — genera un ajuste negativo que anula este importe en el mismo periodo"
+                tooltipPosition="top"
+                [disabled]="isSaving"
+                (onClick)="reverseCharge(row.charge)">
+              </p-button>
+              <p-button
+                *ngIf="!row.charge.isReversal"
+                type="button" icon="pi pi-trash" severity="danger"
+                [rounded]="true" [text]="true"
+                [disabled]="isSaving || !isDraftPeriod(row.charge.expensePeriodId)"
+                (onClick)="deleteCharge(row.charge)">
+              </p-button>
+            </div>
+          </div>
+        </ng-container>
       </div>
     </p-card>
   `,
@@ -270,6 +327,10 @@ import { Building, ExpenseCharge, ExpenseChargeType, ExpensePeriod, Unit } from 
     .is-reversal { opacity: 0.75; }
     .is-reversed { opacity: 0.65; }
     .negative-amount { color: #dc2626; }
+    .group-row { cursor: pointer; background: rgba(245,158,11,0.06); }
+    .group-row:hover { background: rgba(245,158,11,0.12); }
+    .group-row .pi-chevron-down, .group-row .pi-chevron-up { color: var(--brand-muted); }
+    .group-detail-row { background: rgba(20,54,61,0.02); }
     @media (max-width: 900px) {
       .filters-bar { flex-direction: column; align-items: stretch; }
       .charge-form { grid-template-columns: 1fr; }
@@ -290,6 +351,7 @@ export class ExpenseChargesPageComponent implements OnInit {
   get isReadOnly(): boolean { return this.auth.hasRole('CompanyAdmin'); }
 
   items: ExpenseCharge[] = [];
+  displayRows: ChargeRow[] = [];
   private allItems: ExpenseCharge[] = [];
   buildings: Building[] = [];
   periods: ExpensePeriod[] = [];
@@ -372,6 +434,13 @@ export class ExpenseChargesPageComponent implements OnInit {
       (!this.filters.expensePeriodId || item.expensePeriodId === this.filters.expensePeriodId)
     );
     this.sortItems();
+    this.buildDisplayRows();
+    this.cdr.markForCheck();
+  }
+
+  toggleGroupRow(row: ChargeRow): void {
+    if (row.kind !== 'group') return;
+    row.expanded = !row.expanded;
     this.cdr.markForCheck();
   }
 
@@ -444,7 +513,9 @@ export class ExpenseChargesPageComponent implements OnInit {
 
     this.chargesApi.delete(item.id).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: () => {
+        this.allItems = this.allItems.filter((current) => current.id !== item.id);
         this.items = this.items.filter((current) => current.id !== item.id);
+        this.buildDisplayRows();
         if (this.editingId === item.id) {
           this.cancelEdit();
         }
@@ -501,6 +572,44 @@ export class ExpenseChargesPageComponent implements OnInit {
           this.cdr.markForCheck();
         }
       });
+  }
+
+  private buildDisplayRows(): void {
+    const groups = new Map<string, ExpenseCharge[]>();
+    for (const item of this.items) {
+      if (!item.isLateFee) continue;
+      const key = `${item.unitId}|${item.expensePeriodId}`;
+      (groups.get(key) ?? groups.set(key, []).get(key)!).push(item);
+    }
+
+    const consumedKeys = new Set<string>();
+    const rows: ChargeRow[] = [];
+
+    for (const item of this.items) {
+      if (item.isLateFee) {
+        const key = `${item.unitId}|${item.expensePeriodId}`;
+        const group = groups.get(key)!;
+        if (group.length > 1) {
+          if (consumedKeys.has(key)) continue;
+          consumedKeys.add(key);
+          rows.push({
+            kind: 'group',
+            key,
+            unitCode: item.unitCode,
+            buildingName: item.buildingName,
+            expensePeriodName: item.expensePeriodName,
+            expensePeriodId: item.expensePeriodId,
+            charges: group,
+            totalAmount: group.reduce((sum, c) => sum + c.amount, 0),
+            expanded: false
+          });
+          continue;
+        }
+      }
+      rows.push({ kind: 'single', charge: item });
+    }
+
+    this.displayRows = rows;
   }
 
   private sortItems(): void {

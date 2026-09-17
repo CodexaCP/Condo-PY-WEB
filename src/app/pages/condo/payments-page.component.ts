@@ -141,7 +141,45 @@ import {
               <input type="checkbox" [checked]="allChargesSelected" (change)="toggleSelectAll($any($event.target).checked)" />
               <span>Seleccionar todos</span>
             </label>
-            <div class="charge-row" *ngFor="let charge of pendingCharges">
+
+            <div class="charge-row" *ngFor="let charge of visibleCharges">
+              <label class="charge-check">
+                <input type="checkbox" [(ngModel)]="charge['_selected']" [ngModelOptions]="{standalone: true}"
+                  (ngModelChange)="onChargeSelectionChange()" />
+                <div class="charge-info">
+                  <span>{{ charge.concept }}</span>
+                  <small>{{ chargeTypeLabel(charge.chargeType) }}</small>
+                </div>
+              </label>
+              <div class="charge-amounts">
+                <span class="charge-pending">{{ formatCurrency(charge.pendingAmount) }}</span>
+                <input *ngIf="charge['_selected']"
+                  type="number"
+                  [(ngModel)]="charge['_allocAmount']"
+                  [ngModelOptions]="{standalone: true}"
+                  min="1"
+                  [max]="charge.pendingAmount"
+                  class="alloc-input"
+                  placeholder="Importe"
+                  (ngModelChange)="onChargeSelectionChange()" />
+              </div>
+            </div>
+
+            <!-- Recargos por mora agrupados en una sola fila -->
+            <div class="charge-row late-fee-group-row" *ngIf="hasLateFeeGroup" (click)="lateFeeGroupExpanded = !lateFeeGroupExpanded; $event.stopPropagation()">
+              <label class="charge-check" (click)="$event.stopPropagation()">
+                <input type="checkbox" [checked]="allLateFeeSelected" (change)="toggleLateFeeGroup($any($event.target).checked)" />
+                <div class="charge-info">
+                  <span>Recargos por mora ({{ lateFeeCharges.length }} cuotas)</span>
+                  <small>Ajuste · clic para ver el detalle</small>
+                </div>
+              </label>
+              <div class="charge-amounts">
+                <span class="charge-pending">{{ formatCurrency(lateFeeTotalPending) }}</span>
+                <span class="pi" [class.pi-chevron-down]="!lateFeeGroupExpanded" [class.pi-chevron-up]="lateFeeGroupExpanded"></span>
+              </div>
+            </div>
+            <div class="charge-row charge-row-nested" *ngFor="let charge of (lateFeeGroupExpanded ? lateFeeCharges : [])">
               <label class="charge-check">
                 <input type="checkbox" [(ngModel)]="charge['_selected']" [ngModelOptions]="{standalone: true}"
                   (ngModelChange)="onChargeSelectionChange()" />
@@ -339,6 +377,10 @@ import {
       border-bottom: 1px solid rgba(26,140,91,0.15); margin-bottom: 0.25rem;
     }
     .select-all-row input[type="checkbox"] { width: 16px; height: 16px; accent-color: #1a8c5b; cursor: pointer; }
+    .late-fee-group-row { cursor: pointer; background: rgba(245,158,11,0.06); border-radius: 8px; }
+    .late-fee-group-row:hover { background: rgba(245,158,11,0.12); }
+    .late-fee-group-row .pi-chevron-down, .late-fee-group-row .pi-chevron-up { color: var(--brand-muted); }
+    .charge-row-nested { padding-left: 1.5rem; background: rgba(20,54,61,0.02); }
     .charge-row {
       display: flex; justify-content: space-between; align-items: center;
       padding: 0.5rem 0; border-bottom: 1px solid rgba(26,140,91,0.12); gap: 1rem;
@@ -437,6 +479,7 @@ export class PaymentsPageComponent implements OnInit {
   pendingCharges: (ExpenseCharge & { _selected?: boolean; _allocAmount?: number })[] = [];
   loadingCharges = false;
   chargesExpanded = false;
+  lateFeeGroupExpanded = false;
   receipt: Payment | null = null;
   loading = true;
   isSaving = false;
@@ -481,8 +524,36 @@ export class PaymentsPageComponent implements OnInit {
     return this.pendingCharges.length > 0 && this.pendingCharges.every((c) => c['_selected']);
   }
 
+  get lateFeeCharges(): (ExpenseCharge & { _selected?: boolean; _allocAmount?: number })[] {
+    return this.pendingCharges.filter((c) => c.isLateFee);
+  }
+
+  get visibleCharges(): (ExpenseCharge & { _selected?: boolean; _allocAmount?: number })[] {
+    return this.hasLateFeeGroup ? this.pendingCharges.filter((c) => !c.isLateFee) : this.pendingCharges;
+  }
+
+  get hasLateFeeGroup(): boolean {
+    return this.lateFeeCharges.length > 1;
+  }
+
+  get lateFeeTotalPending(): number {
+    return this.lateFeeCharges.reduce((sum, c) => sum + c.pendingAmount, 0);
+  }
+
+  get allLateFeeSelected(): boolean {
+    return this.lateFeeCharges.length > 0 && this.lateFeeCharges.every((c) => c['_selected']);
+  }
+
   toggleSelectAll(checked: boolean): void {
     for (const charge of this.pendingCharges) {
+      charge['_selected'] = checked;
+      charge['_allocAmount'] = checked ? (charge['_allocAmount'] || charge.pendingAmount) : charge['_allocAmount'];
+    }
+    this.onChargeSelectionChange();
+  }
+
+  toggleLateFeeGroup(checked: boolean): void {
+    for (const charge of this.lateFeeCharges) {
       charge['_selected'] = checked;
       charge['_allocAmount'] = checked ? (charge['_allocAmount'] || charge.pendingAmount) : charge['_allocAmount'];
     }
@@ -673,6 +744,7 @@ export class PaymentsPageComponent implements OnInit {
     if (!this.form.expensePeriodId || !this.form.unitId) return;
     this.loadingCharges = true;
     this.chargesExpanded = false;
+    this.lateFeeGroupExpanded = false;
 
     this.paymentsApi.getPendingCharges(this.form.expensePeriodId, this.form.unitId)
       .pipe(takeUntilDestroyed(this.destroyRef))
