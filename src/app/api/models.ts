@@ -581,6 +581,72 @@ export interface CreatePaymentRequest {
   allocations: AllocationRequest[];
 }
 
+export type InvoiceStatus = 'Draft' | 'Issued' | 'Voided';
+
+export interface InvoiceSeries {
+  id: string;
+  companyId: string;
+  buildingId: string;
+  buildingName: string;
+  ruc: string;
+  razonSocial: string;
+  establecimiento: string;
+  puntoExpedicion: string;
+  numeroTimbrado: string;
+  rangoDesde: number;
+  rangoHasta: number;
+  correlativoActual: number;
+  numerosDisponibles: number;
+  vigenciaDesde: string;
+  vigenciaHasta: string;
+  activo: boolean;
+  proximoAAgotarse: boolean;
+  proximoAVencer: boolean;
+}
+
+export interface CreateInvoiceSeriesRequest {
+  buildingId: string;
+  ruc: string;
+  razonSocial: string;
+  establecimiento: string;
+  puntoExpedicion: string;
+  numeroTimbrado: string;
+  rangoDesde: number;
+  rangoHasta: number;
+  vigenciaDesde: string;
+  vigenciaHasta: string;
+}
+
+export interface InvoiceLine {
+  concepto: string;
+  chargeType: ExpenseChargeType | null;
+  monto: number;
+}
+
+export interface Invoice {
+  id: string;
+  companyId: string;
+  buildingId: string;
+  buildingName: string;
+  unitId: string;
+  unitCode: string;
+  paymentId: string;
+  invoiceSeriesId: string | null;
+  seriesRazonSocial: string | null;
+  seriesRuc: string | null;
+  seriesNumeroTimbrado: string | null;
+  status: InvoiceStatus;
+  numero: number | null;
+  numeroFormateado: string | null;
+  montoTotal: number;
+  detalle: InvoiceLine[];
+  fechaEmisionUtc: string | null;
+  fechaAnulacionUtc: string | null;
+  motivoAnulacion: string | null;
+  reemplazadaPorInvoiceId: string | null;
+  createdAtUtc: string;
+}
+
 export interface AccountStatementPeriod {
   expensePeriodId: string;
   expensePeriodName: string;

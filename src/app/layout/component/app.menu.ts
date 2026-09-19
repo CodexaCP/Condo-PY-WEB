@@ -73,6 +73,13 @@ export class AppMenu {
                     ]
                 },
                 {
+                    label: 'Facturación',
+                    items: [
+                        { label: 'Timbrados', icon: 'pi pi-fw pi-receipt', routerLink: ['/invoice-series'] },
+                        { label: 'Facturas', icon: 'pi pi-fw pi-file-edit', routerLink: ['/invoices'] }
+                    ]
+                },
+                {
                     label: 'Propietarios',
                     items: [
                         { label: 'Propietarios', icon: 'pi pi-fw pi-id-card', routerLink: ['/propietarios'] }

@@ -129,6 +129,14 @@ export const appRoutes: Routes = [
                 path: 'payments',
                 loadComponent: () => import('./app/pages/condo/payments-page.component').then(m => m.PaymentsPageComponent)
             },
+            {
+                path: 'invoice-series',
+                loadComponent: () => import('./app/pages/condo/invoice-series-page.component').then(m => m.InvoiceSeriesPageComponent)
+            },
+            {
+                path: 'invoices',
+                loadComponent: () => import('./app/pages/condo/invoices-page.component').then(m => m.InvoicesPageComponent)
+            },
 
             // ── Condo: Residentes ─────────────────────────────────────────
             {
