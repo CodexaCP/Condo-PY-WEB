@@ -155,7 +155,7 @@ const STATUS_SEV: Record<InvoiceStatus, 'warn' | 'success' | 'danger'> = { Draft
 
         <div class="detail-lines" *ngIf="detail.detalle.length">
           <span class="dl">Detalle</span>
-          <div class="line-row" *ngFor="let line of detail.detalle">
+          <div class="line-row" *ngFor="let line of detailLines">
             <span>{{ line.concepto }}</span>
             <strong>{{ formatCurrency(line.monto) }}</strong>
           </div>
@@ -438,6 +438,40 @@ export class InvoicesPageComponent implements OnInit {
 
   statusLabel(s: InvoiceStatus): string { return STATUS_LABEL[s] ?? s; }
   statusSev(s: InvoiceStatus): 'warn' | 'success' | 'danger' { return STATUS_SEV[s] ?? 'warn'; }
+
+  // Igual que el PDF: las moras automáticas ("Mora 0.66% (diario) #94 — Mayo 2026") se muestran en una
+  // sola línea por porcentaje ("Mora 0.66% (diario) por un total de 12 días") con la suma; el resto tal cual.
+  get detailLines(): { concepto: string; monto: number }[] {
+    const lines = this.detail?.detalle ?? [];
+    const result: { concepto: string; monto: number }[] = [];
+    const groups = new Map<string, { line: { concepto: string; monto: number }; count: number; rate: string; freq: string }>();
+
+    for (const line of lines) {
+      const match = /^Mora\s+([\d.,]+%)\s*\(([^)]+)\)/i.exec(line.concepto ?? '');
+      if (!match) {
+        result.push({ concepto: line.concepto, monto: line.monto });
+        continue;
+      }
+      const rate = match[1];
+      const freq = match[2].trim();
+      const key = `${rate}|${freq}`.toLowerCase();
+      const group = groups.get(key);
+      if (group) {
+        group.line.monto += line.monto;
+        group.count++;
+      } else {
+        const merged = { concepto: '', monto: line.monto };
+        groups.set(key, { line: merged, count: 1, rate, freq });
+        result.push(merged);
+      }
+    }
+
+    groups.forEach(g => {
+      const unit = ({ diario: ['día', 'días'], semanal: ['semana', 'semanas'], quincenal: ['quincena', 'quincenas'] } as Record<string, string[]>)[g.freq.toLowerCase()] ?? ['intervalo', 'intervalos'];
+      g.line.concepto = `Mora ${g.rate} (${g.freq}) por un total de ${g.count} ${g.count === 1 ? unit[0] : unit[1]}`;
+    });
+    return result;
+  }
 
   fmtDate(d: string | null): string {
     if (!d) return '—';
