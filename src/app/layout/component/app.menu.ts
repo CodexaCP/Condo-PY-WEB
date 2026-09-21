@@ -82,7 +82,8 @@ export class AppMenu {
                 {
                     label: 'Unidades',
                     items: [
-                        { label: 'Unidades', icon: 'pi pi-fw pi-th-large', routerLink: ['/units'] }
+                        { label: 'Unidades', icon: 'pi pi-fw pi-th-large', routerLink: ['/units'] },
+                        { label: 'Asignaciones', icon: 'pi pi-fw pi-link', routerLink: ['/assignments'] }
                     ]
                 },
                 {
@@ -90,12 +91,6 @@ export class AppMenu {
                     items: [
                         { label: 'Propietarios', icon: 'pi pi-fw pi-id-card', routerLink: ['/propietarios'] },
                         { label: 'Residentes', icon: 'pi pi-fw pi-user', routerLink: ['/residents'] }
-                    ]
-                },
-                {
-                    label: 'Asignaciones',
-                    items: [
-                        { label: 'Asignaciones', icon: 'pi pi-fw pi-link', routerLink: ['/assignments'] }
                     ]
                 },
                 {
