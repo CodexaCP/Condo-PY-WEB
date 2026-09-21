@@ -119,7 +119,7 @@ const STATUS_SEVERITY: Record<string, 'warn' | 'info' | 'success' | 'danger' | '
         </div>
 
         <!-- Saldo a favor del propietario -->
-        <div class="form-section credit-section" *ngIf="ownerCredit !== null">
+        <div class="form-section credit-section" *ngIf="showCredit && ownerCredit !== null">
           <h3>Saldo a favor del propietario</h3>
           <div class="credit-box" [class.credit-positive]="ownerCredit > 0" [class.credit-zero]="ownerCredit === 0">
             <i class="pi" [class]="ownerCredit > 0 ? 'pi-check-circle' : 'pi-minus-circle'"></i>
@@ -342,6 +342,8 @@ export class OwnerPaymentDetailPageComponent implements OnInit {
   reviewedAmount: number | null = null;
   showRejectForm  = false;
   creatingInvoices = false;
+  // El saldo a favor está deshabilitado por ahora: cada pago cubre comprobantes completos, sin excedente.
+  readonly showCredit = false;
   rejectionReason = '';
 
   ngOnInit(): void {
