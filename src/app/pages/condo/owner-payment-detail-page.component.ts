@@ -119,34 +119,60 @@ const STATUS_SEVERITY: Record<string, 'warn' | 'info' | 'success' | 'danger' | '
           </div>
 
           <div class="pay-invoices" *ngIf="paymentInvoices.length > 0">
-            <div class="pay-inv" *ngFor="let inv of paymentInvoices">
-              <div class="pay-inv-main">
-                <strong>{{ inv.numeroFormateado || 'Borrador' }}</strong>
-                <span>Unidad {{ inv.unitCode }} · Período {{ inv.periodYear }}-{{ inv.periodMonth < 10 ? '0' : '' }}{{ inv.periodMonth }}</span>
-                <span class="pay-inv-amount">{{ formatGs(inv.montoTotal) }}</span>
-                <span class="pay-inv-tag" [class.tag-ok]="inv.status === 'Issued'" [class.tag-bad]="inv.status === 'Voided'">{{ invoiceStatusLabel(inv.status) }}</span>
-                <a [href]="invoicePdfUrl(inv.id)" target="_blank" class="pay-inv-pdf">PDF</a>
+            <div class="inv-card" *ngFor="let inv of paymentInvoices"
+                 [class.inv-issued]="inv.status === 'Issued'"
+                 [class.inv-voided]="inv.status === 'Voided'"
+                 [class.inv-draft]="inv.status === 'Draft'">
+
+              <div class="inv-top">
+                <div class="inv-id">
+                  <strong class="inv-number">{{ inv.numeroFormateado || 'Borrador sin numerar' }}</strong>
+                  <span class="inv-sub">
+                    <i class="pi pi-building"></i> Unidad {{ inv.unitCode }}
+                    <i class="inv-sep"></i>
+                    <i class="pi pi-calendar"></i> Período {{ inv.periodYear }}-{{ inv.periodMonth < 10 ? '0' : '' }}{{ inv.periodMonth }}
+                  </span>
+                </div>
+
+                <span class="inv-status"><i class="inv-status-dot"></i>{{ invoiceStatusLabel(inv.status) }}</span>
+
+                <div class="inv-amount">
+                  <small>Monto</small>
+                  <strong>{{ formatGs(inv.montoTotal) }}</strong>
+                </div>
+
+                <div class="inv-btns">
+                  <a class="inv-btn" [href]="invoicePdfUrl(inv.id)" target="_blank">
+                    <i class="pi pi-file-pdf"></i> PDF
+                  </a>
+                  <button type="button" class="inv-btn inv-btn-danger" *ngIf="inv.status === 'Issued'" (click)="askVoid(inv)">
+                    <i class="pi pi-times"></i> Anular
+                  </button>
+                </div>
               </div>
 
-              <div class="pay-inv-actions" *ngIf="inv.status === 'Draft'">
-                <p class="action-hint" *ngIf="seriesFor(inv).length === 0">No hay timbrado activo y vigente para este edificio.</p>
-                <ng-container *ngIf="seriesFor(inv).length > 0">
+              <div class="inv-panel" *ngIf="inv.status === 'Draft'">
+                <p class="inv-note" *ngIf="seriesFor(inv).length === 0">
+                  <i class="pi pi-info-circle"></i> No hay un timbrado activo y vigente para este edificio.
+                </p>
+                <div class="inv-emit" *ngIf="seriesFor(inv).length > 0">
                   <select [(ngModel)]="emitSeriesByInvoice[inv.id]" [name]="'series-' + inv.id">
-                    <option value="" disabled selected>— Timbrado —</option>
-                    <option *ngFor="let sr of seriesFor(inv)" [value]="sr.id">{{ sr.establecimiento }}-{{ sr.puntoExpedicion }}-{{ sr.numeroTimbrado }} ({{ sr.numerosDisponibles }} disp.)</option>
+                    <option value="" disabled selected>Seleccionar timbrado</option>
+                    <option *ngFor="let sr of seriesFor(inv)" [value]="sr.id">{{ sr.establecimiento }}-{{ sr.puntoExpedicion }}-{{ sr.numeroTimbrado }} ({{ sr.numerosDisponibles }} disponibles)</option>
                   </select>
-                  <p-button label="Emitir" icon="pi pi-send" size="small" (onClick)="emitInvoice(inv)"
+                  <p-button label="Emitir factura" icon="pi pi-send" size="small" (onClick)="emitInvoice(inv)"
                             [loading]="emittingId === inv.id" [disabled]="!emitSeriesByInvoice[inv.id]"></p-button>
-                </ng-container>
+                </div>
               </div>
 
-              <div class="pay-inv-actions" *ngIf="inv.status === 'Issued'">
-                <p-button label="Anular" icon="pi pi-times" severity="danger" [outlined]="true" size="small" (onClick)="askVoid(inv)"></p-button>
-              </div>
-              <div class="pay-inv-void" *ngIf="voidTargetId === inv.id">
-                <textarea [(ngModel)]="voidReason" [name]="'void-' + inv.id" rows="2" placeholder="Motivo de la anulación (obligatorio)"></textarea>
-                <p-button label="Confirmar anulación" icon="pi pi-times" severity="danger" size="small"
-                          (onClick)="voidInvoice(inv)" [loading]="voidingId === inv.id"></p-button>
+              <div class="inv-panel inv-panel-danger" *ngIf="voidTargetId === inv.id">
+                <label class="inv-void-label">Motivo de la anulación <em>*</em></label>
+                <textarea [(ngModel)]="voidReason" [name]="'void-' + inv.id" rows="2" placeholder="Ej: error en los datos del cliente, se reemite con nuevo número"></textarea>
+                <div class="inv-void-actions">
+                  <p-button label="Cancelar" severity="secondary" [outlined]="true" size="small" (onClick)="askVoid(inv)"></p-button>
+                  <p-button label="Confirmar anulación" icon="pi pi-times" severity="danger" size="small"
+                            (onClick)="voidInvoice(inv)" [loading]="voidingId === inv.id"></p-button>
+                </div>
               </div>
             </div>
           </div>
@@ -351,19 +377,46 @@ const STATUS_SEVERITY: Record<string, 'warn' | 'info' | 'success' | 'danger' | '
       border-left: 3px solid var(--p-red-500); font-size: 0.92rem;
     }
 
-    .pay-invoices { margin-top: 1rem; display: grid; gap: 0.6rem; }
-    .pay-inv { border: 1px solid rgba(20,54,61,0.12); border-radius: 12px; padding: 0.7rem 0.9rem; background: #fff; }
-    .pay-inv-main { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
-    .pay-inv-main span { color: #637b88; font-size: 0.85rem; }
-    .pay-inv-amount { margin-left: auto; font-weight: 700; color: #14363d !important; }
-    .pay-inv-tag { padding: 0.12rem 0.55rem; border-radius: 999px; background: rgba(245,158,11,0.15); color: #92400e !important; font-weight: 600; font-size: 0.75rem !important; }
-    .pay-inv-tag.tag-ok { background: rgba(22,163,74,0.12); color: #166534 !important; }
-    .pay-inv-tag.tag-bad { background: #fee2e2; color: #991b1b !important; }
-    .pay-inv-pdf { font-size: 0.82rem; font-weight: 600; }
-    .pay-inv-actions { display: flex; gap: 0.6rem; align-items: center; flex-wrap: wrap; margin-top: 0.6rem; }
-    .pay-inv-actions select { flex: 1; min-width: 220px; padding: 0.45rem 0.65rem; border: 1.5px solid rgba(20,54,61,0.18); border-radius: 10px; background: #fff; }
-    .pay-inv-void { display: grid; gap: 0.5rem; margin-top: 0.6rem; }
-    .pay-inv-void textarea { width: 100%; padding: 0.5rem 0.75rem; border: 1px solid rgba(220,38,38,0.4); border-radius: 10px; font: inherit; }
+    .pay-invoices { margin-top: 1.1rem; display: grid; gap: 0.75rem; }
+    .inv-card { background: #fff; border: 1px solid rgba(20,54,61,0.12); border-left: 4px solid #f59e0b; border-radius: 14px; padding: 0.9rem 1.1rem; box-shadow: 0 1px 2px rgba(15,40,60,0.04); transition: box-shadow .15s; }
+    .inv-card:hover { box-shadow: 0 6px 18px rgba(15,40,60,0.08); }
+    .inv-card.inv-issued { border-left-color: #16a34a; }
+    .inv-card.inv-voided { border-left-color: #dc2626; background: #fffafa; }
+    .inv-top { display: grid; grid-template-columns: minmax(0, 1fr) auto auto auto; align-items: center; gap: 1.1rem; }
+    .inv-id { display: flex; flex-direction: column; gap: 0.2rem; min-width: 0; }
+    .inv-number { font-size: 1.05rem; color: #14363d; letter-spacing: 0.01em; font-variant-numeric: tabular-nums; }
+    .inv-sub { display: flex; align-items: center; flex-wrap: wrap; gap: 0.35rem; color: #637b88; font-size: 0.82rem; }
+    .inv-sub .pi { font-size: 0.78rem; opacity: 0.8; }
+    .inv-sep { width: 4px; height: 4px; border-radius: 50%; background: #b8c7cf; display: inline-block; margin: 0 0.25rem; }
+    .inv-status { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.28rem 0.7rem; border-radius: 999px; font-size: 0.76rem; font-weight: 700; background: rgba(245,158,11,0.14); color: #92400e; white-space: nowrap; }
+    .inv-status-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; display: inline-block; }
+    .inv-issued .inv-status { background: rgba(22,163,74,0.13); color: #166534; }
+    .inv-voided .inv-status { background: #fee2e2; color: #991b1b; }
+    .inv-amount { display: flex; flex-direction: column; align-items: flex-end; line-height: 1.15; }
+    .inv-amount small { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.06em; color: #8a9ba5; }
+    .inv-amount strong { font-size: 1.15rem; color: #14363d; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .inv-voided .inv-amount strong { text-decoration: line-through; color: #8a9ba5; }
+    .inv-btns { display: flex; gap: 0.45rem; }
+    .inv-btn { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.42rem 0.8rem; border-radius: 10px; border: 1.5px solid rgba(20,54,61,0.16); background: #fff; color: #14363d; font-size: 0.82rem; font-weight: 600; cursor: pointer; text-decoration: none; transition: background .12s, border-color .12s; }
+    .inv-btn:hover { background: rgba(19,133,182,0.07); border-color: rgba(19,133,182,0.4); }
+    .inv-btn .pi { font-size: 0.85rem; }
+    .inv-btn-danger { color: #b91c1c; border-color: rgba(220,38,38,0.35); }
+    .inv-btn-danger:hover { background: rgba(220,38,38,0.07); border-color: #dc2626; }
+    .inv-panel { margin-top: 0.85rem; padding-top: 0.85rem; border-top: 1px dashed rgba(20,54,61,0.16); }
+    .inv-emit { display: flex; gap: 0.6rem; align-items: center; flex-wrap: wrap; }
+    .inv-emit select { flex: 1; min-width: 240px; padding: 0.5rem 0.7rem; border: 1.5px solid rgba(20,54,61,0.18); border-radius: 10px; background: #fff; font-size: 0.9rem; }
+    .inv-note { margin: 0; display: flex; align-items: center; gap: 0.4rem; color: #92400e; font-size: 0.85rem; }
+    .inv-panel-danger { display: grid; gap: 0.5rem; }
+    .inv-void-label { font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: #991b1b; }
+    .inv-void-label em { color: #dc2626; font-style: normal; }
+    .inv-panel-danger textarea { width: 100%; padding: 0.55rem 0.75rem; border: 1px solid rgba(220,38,38,0.4); border-radius: 10px; font: inherit; background: rgba(220,38,38,0.03); resize: vertical; }
+    .inv-void-actions { display: flex; justify-content: flex-end; gap: 0.5rem; }
+    @media (max-width: 720px) {
+      .inv-top { grid-template-columns: 1fr auto; }
+      .inv-status { justify-self: start; }
+      .inv-amount { align-items: flex-end; }
+      .inv-btns { grid-column: 1 / -1; }
+    }
 
     @media (max-width: 600px) {
       .detail-grid { grid-template-columns: 1fr; }
