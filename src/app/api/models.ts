@@ -420,6 +420,7 @@ export interface ExpenseSettlementSummary {
   approvedAtUtc: string | null;
   approvedByUserId: string | null;
   approvedByUserName: string;
+  approvedByRole: string;
   publishedAtUtc: string | null;
   publishedByUserId: string | null;
   publishedByUserName: string;

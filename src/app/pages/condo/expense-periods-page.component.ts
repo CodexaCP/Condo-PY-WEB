@@ -286,8 +286,11 @@ import {
           <a *ngIf="settlementSummary.isCalculated" [href]="getSettlementPdfUrl()" target="_blank" style="display:contents">
             <p-button type="button" label="PDF" icon="pi pi-file-pdf" severity="secondary" [text]="true"></p-button>
           </a>
-          <p-button *ngIf="canApproveRole" type="button" label="Recargos por mora" icon="pi pi-percentage" severity="warn" [text]="true" [disabled]="!canApplyLateFees()" (onClick)="toggleLateFeeForm()"></p-button>
-          <p-button *ngIf="canApproveRole && canVoidSettlement()" type="button" label="Anular" icon="pi pi-undo" severity="danger" [text]="true" [loading]="isVoidingSettlement" (onClick)="voidSettlement()"></p-button>
+          <p-button *ngIf="canManageRole" type="button" label="Recargos por mora" icon="pi pi-percentage" severity="warn" [text]="true" [disabled]="!canApplyLateFees()" (onClick)="toggleLateFeeForm()"></p-button>
+          <p *ngIf="canPublishRole && publishBlockedReason" class="publish-hint" style="flex-basis:100%;margin:0.25rem 0 0;font-size:0.85rem;color:#92400e;background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:0.5rem 0.75rem">
+            <span class="pi pi-lock" style="margin-right:0.35rem"></span>{{ publishBlockedReason }}
+          </p>
+          <p-button *ngIf="canManageRole && canVoidSettlement()" type="button" label="Anular" icon="pi pi-undo" severity="danger" [text]="true" [loading]="isVoidingSettlement" (onClick)="voidSettlement()"></p-button>
         </div>
 
         <form class="period-form late-fee-form" *ngIf="showLateFeeForm" (ngSubmit)="applyLateFees()">
@@ -569,7 +572,9 @@ export class ExpensePeriodsPageComponent implements OnInit {
 
 
   // CompanyOperator solo calcula; BuildingManager ademas aprueba; CompanyAdmin (presidente) ademas publica.
-  get canApproveRole(): boolean { return this.auth.hasRole('SuperAdmin', 'CompanyAdmin', 'BuildingManager'); }
+  // Solo el Encargado de edificio aprueba; el presidente publica una liquidación ya aprobada por el encargado.
+  get canApproveRole(): boolean { return this.auth.hasRole('SuperAdmin', 'BuildingManager'); }
+  get canManageRole(): boolean { return this.auth.hasRole('SuperAdmin', 'CompanyAdmin', 'BuildingManager'); }
   get canPublishRole(): boolean { return this.auth.hasRole('SuperAdmin', 'CompanyAdmin'); }
   get isOperator(): boolean { return this.auth.hasRole('CompanyOperator'); }
 
@@ -1049,8 +1054,24 @@ export class ExpensePeriodsPageComponent implements OnInit {
       this.settlementSummary.periodStatus === 'Draft';
   }
 
+  // La liquidación solo se publica si la aprobó un Encargado de edificio.
+  get approvedByManager(): boolean {
+    const role = this.settlementSummary?.approvedByRole;
+    return role === 'BuildingManager' || role === 'SuperAdmin';
+  }
+
+  get publishBlockedReason(): string {
+    const summary = this.settlementSummary;
+    if (!summary || summary.periodStatus === 'Published' || !summary.isCalculated) return '';
+    if (!this.approvedByManager) {
+      return 'No se puede publicar: la liquidación debe ser aprobada primero por el Encargado de edificio (Building Manager).';
+    }
+    return '';
+  }
+
   canPublishSettlement(): boolean {
     return !!this.settlementSummary &&
+      this.approvedByManager &&
       (this.settlementSummary.status === 'Approved' || this.settlementSummary.status === 'Applied') &&
       this.settlementSummary.periodStatus !== 'Published' &&
       this.settlementSummary.generatedChargeCount > 0;
