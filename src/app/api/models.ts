@@ -647,6 +647,92 @@ export interface Invoice {
   createdAtUtc: string;
 }
 
+// ─── Consulta / trazabilidad de facturas ────────────────────────────────────
+
+export interface InvoiceLedgerQuery {
+  buildingId?: string;
+  unitId?: string;
+  status?: InvoiceStatus | '';
+  year?: number | null;
+  month?: number | null;
+  from?: string;
+  to?: string;
+  search?: string;
+  ownerPaymentId?: string;
+  sortBy?: string;
+  sortDir?: 'asc' | 'desc';
+  page?: number;
+  pageSize?: number;
+}
+
+export interface InvoiceLedgerRow {
+  id: string;
+  status: InvoiceStatus;
+  numero: number | null;
+  numeroFormateado: string | null;
+  montoTotal: number;
+  fechaEmisionUtc: string | null;
+  fechaAnulacionUtc: string | null;
+  motivoAnulacion: string | null;
+  createdAtUtc: string;
+  lineCount: number;
+  moraTotal: number;
+
+  seriesRazonSocial: string | null;
+  seriesRuc: string | null;
+  seriesNumeroTimbrado: string | null;
+  seriesEstablecimiento: string | null;
+  seriesPuntoExpedicion: string | null;
+
+  buildingId: string;
+  buildingName: string;
+  unitId: string;
+  unitCode: string;
+  clienteNombre: string | null;
+  clienteDocumento: string | null;
+
+  expensePeriodId: string;
+  periodYear: number;
+  periodMonth: number;
+  periodName: string;
+  periodStatus: string;
+  periodDueDate: string;
+  comprobanteTotal: number;
+  liquidationStatus: string | null;
+  liquidationApprovedAtUtc: string | null;
+  liquidationApprovedBy: string | null;
+  liquidationPublishedAtUtc: string | null;
+  liquidationPublishedBy: string | null;
+
+  paymentId: string;
+  paymentReference: string;
+  paymentDate: string;
+  paymentAmount: number;
+  ownerPaymentId: string | null;
+  ownerPaymentReference: string | null;
+  ownerPaymentStatus: string | null;
+  ownerName: string | null;
+  ownerPaymentReviewedBy: string | null;
+  ownerPaymentResolvedAtUtc: string | null;
+}
+
+export interface InvoiceLedgerSummary {
+  draftCount: number;
+  issuedCount: number;
+  voidedCount: number;
+  draftAmount: number;
+  issuedAmount: number;
+  voidedAmount: number;
+}
+
+export interface InvoiceLedger {
+  items: InvoiceLedgerRow[];
+  totalCount: number;
+  page: number;
+  pageSize: number;
+  summary: InvoiceLedgerSummary;
+}
+
 export interface AccountStatementPeriod {
   expensePeriodId: string;
   expensePeriodName: string;

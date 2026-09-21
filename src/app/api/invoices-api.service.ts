@@ -2,7 +2,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { API_BASE_URL } from '../config/api.config';
-import { Invoice, InvoiceStatus } from './models';
+import { Invoice, InvoiceLedger, InvoiceLedgerQuery, InvoiceStatus } from './models';
 
 @Injectable({ providedIn: 'root' })
 export class InvoicesApiService {
@@ -14,6 +14,16 @@ export class InvoicesApiService {
     if (filters?.unitId) params = params.set('unitId', filters.unitId);
     if (filters?.status) params = params.set('status', filters.status);
     return this.http.get<Invoice[]>(`${API_BASE_URL}/invoices`, { params });
+  }
+
+  // Consulta con filtros, orden, paginación y trazabilidad completa.
+  getLedger(query: InvoiceLedgerQuery): Observable<InvoiceLedger> {
+    let params = new HttpParams();
+    for (const [key, value] of Object.entries(query)) {
+      if (value === undefined || value === null || value === '') continue;
+      params = params.set(key, String(value));
+    }
+    return this.http.get<InvoiceLedger>(`${API_BASE_URL}/invoices/ledger`, { params });
   }
 
   getById(id: string): Observable<Invoice> {
