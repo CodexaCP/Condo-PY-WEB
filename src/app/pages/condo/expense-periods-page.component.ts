@@ -41,7 +41,7 @@ import {
             <p>Apertura, cierre y control de ciclos mensuales por edificio.</p>
           </div>
         </div>
-        <div class="toolbar-btns" *ngIf="!isReadOnly">
+        <div class="toolbar-btns" *ngIf="!isOperator">
           <p-button label="Crear para todos" icon="pi pi-th-large" severity="secondary" (onClick)="toggleBulkForm()"></p-button>
           <p-button [label]="showForm ? 'Cerrar' : 'Nuevo periodo'" [icon]="showForm ? 'pi pi-times' : 'pi pi-plus'" (onClick)="toggleForm()"></p-button>
         </div>
@@ -280,14 +280,14 @@ import {
         </div>
 
         <div class="settlement-actions">
-          <p-button *ngIf="!isReadOnly" type="button" [label]="settlementSummary.isCalculated ? 'Recalcular' : 'Calcular liquidación'" icon="pi pi-calculator" [loading]="isCalculatingSettlement" [disabled]="settlementPeriod.status !== 'Draft'" (onClick)="calculateSettlement()"></p-button>
-          <p-button *ngIf="!isReadOnly" type="button" label="Aprobar" icon="pi pi-check" severity="info" [loading]="isApprovingSettlement" [disabled]="!canApproveSettlement()" (onClick)="approveSettlement()"></p-button>
-          <p-button *ngIf="!isReadOnly" type="button" label="Publicar comprobantes" icon="pi pi-send" severity="contrast" [loading]="isPublishingSettlement" [disabled]="!canPublishSettlement()" (onClick)="publishSettlement()"></p-button>
+          <p-button type="button" [label]="settlementSummary.isCalculated ? 'Recalcular' : 'Calcular liquidación'" icon="pi pi-calculator" [loading]="isCalculatingSettlement" [disabled]="settlementPeriod.status !== 'Draft'" (onClick)="calculateSettlement()"></p-button>
+          <p-button *ngIf="canApproveRole" type="button" label="Aprobar" icon="pi pi-check" severity="info" [loading]="isApprovingSettlement" [disabled]="!canApproveSettlement()" (onClick)="approveSettlement()"></p-button>
+          <p-button *ngIf="canPublishRole" type="button" label="Publicar comprobantes" icon="pi pi-send" severity="contrast" [loading]="isPublishingSettlement" [disabled]="!canPublishSettlement()" (onClick)="publishSettlement()"></p-button>
           <a *ngIf="settlementSummary.isCalculated" [href]="getSettlementPdfUrl()" target="_blank" style="display:contents">
             <p-button type="button" label="PDF" icon="pi pi-file-pdf" severity="secondary" [text]="true"></p-button>
           </a>
-          <p-button *ngIf="!isReadOnly" type="button" label="Recargos por mora" icon="pi pi-percentage" severity="warn" [text]="true" [disabled]="!canApplyLateFees()" (onClick)="toggleLateFeeForm()"></p-button>
-          <p-button *ngIf="!isReadOnly && canVoidSettlement()" type="button" label="Anular" icon="pi pi-undo" severity="danger" [text]="true" [loading]="isVoidingSettlement" (onClick)="voidSettlement()"></p-button>
+          <p-button *ngIf="canApproveRole" type="button" label="Recargos por mora" icon="pi pi-percentage" severity="warn" [text]="true" [disabled]="!canApplyLateFees()" (onClick)="toggleLateFeeForm()"></p-button>
+          <p-button *ngIf="canApproveRole && canVoidSettlement()" type="button" label="Anular" icon="pi pi-undo" severity="danger" [text]="true" [loading]="isVoidingSettlement" (onClick)="voidSettlement()"></p-button>
         </div>
 
         <form class="period-form late-fee-form" *ngIf="showLateFeeForm" (ngSubmit)="applyLateFees()">
@@ -356,10 +356,10 @@ import {
           </div>
           <div class="card-actions">
             <p-button type="button" icon="pi pi-calculator" severity="info" [rounded]="true" [text]="true" [disabled]="isSaving || isGenerating || isCalculatingSettlement" (onClick)="openSettlement(item)" pTooltip="Liquidación"></p-button>
-            <p-button *ngIf="!isReadOnly" type="button" icon="pi pi-bolt" severity="success" [rounded]="true" [text]="true" [disabled]="item.status !== 'Draft' || isSaving || isGenerating" (onClick)="openGenerator(item)" pTooltip="Generar cargos"></p-button>
-            <p-button *ngIf="!isReadOnly" type="button" icon="pi pi-copy" severity="secondary" [rounded]="true" [text]="true" [disabled]="isSaving || isCloning" (onClick)="clonePeriod(item)" pTooltip="Clonar al mes siguiente"></p-button>
-            <p-button *ngIf="!isReadOnly" type="button" icon="pi pi-pencil" severity="secondary" [rounded]="true" [text]="true" [disabled]="item.status !== 'Draft'" (onClick)="startEdit(item)" pTooltip="Editar"></p-button>
-            <p-button *ngIf="!isReadOnly" type="button" icon="pi pi-trash" severity="danger" [rounded]="true" [text]="true" [disabled]="isSaving || item.status !== 'Draft'" (onClick)="deletePeriod(item)" pTooltip="Eliminar"></p-button>
+            <p-button *ngIf="!isOperator" type="button" icon="pi pi-bolt" severity="success" [rounded]="true" [text]="true" [disabled]="item.status !== 'Draft' || isSaving || isGenerating" (onClick)="openGenerator(item)" pTooltip="Generar cargos"></p-button>
+            <p-button *ngIf="!isOperator" type="button" icon="pi pi-copy" severity="secondary" [rounded]="true" [text]="true" [disabled]="isSaving || isCloning" (onClick)="clonePeriod(item)" pTooltip="Clonar al mes siguiente"></p-button>
+            <p-button *ngIf="!isOperator" type="button" icon="pi pi-pencil" severity="secondary" [rounded]="true" [text]="true" [disabled]="item.status !== 'Draft'" (onClick)="startEdit(item)" pTooltip="Editar"></p-button>
+            <p-button *ngIf="!isOperator" type="button" icon="pi pi-trash" severity="danger" [rounded]="true" [text]="true" [disabled]="isSaving || item.status !== 'Draft'" (onClick)="deletePeriod(item)" pTooltip="Eliminar"></p-button>
           </div>
         </div>
       </div>
@@ -567,7 +567,11 @@ export class ExpensePeriodsPageComponent implements OnInit {
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly msg = inject(MessageService);
 
-  get isReadOnly(): boolean { return this.auth.hasRole('CompanyAdmin'); }
+
+  // CompanyOperator solo calcula; BuildingManager ademas aprueba; CompanyAdmin (presidente) ademas publica.
+  get canApproveRole(): boolean { return this.auth.hasRole('SuperAdmin', 'CompanyAdmin', 'BuildingManager'); }
+  get canPublishRole(): boolean { return this.auth.hasRole('SuperAdmin', 'CompanyAdmin'); }
+  get isOperator(): boolean { return this.auth.hasRole('CompanyOperator'); }
 
   items: ExpensePeriod[] = [];
   buildings: Building[] = [];

@@ -43,7 +43,7 @@ import { API_BASE_URL } from '../../config/api.config';
             <p>Registro de facturas, servicios y egresos por periodo.</p>
           </div>
         </div>
-        <div class="toolbar-btns" *ngIf="!isReadOnly">
+        <div class="toolbar-btns">
           <p-button label="Plantillas recurrentes" icon="pi pi-sync" severity="secondary" (onClick)="toggleRecurringSection()"></p-button>
           <p-button [label]="showForm ? 'Cerrar' : 'Nuevo gasto'" [icon]="showForm ? 'pi pi-times' : 'pi pi-plus'" (onClick)="toggleForm()"></p-button>
         </div>
@@ -70,7 +70,7 @@ import { API_BASE_URL } from '../../config/api.config';
               <option *ngFor="let b of buildings" [value]="b.id">{{ b.name }}</option>
             </select>
           </div>
-          <p-button *ngIf="!isReadOnly" label="Nueva plantilla" icon="pi pi-plus" severity="secondary" (onClick)="toggleRecurringForm()"></p-button>
+          <p-button label="Nueva plantilla" icon="pi pi-plus" severity="secondary" (onClick)="toggleRecurringForm()"></p-button>
         </div>
 
         <div class="panel-box inner-form" *ngIf="showRecurringForm">
@@ -279,10 +279,10 @@ import { API_BASE_URL } from '../../config/api.config';
             <a *ngIf="item.hasReceipt" [href]="getReceiptUrl(item.id)" target="_blank" class="receipt-link">
               <p-button type="button" icon="pi pi-file-pdf" severity="info" [rounded]="true" [text]="true" [pTooltip]="item.receiptFileName ?? 'Ver comprobante'"></p-button>
             </a>
-            <p-button *ngIf="!isReadOnly && !item.hasReceipt" type="button" icon="pi pi-paperclip" severity="secondary" [rounded]="true" [text]="true" pTooltip="Adjuntar comprobante" (onClick)="triggerReceiptUpload(item)"></p-button>
-            <p-button *ngIf="!isReadOnly && item.hasReceipt" type="button" icon="pi pi-times-circle" severity="warn" [rounded]="true" [text]="true" pTooltip="Quitar comprobante" (onClick)="removeReceipt(item)"></p-button>
-            <p-button *ngIf="!isReadOnly" type="button" icon="pi pi-pencil" severity="secondary" [rounded]="true" [text]="true" [disabled]="!isDraftPeriod(item.expensePeriodId)" (onClick)="startEdit(item)" pTooltip="Editar"></p-button>
-            <p-button *ngIf="!isReadOnly" type="button" icon="pi pi-trash" severity="danger" [rounded]="true" [text]="true" [disabled]="isSaving || !isDraftPeriod(item.expensePeriodId)" (onClick)="deleteExpense(item)" pTooltip="Eliminar"></p-button>
+            <p-button *ngIf="!item.hasReceipt" type="button" icon="pi pi-paperclip" severity="secondary" [rounded]="true" [text]="true" pTooltip="Adjuntar comprobante" (onClick)="triggerReceiptUpload(item)"></p-button>
+            <p-button *ngIf="item.hasReceipt" type="button" icon="pi pi-times-circle" severity="warn" [rounded]="true" [text]="true" pTooltip="Quitar comprobante" (onClick)="removeReceipt(item)"></p-button>
+            <p-button type="button" icon="pi pi-pencil" severity="secondary" [rounded]="true" [text]="true" [disabled]="!isDraftPeriod(item.expensePeriodId)" (onClick)="startEdit(item)" pTooltip="Editar"></p-button>
+            <p-button *ngIf="!isOperator" type="button" icon="pi pi-trash" severity="danger" [rounded]="true" [text]="true" [disabled]="isSaving || !isDraftPeriod(item.expensePeriodId)" (onClick)="deleteExpense(item)" pTooltip="Eliminar"></p-button>
           </div>
         </div>
       </div>
@@ -388,7 +388,8 @@ export class BuildingExpensesPageComponent implements OnInit {
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly msg = inject(MessageService);
 
-  get isReadOnly(): boolean { return this.auth.hasRole('CompanyAdmin'); }
+
+  get isOperator(): boolean { return this.auth.hasRole('CompanyOperator'); }
 
   items: BuildingExpense[] = [];
   private allItems: BuildingExpense[] = [];
