@@ -29,7 +29,7 @@ import { AuthService } from '../../auth/auth.service';
             <p>Gestion de edificios, con condominio opcional y alcance por empresa.</p>
           </div>
         </div>
-        <p-button label="Nuevo edificio" icon="pi pi-plus" (onClick)="goToCreate()"></p-button>
+        <p-button *ngIf="canCreate" label="Nuevo edificio" icon="pi pi-plus" (onClick)="goToCreate()"></p-button>
       </div>
 
       <p-message *ngIf="pageError" severity="error" [text]="pageError"></p-message>
@@ -210,6 +210,9 @@ export class BuildingsPageComponent implements OnInit {
   isDeleting = false;
 
   get isSuperAdmin(): boolean { return this.auth.hasRole('SuperAdmin'); }
+
+  // Por ahora solo el administrador de empresa (y el superadmin) crea edificios; el encargado no ve el botón.
+  get canCreate(): boolean { return this.auth.hasRole('SuperAdmin', 'CompanyAdmin'); }
 
   get availableCondominiums(): Condominium[] {
     if (this.isSuperAdmin && this.form.companyId) {
