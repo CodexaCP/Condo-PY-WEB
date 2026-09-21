@@ -41,7 +41,7 @@ import {
             <p>Apertura, cierre y control de ciclos mensuales por edificio.</p>
           </div>
         </div>
-        <div class="toolbar-btns" *ngIf="!isOperator">
+        <div class="toolbar-btns">
           <p-button label="Crear para todos" icon="pi pi-th-large" severity="secondary" (onClick)="toggleBulkForm()"></p-button>
           <p-button [label]="showForm ? 'Cerrar' : 'Nuevo periodo'" [icon]="showForm ? 'pi pi-times' : 'pi pi-plus'" (onClick)="toggleForm()"></p-button>
         </div>
@@ -356,9 +356,9 @@ import {
           </div>
           <div class="card-actions">
             <p-button type="button" icon="pi pi-calculator" severity="info" [rounded]="true" [text]="true" [disabled]="isSaving || isGenerating || isCalculatingSettlement" (onClick)="openSettlement(item)" pTooltip="Liquidación"></p-button>
-            <p-button *ngIf="!isOperator" type="button" icon="pi pi-bolt" severity="success" [rounded]="true" [text]="true" [disabled]="item.status !== 'Draft' || isSaving || isGenerating" (onClick)="openGenerator(item)" pTooltip="Generar cargos"></p-button>
-            <p-button *ngIf="!isOperator" type="button" icon="pi pi-copy" severity="secondary" [rounded]="true" [text]="true" [disabled]="isSaving || isCloning" (onClick)="clonePeriod(item)" pTooltip="Clonar al mes siguiente"></p-button>
-            <p-button *ngIf="!isOperator" type="button" icon="pi pi-pencil" severity="secondary" [rounded]="true" [text]="true" [disabled]="item.status !== 'Draft'" (onClick)="startEdit(item)" pTooltip="Editar"></p-button>
+            <p-button type="button" icon="pi pi-bolt" severity="success" [rounded]="true" [text]="true" [disabled]="item.status !== 'Draft' || isSaving || isGenerating" (onClick)="openGenerator(item)" pTooltip="Generar cargos"></p-button>
+            <p-button type="button" icon="pi pi-copy" severity="secondary" [rounded]="true" [text]="true" [disabled]="isSaving || isCloning" (onClick)="clonePeriod(item)" pTooltip="Clonar al mes siguiente"></p-button>
+            <p-button type="button" icon="pi pi-pencil" severity="secondary" [rounded]="true" [text]="true" [disabled]="item.status !== 'Draft'" (onClick)="startEdit(item)" pTooltip="Editar"></p-button>
             <p-button *ngIf="!isOperator" type="button" icon="pi pi-trash" severity="danger" [rounded]="true" [text]="true" [disabled]="isSaving || item.status !== 'Draft'" (onClick)="deletePeriod(item)" pTooltip="Eliminar"></p-button>
           </div>
         </div>
