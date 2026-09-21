@@ -10,6 +10,8 @@ import { InputNumber } from 'primeng/inputnumber';
 import { Message } from 'primeng/message';
 import { Tag } from 'primeng/tag';
 import { extractApiErrorMessage } from '../../api/api-error.util';
+import { AuthService } from '../../auth/auth.service';
+import { InvoicesApiService } from '../../api/invoices-api.service';
 import { OwnerPaymentsApiService } from '../../api/owner-payments-api.service';
 import { OwnerPayment } from '../../api/models';
 
@@ -95,6 +97,24 @@ const STATUS_SEVERITY: Record<string, 'warn' | 'info' | 'success' | 'danger' | '
               <label>Revisado por</label>
               <span>{{ payment.reviewedByUserFullName }}</span>
             </div>
+          </div>
+        </div>
+
+        <!-- Facturación: una factura por unidad con todo lo aplicado (capital + mora) -->
+        <div class="form-section action-section" *ngIf="payment.status === 'Approved' && canInvoice">
+          <h3>Facturación</h3>
+          <p class="action-hint">
+            Prepara un borrador de factura por unidad con lo que cubrió este pago (expensas y mora).
+            Luego lo emitís desde Facturación → Facturas.
+          </p>
+          <div class="action-buttons">
+            <p-button
+              label="Generar facturas"
+              icon="pi pi-file-edit"
+              severity="success"
+              (onClick)="createInvoiceDrafts()"
+              [loading]="creatingInvoices">
+            </p-button>
           </div>
         </div>
 
@@ -309,6 +329,8 @@ export class OwnerPaymentDetailPageComponent implements OnInit {
   private readonly destroyRef = inject(DestroyRef);
   private readonly cdr        = inject(ChangeDetectorRef);
   private readonly msgSvc     = inject(MessageService);
+  private readonly invoicesApi = inject(InvoicesApiService);
+  private readonly auth       = inject(AuthService);
 
   payment:        OwnerPayment | null = null;
   ownerCredit:    number | null = null;
@@ -319,6 +341,7 @@ export class OwnerPaymentDetailPageComponent implements OnInit {
   actionError     = '';
   reviewedAmount: number | null = null;
   showRejectForm  = false;
+  creatingInvoices = false;
   rejectionReason = '';
 
   ngOnInit(): void {
@@ -444,6 +467,35 @@ export class OwnerPaymentDetailPageComponent implements OnInit {
   }
 
   goBack(): void { this.router.navigate(['/owner-payments']); }
+
+  // Quien puede facturar: SuperAdmin, CompanyAdmin y BuildingManager (el operador no).
+  get canInvoice(): boolean {
+    return this.auth.hasRole('SuperAdmin', 'CompanyAdmin', 'BuildingManager');
+  }
+
+  createInvoiceDrafts(): void {
+    if (!this.payment) return;
+    this.creatingInvoices = true;
+    this.actionError = '';
+    this.invoicesApi.createDraftsFromOwnerPayment(this.payment.id)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: drafts => {
+          this.creatingInvoices = false;
+          this.msgSvc.add({
+            severity: 'success',
+            summary: 'Facturas preparadas',
+            detail: drafts.length === 1 ? 'Se creó 1 borrador de factura.' : `Se crearon ${drafts.length} borradores de factura (uno por unidad).`
+          });
+          this.router.navigate(['/invoices']);
+        },
+        error: err => {
+          this.creatingInvoices = false;
+          this.actionError = extractApiErrorMessage(err, 'No se pudieron preparar las facturas.');
+          this.cdr.markForCheck();
+        }
+      });
+  }
 
   statusLabel(status: string): string { return STATUS_LABELS[status] ?? status; }
   statusSeverity(status: string): 'warn' | 'info' | 'success' | 'danger' | 'secondary' {

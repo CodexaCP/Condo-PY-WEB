@@ -24,6 +24,11 @@ export class InvoicesApiService {
     return this.http.post<Invoice>(`${API_BASE_URL}/invoices/draft`, { paymentId });
   }
 
+  // Prepara un borrador de factura por unidad a partir de un pago de propietario aprobado.
+  createDraftsFromOwnerPayment(ownerPaymentId: string): Observable<Invoice[]> {
+    return this.http.post<Invoice[]>(`${API_BASE_URL}/invoices/draft-from-owner-payment`, { ownerPaymentId });
+  }
+
   emit(id: string, invoiceSeriesId: string): Observable<Invoice> {
     return this.http.post<Invoice>(`${API_BASE_URL}/invoices/${id}/emit`, { invoiceSeriesId });
   }
