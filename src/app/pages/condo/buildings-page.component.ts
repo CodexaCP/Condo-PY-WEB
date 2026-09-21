@@ -211,8 +211,8 @@ export class BuildingsPageComponent implements OnInit {
 
   get isSuperAdmin(): boolean { return this.auth.hasRole('SuperAdmin'); }
 
-  // Por ahora solo el administrador de empresa (y el superadmin) crea edificios; el encargado no ve el botón.
-  get canCreate(): boolean { return this.auth.hasRole('SuperAdmin', 'CompanyAdmin'); }
+  // Por ahora solo el superadmin crea edificios; el resto de roles no ve el botón.
+  get canCreate(): boolean { return this.auth.hasRole('SuperAdmin'); }
 
   get availableCondominiums(): Condominium[] {
     if (this.isSuperAdmin && this.form.companyId) {
