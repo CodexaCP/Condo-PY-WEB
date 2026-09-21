@@ -25,6 +25,14 @@ import {
   Unit
 } from '../../api/models';
 
+interface PaymentsGroup {
+  periodId: string;
+  periodName: string;
+  buildingName: string;
+  total: number;
+  items: Payment[];
+}
+
 @Component({
   standalone: true,
   selector: 'app-payments-page',
@@ -253,11 +261,26 @@ import {
           <div class="receipt-row"><span>Método</span><strong>{{ paymentMethodLabel(receipt.method) }}</strong></div>
           <div class="receipt-row" *ngIf="receipt.reference"><span>Referencia</span><strong>{{ receipt.reference }}</strong></div>
           <div class="receipt-allocations" *ngIf="receipt.allocations.length > 0">
-            <span class="alloc-title">Cargos cubiertos</span>
-            <div class="alloc-row" *ngFor="let a of receipt.allocations">
+            <span class="alloc-title">Cargos cubiertos ({{ receipt.allocations.length }})</span>
+            <div class="alloc-row" *ngFor="let a of receiptRegularAllocations">
               <span>{{ a.chargeConcept }}</span>
               <strong>{{ formatCurrency(a.allocatedAmount) }}</strong>
             </div>
+            <ng-container *ngIf="receiptLateFeeAllocations.length">
+              <button type="button" class="alloc-row alloc-group" (click)="receiptLateFeesExpanded = !receiptLateFeesExpanded" [attr.aria-expanded]="receiptLateFeesExpanded">
+                <span>
+                  <span class="pi" [ngClass]="receiptLateFeesExpanded ? 'pi-chevron-down' : 'pi-chevron-right'"></span>
+                  Recargos por mora ({{ receiptLateFeeAllocations.length }} cuotas)
+                </span>
+                <strong>{{ formatCurrency(receiptLateFeeTotal) }}</strong>
+              </button>
+              <div class="alloc-nested" *ngIf="receiptLateFeesExpanded">
+                <div class="alloc-row" *ngFor="let a of receiptLateFeeAllocations">
+                  <span>{{ a.chargeConcept }}</span>
+                  <strong>{{ formatCurrency(a.allocatedAmount) }}</strong>
+                </div>
+              </div>
+            </ng-container>
           </div>
           <div class="receipt-row credit-row" *ngIf="receipt.amount - receipt.allocatedAmount > 0.01">
             <span>Crédito a favor</span>
@@ -269,7 +292,17 @@ import {
       <p class="app-state" *ngIf="loading">Cargando pagos...</p>
       <p class="app-state" *ngIf="!loading && !items.length">No hay pagos cargados.</p>
 
-      <div class="app-list" *ngIf="items.length">
+      <div class="period-group" *ngFor="let group of groups; trackBy: trackGroup">
+        <button type="button" class="group-head" (click)="toggleGroup(group.periodId)" [attr.aria-expanded]="isGroupOpen(group.periodId)">
+          <span class="pi" [ngClass]="isGroupOpen(group.periodId) ? 'pi-chevron-down' : 'pi-chevron-right'"></span>
+          <span class="group-title">
+            <strong>{{ group.periodName }}</strong>
+            <small>{{ group.buildingName }}</small>
+          </span>
+          <span class="group-count">{{ group.items.length }} {{ group.items.length === 1 ? 'pago' : 'pagos' }}</span>
+          <strong class="group-total">{{ formatCurrency(group.total) }}</strong>
+        </button>
+      <div class="app-list" *ngIf="isGroupOpen(group.periodId)">
         <div class="app-row header payments-grid">
           <span>Fecha</span>
           <span>Periodo · Edificio</span>
@@ -280,7 +313,7 @@ import {
           <span class="actions-head" *ngIf="!isReadOnly || canRevert">Acciones</span>
         </div>
 
-        <div class="app-row payments-grid" [class.reversed-row]="item.isReversed" *ngFor="let item of items">
+        <div class="app-row payments-grid" [class.reversed-row]="item.isReversed" *ngFor="let item of group.items">
           <strong>{{ item.paymentDate }}</strong>
           <span>
             {{ item.expensePeriodName }} · {{ item.buildingName }}
@@ -306,6 +339,7 @@ import {
               (onClick)="revertPayment(item)"></p-button>
           </div>
         </div>
+      </div>
       </div>
     </p-card>
   `,
@@ -435,6 +469,30 @@ import {
     .alloc-title { font-size: 0.78rem; color: var(--brand-muted); text-transform: uppercase; display: block; margin-bottom: 0.4rem; }
     .alloc-row { display: flex; justify-content: space-between; font-size: 0.88rem; padding: 0.2rem 0; color: var(--brand-ink); }
     .credit-row strong { color: #1a8c5b; }
+    .alloc-group {
+      width: 100%; background: rgba(245,158,11,0.08); border: 0; border-radius: 8px;
+      padding: 0.4rem 0.6rem; margin-top: 0.25rem; cursor: pointer; font: inherit; text-align: left;
+    }
+    .alloc-group:hover { background: rgba(245,158,11,0.15); }
+    .alloc-group .pi { font-size: 0.75rem; margin-right: 0.35rem; color: var(--brand-muted); }
+    .alloc-nested {
+      max-height: 14rem; overflow-y: auto; margin: 0.25rem 0 0 1rem; padding-left: 0.6rem;
+      border-left: 2px solid rgba(245,158,11,0.3);
+    }
+    .alloc-nested .alloc-row { font-size: 0.82rem; color: var(--brand-muted); }
+
+    /* Period groups */
+    .period-group { margin-bottom: 0.75rem; }
+    .group-head {
+      width: 100%; display: flex; align-items: center; gap: 0.85rem;
+      padding: 0.9rem 1.25rem; border-radius: 16px; cursor: pointer;
+      background: #f5faf9; border: 1px solid #e5eeec; font: inherit; color: #14363d; text-align: left;
+    }
+    .group-head:hover { background: #eaf4f2; }
+    .group-title { flex: 1; display: grid; }
+    .group-count { color: #6b878d; font-size: 0.85rem; }
+    .group-total { min-width: 8rem; text-align: right; }
+    .period-group .app-list { margin-top: 0.5rem; }
 
     /* List */
     .payments-grid { grid-template-columns: 0.7fr 1.2fr 0.7fr 0.8fr 0.8fr 0.9fr 0.5fr; }
@@ -472,6 +530,8 @@ export class PaymentsPageComponent implements OnInit {
   get canRevert(): boolean { return !this.auth.hasRole('Resident') && !this.auth.hasRole('Owner') && !this.auth.hasRole('Porter'); }
 
   items: Payment[] = [];
+  groups: PaymentsGroup[] = [];
+  private openGroups = new Set<string>();
   private allItems: Payment[] = [];
   buildings: Building[] = [];
   periods: ExpensePeriod[] = [];
@@ -542,6 +602,20 @@ export class PaymentsPageComponent implements OnInit {
 
   get allLateFeeSelected(): boolean {
     return this.lateFeeCharges.length > 0 && this.lateFeeCharges.every((c) => c['_selected']);
+  }
+
+  receiptLateFeesExpanded = false;
+
+  get receiptLateFeeAllocations() {
+    return (this.receipt?.allocations ?? []).filter((a) => /^mora/i.test(a.chargeConcept));
+  }
+
+  get receiptRegularAllocations() {
+    return (this.receipt?.allocations ?? []).filter((a) => !/^mora/i.test(a.chargeConcept));
+  }
+
+  get receiptLateFeeTotal(): number {
+    return this.receiptLateFeeAllocations.reduce((sum, a) => sum + a.allocatedAmount, 0);
   }
 
   toggleSelectAll(checked: boolean): void {
@@ -629,7 +703,39 @@ export class PaymentsPageComponent implements OnInit {
       (!this.filters.unitId || item.unitId === this.filters.unitId)
     );
     this.sortItems();
+    this.buildGroups();
     this.cdr.markForCheck();
+  }
+
+  isGroupOpen(periodId: string): boolean {
+    return this.openGroups.has(periodId);
+  }
+
+  toggleGroup(periodId: string): void {
+    if (!this.openGroups.delete(periodId)) {
+      this.openGroups.add(periodId);
+    }
+  }
+
+  trackGroup(_: number, group: { periodId: string }): string {
+    return group.periodId;
+  }
+
+  private buildGroups(): void {
+    const map = new Map<string, PaymentsGroup>();
+    for (const item of this.items) {
+      let group = map.get(item.expensePeriodId);
+      if (!group) {
+        group = { periodId: item.expensePeriodId, periodName: item.expensePeriodName, buildingName: item.buildingName, total: 0, items: [] };
+        map.set(item.expensePeriodId, group);
+      }
+      group.items.push(item);
+      if (!item.isReversed) {
+        group.total += item.amount ?? 0;
+      }
+    }
+    const startOf = (id: string) => this.periods.find((p) => p.id === id)?.startDate ?? '';
+    this.groups = [...map.values()].sort((a, b) => startOf(b.periodId).localeCompare(startOf(a.periodId)));
   }
 
   resetFilters(): void {
@@ -666,6 +772,7 @@ export class PaymentsPageComponent implements OnInit {
           : [payment, ...this.allItems];
         this.applyFilters();
         this.receipt = payment;
+        this.receiptLateFeesExpanded = false;
         this.form = this.createInitialForm();
         this.pendingCharges = [];
         this.isSaving = false;
@@ -684,6 +791,7 @@ export class PaymentsPageComponent implements OnInit {
 
   showReceipt(item: Payment): void {
     this.receipt = item;
+    this.receiptLateFeesExpanded = false;
     this.showForm = false;
     this.cdr.markForCheck();
   }

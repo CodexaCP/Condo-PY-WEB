@@ -30,6 +30,14 @@ import {
 } from '../../api/models';
 import { API_BASE_URL } from '../../config/api.config';
 
+interface BuildingExpensesGroup {
+  periodId: string;
+  periodName: string;
+  buildingName: string;
+  total: number;
+  items: BuildingExpense[];
+}
+
 @Component({
   standalone: true,
   selector: 'app-building-expenses-page',
@@ -259,11 +267,21 @@ import { API_BASE_URL } from '../../config/api.config';
       <p class="app-state" *ngIf="!loading && !items.length">No hay gastos registrados.</p>
 
       <!-- LISTA DE GASTOS -->
-      <div class="app-list" *ngIf="items.length">
+      <div class="period-group" *ngFor="let group of groups; trackBy: trackGroup">
+        <button type="button" class="group-head" (click)="toggleGroup(group.periodId)" [attr.aria-expanded]="isGroupOpen(group.periodId)">
+          <span class="pi" [ngClass]="isGroupOpen(group.periodId) ? 'pi-chevron-down' : 'pi-chevron-right'"></span>
+          <span class="group-title">
+            <strong>{{ group.periodName }}</strong>
+            <small>{{ group.buildingName }}</small>
+          </span>
+          <span class="group-count">{{ group.items.length }} {{ group.items.length === 1 ? 'gasto' : 'gastos' }}</span>
+          <strong class="group-total">{{ formatCurrency(group.total) }}</strong>
+        </button>
+      <div class="app-list" *ngIf="isGroupOpen(group.periodId)">
         <div class="app-row header expenses-grid">
           <span>Fecha</span><span>Descripción</span><span>Periodo · Edificio</span><span>Distribución</span><span>Monto</span><span class="txt-right">Acciones</span>
         </div>
-        <div class="app-row expenses-grid" *ngFor="let item of items">
+        <div class="app-row expenses-grid" *ngFor="let item of group.items">
           <span class="expense-date">{{ item.expenseDate }}</span>
           <div>
             <strong>{{ item.description }}</strong>
@@ -285,6 +303,7 @@ import { API_BASE_URL } from '../../config/api.config';
             <p-button *ngIf="!isOperator" type="button" icon="pi pi-trash" severity="danger" [rounded]="true" [text]="true" [disabled]="isSaving || !isDraftPeriod(item.expensePeriodId)" (onClick)="deleteExpense(item)" pTooltip="Eliminar"></p-button>
           </div>
         </div>
+      </div>
       </div>
 
       <input #receiptInput type="file" accept=".pdf,.jpg,.jpeg,.png" style="display:none" (change)="onReceiptFileSelected($event)" />
@@ -359,6 +378,20 @@ import { API_BASE_URL } from '../../config/api.config';
     }
     .apply-icon { font-size: 1.5rem; color: #16a34a; align-self: center; }
 
+    /* Period groups */
+    .period-group { margin-bottom: 0.75rem; }
+    .group-head {
+      width: 100%; display: flex; align-items: center; gap: 0.85rem;
+      padding: 0.9rem 1.25rem; border-radius: 16px; cursor: pointer;
+      background: #f5faf9; border: 1px solid #e5eeec; font: inherit; color: #14363d; text-align: left;
+    }
+    .group-head:hover { background: #eaf4f2; }
+    .group-title { flex: 1; display: grid; }
+    .group-title small { color: #6b878d; font-size: 0.8rem; }
+    .group-count { color: #6b878d; font-size: 0.85rem; }
+    .group-total { min-width: 8rem; text-align: right; }
+    .period-group .app-list { margin-top: 0.5rem; }
+
     /* Expense list */
     .expenses-grid { grid-template-columns: 0.6fr 1.6fr 1.2fr 1fr 0.8fr 0.55fr; }
     .recurring-grid { grid-template-columns: 1.3fr 1fr 0.9fr 1fr 0.7fr 0.5fr 0.4fr; }
@@ -392,6 +425,8 @@ export class BuildingExpensesPageComponent implements OnInit {
   get isOperator(): boolean { return this.auth.hasRole('CompanyOperator'); }
 
   items: BuildingExpense[] = [];
+  groups: BuildingExpensesGroup[] = [];
+  private openGroups = new Set<string>();
   private allItems: BuildingExpense[] = [];
   buildings: Building[] = [];
   periods: ExpensePeriod[] = [];
@@ -552,7 +587,37 @@ export class BuildingExpensesPageComponent implements OnInit {
       (!this.filters.expensePeriodId || item.expensePeriodId === this.filters.expensePeriodId)
     );
     this.sortItems();
+    this.buildGroups();
     this.cdr.markForCheck();
+  }
+
+  isGroupOpen(periodId: string): boolean {
+    return this.openGroups.has(periodId);
+  }
+
+  toggleGroup(periodId: string): void {
+    if (!this.openGroups.delete(periodId)) {
+      this.openGroups.add(periodId);
+    }
+  }
+
+  trackGroup(_: number, group: { periodId: string }): string {
+    return group.periodId;
+  }
+
+  private buildGroups(): void {
+    const map = new Map<string, BuildingExpensesGroup>();
+    for (const item of this.items) {
+      let group = map.get(item.expensePeriodId);
+      if (!group) {
+        group = { periodId: item.expensePeriodId, periodName: item.expensePeriodName, buildingName: item.buildingName, total: 0, items: [] };
+        map.set(item.expensePeriodId, group);
+      }
+      group.items.push(item);
+      group.total += item.amount ?? 0;
+    }
+    const startOf = (id: string) => this.periods.find((p) => p.id === id)?.startDate ?? '';
+    this.groups = [...map.values()].sort((a, b) => startOf(b.periodId).localeCompare(startOf(a.periodId)));
   }
 
   resetFilters(): void {

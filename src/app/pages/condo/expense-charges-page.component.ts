@@ -79,6 +79,25 @@ interface UnitGroup {
             <option *ngFor="let p of filteredPeriodsForSelector" [value]="p.id">{{ p.name }} · {{ p.buildingName }}</option>
           </select>
         </div>
+        <div class="field-block unit-filter">
+          <span>Unidades</span>
+          <div class="unit-picker" (click)="unitInput.focus()">
+            <span class="unit-chip" *ngFor="let u of selectedUnitsForFilter">
+              {{ u.code }}
+              <button type="button" (click)="removeUnitFilter(u.id); $event.stopPropagation()" aria-label="Quitar unidad"><span class="pi pi-times"></span></button>
+            </span>
+            <input #unitInput type="text" [(ngModel)]="unitQuery" name="unitQuery"
+                   (focus)="unitDropdownOpen = true" (blur)="closeUnitDropdown()"
+                   (keydown.enter)="addFirstUnitSuggestion(); $event.preventDefault()"
+                   (keydown.backspace)="onUnitBackspace()"
+                   [placeholder]="filters.unitIds.length ? '' : 'Escribí para buscar unidades...'" autocomplete="off" />
+          </div>
+          <div class="unit-dropdown" *ngIf="unitDropdownOpen && unitSuggestions.length">
+            <button type="button" class="unit-option" *ngFor="let u of unitSuggestions" (mousedown)="addUnitFilter(u.id); $event.preventDefault()">
+              <strong>{{ u.code }}</strong> <small>{{ u.buildingName }}</small>
+            </button>
+          </div>
+        </div>
         <p-button type="button" label="Limpiar" icon="pi pi-times" severity="secondary" [outlined]="true" size="small" (onClick)="resetFilters()"></p-button>
       </div>
 
@@ -333,6 +352,35 @@ interface UnitGroup {
     }
     .filters-icon { color: var(--brand-muted); font-size: 1rem; margin-bottom: 0.35rem; }
 
+    /* Unit multi-select autocomplete */
+    .unit-filter { position: relative; flex: 1; min-width: 260px; }
+    .unit-picker {
+      display: flex; flex-wrap: wrap; align-items: center; gap: 0.35rem;
+      min-height: 2.4rem; padding: 0.25rem 0.5rem; background: #fff; cursor: text;
+      border: 1.5px solid rgba(20,54,61,0.18); border-radius: 10px;
+    }
+    .unit-picker:focus-within { border-color: var(--brand-blue); }
+    .unit-picker input {
+      flex: 1; min-width: 120px; border: 0 !important; outline: none; padding: 0.25rem !important;
+      background: transparent !important; width: auto !important; font-size: 0.92rem;
+    }
+    .unit-chip {
+      display: inline-flex; align-items: center; gap: 0.3rem;
+      background: rgba(19,133,182,0.12); color: #0f5f82; font-weight: 700; font-size: 0.82rem;
+      border-radius: 999px; padding: 0.15rem 0.35rem 0.15rem 0.65rem; text-transform: none; letter-spacing: 0;
+    }
+    .unit-chip button { border: 0; background: none; cursor: pointer; color: inherit; padding: 0.1rem 0.25rem; line-height: 1; }
+    .unit-dropdown {
+      position: absolute; top: 100%; left: 0; right: 0; z-index: 20; margin-top: 0.25rem;
+      max-height: 15rem; overflow-y: auto; background: #fff;
+      border: 1px solid rgba(20,54,61,0.15); border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+    }
+    .unit-option {
+      display: flex; justify-content: space-between; gap: 1rem; width: 100%; text-align: left;
+      padding: 0.5rem 0.85rem; border: 0; background: none; cursor: pointer; font: inherit; color: var(--brand-ink);
+    }
+    .unit-option:hover { background: rgba(19,133,182,0.08); }
+
     /* Panel box */
     .panel-box {
       border-radius: 16px;
@@ -451,7 +499,9 @@ export class ExpenseChargesPageComponent implements OnInit {
   showForm = false;
   editingId: string | null = null;
   readonly chargeTypes: ExpenseChargeType[] = ['Ordinary', 'ReserveFund', 'Extraordinary', 'Individual', 'Adjustment'];
-  filters = { buildingId: '', expensePeriodId: '' };
+  filters = { buildingId: '', expensePeriodId: '', unitIds: [] as string[] };
+  unitQuery = '';
+  unitDropdownOpen = false;
   searchText = '';
   pageSize = 25;
   currentPage = 1;
@@ -475,6 +525,51 @@ export class ExpenseChargesPageComponent implements OnInit {
     return this.filters.buildingId
       ? this.periods.filter((p) => p.buildingId === this.filters.buildingId)
       : this.periods;
+  }
+
+  get selectedUnitsForFilter(): Unit[] {
+    return this.filters.unitIds
+      .map((id) => this.units.find((u) => u.id === id))
+      .filter((u): u is Unit => !!u);
+  }
+
+  get unitSuggestions(): Unit[] {
+    const q = this.unitQuery.trim().toLowerCase();
+    return this.units
+      .filter((u) =>
+        (!this.filters.buildingId || u.buildingId === this.filters.buildingId) &&
+        !this.filters.unitIds.includes(u.id) &&
+        (!q || u.code.toLowerCase().includes(q) || u.buildingName.toLowerCase().includes(q)))
+      .sort((a, b) => a.code.localeCompare(b.code, undefined, { numeric: true }))
+      .slice(0, 50);
+  }
+
+  addUnitFilter(id: string): void {
+    if (!this.filters.unitIds.includes(id)) {
+      this.filters.unitIds = [...this.filters.unitIds, id];
+    }
+    this.unitQuery = '';
+    this.applyFilters();
+  }
+
+  addFirstUnitSuggestion(): void {
+    const first = this.unitSuggestions[0];
+    if (first) this.addUnitFilter(first.id);
+  }
+
+  removeUnitFilter(id: string): void {
+    this.filters.unitIds = this.filters.unitIds.filter((x) => x !== id);
+    this.applyFilters();
+  }
+
+  onUnitBackspace(): void {
+    if (!this.unitQuery && this.filters.unitIds.length) {
+      this.removeUnitFilter(this.filters.unitIds[this.filters.unitIds.length - 1]);
+    }
+  }
+
+  closeUnitDropdown(): void {
+    setTimeout(() => { this.unitDropdownOpen = false; this.cdr.markForCheck(); }, 150);
   }
 
   get draftPeriods(): ExpensePeriod[] {
@@ -532,6 +627,10 @@ export class ExpenseChargesPageComponent implements OnInit {
     if (!periodStillMatches) {
       this.filters.expensePeriodId = '';
     }
+    if (this.filters.buildingId) {
+      this.filters.unitIds = this.filters.unitIds.filter((id) =>
+        this.units.find((u) => u.id === id)?.buildingId === this.filters.buildingId);
+    }
     this.applyFilters();
   }
 
@@ -540,6 +639,7 @@ export class ExpenseChargesPageComponent implements OnInit {
     this.items = this.allItems.filter(item =>
       (!this.filters.buildingId || item.buildingId === this.filters.buildingId) &&
       (!this.filters.expensePeriodId || item.expensePeriodId === this.filters.expensePeriodId) &&
+      (!this.filters.unitIds.length || this.filters.unitIds.includes(item.unitId)) &&
       (!search ||
         item.unitCode.toLowerCase().includes(search) ||
         item.buildingName.toLowerCase().includes(search) ||
@@ -564,7 +664,8 @@ export class ExpenseChargesPageComponent implements OnInit {
   }
 
   resetFilters(): void {
-    this.filters = { buildingId: '', expensePeriodId: '' };
+    this.filters = { buildingId: '', expensePeriodId: '', unitIds: [] };
+    this.unitQuery = '';
     this.searchText = '';
     this.applyFilters();
   }

@@ -164,31 +164,6 @@ import {
         </form>
       </div>
 
-      <!-- Operational alerts -->
-      <div class="panel-box alerts-panel" *ngIf="alerts.length">
-        <div class="panel-head">
-          <div class="panel-title">
-            <span class="panel-icon alert-icon pi pi-bell"></span>
-            <div>
-              <strong>Alertas operativas</strong>
-              <small>{{ alerts.length }} alertas activas</small>
-            </div>
-          </div>
-        </div>
-        <div class="app-list">
-          <div class="app-row header alerts-grid">
-            <span>Tipo</span><span>Periodo</span><span>Edificio</span><span>Vence</span><span>Saldo</span>
-          </div>
-          <div class="app-row alerts-grid" *ngFor="let a of alerts">
-            <p-tag [value]="alertTypeLabel(a)" [severity]="alertSeverity(a)"></p-tag>
-            <div><strong>{{ a.expensePeriodName }}</strong><br><small style="color:#6b878d">{{ a.message }}</small></div>
-            <span>{{ a.buildingName }}</span>
-            <span>{{ a.dueDate }}</span>
-            <span>{{ formatCurrency(a.pendingAmount) }}</span>
-          </div>
-        </div>
-      </div>
-
       <!-- Charge generator -->
       <div class="panel-box generator-panel" *ngIf="generatorPeriod">
         <div class="panel-head">
@@ -366,6 +341,30 @@ import {
           </div>
         </div>
       </div>
+
+      <!-- Operational alerts (colapsadas) -->
+      <div class="panel-box alerts-panel alerts-bottom" *ngIf="alerts.length">
+        <button type="button" class="alerts-toggle" (click)="showAlerts = !showAlerts" [attr.aria-expanded]="showAlerts">
+          <span class="panel-icon alert-icon pi pi-bell"></span>
+          <span class="alerts-title">
+            <strong>Alertas operativas</strong>
+            <small>{{ alerts.length }} alertas activas</small>
+          </span>
+          <span class="pi" [ngClass]="showAlerts ? 'pi-chevron-down' : 'pi-chevron-right'"></span>
+        </button>
+        <div class="app-list" *ngIf="showAlerts">
+          <div class="app-row header alerts-grid">
+            <span>Tipo</span><span>Periodo</span><span>Edificio</span><span>Vence</span><span>Saldo</span>
+          </div>
+          <div class="app-row alerts-grid" *ngFor="let a of alerts">
+            <p-tag [value]="alertTypeLabel(a)" [severity]="alertSeverity(a)"></p-tag>
+            <div><strong>{{ a.expensePeriodName }}</strong><br><small style="color:#6b878d">{{ a.message }}</small></div>
+            <span>{{ a.buildingName }}</span>
+            <span>{{ a.dueDate }}</span>
+            <span>{{ formatCurrency(a.pendingAmount) }}</span>
+          </div>
+        </div>
+      </div>
     </p-card>
   `,
   styles: [`
@@ -383,6 +382,14 @@ import {
     .form-panel { border-color: rgba(19,133,182,0.25); background: rgba(19,133,182,0.02); }
     .bulk-panel { border-color: rgba(108,117,125,0.25); }
     .alerts-panel { border-color: rgba(220,160,0,0.3); background: rgba(255,248,230,0.6); }
+    .alerts-bottom { margin-top: 1.25rem; }
+    .alerts-toggle {
+      width: 100%; display: flex; align-items: center; gap: 0.85rem;
+      background: none; border: 0; padding: 0; cursor: pointer; font: inherit; color: #14363d; text-align: left;
+    }
+    .alerts-title { flex: 1; display: grid; }
+    .alerts-title small { color: #6b878d; font-size: 0.82rem; }
+    .alerts-toggle + .app-list { margin-top: 1.25rem; }
     .generator-panel { border-color: rgba(34,197,94,0.3); background: rgba(240,253,244,0.8); }
     .settlement-panel { border-color: rgba(59,130,246,0.25); background: rgba(239,246,255,0.6); }
 
@@ -597,6 +604,7 @@ export class ExpensePeriodsPageComponent implements OnInit {
   editingId: string | null = null;
   readonly generationModes: GenerateExpenseChargesMode[] = ['FixedAmount', 'ByCoefficient'];
   alerts: ExpensePeriodOperationalAlertItem[] = [];
+  showAlerts = false;
   generatorPeriod: ExpensePeriod | null = null;
   settlementPeriod: ExpensePeriod | null = null;
   settlementSummary: ExpenseSettlementSummary | null = null;
