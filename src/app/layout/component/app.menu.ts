@@ -80,15 +80,10 @@ export class AppMenu {
                     ]
                 },
                 {
-                    label: 'Propietarios',
-                    items: [
-                        { label: 'Propietarios', icon: 'pi pi-fw pi-id-card', routerLink: ['/propietarios'] }
-                    ]
-                },
-                {
-                    label: 'Residentes',
+                    label: 'Propietarios y residentes',
                     items: [
                         { label: 'Unidades', icon: 'pi pi-fw pi-th-large', routerLink: ['/units'] },
+                        { label: 'Propietarios', icon: 'pi pi-fw pi-id-card', routerLink: ['/propietarios'] },
                         { label: 'Residentes', icon: 'pi pi-fw pi-user', routerLink: ['/residents'] },
                         { label: 'Asignaciones', icon: 'pi pi-fw pi-link', routerLink: ['/assignments'] }
                     ]
