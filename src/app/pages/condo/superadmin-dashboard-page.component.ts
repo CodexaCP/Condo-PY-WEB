@@ -39,11 +39,11 @@ interface CompanyCard {
     <!-- KPI ROW -->
     <section class="kpi-row" *ngIf="!loading">
       <div class="kpi-card">
-        <div class="kpi-icon" style="background: linear-gradient(135deg,#0f4862,#1ab7af)">ðŸ¢</div>
+        <div class="kpi-icon" style="background: linear-gradient(135deg,#0f4862,#1ab7af)">🏢</div>
         <div class="kpi-body">
           <span>Empresas totales</span>
           <strong>{{ companies.length }}</strong>
-          <small>{{ activeCompanies }} activas Â· {{ inactiveCompanies }} inactivas</small>
+          <small>{{ activeCompanies }} activas · {{ inactiveCompanies }} inactivas</small>
         </div>
         <div class="kpi-bar-wrap">
           <div class="kpi-bar" [style.width.%]="activeRatio"></div>
@@ -51,7 +51,7 @@ interface CompanyCard {
       </div>
 
       <div class="kpi-card">
-        <div class="kpi-icon" style="background: linear-gradient(135deg,#1385b6,#6ac64a)">ðŸ‘¤</div>
+        <div class="kpi-icon" style="background: linear-gradient(135deg,#1385b6,#6ac64a)">👤</div>
         <div class="kpi-body">
           <span>Admins generales</span>
           <strong>{{ totalAdmins }}</strong>
@@ -64,7 +64,7 @@ interface CompanyCard {
 
       <div class="kpi-card" [class.kpi-alert]="uncoveredCompanies > 0">
         <div class="kpi-icon" [style.background]="uncoveredCompanies > 0 ? 'linear-gradient(135deg,#c94d3f,#e07020)' : 'linear-gradient(135deg,#3d7d2d,#6ac64a)'">
-          {{ uncoveredCompanies > 0 ? 'âš ' : 'âœ“' }}
+          {{ uncoveredCompanies > 0 ? '⚠' : '✓' }}
         </div>
         <div class="kpi-body">
           <span>Sin cobertura</span>
@@ -77,7 +77,7 @@ interface CompanyCard {
       </div>
 
       <div class="kpi-card">
-        <div class="kpi-icon" style="background: linear-gradient(135deg,#7c3aed,#1ab7af)">ðŸ˜</div>
+        <div class="kpi-icon" style="background: linear-gradient(135deg,#7c3aed,#1ab7af)">🏘</div>
         <div class="kpi-body">
           <span>Condominios</span>
           <strong>{{ condominiums.length }}</strong>
@@ -144,8 +144,8 @@ interface CompanyCard {
             </div>
 
             <div class="no-admin-warn" *ngIf="item.admins.length === 0">
-              <span>âš  Sin administrador asignado</span>
-              <a routerLink="/users" class="assign-link">Asignar â†’</a>
+              <span>⚠ Sin administrador asignado</span>
+              <a routerLink="/users" class="assign-link">Asignar →</a>
             </div>
           </div>
         </div>
@@ -158,7 +158,7 @@ interface CompanyCard {
         <div class="panel donut-panel">
           <div class="panel-head">
             <div>
-              <strong>DistribuciÃ³n</strong>
+              <strong>Distribución</strong>
               <span>Estado del portfolio</span>
             </div>
           </div>
@@ -248,41 +248,41 @@ interface CompanyCard {
         <div class="panel actions-panel">
           <div class="panel-head">
             <div>
-              <strong>Acciones rÃ¡pidas</strong>
+              <strong>Acciones rápidas</strong>
             </div>
           </div>
           <div class="action-list">
             <a routerLink="/companies" class="action-item">
-              <div class="action-icon" style="background:linear-gradient(135deg,#0f4862,#1385b6)">ðŸ¢</div>
+              <div class="action-icon" style="background:linear-gradient(135deg,#0f4862,#1385b6)">🏢</div>
               <div>
                 <strong>Nueva empresa</strong>
                 <span>Registrar empresa administradora</span>
               </div>
-              <div class="action-arrow">â†’</div>
+              <div class="action-arrow">→</div>
             </a>
             <a routerLink="/users" class="action-item">
-              <div class="action-icon" style="background:linear-gradient(135deg,#6ac64a,#1ab7af)">ðŸ‘¤</div>
+              <div class="action-icon" style="background:linear-gradient(135deg,#6ac64a,#1ab7af)">👤</div>
               <div>
                 <strong>Nuevo admin general</strong>
                 <span>Crear y asignar administrador</span>
               </div>
-              <div class="action-arrow">â†’</div>
+              <div class="action-arrow">→</div>
             </a>
             <a routerLink="/condominiums" class="action-item">
-              <div class="action-icon" style="background:linear-gradient(135deg,#7c3aed,#1ab7af)">ðŸ˜</div>
+              <div class="action-icon" style="background:linear-gradient(135deg,#7c3aed,#1ab7af)">🏘</div>
               <div>
                 <strong>Nuevo condominio</strong>
                 <span>Asignar condominio a empresa</span>
               </div>
-              <div class="action-arrow">â†’</div>
+              <div class="action-arrow">→</div>
             </a>
             <a routerLink="/buildings" class="action-item">
-              <div class="action-icon" style="background:linear-gradient(135deg,#0f4862,#6ac64a)">ðŸ—</div>
+              <div class="action-icon" style="background:linear-gradient(135deg,#0f4862,#6ac64a)">🏗</div>
               <div>
                 <strong>Nuevo edificio</strong>
                 <span>Registrar edificio con condominio opcional</span>
               </div>
-              <div class="action-arrow">â†’</div>
+              <div class="action-arrow">→</div>
             </a>
           </div>
         </div>

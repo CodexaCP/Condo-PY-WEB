@@ -22,11 +22,11 @@ import { roleOptions } from '../../auth/role-labels';
 
 interface PhonePrefix { label: string; value: string; flag: string; }
 const PHONE_PREFIXES: PhonePrefix[] = [
-  { label: 'PY +595', value: '+595', flag: 'ðŸ‡µðŸ‡¾' },
-  { label: 'USA +1',  value: '+1',   flag: 'ðŸ‡ºðŸ‡¸' },
-  { label: 'BR +55',  value: '+55',  flag: 'ðŸ‡§ðŸ‡·' },
-  { label: 'ARG +54', value: '+54',  flag: 'ðŸ‡¦ðŸ‡·' },
-  { label: 'VE +58',  value: '+58',  flag: 'ðŸ‡»ðŸ‡ª' },
+  { label: 'PY +595', value: '+595', flag: '🇵🇾' },
+  { label: 'USA +1',  value: '+1',   flag: '🇺🇸' },
+  { label: 'BR +55',  value: '+55',  flag: '🇧🇷' },
+  { label: 'ARG +54', value: '+54',  flag: '🇦🇷' },
+  { label: 'VE +58',  value: '+58',  flag: '🇻🇪' },
 ];
 
 const BUILDING_MANAGER_LIMIT = 25;
@@ -81,7 +81,7 @@ const ALL_ROLE_CARDS: RoleCard[] = [
 
       <form class="create-form" (ngSubmit)="save()" *ngIf="!loading && !loadError">
 
-        <!-- â•â• DATOS PERSONALES â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+        <!-- ══ DATOS PERSONALES ══════════════════════════════════════ -->
         <section class="form-section">
           <h2 class="section-title">Datos personales</h2>
 
@@ -94,18 +94,18 @@ const ALL_ROLE_CARDS: RoleCard[] = [
             <div class="field">
               <label for="lastName">Apellidos <span class="required">*</span></label>
               <input id="lastName" type="text" [(ngModel)]="form.lastName" name="lastName"
-                     placeholder="Ej. PÃ©rez GarcÃ­a" maxlength="100" autocomplete="off" />
+                     placeholder="Ej. Pérez García" maxlength="100" autocomplete="off" />
             </div>
           </div>
 
           <div class="field">
-            <label for="address">DirecciÃ³n <span class="optional">(opcional)</span></label>
+            <label for="address">Dirección <span class="optional">(opcional)</span></label>
             <input id="address" type="text" [(ngModel)]="form.address" name="address"
-                   placeholder="Calle, nÃºmero, ciudad" maxlength="200" autocomplete="off" />
+                   placeholder="Calle, número, ciudad" maxlength="200" autocomplete="off" />
           </div>
         </section>
 
-        <!-- â•â• ACCESO AL SISTEMA â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+        <!-- ══ ACCESO AL SISTEMA ════════════════════════════════════ -->
         <section class="form-section">
           <h2 class="section-title">Acceso al sistema</h2>
 
@@ -116,12 +116,12 @@ const ALL_ROLE_CARDS: RoleCard[] = [
                      placeholder="ej. juan.perez" maxlength="60" autocomplete="off"
                      (input)="onUsernameInput()" />
               <small class="field-hint">
-                Solo minÃºsculas, nÃºmeros, puntos y guiones.
-                Ãšnico dentro de su empresa o condominio.
+                Solo minúsculas, números, puntos y guiones.
+                Único dentro de su empresa o condominio.
               </small>
             </div>
             <div class="field">
-              <label for="email">Correo electrÃ³nico <span class="required">*</span></label>
+              <label for="email">Correo electrónico <span class="required">*</span></label>
               <input id="email" type="email" [(ngModel)]="form.email" name="email"
                      placeholder="usuario@ejemplo.com" maxlength="160" autocomplete="off" />
             </div>
@@ -133,13 +133,13 @@ const ALL_ROLE_CARDS: RoleCard[] = [
               <i class="pi pi-at"></i>
               <span><strong>Correo</strong> usuario&#64;ejemplo.com</span>
             </div>
-            <div class="login-sep">Ã³</div>
+            <div class="login-sep">ó</div>
             <div class="login-method">
               <i class="pi pi-user"></i>
               <span><strong>Usuario</strong> juan.perez</span>
             </div>
             <p class="login-note" *ngIf="!isEditing">
-              Clave inicial: <code>123456</code> â€” se debe cambiar en el primer ingreso.
+              Clave inicial: <code>123456</code> — se debe cambiar en el primer ingreso.
             </p>
           </div>
 
@@ -151,7 +151,7 @@ const ALL_ROLE_CARDS: RoleCard[] = [
           </div>
         </section>
 
-        <!-- â•â• ROL â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+        <!-- ══ ROL ═══════════════════════════════════════════════════ -->
         <section class="form-section">
           <h2 class="section-title">Rol <span class="required">*</span></h2>
           <p class="section-desc">Selecciona el nivel de acceso del usuario.</p>
@@ -177,26 +177,26 @@ const ALL_ROLE_CARDS: RoleCard[] = [
           </div>
         </section>
 
-        <!-- â•â• ALCANCE DE ACCESO â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+        <!-- ══ ALCANCE DE ACCESO ══════════════════════════════════════ -->
         <section class="form-section">
           <h2 class="section-title">Alcance de acceso</h2>
-          <p class="section-desc">Define quÃ© recursos puede ver y gestionar este usuario al iniciar sesiÃ³n.</p>
+          <p class="section-desc">Define qué recursos puede ver y gestionar este usuario al iniciar sesión.</p>
 
-          <!-- Caja de alcance segÃºn rol seleccionado -->
+          <!-- Caja de alcance según rol seleccionado -->
           <div class="scope-summary" *ngIf="form.role">
             <div class="scope-level" [class.active]="form.role === 'CompanyAdmin'">
               <i class="pi pi-briefcase"></i>
-              <span>Empresa â†’ todos los condominios y edificios</span>
+              <span>Empresa → todos los condominios y edificios</span>
             </div>
-            <div class="scope-arrow">â€º</div>
+            <div class="scope-arrow">›</div>
             <div class="scope-level" [class.active]="form.role === 'CompanyOperator'">
               <i class="pi pi-building"></i>
-              <span>Condominio â†’ todos los edificios</span>
+              <span>Condominio → todos los edificios</span>
             </div>
-            <div class="scope-arrow">â€º</div>
+            <div class="scope-arrow">›</div>
             <div class="scope-level" [class.active]="form.role === 'BuildingManager'">
               <i class="pi pi-home"></i>
-              <span>Edificios â†’ unidades y residentes</span>
+              <span>Edificios → unidades y residentes</span>
             </div>
           </div>
 
@@ -212,7 +212,7 @@ const ALL_ROLE_CARDS: RoleCard[] = [
             </p-select>
           </div>
 
-          <!-- Condominio + TelÃ©fono en la misma fila -->
+          <!-- Condominio + Teléfono en la misma fila -->
           <div class="field-row">
             <div class="field">
               <label for="condominium">
@@ -226,11 +226,11 @@ const ALL_ROLE_CARDS: RoleCard[] = [
                         (onChange)="onCondominiumChange()">
               </p-select>
               <small class="field-hint" *ngIf="form.condominiumId">
-                El usuario podrÃ¡ ver y editar todos los edificios de este condominio.
+                El usuario podrá ver y editar todos los edificios de este condominio.
               </small>
             </div>
             <div class="field">
-              <label>TelÃ©fono <span class="optional">(opcional)</span></label>
+              <label>Teléfono <span class="optional">(opcional)</span></label>
               <div class="phone-row">
                 <p-select [options]="prefixOptions" [(ngModel)]="form.phonePrefix" name="phonePrefix"
                           optionLabel="label" optionValue="value" styleClass="phone-prefix-select">
@@ -266,12 +266,12 @@ const ALL_ROLE_CARDS: RoleCard[] = [
               Podés asignar edificios específicos o dejar vacío para acceso según condominio.
             </small>
 
-            <!-- Edificio Ãºnico bloqueado (CompanyAdmin con solo 1 edificio) -->
+            <!-- Edificio único bloqueado (CompanyAdmin con solo 1 edificio) -->
             <div class="locked-badge" *ngIf="singleBuildingLocked">
               <i class="pi pi-home"></i>
               <span>{{ filteredBuildings[0]?.name }}</span>
               <span class="locked-badge-sub">{{ filteredBuildings[0]?.code }}</span>
-              <span class="locked-tag">Asignado automÃ¡ticamente</span>
+              <span class="locked-tag">Asignado automáticamente</span>
             </div>
 
             <div class="building-grid" *ngIf="!singleBuildingLocked && filteredBuildings.length; else noBuildings">
@@ -339,7 +339,7 @@ const ALL_ROLE_CARDS: RoleCard[] = [
           </div>
         </section>
 
-        <!-- â•â• ACCIONES â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+        <!-- ══ ACCIONES ══════════════════════════════════════════════ -->
         <section class="form-actions">
           <div class="form-actions-left">
             <p-button *ngIf="isEditing" type="button" label="Eliminar usuario"
@@ -365,12 +365,12 @@ const ALL_ROLE_CARDS: RoleCard[] = [
     <div class="ov-backdrop" *ngIf="confirmVisible" (click)="cancelDelete()"></div>
     <div class="ov-panel-sm" *ngIf="confirmVisible" (click)="$event.stopPropagation()">
       <div class="ov-header">
-        <strong>Confirmar eliminaciÃ³n</strong>
-        <button class="ov-close" (click)="cancelDelete()">âœ•</button>
+        <strong>Confirmar eliminación</strong>
+        <button class="ov-close" (click)="cancelDelete()">✕</button>
       </div>
       <p class="confirm-text">
-        Â¿Eliminar al usuario <strong>{{ editingFullName }}</strong> de forma permanente?
-        Esta acciÃ³n no se puede deshacer.
+        ¿Eliminar al usuario <strong>{{ editingFullName }}</strong> de forma permanente?
+        Esta acción no se puede deshacer.
       </p>
       <div class="confirm-footer">
         <p-button label="Cancelar" severity="secondary" [outlined]="true" (onClick)="cancelDelete()"></p-button>
@@ -472,7 +472,7 @@ export class UserCreatePageComponent implements OnInit {
         this.capacityMap = new Map(capacity.items.map(i => [i.buildingId, i]));
 
         if (id && !entity) {
-          this.loadError = 'No se encontrÃ³ el usuario solicitado.';
+          this.loadError = 'No se encontró el usuario solicitado.';
           this.loading   = false;
           this.cdr.markForCheck();
           return;
@@ -526,14 +526,14 @@ export class UserCreatePageComponent implements OnInit {
 
   onCompanyChange(): void {
     this.form.condominiumId = '';
-    this.form.buildingIds   = [];     // el usuario cambiÃ³ empresa â†’ limpiar selecciÃ³n
+    this.form.buildingIds   = [];     // el usuario cambió empresa → limpiar selección
     this.refreshCondominiumOptions();
     this.refreshBuildings();
     this.cdr.markForCheck();
   }
 
   onCondominiumChange(): void {
-    this.form.buildingIds = [];       // el usuario cambiÃ³ condominio â†’ limpiar selecciÃ³n
+    this.form.buildingIds = [];       // el usuario cambió condominio → limpiar selección
     this.refreshBuildings();
     this.cdr.markForCheck();
   }
@@ -629,10 +629,10 @@ export class UserCreatePageComponent implements OnInit {
     if (!lastName)  { this.msg.add({ severity: 'error', summary: 'Error', detail: 'Los apellidos son obligatorios.', life: 5000 }); return; }
     if (!username)  { this.msg.add({ severity: 'error', summary: 'Error', detail: 'El nombre de usuario es obligatorio.', life: 5000 }); return; }
     if (!/^[a-z0-9][a-z0-9.\-_]*$/.test(username)) {
-      this.msg.add({ severity: 'error', summary: 'Error', detail: 'Nombre de usuario invÃ¡lido. Solo minÃºsculas, nÃºmeros, puntos y guiones.', life: 5000 }); return;
+      this.msg.add({ severity: 'error', summary: 'Error', detail: 'Nombre de usuario inválido. Solo minúsculas, números, puntos y guiones.', life: 5000 }); return;
     }
     if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      this.msg.add({ severity: 'error', summary: 'Error', detail: 'Correo electrÃ³nico invÃ¡lido.', life: 5000 }); return;
+      this.msg.add({ severity: 'error', summary: 'Error', detail: 'Correo electrónico inválido.', life: 5000 }); return;
     }
     if (!this.form.role) { this.msg.add({ severity: 'error', summary: 'Error', detail: 'Debes seleccionar un rol.', life: 5000 }); return; }
     if (buildingIds.length === 0 && this.form.role === 'BuildingManager') { this.msg.add({ severity: 'error', summary: 'Error', detail: 'Debes asignar al menos un edificio.', life: 5000 }); return; }
@@ -663,9 +663,9 @@ export class UserCreatePageComponent implements OnInit {
         if (!this.isEditing) {
           this.isEditing = true;
           this.editingId = saved.id;
-          this.msg.add({ severity: 'success', summary: 'Ã‰xito', detail: 'Usuario creado. Clave inicial: 123456', life: 4000 });
+          this.msg.add({ severity: 'success', summary: 'Éxito', detail: 'Usuario creado. Clave inicial: 123456', life: 4000 });
         } else {
-          this.msg.add({ severity: 'success', summary: 'Ã‰xito', detail: 'Cambios guardados correctamente.', life: 4000 });
+          this.msg.add({ severity: 'success', summary: 'Éxito', detail: 'Cambios guardados correctamente.', life: 4000 });
         }
         this.cdr.markForCheck();
       },
