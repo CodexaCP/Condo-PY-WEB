@@ -888,6 +888,9 @@ export interface MorosityItem {
 export interface MorosityReport {
   summary: MorositySummary;
   items: MorosityItem[];
+  totalCount: number;
+  page: number;
+  pageSize: number;
 }
 
 export interface CollectionSummary {
