@@ -38,12 +38,9 @@ export class CreditNotesApiService {
     return this.http.post<CreditNote>(`${API_BASE_URL}/credit-notes`, request);
   }
 
-  approve(id: string): Observable<CreditNote> {
-    return this.http.post<CreditNote>(`${API_BASE_URL}/credit-notes/${id}/approve`, {});
-  }
-
-  emit(id: string, invoiceSeriesId: string): Observable<CreditNote> {
-    return this.http.post<CreditNote>(`${API_BASE_URL}/credit-notes/${id}/emit`, { invoiceSeriesId });
+  // Aprobar exige un timbrado NC valido: numera y aplica el efecto en el saldo en el mismo paso.
+  approve(id: string, invoiceSeriesId: string): Observable<CreditNote> {
+    return this.http.post<CreditNote>(`${API_BASE_URL}/credit-notes/${id}/approve`, { invoiceSeriesId });
   }
 
   reject(id: string, motivo: string): Observable<CreditNote> {

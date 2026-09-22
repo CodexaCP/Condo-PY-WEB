@@ -744,12 +744,10 @@ export interface CreateCreditNoteRequest {
   lines: CreateCreditNoteLineRequest[];
 }
 
+// numero/timbrado/fechaEmisionUtc ya no se cargan a mano: los asigna approve() con el timbrado.
 export interface RegisterCreditNoteFiscalDataRequest {
   documentType: CreditNoteFiscalDocumentType | null;
-  numero?: string;
-  timbrado?: string;
   cdc?: string;
-  fechaEmisionUtc?: string;
   estado?: string;
   observaciones?: string;
 }

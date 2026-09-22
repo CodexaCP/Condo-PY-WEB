@@ -222,15 +222,32 @@ const STATUS_SEVERITY: Record<string, 'warn' | 'info' | 'success' | 'danger' | '
 
                     <div class="cn-actions" *ngIf="cn.status === 'Draft' && canApproveCreditNotesRole">
                       <p-button label="Aprobar" icon="pi pi-check" size="small" severity="success"
-                                (onClick)="approveCreditNote(cn)" [loading]="cnActionId === cn.id"></p-button>
+                                (onClick)="askApproveCreditNote(cn)"></p-button>
                       <p-button label="Rechazar" icon="pi pi-times" size="small" severity="danger" [outlined]="true"
                                 (onClick)="askRejectCreditNote(cn)"></p-button>
+                    </div>
+                    <div class="cn-reason-form" *ngIf="cnApproveTargetId === cn.id">
+                      <p class="cn-note" *ngIf="creditNoteSeriesFor(cn.buildingId).length === 0">
+                        No hay timbrado activo de notas de crédito para este edificio. Cargá uno en Facturación → Timbrados antes de aprobar.
+                      </p>
+                      <div class="cn-emit-row" *ngIf="creditNoteSeriesFor(cn.buildingId).length > 0">
+                        <select [(ngModel)]="cnApproveSeriesByCn[cn.id]" [name]="'cn-approve-series-' + cn.id">
+                          <option value="" disabled selected>Seleccionar timbrado</option>
+                          <option *ngFor="let sr of creditNoteSeriesFor(cn.buildingId)" [value]="sr.id">{{ sr.establecimiento }}-{{ sr.puntoExpedicion }}-{{ sr.numeroTimbrado }} ({{ sr.numerosDisponibles }} disponibles)</option>
+                        </select>
+                        <p-button label="Confirmar aprobación" size="small" severity="success" (onClick)="approveCreditNote(cn)"
+                                  [loading]="cnActionId === cn.id" [disabled]="!cnApproveSeriesByCn[cn.id]"></p-button>
+                      </div>
                     </div>
                     <div class="cn-reason-form" *ngIf="cnRejectTargetId === cn.id">
                       <textarea [(ngModel)]="cnRejectReason" [name]="'cn-reject-' + cn.id" rows="2" placeholder="Motivo de rechazo (obligatorio)"></textarea>
                       <p-button label="Confirmar rechazo" size="small" severity="danger"
                                 (onClick)="rejectCreditNote(cn)" [loading]="cnActionId === cn.id"></p-button>
                     </div>
+
+                    <p class="cn-emit-issued" *ngIf="cn.numero">
+                      <i class="pi pi-check-circle"></i> Numerada: {{ cn.fiscalNumero }} (timbrado {{ cn.fiscalTimbrado }})
+                    </p>
 
                     <div class="cn-actions" *ngIf="cn.status === 'Approved' && canApproveCreditNotesRole">
                       <p-button label="Anular NC" icon="pi pi-times" size="small" severity="danger" [outlined]="true"
@@ -245,35 +262,18 @@ const STATUS_SEVERITY: Record<string, 'warn' | 'info' | 'success' | 'danger' | '
                     <div class="cn-fiscal">
                       <button type="button" class="cn-fiscal-toggle" (click)="toggleFiscalForm(cn)">
                         <i class="pi" [class.pi-chevron-down]="cnFiscalTargetId !== cn.id" [class.pi-chevron-up]="cnFiscalTargetId === cn.id"></i>
-                        Documento fiscal oficial{{ cn.fiscalNumero ? ' (' + cn.fiscalNumero + ')' : '' }}
+                        Datos complementarios{{ cn.fiscalNumero ? ' (' + cn.fiscalNumero + ')' : '' }}
                       </button>
                       <div class="cn-fiscal-form" *ngIf="cnFiscalTargetId === cn.id">
-                        <div class="cn-emit-box" *ngIf="cn.status === 'Approved' && !cn.numero && creditNoteSeriesFor(cn.buildingId).length > 0">
-                          <span class="cn-emit-label">Emitir con timbrado registrado</span>
-                          <div class="cn-emit-row">
-                            <select [(ngModel)]="cnEmitSeriesByCn[cn.id]" [name]="'cn-emit-series-' + cn.id">
-                              <option value="" disabled selected>Seleccionar timbrado</option>
-                              <option *ngFor="let sr of creditNoteSeriesFor(cn.buildingId)" [value]="sr.id">{{ sr.establecimiento }}-{{ sr.puntoExpedicion }}-{{ sr.numeroTimbrado }} ({{ sr.numerosDisponibles }} disponibles)</option>
-                            </select>
-                            <p-button label="Emitir NC" icon="pi pi-send" size="small" (onClick)="emitCreditNote(cn)"
-                                      [loading]="cnEmittingId === cn.id" [disabled]="!cnEmitSeriesByCn[cn.id]"></p-button>
-                          </div>
-                        </div>
-                        <p class="cn-emit-issued" *ngIf="cn.numero">
-                          <i class="pi pi-check-circle"></i> Numerada automáticamente: {{ cn.fiscalNumero }} (timbrado {{ cn.fiscalTimbrado }})
-                        </p>
                         <div class="cn-fiscal-row">
                           <select [(ngModel)]="cnFiscalForm.documentType" [name]="'cn-doctype-' + cn.id">
                             <option [ngValue]="null">Tipo de documento</option>
                             <option value="Paper">Papel</option>
                             <option value="Electronic">Electrónica</option>
                           </select>
-                          <input type="text" [(ngModel)]="cnFiscalForm.numero" [name]="'cn-numero-' + cn.id" placeholder="Número">
-                          <input type="text" [(ngModel)]="cnFiscalForm.timbrado" [name]="'cn-timbrado-' + cn.id" placeholder="Timbrado">
                           <input type="text" [(ngModel)]="cnFiscalForm.cdc" [name]="'cn-cdc-' + cn.id" placeholder="CDC" *ngIf="cnFiscalForm.documentType === 'Electronic'">
                         </div>
                         <div class="cn-fiscal-row">
-                          <input type="date" [(ngModel)]="cnFiscalForm.fechaEmisionUtc" [name]="'cn-fecha-' + cn.id">
                           <input type="text" [(ngModel)]="cnFiscalForm.estado" [name]="'cn-estado-' + cn.id" placeholder="Estado">
                         </div>
                         <textarea [(ngModel)]="cnFiscalForm.observaciones" [name]="'cn-obs-' + cn.id" rows="2" placeholder="Observaciones"></textarea>
@@ -573,8 +573,6 @@ const STATUS_SEVERITY: Record<string, 'warn' | 'info' | 'success' | 'danger' | '
     .cn-fiscal { border-top: 1px dashed rgba(20,54,61,0.16); padding-top: 0.5rem; }
     .cn-fiscal-toggle { background: none; border: none; padding: 0; display: flex; align-items: center; gap: 0.4rem; color: var(--p-primary-color); font-weight: 600; font-size: 0.85rem; cursor: pointer; }
     .cn-fiscal-form { margin-top: 0.6rem; display: grid; gap: 0.5rem; }
-    .cn-emit-box { display: grid; gap: 0.4rem; padding: 0.6rem; border-radius: 8px; background: rgba(22,163,74,0.06); border: 1px dashed rgba(22,163,74,0.35); }
-    .cn-emit-label { font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; color: #166534; }
     .cn-emit-row { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
     .cn-emit-row select { flex: 1; min-width: 220px; padding: 0.45rem 0.6rem; border: 1.5px solid rgba(20,54,61,0.18); border-radius: 8px; font-size: 0.85rem; }
     .cn-emit-issued { margin: 0; font-size: 0.82rem; color: #166534; display: flex; align-items: center; gap: 0.4rem; }
@@ -644,8 +642,8 @@ export class OwnerPaymentDetailPageComponent implements OnInit {
   cnFiscalTargetId = '';
   cnFiscalSaving = false;
   cnFiscalForm: RegisterCreditNoteFiscalDataRequest = { documentType: null };
-  cnEmitSeriesByCn: Record<string, string> = {};
-  cnEmittingId = '';
+  cnApproveTargetId = '';
+  cnApproveSeriesByCn: Record<string, string> = {};
 
   ngOnInit(): void {
     const id = this.route.snapshot.paramMap.get('id') ?? '';
@@ -946,14 +944,22 @@ export class OwnerPaymentDetailPageComponent implements OnInit {
       });
   }
 
+  askApproveCreditNote(cn: CreditNote): void {
+    this.cnApproveTargetId = this.cnApproveTargetId === cn.id ? '' : cn.id;
+  }
+
   approveCreditNote(cn: CreditNote): void {
+    const seriesId = this.cnApproveSeriesByCn[cn.id];
+    if (!seriesId) return;
+
     this.cnActionId = cn.id;
-    this.creditNotesApi.approve(cn.id)
+    this.creditNotesApi.approve(cn.id, seriesId)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: () => {
+        next: updated => {
           this.cnActionId = '';
-          this.msgSvc.add({ severity: 'success', summary: 'Nota de crédito aprobada', detail: 'El saldo del comprobante se actualizó.' });
+          this.cnApproveTargetId = '';
+          this.msgSvc.add({ severity: 'success', summary: 'Nota de crédito aprobada', detail: `Numerada como ${updated.fiscalNumero}. El saldo del comprobante se actualizó.` });
           this.loadCreditNotesForInvoice(cn.invoiceId);
           this.cdr.markForCheck();
         },
@@ -1031,10 +1037,7 @@ export class OwnerPaymentDetailPageComponent implements OnInit {
     this.cnFiscalTargetId = cn.id;
     this.cnFiscalForm = {
       documentType: cn.fiscalDocumentType,
-      numero: cn.fiscalNumero ?? '',
-      timbrado: cn.fiscalTimbrado ?? '',
       cdc: cn.fiscalCdc ?? '',
-      fechaEmisionUtc: cn.fiscalFechaEmisionUtc ? cn.fiscalFechaEmisionUtc.slice(0, 10) : undefined,
       estado: cn.fiscalEstado ?? '',
       observaciones: cn.fiscalObservaciones ?? ''
     };
@@ -1045,27 +1048,6 @@ export class OwnerPaymentDetailPageComponent implements OnInit {
     return this.allSeries.filter(x =>
       x.buildingId === buildingId && x.documentType === 'CreditNote' && x.activo && x.numerosDisponibles > 0 &&
       x.vigenciaDesde <= today && x.vigenciaHasta >= today);
-  }
-
-  emitCreditNote(cn: CreditNote): void {
-    const seriesId = this.cnEmitSeriesByCn[cn.id];
-    if (!seriesId || this.cnEmittingId) return;
-    this.cnEmittingId = cn.id;
-    this.creditNotesApi.emit(cn.id, seriesId)
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: updated => {
-          this.cnEmittingId = '';
-          this.msgSvc.add({ severity: 'success', summary: 'NC numerada', detail: `Nota de crédito ${updated.fiscalNumero} numerada.`, life: 5000 });
-          this.loadCreditNotesForInvoice(cn.invoiceId);
-          this.cdr.markForCheck();
-        },
-        error: err => {
-          this.cnEmittingId = '';
-          this.msgSvc.add({ severity: 'error', summary: 'Error', detail: extractApiErrorMessage(err, 'No se pudo numerar la nota de crédito.'), life: 7000 });
-          this.cdr.markForCheck();
-        }
-      });
   }
 
   saveFiscalData(cn: CreditNote): void {
