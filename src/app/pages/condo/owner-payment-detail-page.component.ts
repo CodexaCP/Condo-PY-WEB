@@ -14,7 +14,25 @@ import { AuthService } from '../../auth/auth.service';
 import { InvoiceSeriesApiService } from '../../api/invoice-series-api.service';
 import { InvoicesApiService } from '../../api/invoices-api.service';
 import { OwnerPaymentsApiService } from '../../api/owner-payments-api.service';
-import { InvoiceLedgerRow, InvoiceSeries, OwnerPayment } from '../../api/models';
+import { CreditNotesApiService } from '../../api/credit-notes-api.service';
+import { UploadsApiService } from '../../api/uploads-api.service';
+import {
+  AdjustableCharge,
+  CreditNote,
+  CreditNoteAttachment,
+  CreditNoteAttachmentKind,
+  InvoiceLedgerRow,
+  InvoiceSeries,
+  OwnerPayment,
+  RegisterCreditNoteFiscalDataRequest
+} from '../../api/models';
+
+const CREDIT_NOTE_STATUS_LABELS: Record<string, string> = {
+  Draft: 'Borrador',
+  Approved: 'Aprobada',
+  Rejected: 'Rechazada',
+  Voided: 'Anulada'
+};
 
 const STATUS_LABELS: Record<string, string> = {
   Pending:     'Pendiente',
@@ -172,6 +190,109 @@ const STATUS_SEVERITY: Record<string, 'warn' | 'info' | 'success' | 'danger' | '
                   <p-button label="Cancelar" severity="secondary" [outlined]="true" size="small" (onClick)="askVoid(inv)"></p-button>
                   <p-button label="Confirmar anulación" icon="pi pi-times" severity="danger" size="small"
                             (onClick)="voidInvoice(inv)" [loading]="voidingId === inv.id"></p-button>
+                </div>
+              </div>
+
+              <!-- Notas de crédito: ajustes sobre esta factura emitida, sin modificarla -->
+              <div class="inv-panel cn-section" *ngIf="inv.status === 'Issued' && canCreateCreditNotesRole">
+                <div class="cn-header">
+                  <strong>Notas de crédito</strong>
+                  <p-button label="Nueva NC" icon="pi pi-plus" size="small" [outlined]="true"
+                            (onClick)="toggleNewCreditNote(inv)"></p-button>
+                </div>
+
+                <div class="cn-list" *ngIf="(creditNotesByInvoice[inv.id]?.length ?? 0) > 0">
+                  <div class="cn-card" *ngFor="let cn of creditNotesByInvoice[inv.id]"
+                       [class.cn-approved]="cn.status === 'Approved'"
+                       [class.cn-rejected]="cn.status === 'Rejected'"
+                       [class.cn-voided]="cn.status === 'Voided'">
+                    <div class="cn-top">
+                      <span class="cn-status" [class]="'cn-status-' + cn.status.toLowerCase()">{{ creditNoteStatusLabel(cn.status) }}</span>
+                      <strong class="cn-amount">-{{ formatGs(cn.amount) }}</strong>
+                    </div>
+                    <p class="cn-motivo">{{ cn.motivo }}</p>
+                    <p class="cn-meta">Creada por {{ cn.createdByName }} el {{ cn.createdAtUtc | date:'dd/MM/yyyy' }}</p>
+
+                    <ul class="cn-lines">
+                      <li *ngFor="let l of cn.lines">{{ l.chargeConcept }}: -{{ formatGs(l.amount) }}</li>
+                    </ul>
+
+                    <p class="cn-rejection" *ngIf="cn.status === 'Rejected' && cn.rejectionReason">Motivo de rechazo: {{ cn.rejectionReason }}</p>
+                    <p class="cn-rejection" *ngIf="cn.status === 'Voided' && cn.voidReason">Motivo de anulación: {{ cn.voidReason }}</p>
+
+                    <div class="cn-actions" *ngIf="cn.status === 'Draft' && canApproveCreditNotesRole">
+                      <p-button label="Aprobar" icon="pi pi-check" size="small" severity="success"
+                                (onClick)="approveCreditNote(cn)" [loading]="cnActionId === cn.id"></p-button>
+                      <p-button label="Rechazar" icon="pi pi-times" size="small" severity="danger" [outlined]="true"
+                                (onClick)="askRejectCreditNote(cn)"></p-button>
+                    </div>
+                    <div class="cn-reason-form" *ngIf="cnRejectTargetId === cn.id">
+                      <textarea [(ngModel)]="cnRejectReason" [name]="'cn-reject-' + cn.id" rows="2" placeholder="Motivo de rechazo (obligatorio)"></textarea>
+                      <p-button label="Confirmar rechazo" size="small" severity="danger"
+                                (onClick)="rejectCreditNote(cn)" [loading]="cnActionId === cn.id"></p-button>
+                    </div>
+
+                    <div class="cn-actions" *ngIf="cn.status === 'Approved' && canApproveCreditNotesRole">
+                      <p-button label="Anular NC" icon="pi pi-times" size="small" severity="danger" [outlined]="true"
+                                (onClick)="askVoidCreditNote(cn)"></p-button>
+                    </div>
+                    <div class="cn-reason-form" *ngIf="cnVoidTargetId === cn.id">
+                      <textarea [(ngModel)]="cnVoidReason" [name]="'cn-void-' + cn.id" rows="2" placeholder="Motivo de anulación (obligatorio)"></textarea>
+                      <p-button label="Confirmar anulación" size="small" severity="danger"
+                                (onClick)="voidCreditNote(cn)" [loading]="cnActionId === cn.id"></p-button>
+                    </div>
+
+                    <div class="cn-fiscal">
+                      <button type="button" class="cn-fiscal-toggle" (click)="toggleFiscalForm(cn)">
+                        <i class="pi" [class.pi-chevron-down]="cnFiscalTargetId !== cn.id" [class.pi-chevron-up]="cnFiscalTargetId === cn.id"></i>
+                        Documento fiscal oficial{{ cn.fiscalNumero ? ' (' + cn.fiscalNumero + ')' : '' }}
+                      </button>
+                      <div class="cn-fiscal-form" *ngIf="cnFiscalTargetId === cn.id">
+                        <div class="cn-fiscal-row">
+                          <select [(ngModel)]="cnFiscalForm.documentType" [name]="'cn-doctype-' + cn.id">
+                            <option [ngValue]="null">Tipo de documento</option>
+                            <option value="Paper">Papel</option>
+                            <option value="Electronic">Electrónica</option>
+                          </select>
+                          <input type="text" [(ngModel)]="cnFiscalForm.numero" [name]="'cn-numero-' + cn.id" placeholder="Número">
+                          <input type="text" [(ngModel)]="cnFiscalForm.timbrado" [name]="'cn-timbrado-' + cn.id" placeholder="Timbrado">
+                          <input type="text" [(ngModel)]="cnFiscalForm.cdc" [name]="'cn-cdc-' + cn.id" placeholder="CDC" *ngIf="cnFiscalForm.documentType === 'Electronic'">
+                        </div>
+                        <div class="cn-fiscal-row">
+                          <input type="date" [(ngModel)]="cnFiscalForm.fechaEmisionUtc" [name]="'cn-fecha-' + cn.id">
+                          <input type="text" [(ngModel)]="cnFiscalForm.estado" [name]="'cn-estado-' + cn.id" placeholder="Estado">
+                        </div>
+                        <textarea [(ngModel)]="cnFiscalForm.observaciones" [name]="'cn-obs-' + cn.id" rows="2" placeholder="Observaciones"></textarea>
+                        <p-button label="Guardar datos fiscales" size="small" (onClick)="saveFiscalData(cn)" [loading]="cnFiscalSaving"></p-button>
+
+                        <div class="cn-attachments">
+                          <div class="cn-attachment" *ngFor="let att of cn.attachments">
+                            <a [href]="att.url" target="_blank" rel="noopener"><i class="pi pi-paperclip"></i> {{ att.fileName }}</a>
+                            <button type="button" (click)="deleteAttachment(cn, att)"><i class="pi pi-trash"></i></button>
+                          </div>
+                          <label class="cn-attach-input">
+                            <i class="pi pi-upload"></i> Adjuntar archivo (PDF, imagen o XML)
+                            <input type="file" accept=".pdf,.jpg,.jpeg,.png,.webp,.gif,.xml" (change)="uploadAttachment(cn, $event)">
+                          </label>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="cn-new-form" *ngIf="ncTargetInvoiceId === inv.id">
+                  <p class="cn-note" *ngIf="ncAdjustableCharges.length === 0">No hay cargos ajustables en este comprobante.</p>
+                  <div class="cn-charge-row" *ngFor="let ch of ncAdjustableCharges">
+                    <span class="cn-charge-label">{{ ch.concept }} <small>(hasta {{ formatGs(ch.adjustable) }})</small></span>
+                    <input type="number" min="0" [max]="ch.adjustable" [(ngModel)]="ncLineAmounts[ch.expenseChargeId]"
+                           [name]="'cn-line-' + ch.expenseChargeId" placeholder="0">
+                  </div>
+                  <textarea [(ngModel)]="ncMotivo" name="cn-new-motivo" rows="2" placeholder="Motivo del ajuste (obligatorio)"></textarea>
+                  <div class="cn-new-actions">
+                    <p-button label="Cancelar" severity="secondary" [outlined]="true" size="small" (onClick)="toggleNewCreditNote(inv)"></p-button>
+                    <p-button label="Crear nota de crédito" icon="pi pi-check" size="small"
+                              (onClick)="createCreditNote(inv)" [loading]="ncCreating"></p-button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -421,6 +542,49 @@ const STATUS_SEVERITY: Record<string, 'warn' | 'info' | 'success' | 'danger' | '
     @media (max-width: 600px) {
       .detail-grid { grid-template-columns: 1fr; }
     }
+
+    .cn-section { display: grid; gap: 0.75rem; }
+    .cn-header { display: flex; align-items: center; justify-content: space-between; }
+    .cn-list { display: grid; gap: 0.75rem; }
+    .cn-card { border: 1px solid rgba(20,54,61,0.12); border-left: 4px solid #6366f1; border-radius: 12px; padding: 0.8rem 1rem; background: #fff; display: grid; gap: 0.4rem; }
+    .cn-card.cn-approved { border-left-color: #16a34a; }
+    .cn-card.cn-rejected { border-left-color: #dc2626; background: #fffafa; }
+    .cn-card.cn-voided { border-left-color: #8a9ba5; background: #fafafa; }
+    .cn-top { display: flex; align-items: center; justify-content: space-between; }
+    .cn-status { display: inline-flex; align-items: center; padding: 0.22rem 0.6rem; border-radius: 999px; font-size: 0.74rem; font-weight: 700; background: rgba(99,102,241,0.14); color: #4338ca; }
+    .cn-status-approved { background: rgba(22,163,74,0.13); color: #166534; }
+    .cn-status-rejected { background: #fee2e2; color: #991b1b; }
+    .cn-status-voided { background: #eceff1; color: #607080; }
+    .cn-amount { font-family: monospace; font-size: 1.05rem; color: #b91c1c; }
+    .cn-motivo { margin: 0; font-size: 0.9rem; }
+    .cn-meta { margin: 0; font-size: 0.78rem; color: var(--brand-muted); }
+    .cn-lines { margin: 0; padding-left: 1.1rem; font-size: 0.85rem; color: #3a4a52; }
+    .cn-rejection { margin: 0; font-size: 0.82rem; color: #991b1b; }
+    .cn-actions { display: flex; gap: 0.5rem; }
+    .cn-reason-form { display: grid; gap: 0.5rem; padding: 0.6rem; border-radius: 8px; background: color-mix(in srgb, var(--p-red-500) 5%, transparent); border: 1px solid color-mix(in srgb, var(--p-red-500) 25%, transparent); }
+    .cn-reason-form textarea { width: 100%; box-sizing: border-box; padding: 0.5rem 0.7rem; border: 1px solid var(--p-surface-400); border-radius: 6px; resize: vertical; font: inherit; }
+
+    .cn-fiscal { border-top: 1px dashed rgba(20,54,61,0.16); padding-top: 0.5rem; }
+    .cn-fiscal-toggle { background: none; border: none; padding: 0; display: flex; align-items: center; gap: 0.4rem; color: var(--p-primary-color); font-weight: 600; font-size: 0.85rem; cursor: pointer; }
+    .cn-fiscal-form { margin-top: 0.6rem; display: grid; gap: 0.5rem; }
+    .cn-fiscal-row { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+    .cn-fiscal-row select, .cn-fiscal-row input, .cn-fiscal-form textarea { flex: 1; min-width: 140px; padding: 0.45rem 0.6rem; border: 1.5px solid rgba(20,54,61,0.18); border-radius: 8px; font-size: 0.85rem; box-sizing: border-box; }
+    .cn-fiscal-form textarea { width: 100%; resize: vertical; }
+    .cn-attachments { display: grid; gap: 0.4rem; }
+    .cn-attachment { display: flex; align-items: center; justify-content: space-between; padding: 0.35rem 0.6rem; border: 1px solid rgba(20,54,61,0.12); border-radius: 8px; font-size: 0.82rem; }
+    .cn-attachment a { color: #14363d; text-decoration: none; display: inline-flex; gap: 0.4rem; align-items: center; }
+    .cn-attachment button { background: none; border: none; color: #b91c1c; cursor: pointer; }
+    .cn-attach-input { display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.82rem; color: var(--p-primary-color); cursor: pointer; }
+    .cn-attach-input input[type="file"] { display: none; }
+
+    .cn-new-form { display: grid; gap: 0.5rem; padding: 0.75rem; border-radius: 10px; background: rgba(99,102,241,0.06); border: 1px dashed rgba(99,102,241,0.35); }
+    .cn-note { margin: 0; font-size: 0.85rem; color: var(--brand-muted); }
+    .cn-charge-row { display: flex; align-items: center; justify-content: space-between; gap: 0.6rem; }
+    .cn-charge-label { font-size: 0.85rem; }
+    .cn-charge-label small { color: var(--brand-muted); }
+    .cn-charge-row input { width: 9rem; padding: 0.4rem 0.6rem; border: 1.5px solid rgba(20,54,61,0.18); border-radius: 8px; }
+    .cn-new-form textarea { width: 100%; box-sizing: border-box; padding: 0.5rem 0.7rem; border: 1px solid var(--p-surface-400); border-radius: 6px; resize: vertical; font: inherit; }
+    .cn-new-actions { display: flex; justify-content: flex-end; gap: 0.5rem; }
   `]
 })
 export class OwnerPaymentDetailPageComponent implements OnInit {
@@ -433,6 +597,8 @@ export class OwnerPaymentDetailPageComponent implements OnInit {
   private readonly invoicesApi = inject(InvoicesApiService);
   private readonly seriesApi = inject(InvoiceSeriesApiService);
   private readonly auth       = inject(AuthService);
+  private readonly creditNotesApi = inject(CreditNotesApiService);
+  private readonly uploadsApi = inject(UploadsApiService);
 
   payment:        OwnerPayment | null = null;
   ownerCredit:    number | null = null;
@@ -454,6 +620,22 @@ export class OwnerPaymentDetailPageComponent implements OnInit {
   // El saldo a favor está deshabilitado por ahora: cada pago cubre comprobantes completos, sin excedente.
   readonly showCredit = false;
   rejectionReason = '';
+
+  // Notas de crédito por factura, y estado de los formularios inline (nueva NC, rechazo, anulación, datos fiscales).
+  creditNotesByInvoice: Record<string, CreditNote[]> = {};
+  ncTargetInvoiceId = '';
+  ncAdjustableCharges: AdjustableCharge[] = [];
+  ncLineAmounts: Record<string, number> = {};
+  ncMotivo = '';
+  ncCreating = false;
+  cnActionId = '';
+  cnRejectTargetId = '';
+  cnRejectReason = '';
+  cnVoidTargetId = '';
+  cnVoidReason = '';
+  cnFiscalTargetId = '';
+  cnFiscalSaving = false;
+  cnFiscalForm: RegisterCreditNoteFiscalDataRequest = { documentType: null };
 
   ngOnInit(): void {
     const id = this.route.snapshot.paramMap.get('id') ?? '';
@@ -592,7 +774,13 @@ export class OwnerPaymentDetailPageComponent implements OnInit {
     this.invoicesApi.getLedger({ ownerPaymentId: this.payment.id, pageSize: 200, sortBy: 'periodo', sortDir: 'asc' })
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: ledger => { this.paymentInvoices = ledger.items; this.cdr.markForCheck(); },
+        next: ledger => {
+          this.paymentInvoices = ledger.items;
+          for (const inv of ledger.items) {
+            if (inv.status === 'Issued') this.loadCreditNotesForInvoice(inv.id);
+          }
+          this.cdr.markForCheck();
+        },
         error: () => {}
       });
     if (this.allSeries.length === 0) {
@@ -694,5 +882,250 @@ export class OwnerPaymentDetailPageComponent implements OnInit {
   statusLabel(status: string): string { return STATUS_LABELS[status] ?? status; }
   statusSeverity(status: string): 'warn' | 'info' | 'success' | 'danger' | 'secondary' {
     return STATUS_SEVERITY[status] ?? 'secondary';
+  }
+
+  // ─── Notas de crédito ───────────────────────────────────────────────────
+
+  get canCreateCreditNotesRole(): boolean {
+    return this.auth.hasRole('SuperAdmin', 'CompanyAdmin', 'BuildingManager');
+  }
+
+  // Quien crea el borrador puede ser BuildingManager; aprobar/rechazar/anular (lo que mueve el
+  // saldo) queda un escalón más arriba, igual que hoy publica/rechaza la liquidación de expensas.
+  get canApproveCreditNotesRole(): boolean {
+    return this.auth.hasRole('SuperAdmin', 'CompanyAdmin');
+  }
+
+  creditNoteStatusLabel(status: string): string { return CREDIT_NOTE_STATUS_LABELS[status] ?? status; }
+
+  loadCreditNotesForInvoice(invoiceId: string): void {
+    this.creditNotesApi.getAll({ invoiceId })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: list => { this.creditNotesByInvoice[invoiceId] = list; this.cdr.markForCheck(); },
+        error: () => {}
+      });
+  }
+
+  toggleNewCreditNote(inv: InvoiceLedgerRow): void {
+    if (this.ncTargetInvoiceId === inv.id) {
+      this.ncTargetInvoiceId = '';
+      return;
+    }
+    this.ncTargetInvoiceId = inv.id;
+    this.ncMotivo = '';
+    this.ncLineAmounts = {};
+    this.ncAdjustableCharges = [];
+    this.creditNotesApi.getAdjustableCharges(inv.id)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: charges => { this.ncAdjustableCharges = charges; this.cdr.markForCheck(); },
+        error: err => {
+          this.ncTargetInvoiceId = '';
+          this.msgSvc.add({ severity: 'error', summary: 'Error', detail: extractApiErrorMessage(err, 'No se pudieron cargar los cargos ajustables.'), life: 6000 });
+          this.cdr.markForCheck();
+        }
+      });
+  }
+
+  createCreditNote(inv: InvoiceLedgerRow): void {
+    const lines = this.ncAdjustableCharges
+      .map(ch => ({ expenseChargeId: ch.expenseChargeId, amount: Number(this.ncLineAmounts[ch.expenseChargeId]) || 0 }))
+      .filter(l => l.amount > 0);
+
+    if (!this.ncMotivo.trim()) {
+      this.msgSvc.add({ severity: 'error', summary: 'Error', detail: 'El motivo es obligatorio.', life: 5000 });
+      return;
+    }
+    if (lines.length === 0) {
+      this.msgSvc.add({ severity: 'error', summary: 'Error', detail: 'Ingresá al menos un importe a ajustar.', life: 5000 });
+      return;
+    }
+
+    this.ncCreating = true;
+    this.creditNotesApi.create({ invoiceId: inv.id, motivo: this.ncMotivo.trim(), lines })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.ncCreating = false;
+          this.ncTargetInvoiceId = '';
+          this.msgSvc.add({ severity: 'success', summary: 'Nota de crédito creada', detail: 'Queda en borrador hasta que se apruebe.' });
+          this.loadCreditNotesForInvoice(inv.id);
+          this.cdr.markForCheck();
+        },
+        error: err => {
+          this.ncCreating = false;
+          this.msgSvc.add({ severity: 'error', summary: 'Error', detail: extractApiErrorMessage(err, 'No se pudo crear la nota de crédito.'), life: 7000 });
+          this.cdr.markForCheck();
+        }
+      });
+  }
+
+  approveCreditNote(cn: CreditNote): void {
+    this.cnActionId = cn.id;
+    this.creditNotesApi.approve(cn.id)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.cnActionId = '';
+          this.msgSvc.add({ severity: 'success', summary: 'Nota de crédito aprobada', detail: 'El saldo del comprobante se actualizó.' });
+          this.loadCreditNotesForInvoice(cn.invoiceId);
+          this.cdr.markForCheck();
+        },
+        error: err => {
+          this.cnActionId = '';
+          this.msgSvc.add({ severity: 'error', summary: 'Error', detail: extractApiErrorMessage(err, 'No se pudo aprobar la nota de crédito.'), life: 7000 });
+          this.cdr.markForCheck();
+        }
+      });
+  }
+
+  askRejectCreditNote(cn: CreditNote): void {
+    this.cnRejectTargetId = this.cnRejectTargetId === cn.id ? '' : cn.id;
+    this.cnRejectReason = '';
+  }
+
+  rejectCreditNote(cn: CreditNote): void {
+    if (!this.cnRejectReason.trim()) {
+      this.msgSvc.add({ severity: 'error', summary: 'Error', detail: 'El motivo de rechazo es obligatorio.', life: 5000 });
+      return;
+    }
+    this.cnActionId = cn.id;
+    this.creditNotesApi.reject(cn.id, this.cnRejectReason.trim())
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.cnActionId = '';
+          this.cnRejectTargetId = '';
+          this.msgSvc.add({ severity: 'warn', summary: 'Nota de crédito rechazada' });
+          this.loadCreditNotesForInvoice(cn.invoiceId);
+          this.cdr.markForCheck();
+        },
+        error: err => {
+          this.cnActionId = '';
+          this.msgSvc.add({ severity: 'error', summary: 'Error', detail: extractApiErrorMessage(err, 'No se pudo rechazar la nota de crédito.'), life: 7000 });
+          this.cdr.markForCheck();
+        }
+      });
+  }
+
+  askVoidCreditNote(cn: CreditNote): void {
+    this.cnVoidTargetId = this.cnVoidTargetId === cn.id ? '' : cn.id;
+    this.cnVoidReason = '';
+  }
+
+  voidCreditNote(cn: CreditNote): void {
+    if (!this.cnVoidReason.trim()) {
+      this.msgSvc.add({ severity: 'error', summary: 'Error', detail: 'El motivo de anulación es obligatorio.', life: 5000 });
+      return;
+    }
+    this.cnActionId = cn.id;
+    this.creditNotesApi.void(cn.id, this.cnVoidReason.trim())
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.cnActionId = '';
+          this.cnVoidTargetId = '';
+          this.msgSvc.add({ severity: 'info', summary: 'Nota de crédito anulada' });
+          this.loadCreditNotesForInvoice(cn.invoiceId);
+          this.cdr.markForCheck();
+        },
+        error: err => {
+          this.cnActionId = '';
+          this.msgSvc.add({ severity: 'error', summary: 'Error', detail: extractApiErrorMessage(err, 'No se pudo anular la nota de crédito.'), life: 7000 });
+          this.cdr.markForCheck();
+        }
+      });
+  }
+
+  toggleFiscalForm(cn: CreditNote): void {
+    if (this.cnFiscalTargetId === cn.id) {
+      this.cnFiscalTargetId = '';
+      return;
+    }
+    this.cnFiscalTargetId = cn.id;
+    this.cnFiscalForm = {
+      documentType: cn.fiscalDocumentType,
+      numero: cn.fiscalNumero ?? '',
+      timbrado: cn.fiscalTimbrado ?? '',
+      cdc: cn.fiscalCdc ?? '',
+      fechaEmisionUtc: cn.fiscalFechaEmisionUtc ? cn.fiscalFechaEmisionUtc.slice(0, 10) : undefined,
+      estado: cn.fiscalEstado ?? '',
+      observaciones: cn.fiscalObservaciones ?? ''
+    };
+  }
+
+  saveFiscalData(cn: CreditNote): void {
+    this.cnFiscalSaving = true;
+    this.creditNotesApi.registerFiscalData(cn.id, this.cnFiscalForm)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.cnFiscalSaving = false;
+          this.msgSvc.add({ severity: 'success', summary: 'Datos fiscales guardados' });
+          this.loadCreditNotesForInvoice(cn.invoiceId);
+          this.cdr.markForCheck();
+        },
+        error: err => {
+          this.cnFiscalSaving = false;
+          this.msgSvc.add({ severity: 'error', summary: 'Error', detail: extractApiErrorMessage(err, 'No se pudieron guardar los datos fiscales.'), life: 7000 });
+          this.cdr.markForCheck();
+        }
+      });
+  }
+
+  uploadAttachment(cn: CreditNote, event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    input.value = '';
+    if (!file) return;
+
+    const kind = this.attachmentKindFor(file.name);
+    this.uploadsApi.upload(file)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: res => {
+          this.creditNotesApi.addAttachment(cn.id, res.url, file.name, kind)
+            .pipe(takeUntilDestroyed(this.destroyRef))
+            .subscribe({
+              next: () => {
+                this.msgSvc.add({ severity: 'success', summary: 'Adjunto agregado' });
+                this.loadCreditNotesForInvoice(cn.invoiceId);
+                this.cdr.markForCheck();
+              },
+              error: err => {
+                this.msgSvc.add({ severity: 'error', summary: 'Error', detail: extractApiErrorMessage(err, 'No se pudo registrar el adjunto.'), life: 7000 });
+                this.cdr.markForCheck();
+              }
+            });
+        },
+        error: err => {
+          this.msgSvc.add({ severity: 'error', summary: 'Error', detail: extractApiErrorMessage(err, 'No se pudo subir el archivo.'), life: 7000 });
+          this.cdr.markForCheck();
+        }
+      });
+  }
+
+  deleteAttachment(cn: CreditNote, att: CreditNoteAttachment): void {
+    this.creditNotesApi.deleteAttachment(cn.id, att.id)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.loadCreditNotesForInvoice(cn.invoiceId);
+          this.cdr.markForCheck();
+        },
+        error: err => {
+          this.msgSvc.add({ severity: 'error', summary: 'Error', detail: extractApiErrorMessage(err, 'No se pudo eliminar el adjunto.'), life: 7000 });
+          this.cdr.markForCheck();
+        }
+      });
+  }
+
+  private attachmentKindFor(fileName: string): CreditNoteAttachmentKind {
+    const ext = fileName.split('.').pop()?.toLowerCase() ?? '';
+    if (ext === 'pdf') return 'Pdf';
+    if (ext === 'xml') return 'Xml';
+    if (['jpg', 'jpeg', 'png', 'webp', 'gif'].includes(ext)) return 'Image';
+    return 'Other';
   }
 }

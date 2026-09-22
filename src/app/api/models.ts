@@ -656,6 +656,99 @@ export interface Invoice {
   createdAtUtc: string;
 }
 
+// ─── Nota de crédito interna ────────────────────────────────────────────────
+
+export type CreditNoteStatus = 'Draft' | 'Approved' | 'Rejected' | 'Voided';
+export type CreditNoteAttachmentKind = 'Pdf' | 'Image' | 'Xml' | 'Other';
+export type CreditNoteFiscalDocumentType = 'Paper' | 'Electronic';
+
+export interface CreditNoteLine {
+  id: string;
+  expenseChargeId: string;
+  chargeConcept: string;
+  chargeType: ExpenseChargeType;
+  chargeAmount: number;
+  amount: number;
+  concept: string | null;
+}
+
+export interface CreditNoteAttachment {
+  id: string;
+  url: string;
+  fileName: string;
+  kind: CreditNoteAttachmentKind;
+  uploadedByUserId: string;
+  uploadedByName: string | null;
+  uploadedAtUtc: string;
+}
+
+export interface CreditNote {
+  id: string;
+  companyId: string;
+  buildingId: string;
+  buildingName: string;
+  unitId: string;
+  unitCode: string;
+  invoiceId: string;
+  invoiceNumeroFormateado: string | null;
+  invoiceMontoTotal: number;
+  motivo: string;
+  amount: number;
+  status: CreditNoteStatus;
+  createdByUserId: string;
+  createdByName: string | null;
+  createdAtUtc: string;
+  approvedAtUtc: string | null;
+  approvedByName: string | null;
+  rejectionReason: string | null;
+  rejectedAtUtc: string | null;
+  rejectedByName: string | null;
+  voidReason: string | null;
+  voidedAtUtc: string | null;
+  voidedByName: string | null;
+  fiscalDocumentType: CreditNoteFiscalDocumentType | null;
+  fiscalNumero: string | null;
+  fiscalTimbrado: string | null;
+  fiscalCdc: string | null;
+  fiscalFechaEmisionUtc: string | null;
+  fiscalEstado: string | null;
+  fiscalObservaciones: string | null;
+  lines: CreditNoteLine[];
+  attachments: CreditNoteAttachment[];
+}
+
+export interface AdjustableCharge {
+  expenseChargeId: string;
+  concept: string;
+  chargeType: ExpenseChargeType;
+  amount: number;
+  alreadyAdjusted: number;
+  adjustable: number;
+  alreadyPaid: number;
+}
+
+export interface CreateCreditNoteLineRequest {
+  expenseChargeId: string;
+  amount: number;
+  concept?: string;
+}
+
+export interface CreateCreditNoteRequest {
+  invoiceId: string;
+  motivo: string;
+  lines: CreateCreditNoteLineRequest[];
+}
+
+export interface RegisterCreditNoteFiscalDataRequest {
+  documentType: CreditNoteFiscalDocumentType | null;
+  numero?: string;
+  timbrado?: string;
+  cdc?: string;
+  fechaEmisionUtc?: string;
+  estado?: string;
+  observaciones?: string;
+}
+
 // ─── Consulta / trazabilidad de facturas ────────────────────────────────────
 
 export interface InvoiceLedgerQuery {
