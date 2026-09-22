@@ -26,6 +26,9 @@ export class AppMenu {
         const isSuperAdmin = this.auth.hasRole('SuperAdmin');
         const isCompanyAdmin = this.auth.hasRole('CompanyAdmin');
         const isAdmin = this.auth.hasRole('CompanyAdmin', 'CompanyOperator', 'BuildingManager');
+        // Timbrados: el operador de empresa no puede administrarlos (lo bloquea el backend);
+        // se oculta el ítem en vez de mostrarlo y dejar que falle con un error 403.
+        const canManageInvoicing = this.auth.hasRole('CompanyAdmin', 'BuildingManager');
 
         if (isSuperAdmin) {
             return [
@@ -75,7 +78,7 @@ export class AppMenu {
                 {
                     label: 'Facturación',
                     items: [
-                        { label: 'Timbrados', icon: 'pi pi-fw pi-receipt', routerLink: ['/invoice-series'] },
+                        ...(canManageInvoicing ? [{ label: 'Timbrados', icon: 'pi pi-fw pi-receipt', routerLink: ['/invoice-series'] }] : []),
                         { label: 'Facturas', icon: 'pi pi-fw pi-file-edit', routerLink: ['/invoices'] }
                     ]
                 },
