@@ -313,24 +313,16 @@ const STATUS_SEVERITY: Record<string, 'warn' | 'info' | 'success' | 'danger' | '
           </div>
         </div>
 
-        <!-- Saldo a favor del propietario -->
-        <div class="form-section credit-section" *ngIf="showCredit && ownerCredit !== null">
+        <!-- Saldo a favor del propietario: se genera por notas de crédito y se descuenta solo en
+             su próximo pago (nunca lo elige el propietario), por eso no hay botón "Aplicar". -->
+        <div class="form-section credit-section" *ngIf="ownerCredit !== null">
           <h3>Saldo a favor del propietario</h3>
           <div class="credit-box" [class.credit-positive]="ownerCredit > 0" [class.credit-zero]="ownerCredit === 0">
             <i class="pi" [class]="ownerCredit > 0 ? 'pi-check-circle' : 'pi-minus-circle'"></i>
             <div class="credit-text">
               <span class="credit-amount">{{ ownerCredit | number:'1.0-2' }} Gs.</span>
-              <span class="credit-hint">{{ ownerCredit > 0 ? 'El excedente quedó como crédito a favor.' : 'Sin saldo a favor.' }}</span>
+              <span class="credit-hint">{{ ownerCredit > 0 ? 'Se descuenta automáticamente en el próximo pago que se apruebe.' : 'Sin saldo a favor.' }}</span>
             </div>
-            <p-button
-              *ngIf="ownerCredit > 0"
-              label="Aplicar saldo"
-              icon="pi pi-bolt"
-              severity="success"
-              size="small"
-              [loading]="applyingCredit"
-              (onClick)="doApplyCredit()">
-            </p-button>
           </div>
         </div>
 
@@ -623,7 +615,6 @@ export class OwnerPaymentDetailPageComponent implements OnInit {
   ownerCredit:    number | null = null;
   loading         = true;
   saving          = false;
-  applyingCredit  = false;
   pageError       = '';
   actionError     = '';
   reviewedAmount: number | null = null;
@@ -636,8 +627,6 @@ export class OwnerPaymentDetailPageComponent implements OnInit {
   voidingId = '';
   voidReason = '';
   voidTargetId = '';
-  // El saldo a favor está deshabilitado por ahora: cada pago cubre comprobantes completos, sin excedente.
-  readonly showCredit = false;
   rejectionReason = '';
 
   // Notas de crédito por factura, y estado de los formularios inline (nueva NC, rechazo, anulación, datos fiscales).
@@ -746,31 +735,6 @@ export class OwnerPaymentDetailPageComponent implements OnInit {
         error: err => {
           this.actionError = extractApiErrorMessage(err, 'Error al rechazar el pago.');
           this.saving = false;
-          this.cdr.markForCheck();
-        }
-      });
-  }
-
-  doApplyCredit(): void {
-    if (!this.payment) return;
-    this.applyingCredit = true;
-    this.actionError = '';
-    this.api.applyCredit(this.payment.ownerId.toString())
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: result => {
-          this.ownerCredit = result.remainingCredit;
-          this.applyingCredit = false;
-          this.msgSvc.add({
-            severity: 'success',
-            summary: 'Saldo aplicado',
-            detail: `Se liquidaron ${result.chargesSettled} cargo(s) por ${result.settledAmount.toLocaleString('es-PY')} Gs. Saldo restante: ${result.remainingCredit.toLocaleString('es-PY')} Gs.`
-          });
-          this.cdr.markForCheck();
-        },
-        error: err => {
-          this.actionError = extractApiErrorMessage(err, 'Error al aplicar el saldo.');
-          this.applyingCredit = false;
           this.cdr.markForCheck();
         }
       });
