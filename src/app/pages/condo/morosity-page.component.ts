@@ -79,6 +79,7 @@ const AGING_BUCKETS = [
       <p class="app-state" *ngIf="loading && !report">Cargando reporte de morosidad...</p>
 
       <ng-container *ngIf="report">
+        <!-- Todas las cards de resumen en una sola fila -->
         <section class="stats-grid">
           <div class="summary-card">
             <span>Unidades en mora</span>
@@ -96,10 +97,6 @@ const AGING_BUCKETS = [
             <span>Creditos a favor</span>
             <strong>{{ formatCurrency(report.summary.totalCreditBalanceAmount) }}</strong>
           </div>
-        </section>
-
-        <!-- Aging buckets -->
-        <section class="aging-grid">
           <div class="aging-card bucket-30" (click)="selectBucket('0-30')" [class.active]="selectedAgingBucket === '0-30'">
             <span class="bucket-label">0 – 30 días</span>
             <strong>{{ report.summary.units0To30 }} un.</strong>
@@ -193,13 +190,9 @@ const AGING_BUCKETS = [
     }
     .owner-field input { min-width: 200px; }
 
-    /* Cards compactas y cuadradas: caben varias por fila sin desbordar */
+    /* Cards de resumen y de antiguedad, compactas y cuadradas, todas en la misma fila */
     .stats-grid {
-      display:grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
-      gap:0.6rem; margin-bottom:0.85rem;
-    }
-    .aging-grid {
-      display:grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+      display:grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
       gap:0.6rem; margin-bottom:0.85rem;
     }
     .aging-card {
@@ -259,11 +252,11 @@ const AGING_BUCKETS = [
     .pg-active { background: var(--brand-blue); color: #fff; border-color: var(--brand-blue); }
 
     @media (max-width: 900px) {
-      .stats-grid, .aging-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .stats-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
       .morosity-grid { grid-template-columns: 1fr; }
     }
     @media (max-width: 600px) {
-      .stats-grid, .aging-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .stats-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     }
   `]
 })
