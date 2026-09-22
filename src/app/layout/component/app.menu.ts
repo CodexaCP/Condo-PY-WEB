@@ -79,7 +79,8 @@ export class AppMenu {
                     label: 'Facturación',
                     items: [
                         ...(canManageInvoicing ? [{ label: 'Timbrados', icon: 'pi pi-fw pi-receipt', routerLink: ['/invoice-series'] }] : []),
-                        { label: 'Facturas', icon: 'pi pi-fw pi-file-edit', routerLink: ['/invoices'] }
+                        { label: 'Facturas', icon: 'pi pi-fw pi-file-edit', routerLink: ['/invoices'] },
+                        { label: 'Notas de Crédito', icon: 'pi pi-fw pi-file-excel', routerLink: ['/credit-notes'] }
                     ]
                 },
                 {

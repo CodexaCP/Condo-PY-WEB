@@ -12,7 +12,7 @@ import { extractApiErrorMessage } from '../../api/api-error.util';
 import { BuildingsApiService } from '../../api/buildings-api.service';
 import { InvoiceSeriesApiService } from '../../api/invoice-series-api.service';
 import { AuthService } from '../../auth/auth.service';
-import { Building, InvoiceSeries } from '../../api/models';
+import { Building, InvoiceSeries, InvoiceSeriesDocumentType } from '../../api/models';
 
 @Component({
   standalone: true,
@@ -45,6 +45,14 @@ import { Building, InvoiceSeries } from '../../api/models';
             <option *ngFor="let b of buildings" [value]="b.id">{{ b.name }}</option>
           </select>
         </div>
+        <div class="field-block">
+          <span>Tipo de documento</span>
+          <select [(ngModel)]="filterDocumentType" name="filterDocumentType" (ngModelChange)="applyFilters()">
+            <option value="">Todos</option>
+            <option value="Invoice">Factura</option>
+            <option value="CreditNote">Nota de crédito</option>
+          </select>
+        </div>
       </div>
 
       <!-- Form -->
@@ -60,6 +68,13 @@ import { Building, InvoiceSeries } from '../../api/models';
             <select [(ngModel)]="form.buildingId" name="buildingId" required>
               <option value="" disabled>— Seleccionar —</option>
               <option *ngFor="let b of buildings" [value]="b.id">{{ b.name }}</option>
+            </select>
+          </div>
+          <div class="field-block">
+            <span>Tipo de documento <em>*</em></span>
+            <select [(ngModel)]="form.documentType" name="documentType" required>
+              <option value="Invoice">Factura</option>
+              <option value="CreditNote">Nota de crédito</option>
             </select>
           </div>
           <div class="field-block">
@@ -113,6 +128,7 @@ import { Building, InvoiceSeries } from '../../api/models';
       <div class="app-list" *ngIf="items.length">
         <div class="app-row header series-grid">
           <span>Edificio</span>
+          <span>Tipo</span>
           <span>Timbrado</span>
           <span>Rango</span>
           <span>Disponibles</span>
@@ -126,6 +142,8 @@ import { Building, InvoiceSeries } from '../../api/models';
             {{ item.buildingName }}
             <small class="sub-text">{{ item.razonSocial }} · RUC {{ item.ruc }}</small>
           </span>
+          <p-tag [value]="item.documentType === 'CreditNote' ? 'Nota de crédito' : 'Factura'"
+                 [severity]="item.documentType === 'CreditNote' ? 'info' : 'secondary'"></p-tag>
           <span>{{ item.establecimiento }}-{{ item.puntoExpedicion }}-{{ item.numeroTimbrado }}</span>
           <span>{{ item.correlativoActual }} / {{ item.rangoHasta }}</span>
           <span [class.warn-text]="item.proximoAAgotarse">
@@ -168,7 +186,7 @@ import { Building, InvoiceSeries } from '../../api/models';
     .series-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.25rem; }
     .wide2 { grid-column: span 2; }
     .form-footer { display: flex; justify-content: flex-end; padding-top: 1rem; border-top: 1px solid rgba(20,54,61,0.1); }
-    .series-grid { grid-template-columns: 1.6fr 1.1fr 0.9fr 1fr 1.4fr 0.8fr 0.5fr; }
+    .series-grid { grid-template-columns: 1.6fr 0.9fr 1.1fr 0.9fr 1fr 1.4fr 0.8fr 0.5fr; }
     .actions-head { text-align: right; }
     .sub-text { display: block; font-size: 0.78rem; color: var(--brand-muted); }
     .warn-text { color: #b45309; }
@@ -199,6 +217,7 @@ export class InvoiceSeriesPageComponent implements OnInit {
   showForm = false;
   deactivatingId: string | null = null;
   filterBuildingId = '';
+  filterDocumentType: InvoiceSeriesDocumentType | '' = '';
   form = this.createInitialForm();
 
   ngOnInit(): void {
@@ -211,9 +230,9 @@ export class InvoiceSeriesPageComponent implements OnInit {
   }
 
   applyFilters(): void {
-    this.items = this.filterBuildingId
-      ? this.allItems.filter((x) => x.buildingId === this.filterBuildingId)
-      : this.allItems;
+    this.items = this.allItems.filter((x) =>
+      (!this.filterBuildingId || x.buildingId === this.filterBuildingId) &&
+      (!this.filterDocumentType || x.documentType === this.filterDocumentType));
     this.cdr.markForCheck();
   }
 
@@ -230,6 +249,7 @@ export class InvoiceSeriesPageComponent implements OnInit {
     this.isSaving = true;
     this.seriesApi.create({
       buildingId: this.form.buildingId,
+      documentType: this.form.documentType,
       ruc: this.form.ruc.trim(),
       razonSocial: this.form.razonSocial.trim(),
       establecimiento: this.form.establecimiento.trim(),
@@ -298,6 +318,7 @@ export class InvoiceSeriesPageComponent implements OnInit {
   private createInitialForm() {
     return {
       buildingId: '',
+      documentType: 'Invoice' as InvoiceSeriesDocumentType,
       ruc: '',
       razonSocial: '',
       establecimiento: '',

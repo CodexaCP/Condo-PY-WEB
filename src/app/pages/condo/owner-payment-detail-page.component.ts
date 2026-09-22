@@ -248,6 +248,20 @@ const STATUS_SEVERITY: Record<string, 'warn' | 'info' | 'success' | 'danger' | '
                         Documento fiscal oficial{{ cn.fiscalNumero ? ' (' + cn.fiscalNumero + ')' : '' }}
                       </button>
                       <div class="cn-fiscal-form" *ngIf="cnFiscalTargetId === cn.id">
+                        <div class="cn-emit-box" *ngIf="cn.status === 'Approved' && !cn.numero && creditNoteSeriesFor(cn.buildingId).length > 0">
+                          <span class="cn-emit-label">Emitir con timbrado registrado</span>
+                          <div class="cn-emit-row">
+                            <select [(ngModel)]="cnEmitSeriesByCn[cn.id]" [name]="'cn-emit-series-' + cn.id">
+                              <option value="" disabled selected>Seleccionar timbrado</option>
+                              <option *ngFor="let sr of creditNoteSeriesFor(cn.buildingId)" [value]="sr.id">{{ sr.establecimiento }}-{{ sr.puntoExpedicion }}-{{ sr.numeroTimbrado }} ({{ sr.numerosDisponibles }} disponibles)</option>
+                            </select>
+                            <p-button label="Emitir NC" icon="pi pi-send" size="small" (onClick)="emitCreditNote(cn)"
+                                      [loading]="cnEmittingId === cn.id" [disabled]="!cnEmitSeriesByCn[cn.id]"></p-button>
+                          </div>
+                        </div>
+                        <p class="cn-emit-issued" *ngIf="cn.numero">
+                          <i class="pi pi-check-circle"></i> Numerada automáticamente: {{ cn.fiscalNumero }} (timbrado {{ cn.fiscalTimbrado }})
+                        </p>
                         <div class="cn-fiscal-row">
                           <select [(ngModel)]="cnFiscalForm.documentType" [name]="'cn-doctype-' + cn.id">
                             <option [ngValue]="null">Tipo de documento</option>
@@ -567,6 +581,11 @@ const STATUS_SEVERITY: Record<string, 'warn' | 'info' | 'success' | 'danger' | '
     .cn-fiscal { border-top: 1px dashed rgba(20,54,61,0.16); padding-top: 0.5rem; }
     .cn-fiscal-toggle { background: none; border: none; padding: 0; display: flex; align-items: center; gap: 0.4rem; color: var(--p-primary-color); font-weight: 600; font-size: 0.85rem; cursor: pointer; }
     .cn-fiscal-form { margin-top: 0.6rem; display: grid; gap: 0.5rem; }
+    .cn-emit-box { display: grid; gap: 0.4rem; padding: 0.6rem; border-radius: 8px; background: rgba(22,163,74,0.06); border: 1px dashed rgba(22,163,74,0.35); }
+    .cn-emit-label { font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; color: #166534; }
+    .cn-emit-row { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
+    .cn-emit-row select { flex: 1; min-width: 220px; padding: 0.45rem 0.6rem; border: 1.5px solid rgba(20,54,61,0.18); border-radius: 8px; font-size: 0.85rem; }
+    .cn-emit-issued { margin: 0; font-size: 0.82rem; color: #166534; display: flex; align-items: center; gap: 0.4rem; }
     .cn-fiscal-row { display: flex; gap: 0.5rem; flex-wrap: wrap; }
     .cn-fiscal-row select, .cn-fiscal-row input, .cn-fiscal-form textarea { flex: 1; min-width: 140px; padding: 0.45rem 0.6rem; border: 1.5px solid rgba(20,54,61,0.18); border-radius: 8px; font-size: 0.85rem; box-sizing: border-box; }
     .cn-fiscal-form textarea { width: 100%; resize: vertical; }
@@ -636,6 +655,8 @@ export class OwnerPaymentDetailPageComponent implements OnInit {
   cnFiscalTargetId = '';
   cnFiscalSaving = false;
   cnFiscalForm: RegisterCreditNoteFiscalDataRequest = { documentType: null };
+  cnEmitSeriesByCn: Record<string, string> = {};
+  cnEmittingId = '';
 
   ngOnInit(): void {
     const id = this.route.snapshot.paramMap.get('id') ?? '';
@@ -1053,6 +1074,34 @@ export class OwnerPaymentDetailPageComponent implements OnInit {
       estado: cn.fiscalEstado ?? '',
       observaciones: cn.fiscalObservaciones ?? ''
     };
+  }
+
+  creditNoteSeriesFor(buildingId: string): InvoiceSeries[] {
+    const today = new Date().toISOString().slice(0, 10);
+    return this.allSeries.filter(x =>
+      x.buildingId === buildingId && x.documentType === 'CreditNote' && x.activo && x.numerosDisponibles > 0 &&
+      x.vigenciaDesde <= today && x.vigenciaHasta >= today);
+  }
+
+  emitCreditNote(cn: CreditNote): void {
+    const seriesId = this.cnEmitSeriesByCn[cn.id];
+    if (!seriesId || this.cnEmittingId) return;
+    this.cnEmittingId = cn.id;
+    this.creditNotesApi.emit(cn.id, seriesId)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: updated => {
+          this.cnEmittingId = '';
+          this.msgSvc.add({ severity: 'success', summary: 'NC numerada', detail: `Nota de crédito ${updated.fiscalNumero} numerada.`, life: 5000 });
+          this.loadCreditNotesForInvoice(cn.invoiceId);
+          this.cdr.markForCheck();
+        },
+        error: err => {
+          this.cnEmittingId = '';
+          this.msgSvc.add({ severity: 'error', summary: 'Error', detail: extractApiErrorMessage(err, 'No se pudo numerar la nota de crédito.'), life: 7000 });
+          this.cdr.markForCheck();
+        }
+      });
   }
 
   saveFiscalData(cn: CreditNote): void {

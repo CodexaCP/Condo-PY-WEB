@@ -137,6 +137,10 @@ export const appRoutes: Routes = [
                 path: 'invoices',
                 loadComponent: () => import('./app/pages/condo/invoices-page.component').then(m => m.InvoicesPageComponent)
             },
+            {
+                path: 'credit-notes',
+                loadComponent: () => import('./app/pages/condo/credit-notes-page.component').then(m => m.CreditNotesPageComponent)
+            },
 
             // ── Condo: Residentes ─────────────────────────────────────────
             {

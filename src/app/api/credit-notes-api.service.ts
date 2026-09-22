@@ -42,6 +42,10 @@ export class CreditNotesApiService {
     return this.http.post<CreditNote>(`${API_BASE_URL}/credit-notes/${id}/approve`, {});
   }
 
+  emit(id: string, invoiceSeriesId: string): Observable<CreditNote> {
+    return this.http.post<CreditNote>(`${API_BASE_URL}/credit-notes/${id}/emit`, { invoiceSeriesId });
+  }
+
   reject(id: string, motivo: string): Observable<CreditNote> {
     return this.http.post<CreditNote>(`${API_BASE_URL}/credit-notes/${id}/reject`, { motivo });
   }

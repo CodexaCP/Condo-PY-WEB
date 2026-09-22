@@ -591,12 +591,14 @@ export interface CreatePaymentRequest {
 }
 
 export type InvoiceStatus = 'Draft' | 'Issued' | 'Voided';
+export type InvoiceSeriesDocumentType = 'Invoice' | 'CreditNote';
 
 export interface InvoiceSeries {
   id: string;
   companyId: string;
   buildingId: string;
   buildingName: string;
+  documentType: InvoiceSeriesDocumentType;
   ruc: string;
   razonSocial: string;
   establecimiento: string;
@@ -615,6 +617,7 @@ export interface InvoiceSeries {
 
 export interface CreateInvoiceSeriesRequest {
   buildingId: string;
+  documentType: InvoiceSeriesDocumentType;
   ruc: string;
   razonSocial: string;
   establecimiento: string;
@@ -706,6 +709,8 @@ export interface CreditNote {
   voidReason: string | null;
   voidedAtUtc: string | null;
   voidedByName: string | null;
+  invoiceSeriesId: string | null;
+  numero: number | null;
   fiscalDocumentType: CreditNoteFiscalDocumentType | null;
   fiscalNumero: string | null;
   fiscalTimbrado: string | null;
