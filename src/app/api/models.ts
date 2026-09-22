@@ -709,6 +709,7 @@ export interface CreditNote {
   invoiceId: string;
   invoiceNumeroFormateado: string | null;
   invoiceMontoTotal: number;
+  invoiceStatus: InvoiceStatus;
   buildingAddress: string | null;
   clienteNombre: string | null;
   clienteDocumento: string | null;

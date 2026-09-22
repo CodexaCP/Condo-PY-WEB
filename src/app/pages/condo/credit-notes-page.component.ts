@@ -114,7 +114,8 @@ const STATUS_SEV: Record<CreditNoteStatus, 'warn' | 'success' | 'danger' | 'seco
                 <p-tag [value]="statusLabel(cn.status)" [severity]="statusSeverity(cn.status)" styleClass="row-tag"></p-tag>
               </td>
               <td>
-                <strong class="monospace">{{ cn.invoiceNumeroFormateado || '—' }}</strong>
+                <strong class="monospace">{{ invoiceLabel(cn) }}</strong>
+                <small *ngIf="invoiceSubLabel(cn)">{{ invoiceSubLabel(cn) }}</small>
                 <small class="motivo-cell" [title]="cn.motivo">{{ cn.motivo }}</small>
               </td>
               <td>
@@ -142,7 +143,7 @@ const STATUS_SEV: Record<CreditNoteStatus, 'warn' | 'success' | 'danger' | 'seco
     <aside class="drawer" *ngIf="detail" (click)="$event.stopPropagation()">
       <header class="drawer-head">
         <div>
-          <strong>{{ detail.invoiceNumeroFormateado ? ('NC sobre ' + detail.invoiceNumeroFormateado) : 'Nota de crédito en borrador' }}</strong>
+          <strong>NC sobre {{ invoiceLabel(detail) }}</strong>
           <p-tag [value]="statusLabel(detail.status)" [severity]="statusSeverity(detail.status)" styleClass="ml-2"></p-tag>
         </div>
         <button class="ov-close" (click)="closeDetail()">✕</button>
@@ -409,7 +410,7 @@ export class CreditNotesPageComponent implements OnInit {
       (!this.filterStatus || x.status === this.filterStatus) &&
       (!search ||
         x.motivo.toLowerCase().includes(search) ||
-        (x.invoiceNumeroFormateado ?? '').toLowerCase().includes(search) ||
+        this.invoiceLabel(x).toLowerCase().includes(search) ||
         x.unitCode.toLowerCase().includes(search) ||
         x.buildingName.toLowerCase().includes(search)));
     this.cdr.markForCheck();
@@ -451,11 +452,24 @@ export class CreditNotesPageComponent implements OnInit {
   pdfUrl(id: string): string { return this.creditNotesApi.getPdfUrl(id, this.auth.getToken() ?? ''); }
   statusSeverity(status: CreditNoteStatus): 'warn' | 'success' | 'danger' | 'secondary' { return STATUS_SEV[status]; }
 
+  // Toda NC se crea sobre una factura ya Emitida (el backend lo exige), así que en el uso normal
+  // siempre hay número. Si de todos modos falta (dato viejo o excepcional), se identifica igual con
+  // los últimos 8 caracteres del ID de la factura, para no dejar la fila sin ninguna referencia.
+  invoiceLabel(cn: CreditNote): string {
+    if (cn.invoiceNumeroFormateado) return cn.invoiceNumeroFormateado;
+    return `Factura #${cn.invoiceId.slice(-8).toUpperCase()}`;
+  }
+
+  invoiceSubLabel(cn: CreditNote): string {
+    if (cn.invoiceNumeroFormateado) return '';
+    return cn.invoiceStatus === 'Draft' ? 'aún no emitida' : 'sin número asignado';
+  }
+
   // Trazabilidad: factura original emitida -> nota de crédito creada -> su resolución (aprobada/rechazada/anulada).
   timeline(cn: CreditNote): { title: string; icon: string; state: 'done' | 'void' | 'pending'; lines: string[] }[] {
     const steps: { title: string; icon: string; state: 'done' | 'void' | 'pending'; lines: string[] }[] = [
       {
-        title: `Factura ${cn.invoiceNumeroFormateado || 'en borrador'}`,
+        title: this.invoiceLabel(cn),
         icon: 'pi-file',
         state: 'done',
         lines: [`Monto: ${this.formatGs(cn.invoiceMontoTotal)}`]
