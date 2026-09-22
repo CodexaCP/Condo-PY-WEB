@@ -16,7 +16,6 @@ import { ResidentsApiService } from '../../api/residents-api.service';
 import { AssignmentsApiService } from '../../api/assignments-api.service';
 import { extractApiErrorMessage } from '../../api/api-error.util';
 import { Assignment, Owner, Resident, Unit, UnitOwnerAssignment } from '../../api/models';
-import { AuthService } from '../../auth/auth.service';
 
 type UnitOption = Unit & { display: string };
 
@@ -79,7 +78,7 @@ type UnitOption = Unit & { display: string };
               <strong>{{ currentPrimary.ownerName }}</strong>
               <small class="since">Desde {{ currentPrimary.startDate }}</small>
             </div>
-            <button *ngIf="!isReadOnly" type="button" class="remove-btn" title="Quitar" (click)="removeOwner(currentPrimary)">
+            <button  type="button" class="remove-btn" title="Quitar" (click)="removeOwner(currentPrimary)">
               <span class="pi pi-times"></span>
             </button>
           </div>
@@ -90,7 +89,7 @@ type UnitOption = Unit & { display: string };
               <strong>{{ currentSecondary.ownerName }}</strong>
               <small class="since">Desde {{ currentSecondary.startDate }}</small>
             </div>
-            <button *ngIf="!isReadOnly" type="button" class="remove-btn" title="Quitar" (click)="removeOwner(currentSecondary)">
+            <button  type="button" class="remove-btn" title="Quitar" (click)="removeOwner(currentSecondary)">
               <span class="pi pi-times"></span>
             </button>
           </div>
@@ -98,7 +97,7 @@ type UnitOption = Unit & { display: string };
         <p class="no-owners" *ngIf="!currentPrimary && !currentSecondary">Esta unidad no tiene propietarios asignados.</p>
 
         <!-- Add owner form -->
-        <form class="add-form" *ngIf="!isReadOnly && canAddMore" (ngSubmit)="addOwner()">
+        <form class="add-form" *ngIf="canAddMore" (ngSubmit)="addOwner()">
           <div class="add-form-fields">
             <label class="field-block">
               <span>{{ !currentPrimary ? 'Propietario principal *' : 'Propietario 2 (opcional)' }}</span>
@@ -123,7 +122,7 @@ type UnitOption = Unit & { display: string };
           </div>
         </form>
 
-        <p class="max-owners" *ngIf="!isReadOnly && !canAddMore">
+        <p class="max-owners" *ngIf="!canAddMore">
           <span class="pi pi-info-circle"></span> La unidad ya tiene sus 2 propietarios asignados. Quitá uno para agregar otro.
         </p>
 
@@ -142,7 +141,7 @@ type UnitOption = Unit & { display: string };
                   <span *ngIf="r.endDate"> · Finalizada el {{ r.endDate }}</span>
                 </small>
               </div>
-              <button *ngIf="!r.endDate && !isReadOnly" type="button" class="remove-btn"
+              <button *ngIf="!r.endDate" type="button" class="remove-btn"
                       title="Finalizar residencia" [disabled]="isSavingResident"
                       (click)="endResidentResidency(r)">
                 <span class="pi pi-times"></span>
@@ -151,7 +150,7 @@ type UnitOption = Unit & { display: string };
           </div>
           <p class="no-owners" *ngIf="!currentResidents.length">Esta unidad no tiene residentes asignados.</p>
 
-          <form class="add-form" *ngIf="!isReadOnly" (ngSubmit)="addResident()">
+          <form class="add-form"  (ngSubmit)="addResident()">
             <div class="add-form-fields">
               <label class="field-block">
                 <span>Residente</span>
@@ -196,7 +195,7 @@ type UnitOption = Unit & { display: string };
             <span>Tipo</span>
             <span>Residente</span>
             <span>Desde</span>
-            <span *ngIf="!isReadOnly"></span>
+            <span ></span>
           </div>
           <div class="app-row owners-grid" *ngFor="let item of assignments">
             <strong>{{ item.unitCode }}</strong>
@@ -210,7 +209,7 @@ type UnitOption = Unit & { display: string };
               {{ residentNameForUnit(item.unitId) || 'Sin residente asociado' }}
             </span>
             <span>{{ item.startDate }}</span>
-            <div *ngIf="!isReadOnly">
+            <div >
               <p-button
                 type="button"
                 icon="pi pi-trash"
@@ -238,7 +237,7 @@ type UnitOption = Unit & { display: string };
             <span>Residente</span>
             <span>Tipo</span>
             <span>Desde / Hasta</span>
-            <span *ngIf="!isReadOnly"></span>
+            <span ></span>
           </div>
           <div class="app-row assign-grid" *ngFor="let item of residentAssignments" [class.ended-row]="!!item.endDate">
             <strong>{{ item.unitCode }}</strong>
@@ -249,7 +248,7 @@ type UnitOption = Unit & { display: string };
               [severity]="item.isPrimary ? 'info' : 'secondary'">
             </p-tag>
             <span>{{ item.startDate }}<span *ngIf="item.endDate"> — {{ item.endDate }}</span></span>
-            <div *ngIf="!isReadOnly">
+            <div >
               <p-button
                 *ngIf="!item.endDate"
                 type="button"
@@ -475,12 +474,9 @@ export class AssignmentsPageComponent implements OnInit {
   private readonly unitsApi = inject(UnitsApiService);
   private readonly residentsApi = inject(ResidentsApiService);
   private readonly assignmentsApi = inject(AssignmentsApiService);
-  private readonly auth = inject(AuthService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly msg = inject(MessageService);
-
-  get isReadOnly(): boolean { return this.auth.hasRole('CompanyAdmin'); }
 
   units: UnitOption[] = [];
   owners: Owner[] = [];
