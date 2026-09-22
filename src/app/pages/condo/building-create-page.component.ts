@@ -198,7 +198,7 @@ function templateFile(url?: string | null, fileName?: string | null): TemplateFi
           </div>
         </section>
 
-        <section class="form-section">
+        <section class="form-section" *ngIf="isSuperAdmin">
           <h2 class="section-title">Modelos de documentos</h2>
           <div class="field checkbox-field">
             <label class="checkbox-label">
@@ -468,9 +468,10 @@ export class BuildingCreatePageComponent implements OnInit {
     const lateFeeFrequency = (lateFeeRate && this.form.lateFeeFrequency) ? this.form.lateFeeFrequency : null;
     if (lateFeeRate && !lateFeeFrequency) { this.msg.add({ severity: 'error', summary: 'Error', detail: 'Definí el incremento de la mora (diario, semanal o quincenal).', life: 5000 }); return; }
 
+    // Solo el SuperAdmin edita los modelos; el resto no los envia y el backend los deja como estan.
     const standard = this.form.useStandardTemplates;
     const { invoice, creditNote, receipt } = this.form.templates;
-    if (!standard && (!invoice || !creditNote || !receipt)) {
+    if (this.isSuperAdmin && !standard && (!invoice || !creditNote || !receipt)) {
       this.msg.add({ severity: 'error', summary: 'Error', detail: 'Adjuntá los 3 modelos (factura, nota de crédito y comprobante) o marcá "Usar modelos estándar de CONDOPY".', life: 5000 });
       return;
     }
@@ -478,13 +479,15 @@ export class BuildingCreatePageComponent implements OnInit {
     const req = { companyId, condominiumId, name, code, address, isActive: this.form.isActive, description, contactPhonePrefix: phonePrefix, contactPhone: phoneNumber, contactEmail: email,
                   lateFeeRatePercentage: lateFeeRate, lateFeeFrequency,
                   blockOverdueAmenityReservations: this.form.blockOverdueAmenityReservations,
-                  useStandardTemplates: standard,
-                  invoiceTemplateUrl:         standard ? null : invoice!.url,
-                  invoiceTemplateFileName:    standard ? null : invoice!.fileName,
-                  creditNoteTemplateUrl:      standard ? null : creditNote!.url,
-                  creditNoteTemplateFileName: standard ? null : creditNote!.fileName,
-                  receiptTemplateUrl:         standard ? null : receipt!.url,
-                  receiptTemplateFileName:    standard ? null : receipt!.fileName };
+                  ...(this.isSuperAdmin ? {
+                    useStandardTemplates: standard,
+                    invoiceTemplateUrl:         standard ? null : invoice!.url,
+                    invoiceTemplateFileName:    standard ? null : invoice!.fileName,
+                    creditNoteTemplateUrl:      standard ? null : creditNote!.url,
+                    creditNoteTemplateFileName: standard ? null : creditNote!.fileName,
+                    receiptTemplateUrl:         standard ? null : receipt!.url,
+                    receiptTemplateFileName:    standard ? null : receipt!.fileName
+                  } : {}) };
     this.isSaving = true;
     const op = this.isEditing ? this.api.update(this.editingId, req) : this.api.create(req);
     op.pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
