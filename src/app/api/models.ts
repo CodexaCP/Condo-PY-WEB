@@ -185,7 +185,7 @@ export interface DashboardSummary {
 }
 
 export type ExpensePeriodStatus = 'Draft' | 'Closed' | 'Published';
-export type ExpenseSettlementStatus = 'Draft' | 'Calculated' | 'Approved' | 'Applied';
+export type ExpenseSettlementStatus = 'Draft' | 'Calculated' | 'Approved' | 'Applied' | 'Rejected';
 export type ExpenseChargeType = 'Ordinary' | 'ReserveFund' | 'Extraordinary' | 'Individual' | 'Adjustment';
 
 export interface ExpensePeriod {
@@ -424,11 +424,19 @@ export interface ExpenseSettlementSummary {
   publishedAtUtc: string | null;
   publishedByUserId: string | null;
   publishedByUserName: string;
+  rejectionReason: string;
+  rejectedAtUtc: string | null;
+  rejectedByUserId: string | null;
+  rejectedByUserName: string;
   status: ExpenseSettlementStatus | null;
   periodStatus: ExpensePeriodStatus;
   generatedChargeCount: number;
   isCalculated: boolean;
   categoryTotals: SettlementCategoryTotal[];
+}
+
+export interface RejectSettlementRequest {
+  rejectionReason: string;
 }
 
 export interface SettlementCategoryTotal {

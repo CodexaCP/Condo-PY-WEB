@@ -15,6 +15,7 @@ import {
   ExpenseSettlementSummary,
   GenerateExpenseChargesRequest,
   GenerateExpenseChargesResult,
+  RejectSettlementRequest,
   VoidSettlementResult
 } from './models';
 
@@ -73,6 +74,10 @@ export class ExpensePeriodsApiService {
 
   publish(id: string): Observable<ExpenseSettlementSummary> {
     return this.http.post<ExpenseSettlementSummary>(`${API_BASE_URL}/expense-periods/${id}/publish`, {});
+  }
+
+  rejectSettlement(id: string, request: RejectSettlementRequest): Observable<ExpenseSettlementSummary> {
+    return this.http.post<ExpenseSettlementSummary>(`${API_BASE_URL}/expense-periods/${id}/reject-settlement`, request);
   }
 
   applyLateFees(id: string, request: ApplyLateFeesRequest): Observable<ApplyLateFeesResult> {

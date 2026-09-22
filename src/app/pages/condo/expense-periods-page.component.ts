@@ -252,12 +252,14 @@ import {
           <span *ngIf="settlementSummary.generatedAtUtc" class="trail-item"><span class="pi pi-check-circle"></span> Calculada: {{ settlementSummary.generatedAtUtc }}<span *ngIf="settlementSummary.generatedByUserName"> por {{ settlementSummary.generatedByUserName }}</span></span>
           <span *ngIf="settlementSummary.approvedAtUtc" class="trail-item"><span class="pi pi-check-circle"></span> Aprobada: {{ settlementSummary.approvedAtUtc }}<span *ngIf="settlementSummary.approvedByUserName"> por {{ settlementSummary.approvedByUserName }}</span></span>
           <span *ngIf="settlementSummary.publishedAtUtc" class="trail-item"><span class="pi pi-check-circle"></span> Publicada: {{ settlementSummary.publishedAtUtc }}<span *ngIf="settlementSummary.publishedByUserName"> por {{ settlementSummary.publishedByUserName }}</span></span>
+          <span *ngIf="settlementSummary.rejectedAtUtc" class="trail-item rejected"><span class="pi pi-times-circle"></span> Rechazada: {{ settlementSummary.rejectedAtUtc }}<span *ngIf="settlementSummary.rejectedByUserName"> por {{ settlementSummary.rejectedByUserName }}</span></span>
         </div>
 
         <div class="settlement-actions">
           <p-button type="button" [label]="settlementSummary.isCalculated ? 'Recalcular' : 'Calcular liquidación'" icon="pi pi-calculator" [loading]="isCalculatingSettlement" [disabled]="settlementPeriod.status !== 'Draft'" (onClick)="calculateSettlement()"></p-button>
           <p-button *ngIf="canApproveRole" type="button" label="Aprobar" icon="pi pi-check" severity="info" [loading]="isApprovingSettlement" [disabled]="!canApproveSettlement()" (onClick)="approveSettlement()"></p-button>
           <p-button *ngIf="canPublishRole" type="button" label="Publicar comprobantes" icon="pi pi-send" severity="contrast" [loading]="isPublishingSettlement" [disabled]="!canPublishSettlement()" (onClick)="publishSettlement()"></p-button>
+          <p-button *ngIf="canPublishRole" type="button" label="Rechazar" icon="pi pi-times" severity="danger" [outlined]="!showRejectSettlementForm" [disabled]="!canRejectSettlement()" (onClick)="toggleRejectSettlementForm()"></p-button>
           <a *ngIf="settlementSummary.isCalculated" [href]="getSettlementPdfUrl()" target="_blank" style="display:contents">
             <p-button type="button" label="PDF" icon="pi pi-file-pdf" severity="secondary" [text]="true"></p-button>
           </a>
@@ -266,6 +268,32 @@ import {
             <span class="pi pi-lock" style="margin-right:0.35rem"></span>{{ publishBlockedReason }}
           </p>
           <p-button *ngIf="canManageRole && canVoidSettlement()" type="button" label="Anular" icon="pi pi-undo" severity="danger" [text]="true" [loading]="isVoidingSettlement" (onClick)="voidSettlement()"></p-button>
+        </div>
+
+        <div class="reject-form" *ngIf="canPublishRole && showRejectSettlementForm">
+          <label class="field-label">Motivo de rechazo <span class="required">*</span></label>
+          <textarea
+            [(ngModel)]="rejectionReason"
+            rows="4"
+            maxlength="500"
+            placeholder="Describe el motivo del rechazo (obligatorio, máx. 500 caracteres)..."
+            class="reject-textarea">
+          </textarea>
+          <div class="reject-actions">
+            <span class="char-count">{{ rejectionReason.length }}/500</span>
+            <p-button
+              label="Confirmar rechazo"
+              icon="pi pi-times-circle"
+              severity="danger"
+              (onClick)="rejectSettlement()"
+              [loading]="isRejectingSettlement"
+              [disabled]="!rejectionReason.trim()">
+            </p-button>
+          </div>
+        </div>
+
+        <div class="rejection-text" *ngIf="settlementSummary.status === 'Rejected' && settlementSummary.rejectionReason">
+          <strong>Motivo de rechazo:</strong> {{ settlementSummary.rejectionReason }}
         </div>
 
         <form class="period-form late-fee-form" *ngIf="showLateFeeForm" (ngSubmit)="applyLateFees()">
@@ -490,7 +518,30 @@ import {
       padding: 0.3rem 0.75rem;
     }
     .trail-item.pending { color: #8a6800; background: rgba(220,160,0,0.1); }
+    .trail-item.rejected { color: #9b1c1c; background: rgba(220,38,38,0.08); }
     .trail-item .pi { margin-right: 0.3rem; }
+
+    .reject-form {
+      margin-top: 1rem; padding: 1rem; border-radius: 8px;
+      background: rgba(220,38,38,0.05);
+      border: 1px solid rgba(220,38,38,0.25);
+    }
+    .reject-textarea {
+      width: 100%; box-sizing: border-box; padding: 0.6rem 0.8rem;
+      border: 1px solid #cbd5d1; border-radius: 6px; resize: vertical;
+      font-family: inherit; font-size: 0.9rem; margin-bottom: 0.75rem;
+      background: white;
+    }
+    .reject-textarea:focus { outline: none; border-color: #1385b6; }
+    .reject-actions { display: flex; justify-content: space-between; align-items: center; }
+    .char-count { font-size: 0.8rem; color: #6b878d; }
+    .field-label { display: block; font-size: 0.85rem; font-weight: 600; color: #14363d; margin-bottom: 0.4rem; }
+    .field-label .required { color: #dc2626; }
+    .rejection-text {
+      margin-top: 0.75rem; padding: 0.75rem 1rem; border-radius: 6px;
+      background: rgba(220,38,38,0.06);
+      border-left: 3px solid #dc2626; font-size: 0.92rem; color: #14363d;
+    }
 
     .settlement-actions {
       display: flex;
@@ -594,6 +645,7 @@ export class ExpensePeriodsPageComponent implements OnInit {
   isApplyingSettlement = false;
   isApprovingSettlement = false;
   isPublishingSettlement = false;
+  isRejectingSettlement = false;
   isApplyingLateFees = false;
   isVoidingSettlement = false;
   isBulkCreating = false;
@@ -601,6 +653,8 @@ export class ExpensePeriodsPageComponent implements OnInit {
   showForm = false;
   showBulkForm = false;
   showLateFeeForm = false;
+  showRejectSettlementForm = false;
+  rejectionReason = '';
   editingId: string | null = null;
   readonly generationModes: GenerateExpenseChargesMode[] = ['FixedAmount', 'ByCoefficient'];
   alerts: ExpensePeriodOperationalAlertItem[] = [];
@@ -738,6 +792,8 @@ export class ExpensePeriodsPageComponent implements OnInit {
     this.settlementPeriod = item;
     this.settlementSummary = null;
     this.showLateFeeForm = false;
+    this.showRejectSettlementForm = false;
+    this.rejectionReason = '';
     this.lateFeeForm = this.createInitialLateFeeForm(item);
     this.isCalculatingSettlement = true;
 
@@ -762,6 +818,8 @@ export class ExpensePeriodsPageComponent implements OnInit {
     this.settlementPeriod = null;
     this.settlementSummary = null;
     this.showLateFeeForm = false;
+    this.showRejectSettlementForm = false;
+    this.rejectionReason = '';
   }
 
   submitPeriod(): void {
@@ -976,6 +1034,40 @@ export class ExpensePeriodsPageComponent implements OnInit {
     this.showLateFeeForm = !this.showLateFeeForm;
   }
 
+  toggleRejectSettlementForm(): void {
+    this.showRejectSettlementForm = !this.showRejectSettlementForm;
+    if (!this.showRejectSettlementForm) {
+      this.rejectionReason = '';
+    }
+  }
+
+  rejectSettlement(): void {
+    if (!this.settlementPeriod || !this.rejectionReason.trim()) {
+      return;
+    }
+
+    this.isRejectingSettlement = true;
+
+    this.periodsApi.rejectSettlement(this.settlementPeriod.id, { rejectionReason: this.rejectionReason.trim() })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (summary) => {
+          this.settlementSummary = summary;
+          this.syncPeriodStatus(summary.expensePeriodId, summary.periodStatus);
+          this.showRejectSettlementForm = false;
+          this.rejectionReason = '';
+          this.msg.add({ severity: 'warn', summary: 'Liquidación rechazada', detail: `El encargado de edificio será notificado. El período volvió a Borrador.`, life: 5000 });
+          this.isRejectingSettlement = false;
+          this.cdr.markForCheck();
+        },
+        error: (error) => {
+          this.msg.add({ severity: 'error', summary: 'Error', detail: extractApiErrorMessage(error, 'No se pudo rechazar la liquidación.'), life: 5000 });
+          this.isRejectingSettlement = false;
+          this.cdr.markForCheck();
+        }
+      });
+  }
+
   applyLateFees(): void {
     if (!this.settlementPeriod) {
       return;
@@ -1033,7 +1125,9 @@ export class ExpensePeriodsPageComponent implements OnInit {
         ? 'Calculada'
         : status === 'Approved'
           ? 'Aprobada'
-          : 'Aplicada';
+          : status === 'Rejected'
+            ? 'Rechazada'
+            : 'Aplicada';
   }
 
   alertTypeLabel(alert: ExpensePeriodOperationalAlertItem): string {
@@ -1083,6 +1177,12 @@ export class ExpensePeriodsPageComponent implements OnInit {
       (this.settlementSummary.status === 'Approved' || this.settlementSummary.status === 'Applied') &&
       this.settlementSummary.periodStatus !== 'Published' &&
       this.settlementSummary.generatedChargeCount > 0;
+  }
+
+  canRejectSettlement(): boolean {
+    return !!this.settlementSummary &&
+      this.settlementSummary.status === 'Approved' &&
+      this.settlementSummary.periodStatus !== 'Published';
   }
 
   canApplyLateFees(): boolean {
@@ -1242,6 +1342,8 @@ export class ExpensePeriodsPageComponent implements OnInit {
     }
 
     this.showLateFeeForm = false;
+    this.showRejectSettlementForm = false;
+    this.rejectionReason = '';
     this.msg.add({ severity: 'success', summary: 'Éxito', detail: `Se registraron ${result.chargesCreated} recargos por ${this.formatCurrency(result.totalLateFeeAmount)} en ${result.expensePeriodName}.`, life: 4000 });
     this.loadAlerts();
   }
