@@ -456,7 +456,7 @@ export class CreditNotesPageComponent implements OnInit {
   // los últimos 8 caracteres del ID de la factura, para no dejar la fila sin ninguna referencia.
   invoiceLabel(cn: CreditNote): string {
     if (cn.invoiceNumeroFormateado) return cn.invoiceNumeroFormateado;
-    return `Factura #${cn.invoiceId.slice(-8).toUpperCase()}`;
+    return `#${cn.invoiceId.slice(-8).toUpperCase()}`;
   }
 
   invoiceSubLabel(cn: CreditNote): string {
@@ -468,7 +468,7 @@ export class CreditNotesPageComponent implements OnInit {
   timeline(cn: CreditNote): { title: string; icon: string; state: 'done' | 'void' | 'pending'; lines: string[] }[] {
     const steps: { title: string; icon: string; state: 'done' | 'void' | 'pending'; lines: string[] }[] = [
       {
-        title: this.invoiceLabel(cn),
+        title: `Factura ${this.invoiceLabel(cn)}`,
         icon: 'pi-file',
         state: 'done',
         lines: [`Monto: ${this.formatGs(cn.invoiceMontoTotal)}`]
