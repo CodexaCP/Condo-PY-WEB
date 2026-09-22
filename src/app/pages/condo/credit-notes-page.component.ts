@@ -6,6 +6,7 @@ import { forkJoin } from 'rxjs';
 import { Button } from 'primeng/button';
 import { Card } from 'primeng/card';
 import { Tag } from 'primeng/tag';
+import { Tooltip } from 'primeng/tooltip';
 import { MessageService } from 'primeng/api';
 import { extractApiErrorMessage } from '../../api/api-error.util';
 import { AuthService } from '../../auth/auth.service';
@@ -23,7 +24,7 @@ const STATUS_SEV: Record<CreditNoteStatus, 'warn' | 'success' | 'danger' | 'seco
 @Component({
   standalone: true,
   selector: 'app-credit-notes-page',
-  imports: [CommonModule, FormsModule, Button, Card, Tag],
+  imports: [CommonModule, FormsModule, Button, Card, Tag, Tooltip],
   template: `
     <p-card styleClass="app-page-card">
       <div class="app-toolbar">
@@ -92,114 +93,157 @@ const STATUS_SEV: Record<CreditNoteStatus, 'warn' | 'success' | 'danger' | 'seco
       <p class="app-state" *ngIf="!loading && !items.length">No hay notas de crédito registradas.</p>
       <p class="app-state" *ngIf="!loading && items.length && !filteredItems.length">Ningún resultado con estos filtros.</p>
 
-      <div class="app-list" *ngIf="filteredItems.length">
-        <div class="app-row header cn-grid">
-          <span>Motivo</span>
-          <span>Factura</span>
-          <span>Edificio · Unidad</span>
-          <span class="right">Importe</span>
-          <span>Estado</span>
-          <span>Creada</span>
-          <span class="actions-head">Detalle</span>
-        </div>
-
-        <div class="app-row cn-grid" *ngFor="let cn of filteredItems">
-          <span class="motivo-cell" [title]="cn.motivo">{{ cn.motivo }}</span>
-          <span class="monospace">{{ cn.invoiceNumeroFormateado || 'Borrador' }}</span>
-          <span>
-            {{ cn.buildingName }}
-            <small class="sub-text">Unidad {{ cn.unitCode }}</small>
-          </span>
-          <span class="right amount">-{{ formatGs(cn.amount) }}</span>
-          <p-tag [value]="statusLabel(cn.status)" [severity]="statusSeverity(cn.status)"></p-tag>
-          <span>
-            {{ cn.createdAtUtc | date:'dd/MM/yyyy' }}
-            <small class="sub-text">{{ cn.createdByName }}</small>
-          </span>
-          <div class="app-actions">
-            <p-button type="button" icon="pi pi-eye" severity="secondary" [rounded]="true" [text]="true"
-                      (onClick)="openDetail(cn)"></p-button>
-          </div>
-        </div>
+      <!-- Tabla, mismo lenguaje visual que Facturas -->
+      <div class="table-wrap" *ngIf="filteredItems.length">
+        <table class="ledger">
+          <thead>
+            <tr>
+              <th>N° Factura</th>
+              <th>Edificio · Unidad</th>
+              <th>Motivo</th>
+              <th class="num">Importe</th>
+              <th>Estado</th>
+              <th>Creada</th>
+              <th class="actions-col"></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let cn of filteredItems" (click)="openDetail(cn)" [class.row-selected]="detail?.id === cn.id">
+              <td>
+                <strong class="monospace">{{ cn.invoiceNumeroFormateado || 'Borrador' }}</strong>
+                <small *ngIf="cn.fiscalNumero">NC {{ cn.fiscalNumero }}</small>
+              </td>
+              <td>
+                {{ cn.buildingName }}
+                <small>Unidad {{ cn.unitCode }}</small>
+              </td>
+              <td class="motivo-cell" [title]="cn.motivo">{{ cn.motivo }}</td>
+              <td class="num"><strong class="amount">-{{ formatGs(cn.amount) }}</strong></td>
+              <td><p-tag [value]="statusLabel(cn.status)" [severity]="statusSeverity(cn.status)"></p-tag></td>
+              <td>
+                {{ cn.createdAtUtc | date:'dd/MM/yyyy' }}
+                <small>{{ cn.createdByName }}</small>
+              </td>
+              <td class="actions-col" (click)="$event.stopPropagation()">
+                <a [href]="pdfUrl(cn.id)" target="_blank" rel="noopener" style="display:contents">
+                  <p-button type="button" icon="pi pi-file-pdf" severity="secondary" [rounded]="true" [text]="true" pTooltip="Descargar PDF"></p-button>
+                </a>
+              </td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </p-card>
 
-    <!-- Detalle (solo lectura) -->
-    <div class="drawer-backdrop" *ngIf="detail" (click)="closeDetail()"></div>
-    <div class="drawer" *ngIf="detail">
-      <div class="drawer-head">
-        <h2>Nota de crédito</h2>
-        <button type="button" class="drawer-close" (click)="closeDetail()"><i class="pi pi-times"></i></button>
+    <!-- Detalle -->
+    <div class="ov-backdrop" *ngIf="detail" (click)="closeDetail()"></div>
+    <aside class="drawer" *ngIf="detail" (click)="$event.stopPropagation()">
+      <header class="drawer-head">
+        <div>
+          <strong>{{ detail.invoiceNumeroFormateado ? ('NC sobre ' + detail.invoiceNumeroFormateado) : 'Nota de crédito en borrador' }}</strong>
+          <p-tag [value]="statusLabel(detail.status)" [severity]="statusSeverity(detail.status)" styleClass="ml-2"></p-tag>
+        </div>
+        <button class="ov-close" (click)="closeDetail()">✕</button>
+      </header>
+
+      <div class="hero-amount">
+        <span>Importe ajustado</span>
+        <strong>-{{ formatGs(detail.amount) }}</strong>
+        <small>{{ detail.lines.length }} {{ detail.lines.length === 1 ? 'línea' : 'líneas' }}</small>
       </div>
 
-      <div class="drawer-body" *ngIf="!detailLoading">
-        <div class="drawer-top">
-          <p-tag [value]="statusLabel(detail!.status)" [severity]="statusSeverity(detail!.status)"></p-tag>
-          <strong class="drawer-amount">-{{ formatGs(detail!.amount) }}</strong>
-        </div>
-
-        <a class="drawer-attachment" [href]="pdfUrl(detail!.id)" target="_blank" rel="noopener">
-          <i class="pi pi-file-pdf"></i> Descargar PDF de la nota de crédito
+      <div class="drawer-actions" *ngIf="!detailLoading">
+        <a [href]="pdfUrl(detail.id)" target="_blank" rel="noopener" style="display:contents">
+          <p-button type="button" label="Descargar PDF" icon="pi pi-file-pdf" severity="secondary" [outlined]="true"></p-button>
         </a>
-
-        <p class="drawer-motivo">{{ detail!.motivo }}</p>
-
-        <div class="drawer-section">
-          <h4>Comprobante original</h4>
-          <p>Factura {{ detail!.invoiceNumeroFormateado || 'Borrador' }} · {{ detail!.buildingName }} · Unidad {{ detail!.unitCode }}</p>
-          <p class="sub-text">Monto de la factura: {{ formatGs(detail!.invoiceMontoTotal) }}</p>
-        </div>
-
-        <div class="drawer-section">
-          <h4>Líneas ajustadas</h4>
-          <div class="drawer-lines">
-            <div class="drawer-line" *ngFor="let l of detail!.lines">
-              <span>{{ l.chargeConcept }}</span>
-              <span class="amount">-{{ formatGs(l.amount) }}</span>
-            </div>
-          </div>
-        </div>
-
-        <div class="drawer-section" *ngIf="detail!.status === 'Rejected' && detail!.rejectionReason">
-          <h4>Motivo de rechazo</h4>
-          <p>{{ detail!.rejectionReason }} <span class="sub-text">— {{ detail!.rejectedByName }}, {{ detail!.rejectedAtUtc | date:'dd/MM/yyyy' }}</span></p>
-        </div>
-
-        <div class="drawer-section" *ngIf="detail!.status === 'Voided' && detail!.voidReason">
-          <h4>Motivo de anulación</h4>
-          <p>{{ detail!.voidReason }} <span class="sub-text">— {{ detail!.voidedByName }}, {{ detail!.voidedAtUtc | date:'dd/MM/yyyy' }}</span></p>
-        </div>
-
-        <div class="drawer-section" *ngIf="detail!.status === 'Approved' || detail!.status === 'Voided'">
-          <h4>Aprobación</h4>
-          <p>{{ detail!.approvedByName }}, {{ detail!.approvedAtUtc | date:'dd/MM/yyyy HH:mm' }}</p>
-        </div>
-
-        <div class="drawer-section">
-          <h4>Documento fiscal oficial</h4>
-          <p *ngIf="!detail!.fiscalNumero && !detail!.numero" class="sub-text">Sin datos fiscales registrados todavía.</p>
-          <div *ngIf="detail!.fiscalNumero || detail!.numero">
-            <p><strong>{{ detail!.fiscalNumero }}</strong> <span *ngIf="detail!.numero" class="sub-text">(numerada automáticamente)</span></p>
-            <p class="sub-text" *ngIf="detail!.fiscalTimbrado">Timbrado {{ detail!.fiscalTimbrado }}</p>
-            <p class="sub-text" *ngIf="detail!.fiscalCdc">CDC {{ detail!.fiscalCdc }}</p>
-            <p class="sub-text" *ngIf="detail!.fiscalFechaEmisionUtc">Emitida el {{ detail!.fiscalFechaEmisionUtc | date:'dd/MM/yyyy' }}</p>
-            <p class="sub-text" *ngIf="detail!.fiscalEstado">Estado: {{ detail!.fiscalEstado }}</p>
-            <p class="sub-text" *ngIf="detail!.fiscalObservaciones">{{ detail!.fiscalObservaciones }}</p>
-          </div>
-        </div>
-
-        <div class="drawer-section" *ngIf="detail!.attachments.length">
-          <h4>Adjuntos</h4>
-          <div class="drawer-attachments">
-            <a *ngFor="let att of detail!.attachments" [href]="att.url" target="_blank" rel="noopener" class="drawer-attachment">
-              <i class="pi pi-paperclip"></i> {{ att.fileName }}
-            </a>
-          </div>
-        </div>
       </div>
 
       <p class="app-state" *ngIf="detailLoading">Cargando detalle...</p>
-    </div>
+
+      <ng-container *ngIf="!detailLoading">
+        <h4 class="drawer-title">Motivo</h4>
+        <p class="motivo-text">{{ detail.motivo }}</p>
+
+        <h4 class="drawer-title">Datos</h4>
+        <div class="info-grid">
+          <div class="info-card">
+            <h5>Factura ajustada</h5>
+            <p>{{ detail.invoiceNumeroFormateado || 'Borrador' }}</p>
+            <small>Monto de la factura: {{ formatGs(detail.invoiceMontoTotal) }}</small>
+          </div>
+          <div class="info-card">
+            <h5>Edificio y unidad</h5>
+            <p>{{ detail.buildingName }}</p>
+            <small>Unidad {{ detail.unitCode }}</small>
+          </div>
+          <div class="info-card">
+            <h5>Creada</h5>
+            <p>{{ detail.createdAtUtc | date:'dd/MM/yyyy HH:mm' }}</p>
+            <small *ngIf="detail.createdByName">{{ detail.createdByName }}</small>
+          </div>
+          <div class="info-card" *ngIf="detail.status === 'Approved' || detail.status === 'Voided'">
+            <h5>Aprobación</h5>
+            <p>{{ detail.approvedByName || '—' }}</p>
+            <small *ngIf="detail.approvedAtUtc">{{ detail.approvedAtUtc | date:'dd/MM/yyyy HH:mm' }}</small>
+          </div>
+        </div>
+
+        <h4 class="drawer-title">Líneas ajustadas</h4>
+        <div class="lines">
+          <div class="line-row" *ngFor="let l of detail.lines">
+            <span>{{ l.concept || l.chargeConcept }}</span>
+            <strong>-{{ formatGs(l.amount) }}</strong>
+          </div>
+          <div class="line-row line-total">
+            <span>Total nota de crédito</span>
+            <strong>-{{ formatGs(detail.amount) }}</strong>
+          </div>
+        </div>
+
+        <div class="void-box" *ngIf="detail.status === 'Rejected' && detail.rejectionReason">
+          <strong>Nota de crédito rechazada</strong>
+          <span>{{ detail.rejectedByName }}, {{ detail.rejectedAtUtc | date:'dd/MM/yyyy' }} — {{ detail.rejectionReason }}</span>
+        </div>
+
+        <div class="void-box" *ngIf="detail.status === 'Voided' && detail.voidReason">
+          <strong>Nota de crédito anulada</strong>
+          <span>{{ detail.voidedByName }}, {{ detail.voidedAtUtc | date:'dd/MM/yyyy' }} — {{ detail.voidReason }}</span>
+        </div>
+
+        <h4 class="drawer-title">Documento fiscal oficial</h4>
+        <p class="sub-text" *ngIf="!detail.fiscalNumero && !detail.numero">Sin datos fiscales registrados todavía.</p>
+        <div class="info-grid" *ngIf="detail.fiscalNumero || detail.numero">
+          <div class="info-card">
+            <h5>Número</h5>
+            <p>{{ detail.fiscalNumero || '—' }}</p>
+            <small *ngIf="detail.numero">Numerada automáticamente</small>
+          </div>
+          <div class="info-card">
+            <h5>Timbrado</h5>
+            <p>{{ detail.fiscalTimbrado || '—' }}</p>
+            <small *ngIf="detail.fiscalFechaEmisionUtc">Emitida el {{ detail.fiscalFechaEmisionUtc | date:'dd/MM/yyyy' }}</small>
+          </div>
+          <div class="info-card" *ngIf="detail.fiscalCdc">
+            <h5>CDC</h5>
+            <p class="mono">{{ detail.fiscalCdc }}</p>
+          </div>
+          <div class="info-card" *ngIf="detail.fiscalEstado || detail.fiscalObservaciones">
+            <h5>Estado</h5>
+            <p>{{ detail.fiscalEstado || '—' }}</p>
+            <small *ngIf="detail.fiscalObservaciones">{{ detail.fiscalObservaciones }}</small>
+          </div>
+        </div>
+
+        <ng-container *ngIf="detail.attachments.length">
+          <h4 class="drawer-title">Adjuntos</h4>
+          <div class="drawer-attachments">
+            <a *ngFor="let att of detail.attachments" [href]="att.url" target="_blank" rel="noopener" class="drawer-attachment">
+              <i class="pi pi-paperclip"></i> {{ att.fileName }}
+            </a>
+          </div>
+        </ng-container>
+      </ng-container>
+    </aside>
   `,
   styles: [`
     .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 0.9rem; margin-bottom: 1.25rem; }
@@ -226,36 +270,61 @@ const STATUS_SEV: Record<CreditNoteStatus, 'warn' | 'success' | 'danger' | 'seco
       background: #fff; outline: none; width: 100%; box-sizing: border-box;
     }
 
-    .cn-grid { grid-template-columns: 1.6fr 1fr 1.4fr 1fr 0.9fr 1fr 0.5fr; }
-    .actions-head { text-align: right; }
-    .motivo-cell { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .sub-text { display: block; font-size: 0.78rem; color: var(--brand-muted); }
-    .monospace { font-family: monospace; }
-    .amount { font-family: monospace; font-weight: 700; color: #b91c1c; }
-    .right { text-align: right; }
+    /* Tabla, mismo lenguaje visual que Facturas */
+    .table-wrap { overflow-x: auto; border: 1px solid rgba(20,54,61,0.1); border-radius: 14px; background: #fff; }
+    table.ledger { width: 100%; border-collapse: collapse; font-size: 0.88rem; min-width: 760px; }
+    table.ledger thead th { position: sticky; top: 0; background: #f4f9fc; text-align: left; padding: 0.7rem 0.8rem; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--brand-muted); border-bottom: 1px solid rgba(20,54,61,0.12); white-space: nowrap; }
+    table.ledger tbody td { padding: 0.65rem 0.8rem; border-bottom: 1px solid rgba(20,54,61,0.07); color: var(--brand-ink); vertical-align: top; }
+    table.ledger tbody tr { cursor: pointer; transition: background .12s; }
+    table.ledger tbody tr:hover { background: rgba(19,133,182,0.05); }
+    table.ledger tbody tr.row-selected { background: rgba(19,133,182,0.09); }
+    table.ledger td small { display: block; color: var(--brand-muted); font-size: 0.76rem; margin-top: 0.1rem; }
+    table.ledger .num { text-align: right !important; white-space: nowrap; }
+    .actions-col { width: 52px; text-align: right; }
+    .motivo-cell { max-width: 320px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .monospace { font-family: ui-monospace, Menlo, Consolas, monospace; }
+    .amount { font-family: ui-monospace, Menlo, Consolas, monospace; color: #b91c1c; }
 
-    .drawer-backdrop { position: fixed; inset: 0; background: rgba(15,40,60,0.35); z-index: 1000; }
-    .drawer {
-      position: fixed; top: 0; right: 0; bottom: 0; width: min(480px, 100vw);
-      background: #fff; z-index: 1001; overflow-y: auto; box-shadow: -8px 0 24px rgba(15,40,60,0.18);
-      padding: 1.25rem 1.5rem;
-    }
-    .drawer-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; }
-    .drawer-close { background: none; border: none; font-size: 1.1rem; cursor: pointer; color: var(--brand-muted); }
-    .drawer-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem; }
-    .drawer-amount { font-family: monospace; font-size: 1.2rem; color: #b91c1c; }
-    .drawer-motivo { font-size: 0.92rem; margin-bottom: 1rem; }
-    .drawer-section { margin-bottom: 1.1rem; padding-bottom: 1.1rem; border-bottom: 1px dashed rgba(20,54,61,0.14); }
-    .drawer-section h4 { margin: 0 0 0.4rem; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.03em; color: var(--brand-muted); }
-    .drawer-section p { margin: 0.2rem 0; font-size: 0.9rem; }
-    .drawer-lines { display: grid; gap: 0.3rem; }
-    .drawer-line { display: flex; justify-content: space-between; font-size: 0.88rem; }
+    /* DRAWER — mismo lenguaje visual que Facturas */
+    .ov-backdrop { position: fixed; inset: 0; background: rgba(15,35,50,0.4); z-index: 1000; backdrop-filter: blur(2px); }
+    .drawer { position: fixed; top: 0; right: 0; bottom: 0; width: min(560px, 100vw); background: #fff; z-index: 1001; overflow-y: auto; padding: 1.4rem 1.5rem 2rem; box-shadow: -24px 0 60px rgba(15,40,60,0.22); }
+    .drawer-head { display: flex; justify-content: space-between; align-items: flex-start; padding-bottom: 0.9rem; border-bottom: 1px solid rgba(20,54,61,0.1); margin-bottom: 1rem; }
+    .drawer-head > div { display: flex; align-items: center; flex-wrap: wrap; gap: 0.4rem; }
+    .drawer-head strong { font-size: 1.1rem; color: var(--brand-ink); }
+    .ov-close { background: none; border: none; cursor: pointer; font-size: 1.1rem; color: var(--brand-muted); width: 34px; height: 34px; border-radius: 50%; }
+    .ov-close:hover { background: rgba(19,133,182,0.08); color: var(--brand-ink); }
+    .hero-amount { display: flex; flex-direction: column; background: linear-gradient(135deg, rgba(220,38,38,0.08), rgba(180,20,20,0.08)); border-radius: 14px; padding: 0.9rem 1.1rem; margin-bottom: 0.9rem; }
+    .hero-amount span { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--brand-muted); }
+    .hero-amount strong { font-size: 1.7rem; color: #b91c1c; font-family: ui-monospace, Menlo, Consolas, monospace; }
+    .hero-amount small { color: var(--brand-muted); }
+    .drawer-actions { display: flex; gap: 0.4rem; flex-wrap: wrap; margin-bottom: 0.4rem; }
+    .drawer-title { margin: 1.2rem 0 0.6rem; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--brand-muted); }
+    .motivo-text { margin: 0; font-size: 0.92rem; color: var(--brand-ink); }
+
+    .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.7rem; }
+    .info-card { border: 1px solid rgba(20,54,61,0.1); border-radius: 12px; padding: 0.7rem 0.85rem; display: flex; flex-direction: column; gap: 0.1rem; min-width: 0; }
+    .info-card h5 { margin: 0 0 0.25rem; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--brand-muted); }
+    .info-card p { margin: 0; font-weight: 600; color: var(--brand-ink); word-break: break-word; }
+    .info-card small { color: var(--brand-muted); font-size: 0.78rem; }
+    .mono { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 0.82rem; word-break: break-all; }
+
+    .void-box { margin-top: 0.9rem; padding: 0.7rem 0.9rem; border-radius: 12px; background: #fee2e2; border: 1px solid #fca5a5; display: flex; flex-direction: column; gap: 0.2rem; color: #991b1b; }
+    .void-box strong { font-size: 0.9rem; }
+    .void-box span { font-size: 0.85rem; }
+
+    .lines { border-top: 1px dashed rgba(19,133,182,0.2); }
+    .line-row { display: flex; justify-content: space-between; gap: 1rem; padding: 0.4rem 0; border-bottom: 1px dashed rgba(19,133,182,0.12); font-size: 0.88rem; color: var(--brand-ink); }
+    .line-row strong { font-family: ui-monospace, Menlo, Consolas, monospace; color: #b91c1c; }
+    .line-total { font-weight: 700; border-bottom: none; padding-top: 0.6rem; }
+
     .drawer-attachments { display: grid; gap: 0.4rem; }
     .drawer-attachment { display: inline-flex; gap: 0.4rem; align-items: center; color: var(--p-primary-color); text-decoration: none; font-size: 0.88rem; }
+    .sub-text { color: var(--brand-muted); font-size: 0.85rem; }
+    .ml-2 { margin-left: 0.4rem; }
 
     @media (max-width: 900px) {
       .filters-bar { flex-direction: column; align-items: stretch; }
-      .cn-grid { grid-template-columns: 1fr; }
+      .info-grid { grid-template-columns: 1fr; }
     }
   `]
 })
