@@ -211,7 +211,8 @@ const STATUS_SEVERITY: Record<string, 'warn' | 'info' | 'success' | 'danger' | '
                       <strong class="cn-amount">-{{ formatGs(cn.amount) }}</strong>
                     </div>
                     <p class="cn-motivo">{{ cn.motivo }}</p>
-                    <p class="cn-meta">Creada por {{ cn.createdByName }} el {{ cn.createdAtUtc | date:'dd/MM/yyyy' }}</p>
+                    <p class="cn-meta">Creada por {{ cn.createdByName }} el {{ cn.createdAtUtc | date:'dd/MM/yyyy' }}
+                      · <a [href]="creditNotePdfUrl(cn.id)" target="_blank" rel="noopener"><i class="pi pi-file-pdf"></i> PDF</a></p>
 
                     <ul class="cn-lines">
                       <li *ngFor="let l of cn.lines">{{ l.chargeConcept }}: -{{ formatGs(l.amount) }}</li>
@@ -831,6 +832,10 @@ export class OwnerPaymentDetailPageComponent implements OnInit {
 
   invoicePdfUrl(id: string): string {
     return this.invoicesApi.getPdfUrl(id, this.auth.getToken() ?? '');
+  }
+
+  creditNotePdfUrl(id: string): string {
+    return this.creditNotesApi.getPdfUrl(id, this.auth.getToken() ?? '');
   }
 
   formatGs(value: number): string {

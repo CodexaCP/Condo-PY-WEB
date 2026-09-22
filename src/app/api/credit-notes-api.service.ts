@@ -62,4 +62,8 @@ export class CreditNotesApiService {
   deleteAttachment(id: string, attachmentId: string): Observable<void> {
     return this.http.delete<void>(`${API_BASE_URL}/credit-notes/${id}/attachments/${attachmentId}`);
   }
+
+  getPdfUrl(id: string, token: string): string {
+    return `${API_BASE_URL}/credit-notes/${id}/pdf?access_token=${token}`;
+  }
 }

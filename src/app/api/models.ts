@@ -16,6 +16,13 @@ export interface Building {
   lateFeeRatePercentage?: number | null;
   lateFeeFrequency?: LateFeeFrequency | null;
   blockOverdueAmenityReservations: boolean;
+  useStandardTemplates?: boolean | null;
+  invoiceTemplateUrl?: string | null;
+  invoiceTemplateFileName?: string | null;
+  creditNoteTemplateUrl?: string | null;
+  creditNoteTemplateFileName?: string | null;
+  receiptTemplateUrl?: string | null;
+  receiptTemplateFileName?: string | null;
 }
 
 export interface CreateBuildingRequest {
@@ -32,6 +39,13 @@ export interface CreateBuildingRequest {
   lateFeeRatePercentage?: number | null;
   lateFeeFrequency?: LateFeeFrequency | null;
   blockOverdueAmenityReservations: boolean;
+  useStandardTemplates?: boolean | null;
+  invoiceTemplateUrl?: string | null;
+  invoiceTemplateFileName?: string | null;
+  creditNoteTemplateUrl?: string | null;
+  creditNoteTemplateFileName?: string | null;
+  receiptTemplateUrl?: string | null;
+  receiptTemplateFileName?: string | null;
 }
 
 export interface Company {

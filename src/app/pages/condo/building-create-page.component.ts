@@ -16,7 +16,18 @@ import { BuildingsApiService } from '../../api/buildings-api.service';
 import { CompaniesApiService } from '../../api/companies-api.service';
 import { CondominiumsApiService } from '../../api/condominiums-api.service';
 import { Company, Condominium, LateFeeFrequency } from '../../api/models';
+import { UploadsApiService } from '../../api/uploads-api.service';
 import { AuthService } from '../../auth/auth.service';
+
+type TemplateKind = 'invoice' | 'creditNote' | 'receipt';
+interface TemplateFile { url: string; fileName: string; }
+
+// Un modelo por concepto; si el edificio no usa los estandar de CONDOPY tiene que adjuntar los tres.
+const TEMPLATE_KINDS: { kind: TemplateKind; label: string }[] = [
+  { kind: 'invoice',    label: 'Factura' },
+  { kind: 'creditNote', label: 'Nota de crédito' },
+  { kind: 'receipt',    label: 'Comprobante' },
+];
 
 interface PhonePrefix { label: string; value: string; flag: string; pattern: RegExp; hint: string; }
 
@@ -26,6 +37,10 @@ const PHONE_PREFIXES: PhonePrefix[] = [
   { label: 'BR +55',  value: '+55',  flag: '🇧🇷', pattern: /^\d{10,11}$/, hint: '10-11 dígitos' },
   { label: 'ARG +54', value: '+54',  flag: '🇦🇷', pattern: /^\d{10}$/,    hint: '10 dígitos' },
 ];
+
+function templateFile(url?: string | null, fileName?: string | null): TemplateFile | null {
+  return url ? { url, fileName: fileName || 'modelo' } : null;
+}
 
 @Component({
   standalone: true,
@@ -183,6 +198,44 @@ const PHONE_PREFIXES: PhonePrefix[] = [
           </div>
         </section>
 
+        <section class="form-section">
+          <h2 class="section-title">Modelos de documentos</h2>
+          <div class="field checkbox-field">
+            <label class="checkbox-label">
+              <input type="checkbox" [(ngModel)]="form.useStandardTemplates" name="useStandardTemplates" />
+              <span>Usar modelos estándar de CONDOPY</span>
+            </label>
+            <small class="field-hint">
+              Factura, nota de crédito y comprobante se descargan con el diseño estándar de CONDOPY (colores de la marca).
+              Si lo desmarcás, adjuntá los 3 modelos propios del edificio, uno por concepto.
+            </small>
+          </div>
+
+          <div class="template-list" *ngIf="!form.useStandardTemplates">
+            <div class="template-row" *ngFor="let t of templateKinds">
+              <span class="template-label">{{ t.label }} <span class="required">*</span></span>
+              <ng-container *ngIf="form.templates[t.kind] as file; else noFile">
+                <a class="template-file" [href]="file.url" target="_blank" rel="noopener">
+                  <i class="pi pi-file"></i> {{ file.fileName }}
+                </a>
+                <button type="button" class="template-remove" (click)="removeTemplate(t.kind)" pTooltip="Quitar modelo" tooltipPosition="top">
+                  <i class="pi pi-times"></i>
+                </button>
+              </ng-container>
+              <ng-template #noFile>
+                <label class="template-upload" [class.disabled]="uploadingTemplate === t.kind">
+                  <i class="pi" [class.pi-upload]="uploadingTemplate !== t.kind" [class.pi-spin]="uploadingTemplate === t.kind"
+                     [class.pi-spinner]="uploadingTemplate === t.kind"></i>
+                  {{ uploadingTemplate === t.kind ? 'Subiendo...' : 'Adjuntar modelo' }}
+                  <input type="file" accept=".pdf,.png,.jpg,.jpeg,.webp" hidden
+                         [disabled]="uploadingTemplate !== null" (change)="onTemplateSelected(t.kind, $event)" />
+                </label>
+              </ng-template>
+            </div>
+            <small class="field-hint">PDF o imagen, hasta 10 MB cada uno.</small>
+          </div>
+        </section>
+
         <section class="form-actions">
           <p-button type="button" label="Cancelar" [text]="true" [rounded]="true" severity="secondary"
                     (onClick)="cancel()" pTooltip="Cancelar y volver al listado" tooltipPosition="top">
@@ -229,6 +282,15 @@ const PHONE_PREFIXES: PhonePrefix[] = [
     :host ::ng-deep .phone-prefix-select .p-select,
     :host ::ng-deep .full-select .p-select { border-radius:10px; border:1px solid rgba(19,133,182,0.25); }
     :host ::ng-deep .full-select { width:100%; }
+    .template-list { display:flex; flex-direction:column; gap:0.6rem; }
+    .template-row { display:flex; align-items:center; gap:0.75rem; flex-wrap:wrap; padding:0.6rem 0.85rem;
+      border:1px solid rgba(19,133,182,0.15); border-radius:10px; }
+    .template-label { font-weight:500; min-width:140px; color:var(--brand-ink); }
+    .template-file { display:inline-flex; align-items:center; gap:0.4rem; color:var(--brand-blue); text-decoration:none; word-break:break-all; }
+    .template-remove { background:none; border:none; cursor:pointer; color:var(--brand-muted); }
+    .template-remove:hover { color:#e74c3c; }
+    .template-upload { display:inline-flex; align-items:center; gap:0.4rem; cursor:pointer; color:var(--brand-blue); font-weight:500; }
+    .template-upload.disabled { cursor:progress; opacity:0.7; }
     .form-actions { display:flex; justify-content:flex-end; gap:0.75rem; padding-top:0.5rem; border-top:1px solid rgba(19,133,182,0.08); }
   `]
 })
@@ -242,6 +304,7 @@ export class BuildingCreatePageComponent implements OnInit {
   private readonly destroyRef      = inject(DestroyRef);
   private readonly cdr             = inject(ChangeDetectorRef);
   private readonly msg             = inject(MessageService);
+  private readonly uploadsApi      = inject(UploadsApiService);
 
   prefixOptions = PHONE_PREFIXES;
   companyOptions: { label: string; value: string }[] = [];
@@ -255,12 +318,16 @@ export class BuildingCreatePageComponent implements OnInit {
   loading   = false;
   loadError = '';
   isSaving  = false;
+  uploadingTemplate: TemplateKind | null = null;
+  readonly templateKinds = TEMPLATE_KINDS;
   phoneError = '';
   emailError = '';
 
   form = { companyId:'', condominiumId:'', name:'', code:'', address:'', description:'', phonePrefix:'+595', phoneNumber:'', email:'', isActive:true,
            lateFeeRatePercentage: null as number | null, lateFeeFrequency: '' as '' | LateFeeFrequency,
-           blockOverdueAmenityReservations: false };
+           blockOverdueAmenityReservations: false,
+           useStandardTemplates: true,
+           templates: { invoice: null, creditNote: null, receipt: null } as Record<TemplateKind, TemplateFile | null> };
 
   readonly lateFeeFrequencyOptions = [
     { label: 'Diario', value: 'Daily' },
@@ -305,7 +372,13 @@ export class BuildingCreatePageComponent implements OnInit {
             isActive: entity.isActive,
             lateFeeRatePercentage: entity.lateFeeRatePercentage ?? null,
             lateFeeFrequency: entity.lateFeeFrequency ?? '',
-            blockOverdueAmenityReservations: entity.blockOverdueAmenityReservations ?? false
+            blockOverdueAmenityReservations: entity.blockOverdueAmenityReservations ?? false,
+            useStandardTemplates: entity.useStandardTemplates ?? true,
+            templates: {
+              invoice:    templateFile(entity.invoiceTemplateUrl, entity.invoiceTemplateFileName),
+              creditNote: templateFile(entity.creditNoteTemplateUrl, entity.creditNoteTemplateFileName),
+              receipt:    templateFile(entity.receiptTemplateUrl, entity.receiptTemplateFileName)
+            }
           };
         }
         this.refreshCondominiumOptions();
@@ -333,6 +406,35 @@ export class BuildingCreatePageComponent implements OnInit {
     }
     this.filteredCondominiumOptions = list.sort((a, b) => a.name.localeCompare(b.name)).map(c => ({ label: c.name, value: c.id }));
   }
+
+  onTemplateSelected(kind: TemplateKind, event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    input.value = '';
+    if (!file) return;
+
+    if (file.size > 10 * 1024 * 1024) {
+      this.msg.add({ severity: 'error', summary: 'Error', detail: 'El archivo supera el límite de 10 MB.', life: 5000 });
+      return;
+    }
+
+    this.uploadingTemplate = kind;
+    this.cdr.markForCheck();
+    this.uploadsApi.upload(file).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: ({ url }) => {
+        this.form.templates[kind] = { url, fileName: file.name };
+        this.uploadingTemplate = null;
+        this.cdr.markForCheck();
+      },
+      error: err => {
+        this.msg.add({ severity: 'error', summary: 'Error', detail: extractApiErrorMessage(err, 'No se pudo subir el modelo.'), life: 5000 });
+        this.uploadingTemplate = null;
+        this.cdr.markForCheck();
+      }
+    });
+  }
+
+  removeTemplate(kind: TemplateKind): void { this.form.templates[kind] = null; }
 
   onCodeInput()  { this.form.code = this.form.code.toUpperCase().replace(/[^A-Z0-9-]/g, ''); }
   onPhoneInput() { this.form.phoneNumber = this.form.phoneNumber.replace(/\D/g, ''); this.phoneError = ''; }
@@ -366,9 +468,23 @@ export class BuildingCreatePageComponent implements OnInit {
     const lateFeeFrequency = (lateFeeRate && this.form.lateFeeFrequency) ? this.form.lateFeeFrequency : null;
     if (lateFeeRate && !lateFeeFrequency) { this.msg.add({ severity: 'error', summary: 'Error', detail: 'Definí el incremento de la mora (diario, semanal o quincenal).', life: 5000 }); return; }
 
+    const standard = this.form.useStandardTemplates;
+    const { invoice, creditNote, receipt } = this.form.templates;
+    if (!standard && (!invoice || !creditNote || !receipt)) {
+      this.msg.add({ severity: 'error', summary: 'Error', detail: 'Adjuntá los 3 modelos (factura, nota de crédito y comprobante) o marcá "Usar modelos estándar de CONDOPY".', life: 5000 });
+      return;
+    }
+
     const req = { companyId, condominiumId, name, code, address, isActive: this.form.isActive, description, contactPhonePrefix: phonePrefix, contactPhone: phoneNumber, contactEmail: email,
                   lateFeeRatePercentage: lateFeeRate, lateFeeFrequency,
-                  blockOverdueAmenityReservations: this.form.blockOverdueAmenityReservations };
+                  blockOverdueAmenityReservations: this.form.blockOverdueAmenityReservations,
+                  useStandardTemplates: standard,
+                  invoiceTemplateUrl:         standard ? null : invoice!.url,
+                  invoiceTemplateFileName:    standard ? null : invoice!.fileName,
+                  creditNoteTemplateUrl:      standard ? null : creditNote!.url,
+                  creditNoteTemplateFileName: standard ? null : creditNote!.fileName,
+                  receiptTemplateUrl:         standard ? null : receipt!.url,
+                  receiptTemplateFileName:    standard ? null : receipt!.fileName };
     this.isSaving = true;
     const op = this.isEditing ? this.api.update(this.editingId, req) : this.api.create(req);
     op.pipe(takeUntilDestroyed(this.destroyRef)).subscribe({

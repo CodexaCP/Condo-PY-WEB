@@ -8,6 +8,7 @@ import { Card } from 'primeng/card';
 import { Tag } from 'primeng/tag';
 import { MessageService } from 'primeng/api';
 import { extractApiErrorMessage } from '../../api/api-error.util';
+import { AuthService } from '../../auth/auth.service';
 import { BuildingsApiService } from '../../api/buildings-api.service';
 import { CreditNotesApiService } from '../../api/credit-notes-api.service';
 import { Building, CreditNote, CreditNoteStatus } from '../../api/models';
@@ -137,6 +138,10 @@ const STATUS_SEV: Record<CreditNoteStatus, 'warn' | 'success' | 'danger' | 'seco
           <strong class="drawer-amount">-{{ formatGs(detail!.amount) }}</strong>
         </div>
 
+        <a class="drawer-attachment" [href]="pdfUrl(detail!.id)" target="_blank" rel="noopener">
+          <i class="pi pi-file-pdf"></i> Descargar PDF de la nota de crédito
+        </a>
+
         <p class="drawer-motivo">{{ detail!.motivo }}</p>
 
         <div class="drawer-section">
@@ -260,6 +265,7 @@ export class CreditNotesPageComponent implements OnInit {
   private readonly destroyRef = inject(DestroyRef);
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly msg = inject(MessageService);
+  private readonly auth = inject(AuthService);
 
   items: CreditNote[] = [];
   filteredItems: CreditNote[] = [];
@@ -342,6 +348,7 @@ export class CreditNotesPageComponent implements OnInit {
   }
 
   statusLabel(status: CreditNoteStatus): string { return STATUS_LABEL[status]; }
+  pdfUrl(id: string): string { return this.creditNotesApi.getPdfUrl(id, this.auth.getToken() ?? ''); }
   statusSeverity(status: CreditNoteStatus): 'warn' | 'success' | 'danger' | 'secondary' { return STATUS_SEV[status]; }
 
   formatGs(value: number): string {
