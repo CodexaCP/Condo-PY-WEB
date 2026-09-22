@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import { ChangeDetectorRef, Component, DestroyRef, inject, OnInit } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { forkJoin } from 'rxjs';
 import { Button } from 'primeng/button';
 import { Card } from 'primeng/card';
@@ -24,7 +25,7 @@ const STATUS_SEV: Record<CreditNoteStatus, 'warn' | 'success' | 'danger' | 'seco
 @Component({
   standalone: true,
   selector: 'app-credit-notes-page',
-  imports: [CommonModule, FormsModule, Button, Card, Tag, Tooltip],
+  imports: [CommonModule, FormsModule, RouterLink, Button, Card, Tag, Tooltip],
   template: `
     <p-card styleClass="app-page-card">
       <div class="app-toolbar">
@@ -156,47 +157,51 @@ const STATUS_SEV: Record<CreditNoteStatus, 'warn' | 'success' | 'danger' | 'seco
         <a [href]="pdfUrl(detail.id)" target="_blank" rel="noopener" style="display:contents">
           <p-button type="button" label="Descargar PDF" icon="pi pi-file-pdf" severity="secondary" [outlined]="true"></p-button>
         </a>
+        <a *ngIf="detail.ownerPaymentId" [routerLink]="['/owner-payments', detail.ownerPaymentId]" style="display:contents">
+          <p-button type="button" label="Ver pago" icon="pi pi-wallet" severity="secondary" [text]="true"></p-button>
+        </a>
       </div>
 
       <p class="app-state" *ngIf="detailLoading">Cargando detalle...</p>
 
       <ng-container *ngIf="!detailLoading">
-        <h4 class="drawer-title">Motivo</h4>
-        <p class="motivo-text">{{ detail.motivo }}</p>
+        <!-- Trazabilidad: factura original -> nota de credito -> resolucion -->
+        <h4 class="drawer-title">Trazabilidad</h4>
+        <ol class="timeline">
+          <li *ngFor="let step of timeline(detail)" [class.done]="step.state === 'done'" [class.void]="step.state === 'void'">
+            <span class="tl-dot"><i class="pi" [ngClass]="step.icon"></i></span>
+            <div class="tl-body">
+              <strong>{{ step.title }}</strong>
+              <span *ngFor="let l of step.lines">{{ l }}</span>
+            </div>
+          </li>
+        </ol>
 
         <h4 class="drawer-title">Datos</h4>
         <div class="info-grid">
           <div class="info-card">
-            <h5>Factura ajustada</h5>
-            <p>{{ detail.invoiceNumeroFormateado || 'Borrador' }}</p>
-            <small>Monto de la factura: {{ formatGs(detail.invoiceMontoTotal) }}</small>
+            <h5>Cliente</h5>
+            <p>{{ detail.clienteNombre || '—' }}</p>
+            <small *ngIf="detail.clienteDocumento">CI/RUC {{ detail.clienteDocumento }}</small>
+            <small>{{ detail.buildingName }}{{ detail.buildingAddress ? (' ' + detail.buildingAddress) : '' }} · Unidad {{ detail.unitCode }}</small>
           </div>
           <div class="info-card">
-            <h5>Edificio y unidad</h5>
-            <p>{{ detail.buildingName }}</p>
-            <small>Unidad {{ detail.unitCode }}</small>
+            <h5>Emisor y timbrado</h5>
+            <p>{{ detail.emisorRazonSocial || '—' }}</p>
+            <small *ngIf="detail.emisorRuc">RUC {{ detail.emisorRuc }}</small>
+            <small *ngIf="detail.emisorTimbrado">Timbrado {{ detail.emisorTimbrado }}<ng-container *ngIf="detail.emisorEstablecimiento"> · {{ detail.emisorEstablecimiento }}-{{ detail.emisorPuntoExpedicion }}</ng-container></small>
           </div>
           <div class="info-card">
-            <h5>Creada</h5>
-            <p>{{ detail.createdAtUtc | date:'dd/MM/yyyy HH:mm' }}</p>
-            <small *ngIf="detail.createdByName">{{ detail.createdByName }}</small>
+            <h5>Comprobante</h5>
+            <p>{{ detail.periodName || '—' }} · Unidad {{ detail.unitCode }}</p>
+            <small>Facturado {{ formatGs(detail.invoiceMontoTotal) }}</small>
+            <small *ngIf="detail.periodDueDate">Vencimiento {{ detail.periodDueDate | date:'dd/MM/yyyy' }}</small>
           </div>
-          <div class="info-card" *ngIf="detail.status === 'Approved' || detail.status === 'Voided'">
-            <h5>Aprobación</h5>
-            <p>{{ detail.approvedByName || '—' }}</p>
-            <small *ngIf="detail.approvedAtUtc">{{ detail.approvedAtUtc | date:'dd/MM/yyyy HH:mm' }}</small>
-          </div>
-        </div>
-
-        <h4 class="drawer-title">Líneas ajustadas</h4>
-        <div class="lines">
-          <div class="line-row" *ngFor="let l of detail.lines">
-            <span>{{ l.concept || l.chargeConcept }}</span>
-            <strong>-{{ formatGs(l.amount) }}</strong>
-          </div>
-          <div class="line-row line-total">
-            <span>Total nota de crédito</span>
-            <strong>-{{ formatGs(detail.amount) }}</strong>
+          <div class="info-card">
+            <h5>Pago</h5>
+            <p class="mono">{{ detail.paymentReference || '—' }}</p>
+            <small *ngIf="detail.paymentDate">{{ detail.paymentDate | date:'dd/MM/yyyy' }}<ng-container *ngIf="detail.paymentAmount"> · {{ formatGs(detail.paymentAmount) }}</ng-container></small>
+            <small *ngIf="detail.ownerName">Propietario {{ detail.ownerName }}</small>
           </div>
         </div>
 
@@ -242,6 +247,19 @@ const STATUS_SEV: Record<CreditNoteStatus, 'warn' | 'success' | 'danger' | 'seco
             </a>
           </div>
         </ng-container>
+
+        <h4 class="drawer-title">Detalle de la nota de crédito</h4>
+        <p class="motivo-text">{{ detail.motivo }}</p>
+        <div class="lines">
+          <div class="line-row" *ngFor="let l of detail.lines">
+            <span>{{ l.concept || l.chargeConcept }}</span>
+            <strong>-{{ formatGs(l.amount) }}</strong>
+          </div>
+          <div class="line-row line-total">
+            <span>Total</span>
+            <strong>-{{ formatGs(detail.amount) }}</strong>
+          </div>
+        </div>
       </ng-container>
     </aside>
   `,
@@ -299,7 +317,17 @@ const STATUS_SEV: Record<CreditNoteStatus, 'warn' | 'success' | 'danger' | 'seco
     .hero-amount small { color: var(--brand-muted); }
     .drawer-actions { display: flex; gap: 0.4rem; flex-wrap: wrap; margin-bottom: 0.4rem; }
     .drawer-title { margin: 1.2rem 0 0.6rem; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--brand-muted); }
-    .motivo-text { margin: 0; font-size: 0.92rem; color: var(--brand-ink); }
+    .motivo-text { margin: 0 0 0.6rem; font-size: 0.92rem; color: var(--brand-ink); }
+
+    .timeline { list-style: none; margin: 0; padding: 0; position: relative; }
+    .timeline li { display: flex; gap: 0.8rem; padding-bottom: 1rem; position: relative; }
+    .timeline li:not(:last-child)::before { content: ''; position: absolute; left: 15px; top: 32px; bottom: 0; width: 2px; background: rgba(20,54,61,0.12); }
+    .tl-dot { flex: 0 0 32px; height: 32px; border-radius: 50%; background: rgba(20,54,61,0.08); color: var(--brand-muted); display: flex; align-items: center; justify-content: center; font-size: 0.85rem; }
+    .timeline li.done .tl-dot { background: #16a34a; color: #fff; }
+    .timeline li.void .tl-dot { background: #dc2626; color: #fff; }
+    .tl-body { display: flex; flex-direction: column; gap: 0.1rem; padding-top: 0.15rem; }
+    .tl-body strong { color: var(--brand-ink); font-size: 0.92rem; }
+    .tl-body span { color: var(--brand-muted); font-size: 0.82rem; }
 
     .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.7rem; }
     .info-card { border: 1px solid rgba(20,54,61,0.1); border-radius: 12px; padding: 0.7rem 0.85rem; display: flex; flex-direction: column; gap: 0.1rem; min-width: 0; }
@@ -419,6 +447,61 @@ export class CreditNotesPageComponent implements OnInit {
   statusLabel(status: CreditNoteStatus): string { return STATUS_LABEL[status]; }
   pdfUrl(id: string): string { return this.creditNotesApi.getPdfUrl(id, this.auth.getToken() ?? ''); }
   statusSeverity(status: CreditNoteStatus): 'warn' | 'success' | 'danger' | 'secondary' { return STATUS_SEV[status]; }
+
+  // Trazabilidad: factura original emitida -> nota de crédito creada -> su resolución (aprobada/rechazada/anulada).
+  timeline(cn: CreditNote): { title: string; icon: string; state: 'done' | 'void' | 'pending'; lines: string[] }[] {
+    const steps: { title: string; icon: string; state: 'done' | 'void' | 'pending'; lines: string[] }[] = [
+      {
+        title: `Factura ${cn.invoiceNumeroFormateado || 'en borrador'}`,
+        icon: 'pi-file',
+        state: 'done',
+        lines: [`Monto: ${this.formatGs(cn.invoiceMontoTotal)}`]
+      },
+      {
+        title: 'Nota de crédito creada',
+        icon: 'pi-pencil',
+        state: 'done',
+        lines: [
+          cn.createdByName ? `${cn.createdByName} · ${this.fmtDate(cn.createdAtUtc)}` : this.fmtDate(cn.createdAtUtc),
+          `Ajuste: -${this.formatGs(cn.amount)}`
+        ]
+      }
+    ];
+
+    if (cn.status === 'Approved' || cn.status === 'Voided') {
+      steps.push({
+        title: 'Aprobada',
+        icon: 'pi-check',
+        state: 'done',
+        lines: [cn.approvedByName ? `${cn.approvedByName} · ${this.fmtDate(cn.approvedAtUtc)}` : this.fmtDate(cn.approvedAtUtc),
+          ...(cn.fiscalNumero ? [`Numerada como ${cn.fiscalNumero}`] : [])]
+      });
+    } else if (cn.status === 'Rejected') {
+      steps.push({
+        title: 'Rechazada',
+        icon: 'pi-times',
+        state: 'void',
+        lines: [cn.rejectedByName ? `${cn.rejectedByName} · ${this.fmtDate(cn.rejectedAtUtc)}` : this.fmtDate(cn.rejectedAtUtc)]
+      });
+    } else {
+      steps.push({ title: 'Pendiente de aprobación', icon: 'pi-clock', state: 'pending', lines: [] });
+    }
+
+    if (cn.status === 'Voided') {
+      steps.push({
+        title: 'Anulada',
+        icon: 'pi-ban',
+        state: 'void',
+        lines: [cn.voidedByName ? `${cn.voidedByName} · ${this.fmtDate(cn.voidedAtUtc)}` : this.fmtDate(cn.voidedAtUtc)]
+      });
+    }
+
+    return steps;
+  }
+
+  private fmtDate(value: string | null): string {
+    return value ? new Date(value).toLocaleDateString('es-PY') : '';
+  }
 
   formatGs(value: number): string {
     return new Intl.NumberFormat('es-PY', { maximumFractionDigits: 0 }).format(value ?? 0);
