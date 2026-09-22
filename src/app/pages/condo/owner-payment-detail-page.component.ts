@@ -776,7 +776,7 @@ export class OwnerPaymentDetailPageComponent implements OnInit {
   seriesFor(invoice: InvoiceLedgerRow): InvoiceSeries[] {
     const today = new Date().toISOString().slice(0, 10);
     return this.allSeries.filter(x =>
-      x.buildingId === invoice.buildingId && x.activo && x.numerosDisponibles > 0 &&
+      x.buildingId === invoice.buildingId && x.documentType === 'Invoice' && x.activo && x.numerosDisponibles > 0 &&
       x.vigenciaDesde <= today && x.vigenciaHasta >= today);
   }
 
