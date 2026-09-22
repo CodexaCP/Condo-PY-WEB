@@ -9,6 +9,7 @@ import { MessageService } from 'primeng/api';
 import { extractApiErrorMessage } from '../../api/api-error.util';
 import { BuildingPlansApiService } from '../../api/building-plans-api.service';
 import { BuildingPlanPaymentsApiService } from '../../api/building-plan-payments-api.service';
+import { UploadsApiService } from '../../api/uploads-api.service';
 import { BuildingPlanPaymentCreateRequest, BuildingPlanStatus, BuildingPlanSummary } from '../../api/models';
 
 const STATUS_LABEL: Record<BuildingPlanStatus, string> = {
@@ -134,10 +135,27 @@ const STATUS_SEV: Record<BuildingPlanStatus, 'success' | 'warn' | 'danger' | 'se
           <input [(ngModel)]="payForm.paymentDate" name="payDate" type="date" required />
         </label>
         <label>
-          <span>URL del comprobante</span>
-          <input [(ngModel)]="payForm.comprobanteUrl" name="compUrl" type="url"
-                 placeholder="https://..." maxlength="500" />
-          <small>Enlace a la imagen o PDF del comprobante (Google Drive, Dropbox, etc.)</small>
+          <span>Foto del comprobante</span>
+          <input #comprobanteInput type="file" accept=".jpg,.jpeg,.png,.webp,.gif" style="display:none"
+                 (change)="onComprobanteFileChange($event)" />
+
+          <div class="photo-attach" *ngIf="!comprobantePreview" (click)="comprobanteInput.click()">
+            <span class="pi pi-camera"></span>
+            <span>Tocá para adjuntar la foto del pago</span>
+            <small>JPG, PNG · máximo 10 MB</small>
+          </div>
+
+          <div class="photo-preview" *ngIf="comprobantePreview">
+            <img [src]="comprobantePreview" alt="Comprobante" />
+            <div class="photo-preview-actions">
+              <p-button type="button" label="Cambiar" icon="pi pi-refresh" size="small" [outlined]="true"
+                        [disabled]="uploadingComprobante" (onClick)="comprobanteInput.click()"></p-button>
+              <p-button type="button" label="Quitar" icon="pi pi-trash" size="small" severity="danger" [outlined]="true"
+                        [disabled]="uploadingComprobante" (onClick)="clearComprobante()"></p-button>
+            </div>
+          </div>
+
+          <small *ngIf="uploadingComprobante" class="uploading-hint"><span class="pi pi-spin pi-spinner"></span> Subiendo foto...</small>
         </label>
         <label>
           <span>Referencia / N° de transferencia</span>
@@ -146,7 +164,7 @@ const STATUS_SEV: Record<BuildingPlanStatus, 'success' | 'warn' | 'danger' | 'se
         </label>
         <div class="ficha-footer">
           <span></span>
-          <p-button type="submit" [loading]="isSubmitting" label="Enviar comprobante"
+          <p-button type="submit" [loading]="isSubmitting" [disabled]="uploadingComprobante" label="Enviar comprobante"
                     icon="pi pi-send"></p-button>
         </div>
       </form>
@@ -237,11 +255,29 @@ const STATUS_SEV: Record<BuildingPlanStatus, 'success' | 'warn' | 'danger' | 'se
     .ficha-form input:focus { outline: none; border-color: var(--brand-blue); }
     .ficha-footer { display: flex; justify-content: flex-end; padding-top: 0.5rem; }
     .req { color: var(--red-400); }
+
+    .photo-attach {
+      display: flex; flex-direction: column; align-items: center; gap: 0.4rem;
+      padding: 1.6rem 1rem; border: 1.5px dashed rgba(19,133,182,0.35); border-radius: 14px;
+      background: var(--surface-ground, #f8fafc); color: var(--brand-muted); cursor: pointer;
+      text-align: center; transition: border-color 0.15s, background 0.15s;
+    }
+    .photo-attach:hover { border-color: var(--brand-blue); background: rgba(19,133,182,0.05); }
+    .photo-attach .pi { font-size: 1.6rem; color: var(--brand-blue); }
+    .photo-attach small { font-size: 0.75rem; }
+    .photo-preview { display: grid; gap: 0.6rem; }
+    .photo-preview img {
+      width: 100%; max-height: 260px; object-fit: contain; border-radius: 14px;
+      border: 1px solid rgba(19,133,182,0.2); background: var(--surface-ground, #f8fafc);
+    }
+    .photo-preview-actions { display: flex; gap: 0.5rem; justify-content: center; }
+    .uploading-hint { display: flex; align-items: center; gap: 0.4rem; color: var(--brand-blue); }
   `]
 })
 export class MyPlanPageComponent implements OnInit {
   private readonly bpApi = inject(BuildingPlansApiService);
   private readonly payApi = inject(BuildingPlanPaymentsApiService);
+  private readonly uploadsApi = inject(UploadsApiService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly msg = inject(MessageService);
@@ -253,6 +289,10 @@ export class MyPlanPageComponent implements OnInit {
   payVisible = false;
   payForm: Partial<BuildingPlanPaymentCreateRequest> = {};
   isSubmitting = false;
+
+  // Foto del comprobante: se sube apenas se elige y se guarda la URL resultante en payForm.
+  comprobantePreview: string | null = null;
+  uploadingComprobante = false;
 
   ngOnInit(): void {
     this.bpApi.getMyPlan().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
@@ -285,13 +325,53 @@ export class MyPlanPageComponent implements OnInit {
       comprobanteUrl: '',
       reference: '',
     };
+    this.comprobantePreview = null;
+    this.uploadingComprobante = false;
     this.payVisible = true;
   }
 
   closePay(): void { this.payVisible = false; }
 
+  onComprobanteFileChange(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    input.value = '';
+    if (!file) return;
+
+    if (file.size > 10 * 1024 * 1024) {
+      this.msg.add({ severity: 'error', summary: 'Error', detail: 'La foto supera el límite de 10 MB.', life: 5000 });
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => { this.comprobantePreview = reader.result as string; this.cdr.markForCheck(); };
+    reader.readAsDataURL(file);
+
+    this.uploadingComprobante = true;
+    this.cdr.markForCheck();
+    this.uploadsApi.upload(file).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: ({ url }) => {
+        this.payForm.comprobanteUrl = url;
+        this.uploadingComprobante = false;
+        this.cdr.markForCheck();
+      },
+      error: err => {
+        this.msg.add({ severity: 'error', summary: 'Error', detail: extractApiErrorMessage(err, 'No se pudo subir la foto.'), life: 5000 });
+        this.comprobantePreview = null;
+        this.payForm.comprobanteUrl = '';
+        this.uploadingComprobante = false;
+        this.cdr.markForCheck();
+      }
+    });
+  }
+
+  clearComprobante(): void {
+    this.comprobantePreview = null;
+    this.payForm.comprobanteUrl = '';
+  }
+
   submitPayment(): void {
-    if (this.isSubmitting) return;
+    if (this.isSubmitting || this.uploadingComprobante) return;
     const { buildingPlanId, declaredAmount, paymentDate, comprobanteUrl, reference } = this.payForm;
     if (!buildingPlanId || !declaredAmount || declaredAmount <= 0) {
       this.msg.add({ severity: 'error', summary: 'Error', detail: 'El monto debe ser mayor a cero.', life: 5000 });
