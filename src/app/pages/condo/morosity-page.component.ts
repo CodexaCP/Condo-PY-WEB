@@ -96,22 +96,6 @@ const AGING_BUCKETS = [
             <span>Creditos a favor</span>
             <strong>{{ formatCurrency(report.summary.totalCreditBalanceAmount) }}</strong>
           </div>
-          <div class="summary-card">
-            <span>Ocupadas en mora</span>
-            <strong>{{ report.summary.occupiedUnitsInArrears }}</strong>
-          </div>
-          <div class="summary-card danger">
-            <span>Saldo ocupado vencido</span>
-            <strong>{{ formatCurrency(report.summary.occupiedOverdueAmount) }}</strong>
-          </div>
-          <div class="summary-card">
-            <span>Vacias en mora</span>
-            <strong>{{ report.summary.vacantUnitsInArrears }}</strong>
-          </div>
-          <div class="summary-card danger">
-            <span>Saldo propietario vencido</span>
-            <strong>{{ formatCurrency(report.summary.vacantOverdueAmount) }}</strong>
-          </div>
         </section>
 
         <!-- Aging buckets -->
