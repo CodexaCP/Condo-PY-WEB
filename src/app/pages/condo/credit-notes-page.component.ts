@@ -103,6 +103,7 @@ const STATUS_SEV: Record<CreditNoteStatus, 'warn' | 'success' | 'danger' | 'seco
               <th>N° Factura</th>
               <th>Edificio · Unidad</th>
               <th class="num">Importe</th>
+              <th>Estado</th>
               <th>Creada</th>
               <th class="actions-col"></th>
             </tr>
@@ -111,7 +112,6 @@ const STATUS_SEV: Record<CreditNoteStatus, 'warn' | 'success' | 'danger' | 'seco
             <tr *ngFor="let cn of filteredItems" (click)="openDetail(cn)" [class.row-selected]="detail?.id === cn.id">
               <td>
                 <strong class="monospace">{{ cn.fiscalNumero || 'Borrador' }}</strong>
-                <p-tag [value]="statusLabel(cn.status)" [severity]="statusSeverity(cn.status)" styleClass="row-tag"></p-tag>
               </td>
               <td>
                 <strong class="monospace">{{ invoiceLabel(cn) }}</strong>
@@ -123,6 +123,7 @@ const STATUS_SEV: Record<CreditNoteStatus, 'warn' | 'success' | 'danger' | 'seco
                 <small>Unidad {{ cn.unitCode }}</small>
               </td>
               <td class="num"><strong class="amount">-{{ formatGs(cn.amount) }}</strong></td>
+              <td><p-tag [value]="statusLabel(cn.status)" [severity]="statusSeverity(cn.status)"></p-tag></td>
               <td>
                 {{ cn.createdAtUtc | date:'dd/MM/yyyy' }}
                 <small>{{ cn.createdByName }}</small>
@@ -304,8 +305,6 @@ const STATUS_SEV: Record<CreditNoteStatus, 'warn' | 'success' | 'danger' | 'seco
     .motivo-cell { display: block; max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .monospace { font-family: ui-monospace, Menlo, Consolas, monospace; }
     .amount { font-family: ui-monospace, Menlo, Consolas, monospace; color: #b91c1c; }
-    :host ::ng-deep .row-tag { display: block; margin-top: 0.2rem; width: fit-content; }
-    :host ::ng-deep .row-tag .p-tag { font-size: 0.68rem; padding: 0.1rem 0.45rem; }
 
     /* DRAWER — mismo lenguaje visual que Facturas */
     .ov-backdrop { position: fixed; inset: 0; background: rgba(15,35,50,0.4); z-index: 1000; backdrop-filter: blur(2px); }
