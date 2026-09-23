@@ -2,10 +2,12 @@ import { CommonModule } from '@angular/common';
 import { ChangeDetectorRef, Component, DestroyRef, OnInit, inject } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { Button } from 'primeng/button';
 import { Card } from 'primeng/card';
 import { MessageService } from 'primeng/api';
 import { extractApiErrorMessage } from '../../api/api-error.util';
+import { isPdfUrl, resolveUploadUrl } from '../../api/file-url.util';
 import { InvoiceSeriesApiService } from '../../api/invoice-series-api.service';
 import { UploadsApiService } from '../../api/uploads-api.service';
 import { AuthService } from '../../auth/auth.service';
@@ -81,7 +83,8 @@ const SCALE = 0.72; // px por punto PDF
         </p>
 
         <div class="calib-canvas" [style.width.px]="canvasW" [style.height.px]="canvasH">
-          <img *ngIf="referenceScanUrl" [src]="referenceScanUrl" class="calib-bg" [style.width.px]="canvasW" [style.height.px]="canvasH" alt="Papel preimpreso" />
+          <img *ngIf="referenceScanUrl && !isPdf" [src]="resolvedScanUrl" class="calib-bg" [style.width.px]="canvasW" [style.height.px]="canvasH" alt="Papel preimpreso" />
+          <iframe *ngIf="referenceScanUrl && isPdf" [src]="resolvedScanUrlSafe" class="calib-bg" [style.width.px]="canvasW" [style.height.px]="canvasH" title="Papel preimpreso"></iframe>
 
           <div class="calib-field" *ngFor="let f of fields"
                [style.left.px]="screenX(f)" [style.top.px]="screenY(f)"
@@ -120,7 +123,7 @@ const SCALE = 0.72; // px por punto PDF
       overflow: hidden;
       box-shadow: 0 2px 10px rgba(0,0,0,0.06);
     }
-    .calib-bg { position: absolute; top: 0; left: 0; object-fit: contain; pointer-events: none; }
+    .calib-bg { position: absolute; top: 0; left: 0; object-fit: contain; pointer-events: none; border: 0; }
     .calib-field {
       position: absolute;
       transform: translateY(-100%);
@@ -151,6 +154,7 @@ export class InvoiceSeriesCalibrationPageComponent implements OnInit {
   private readonly destroyRef = inject(DestroyRef);
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly msg = inject(MessageService);
+  private readonly sanitizer = inject(DomSanitizer);
 
   readonly fields = FIELDS;
   readonly canvasW = Math.round(PAGE_W_PT * SCALE);
@@ -162,6 +166,10 @@ export class InvoiceSeriesCalibrationPageComponent implements OnInit {
   uploadingScan = false;
   referenceScanUrl: string | null = null;
   offsets: Record<string, FieldOffset> = {};
+
+  get resolvedScanUrl(): string { return resolveUploadUrl(this.referenceScanUrl); }
+  get resolvedScanUrlSafe(): SafeResourceUrl { return this.sanitizer.bypassSecurityTrustResourceUrl(this.resolvedScanUrl); }
+  get isPdf(): boolean { return isPdfUrl(this.referenceScanUrl); }
 
   private draggingField: CalibField | null = null;
   private dragStartX = 0;
