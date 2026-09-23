@@ -130,6 +130,12 @@ export class AppMenu {
                     items: [
                         { label: 'Mi plan', icon: 'pi pi-fw pi-bookmark', routerLink: ['/my-plan'] }
                     ]
+                },
+                {
+                    label: 'Ayuda',
+                    items: [
+                        { label: 'Tutoriales', icon: 'pi pi-fw pi-play-circle', routerLink: ['/tutorials'] }
+                    ]
                 }
             ];
         }

@@ -1,0 +1,81 @@
+import { CommonModule } from '@angular/common';
+import { Component } from '@angular/core';
+import { Card } from 'primeng/card';
+
+interface Tutorial {
+  title: string;
+  description: string;
+  url: string;
+  icon: string;
+}
+
+// Lista fija a mano: cada tutorial es un video (Drive u otro link) con titulo y descripcion breve.
+// Para agregar uno nuevo, sumar un item aca — no hace falta backend ni CRUD.
+const TUTORIALS: Tutorial[] = [];
+
+@Component({
+  standalone: true,
+  selector: 'app-tutorials-page',
+  imports: [CommonModule, Card],
+  template: `
+    <p-card styleClass="app-page-card">
+      <div class="app-page-head">
+        <div>
+          <h1>Tutoriales</h1>
+          <p>Videos guía para administrar el sistema.</p>
+        </div>
+      </div>
+
+      <p class="empty-state" *ngIf="tutorials.length === 0">Todavía no hay tutoriales cargados.</p>
+
+      <div class="tutorial-grid" *ngIf="tutorials.length > 0">
+        <a class="tutorial-card" *ngFor="let t of tutorials" [href]="t.url" target="_blank" rel="noopener">
+          <div class="tutorial-icon"><i [class]="t.icon"></i></div>
+          <div class="tutorial-body">
+            <strong>{{ t.title }}</strong>
+            <p>{{ t.description }}</p>
+          </div>
+        </a>
+      </div>
+    </p-card>
+  `,
+  styles: [`
+    .empty-state { color: var(--brand-muted); padding: 1rem 0; }
+    .tutorial-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+    .tutorial-card {
+      display: flex;
+      gap: 0.85rem;
+      padding: 1rem;
+      border: 1.5px solid rgba(19,133,182,0.18);
+      border-radius: 14px;
+      background: #fff;
+      text-decoration: none;
+      color: inherit;
+      transition: border-color 0.15s, box-shadow 0.15s, transform 0.15s;
+    }
+    .tutorial-card:hover {
+      border-color: var(--brand-blue);
+      box-shadow: 0 4px 14px rgba(19,133,182,0.15);
+      transform: translateY(-1px);
+    }
+    .tutorial-icon {
+      flex-shrink: 0;
+      width: 42px; height: 42px;
+      border-radius: 10px;
+      background: rgba(19,133,182,0.1);
+      color: var(--brand-blue);
+      display: grid; place-items: center;
+      font-size: 1.2rem;
+    }
+    .tutorial-body strong { display: block; color: var(--brand-ink); margin-bottom: 0.25rem; }
+    .tutorial-body p { margin: 0; font-size: 0.85rem; color: var(--brand-muted); line-height: 1.4; }
+  `]
+})
+export class TutorialsPageComponent {
+  readonly tutorials = TUTORIALS;
+}

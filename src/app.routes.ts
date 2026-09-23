@@ -210,6 +210,12 @@ export const appRoutes: Routes = [
                 loadComponent: () => import('./app/pages/condo/my-plan-page.component').then(m => m.MyPlanPageComponent)
             },
 
+            // ── Tutoriales ────────────────────────────────────────────────
+            {
+                path: 'tutorials',
+                loadComponent: () => import('./app/pages/condo/tutorials-page.component').then(m => m.TutorialsPageComponent)
+            },
+
             // ── Amenities ─────────────────────────────────────────────────
             {
                 path: 'amenities',
