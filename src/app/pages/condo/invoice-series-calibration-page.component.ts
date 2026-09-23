@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { ChangeDetectorRef, Component, DestroyRef, OnInit, inject } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { Button } from 'primeng/button';
@@ -50,7 +51,7 @@ const SCALE = 0.72; // px por punto PDF
 @Component({
   standalone: true,
   selector: 'app-invoice-series-calibration-page',
-  imports: [CommonModule, RouterLink, Button, Card],
+  imports: [CommonModule, FormsModule, RouterLink, Button, Card],
   template: `
     <p-card styleClass="app-page-card">
       <div class="app-page-head">
@@ -81,6 +82,11 @@ const SCALE = 0.72; // px por punto PDF
           Arrastrá cada campo hasta que calce sobre el papel. Los datos son de ejemplo (no es una factura real).
           Después de guardar, generá el PDF de prueba e imprimilo sobre el papel preimpreso para verificar.
         </p>
+
+        <label class="hide-frame-check">
+          <input type="checkbox" [(ngModel)]="hideFrame" name="hideFrame" [ngModelOptions]="{ standalone: true }" />
+          Mi papel ya tiene su propio marco y casillas impresas — no dibujar el marco del sistema, solo el texto.
+        </label>
 
         <div class="calib-canvas" [style.width.px]="canvasW" [style.height.px]="canvasH">
           <img *ngIf="referenceScanUrl && !isPdf" [src]="resolvedScanUrl" class="calib-bg" [style.width.px]="canvasW" [style.height.px]="canvasH" alt="Papel preimpreso" />
@@ -114,6 +120,12 @@ const SCALE = 0.72; // px por punto PDF
     }
     .upload-btn:hover { border-color: #1385b6; }
     .calib-hint { font-size: 0.82rem; color: #6b878d; margin: 0 0 1rem; }
+    .hide-frame-check {
+      display: flex; align-items: center; gap: 0.5rem;
+      font-size: 0.85rem; color: #29484f; font-weight: 600;
+      margin-bottom: 1rem; cursor: pointer;
+    }
+    .hide-frame-check input { width: auto; }
     .calib-canvas {
       position: relative;
       background: #fff;
@@ -123,7 +135,9 @@ const SCALE = 0.72; // px por punto PDF
       overflow: hidden;
       box-shadow: 0 2px 10px rgba(0,0,0,0.06);
     }
-    .calib-bg { position: absolute; top: 0; left: 0; object-fit: contain; pointer-events: none; border: 0; }
+    /* fill (no contain): la imagen se estira exacto al tamano del lienzo A4. Si la proporcion original
+       no es perfecta, se deforma un poco en vez de dejar margenes en blanco que desalinearian todo. */
+    .calib-bg { position: absolute; top: 0; left: 0; object-fit: fill; pointer-events: none; border: 0; }
     .calib-field {
       position: absolute;
       transform: translateY(-100%);
@@ -166,6 +180,7 @@ export class InvoiceSeriesCalibrationPageComponent implements OnInit {
   uploadingScan = false;
   referenceScanUrl: string | null = null;
   offsets: Record<string, FieldOffset> = {};
+  hideFrame = false;
 
   get resolvedScanUrl(): string { return resolveUploadUrl(this.referenceScanUrl); }
   get resolvedScanUrlSafe(): SafeResourceUrl { return this.sanitizer.bypassSecurityTrustResourceUrl(this.resolvedScanUrl); }
@@ -194,6 +209,7 @@ export class InvoiceSeriesCalibrationPageComponent implements OnInit {
         this.series = found;
         this.referenceScanUrl = found.referenceScanUrl ?? null;
         this.offsets = found.fieldPositionsJson ? JSON.parse(found.fieldPositionsJson) : {};
+        this.hideFrame = found.hideFrame;
         this.loading = false;
         this.cdr.markForCheck();
       },
@@ -275,7 +291,8 @@ export class InvoiceSeriesCalibrationPageComponent implements OnInit {
     this.saving = true;
     this.seriesApi.updateFieldPositions(this.series.id, {
       positions: this.offsets,
-      referenceScanUrl: this.referenceScanUrl
+      referenceScanUrl: this.referenceScanUrl,
+      hideFrame: this.hideFrame
     }).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (updated) => {
         this.series = updated;

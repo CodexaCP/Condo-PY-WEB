@@ -637,6 +637,7 @@ export interface InvoiceSeries {
   imprentaRazonSocial?: string | null;
   fieldPositionsJson?: string | null;
   referenceScanUrl?: string | null;
+  hideFrame: boolean;
 }
 
 export interface FieldOffset {
@@ -647,6 +648,7 @@ export interface FieldOffset {
 export interface UpdateInvoiceSeriesCalibrationRequest {
   positions: Record<string, FieldOffset>;
   referenceScanUrl?: string | null;
+  hideFrame: boolean;
 }
 
 export interface CreateInvoiceSeriesRequest {
