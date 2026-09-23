@@ -23,6 +23,12 @@ const TUTORIALS: Tutorial[] = [
     description: 'Crea una vez y úsala todas las veces que necesites. En CONDO-PY puedes crear plantillas de gastos independientes del edificio y del período. Luego, reutilízalas sin límites, aplicándolas al edificio y período que necesites. Menos carga manual, menos errores y más velocidad en la gestión de expensas.',
     url: 'https://drive.google.com/file/d/1aPovgo3ywA-NvLgQopz7s67yfvQOKGgm/view?usp=sharing',
     icon: 'pi pi-calendar-plus'
+  },
+  {
+    title: 'Clonar al mes siguiente',
+    description: '¿Por qué volver a cargar lo que ya tienes creado? Con CONDO-PY, puedes clonar un período publicado al mes siguiente con un solo clic. Se copia el período con todos sus gastos, ahorrándote el trabajo de cargar todo nuevamente. Y tienes el control: puedes editar cada gasto individualmente, eliminar lo que ya no corresponda y agregar nuevos gastos. Clona, ajusta y publica. Así de simple.',
+    url: 'https://drive.google.com/file/d/12VznPRLZV4P63tb_YFzadYIeEhtqVkHR/view?usp=sharing',
+    icon: 'pi pi-calendar-plus'
   }
 ];
 
