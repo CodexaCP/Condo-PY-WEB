@@ -635,6 +635,18 @@ export interface InvoiceSeries {
   imprentaNumeroHabilitacion?: string | null;
   imprentaRuc?: string | null;
   imprentaRazonSocial?: string | null;
+  fieldPositionsJson?: string | null;
+  referenceScanUrl?: string | null;
+}
+
+export interface FieldOffset {
+  dx: number;
+  dy: number;
+}
+
+export interface UpdateInvoiceSeriesCalibrationRequest {
+  positions: Record<string, FieldOffset>;
+  referenceScanUrl?: string | null;
 }
 
 export interface CreateInvoiceSeriesRequest {

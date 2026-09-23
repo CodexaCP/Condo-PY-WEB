@@ -134,6 +134,10 @@ export const appRoutes: Routes = [
                 loadComponent: () => import('./app/pages/condo/invoice-series-page.component').then(m => m.InvoiceSeriesPageComponent)
             },
             {
+                path: 'invoice-series/:id/calibrate',
+                loadComponent: () => import('./app/pages/condo/invoice-series-calibration-page.component').then(m => m.InvoiceSeriesCalibrationPageComponent)
+            },
+            {
                 path: 'invoices',
                 loadComponent: () => import('./app/pages/condo/invoices-page.component').then(m => m.InvoicesPageComponent)
             },

@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import { ChangeDetectorRef, Component, DestroyRef, inject, OnInit } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { forkJoin } from 'rxjs';
 import { Button } from 'primeng/button';
 import { Card } from 'primeng/card';
@@ -17,7 +18,7 @@ import { Building, InvoiceSeries, InvoiceSeriesDocumentType } from '../../api/mo
 @Component({
   standalone: true,
   selector: 'app-invoice-series-page',
-  imports: [CommonModule, FormsModule, Button, Card, Tag, Tooltip],
+  imports: [CommonModule, FormsModule, RouterLink, Button, Card, Tag, Tooltip],
   template: `
     <p-card styleClass="app-page-card">
       <div class="app-toolbar">
@@ -187,6 +188,9 @@ import { Building, InvoiceSeries, InvoiceSeriesDocumentType } from '../../api/mo
           </span>
           <p-tag [value]="item.activo ? 'Activo' : 'Inactivo'" [severity]="item.activo ? 'success' : 'secondary'"></p-tag>
           <div class="app-actions" *ngIf="canManage">
+            <a *ngIf="item.documentType === 'Invoice'" [routerLink]="['/invoice-series', item.id, 'calibrate']" style="display:contents">
+              <p-button type="button" icon="pi pi-sliders-h" severity="secondary" [rounded]="true" [text]="true" pTooltip="Calibrar posiciones"></p-button>
+            </a>
             <p-button *ngIf="item.activo" type="button" icon="pi pi-ban" severity="danger" [rounded]="true" [text]="true"
               pTooltip="Desactivar timbrado" [loading]="deactivatingId === item.id" (onClick)="deactivate(item)"></p-button>
           </div>
@@ -219,7 +223,7 @@ import { Building, InvoiceSeries, InvoiceSeriesDocumentType } from '../../api/mo
     .series-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.25rem; }
     .wide2 { grid-column: span 2; }
     .form-footer { display: flex; justify-content: flex-end; padding-top: 1rem; border-top: 1px solid rgba(20,54,61,0.1); }
-    .series-grid { grid-template-columns: 1.6fr 0.9fr 1.1fr 0.9fr 1fr 1.4fr 0.8fr 0.5fr; }
+    .series-grid { grid-template-columns: 1.6fr 0.9fr 1.1fr 0.9fr 1fr 1.4fr 0.8fr 0.8fr; }
     .actions-head { text-align: right; }
     .sub-text { display: block; font-size: 0.78rem; color: var(--brand-muted); }
     .warn-text { color: #b45309; }
