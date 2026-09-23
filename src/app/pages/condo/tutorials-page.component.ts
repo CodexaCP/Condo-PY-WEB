@@ -11,7 +11,14 @@ interface Tutorial {
 
 // Lista fija a mano: cada tutorial es un video (Drive u otro link) con titulo y descripcion breve.
 // Para agregar uno nuevo, sumar un item aca — no hace falta backend ni CRUD.
-const TUTORIALS: Tutorial[] = [];
+const TUTORIALS: Tutorial[] = [
+  {
+    title: 'Crear un Periodo de Expensas para todos mis edificios',
+    description: '¿Administras varios edificios? Esto te va a ahorrar tiempo. Con CONDO-PY, puedes crear el período de expensas de todos tus edificios en una sola operación. Sin repetir el mismo proceso edificio por edificio. Una sola acción, todos tus edificios listos. Una función pensada para simplificar la gestión, reducir tareas repetitivas y aprovechar mejor tu tiempo.',
+    url: 'https://drive.google.com/file/d/1_YQ9IK03KU36wVfkFDQmJZCdHDSqJrRW/view?usp=sharing',
+    icon: 'pi pi-calendar-plus'
+  }
+];
 
 @Component({
   standalone: true,
