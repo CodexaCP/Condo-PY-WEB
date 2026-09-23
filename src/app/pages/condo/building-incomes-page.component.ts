@@ -5,6 +5,8 @@ import { FormsModule } from '@angular/forms';
 import { forkJoin } from 'rxjs';
 import { Button } from 'primeng/button';
 import { Card } from 'primeng/card';
+import { Tag } from 'primeng/tag';
+import { Tooltip } from 'primeng/tooltip';
 import { MessageService } from 'primeng/api';
 import { InputNumber } from 'primeng/inputnumber';
 import { extractApiErrorMessage } from '../../api/api-error.util';
@@ -24,68 +26,61 @@ import {
 @Component({
   standalone: true,
   selector: 'app-building-incomes-page',
-  imports: [CommonModule, FormsModule, Button, Card, InputNumber],
+  imports: [CommonModule, FormsModule, Button, Card, Tag, Tooltip, InputNumber],
   template: `
     <p-card styleClass="app-page-card">
       <div class="app-toolbar">
         <div class="app-page-head">
           <div>
             <h1>Ingresos del edificio</h1>
-            <p>Compensaciones e ingresos que reducen o ajustan la liquidacion comun.</p>
+            <p>Compensaciones e ingresos que reducen o ajustan la liquidación común.</p>
           </div>
         </div>
 
-        <div style="display:flex;gap:0.5rem;" *ngIf="!isReadOnly">
-          <p-button
-            label="Rollover saldo anterior"
-            icon="pi pi-refresh"
-            severity="secondary"
-            (onClick)="toggleRolloverSection()">
-          </p-button>
-          <p-button
-            [label]="showForm ? 'Cerrar formulario' : 'Nuevo ingreso'"
-            [icon]="showForm ? 'pi pi-times' : 'pi pi-plus'"
-            (onClick)="toggleForm()">
-          </p-button>
+        <div class="toolbar-btns" *ngIf="!isReadOnly">
+          <p-button label="Rollover saldo anterior" icon="pi pi-refresh" severity="secondary" (onClick)="toggleRolloverSection()"></p-button>
+          <p-button [label]="showForm ? 'Cerrar' : 'Nuevo ingreso'" [icon]="showForm ? 'pi pi-times' : 'pi pi-plus'" (onClick)="toggleForm()"></p-button>
         </div>
       </div>
 
-      <!-- PANEL ROLLOVER -->
-      <div class="action-box" *ngIf="showRolloverSection">
-        <div class="action-head">
-          <div>
-            <strong>Rollover saldo anterior</strong>
-            <span>Calcula el saldo neto del periodo origen (Ingresos − Gastos) y lo registra como ingreso en el periodo destino.</span>
+      <!-- ROLLOVER -->
+      <div class="panel-box rec-panel" *ngIf="showRolloverSection">
+        <div class="panel-head">
+          <div class="panel-title">
+            <span class="panel-icon rec-icon pi pi-refresh"></span>
+            <div>
+              <strong>Rollover saldo anterior</strong>
+              <small>Calcula el saldo neto del período origen (ingresos − gastos) y lo registra como ingreso en el período destino</small>
+            </div>
           </div>
-          <p-button type="button" label="Cerrar" icon="pi pi-times" severity="secondary" [text]="true" (onClick)="toggleRolloverSection()"></p-button>
+          <p-button type="button" icon="pi pi-times" severity="secondary" [rounded]="true" [text]="true" (onClick)="toggleRolloverSection()"></p-button>
         </div>
 
-        <form class="app-form-grid compact" (ngSubmit)="applyRollover()">
-          <label>
-            <span>Edificio</span>
-            <select [(ngModel)]="rollover.buildingId" name="rolloverBuilding" required (ngModelChange)="onRolloverBuildingChange()">
-              <option value="" disabled>Selecciona un edificio</option>
-              <option *ngFor="let b of buildings" [value]="b.id">{{ b.name }}</option>
-            </select>
-          </label>
-
-          <label>
-            <span>Periodo origen (cerrado)</span>
-            <select [(ngModel)]="rollover.sourcePeriodId" name="rolloverSource" required>
-              <option value="" disabled>Selecciona un periodo origen</option>
-              <option *ngFor="let p of rolloverSourcePeriods" [value]="p.id">{{ p.name }}</option>
-            </select>
-          </label>
-
-          <label>
-            <span>Periodo destino (borrador)</span>
-            <select [(ngModel)]="rollover.targetPeriodId" name="rolloverTarget" required>
-              <option value="" disabled>Selecciona un periodo destino</option>
-              <option *ngFor="let p of rolloverTargetPeriods" [value]="p.id">{{ p.name }}</option>
-            </select>
-          </label>
-
-          <div class="wide form-actions">
+        <form class="income-form" (ngSubmit)="applyRollover()">
+          <div class="form-row">
+            <label class="field-block">
+              <span>Edificio *</span>
+              <select [(ngModel)]="rollover.buildingId" name="rolloverBuilding" required (ngModelChange)="onRolloverBuildingChange()">
+                <option value="" disabled>— Seleccionar —</option>
+                <option *ngFor="let b of buildings" [value]="b.id">{{ b.name }}</option>
+              </select>
+            </label>
+            <label class="field-block">
+              <span>Período origen (cerrado) *</span>
+              <select [(ngModel)]="rollover.sourcePeriodId" name="rolloverSource" required>
+                <option value="" disabled>— Seleccionar —</option>
+                <option *ngFor="let p of rolloverSourcePeriods" [value]="p.id">{{ p.name }}</option>
+              </select>
+            </label>
+            <label class="field-block">
+              <span>Período destino (borrador) *</span>
+              <select [(ngModel)]="rollover.targetPeriodId" name="rolloverTarget" required>
+                <option value="" disabled>— Seleccionar —</option>
+                <option *ngFor="let p of rolloverTargetPeriods" [value]="p.id">{{ p.name }}</option>
+              </select>
+            </label>
+          </div>
+          <div class="form-actions">
             <p-button
               type="submit"
               label="Calcular y aplicar rollover"
@@ -99,11 +94,11 @@ import {
 
         <div class="rollover-result" *ngIf="rolloverResult">
           <div class="result-row">
-            <span class="result-label">Ingresos del periodo origen</span>
+            <span class="result-label">Ingresos del período origen</span>
             <span class="result-value positive">{{ formatCurrency(rolloverResult.totalIngresos) }}</span>
           </div>
           <div class="result-row">
-            <span class="result-label">Gastos del periodo origen</span>
+            <span class="result-label">Gastos del período origen</span>
             <span class="result-value negative">{{ formatCurrency(rolloverResult.totalGastos) }}</span>
           </div>
           <div class="result-row total">
@@ -113,92 +108,101 @@ import {
             </span>
           </div>
           <p class="result-msg success" *ngIf="rolloverResult.rolloverCreated">
-            ✓ Se creó el ingreso "Saldo anterior período {{ rolloverResult.sourcePeriodName }}" en el periodo "{{ rolloverResult.targetPeriodName }}".
+            <i class="pi pi-check-circle"></i> Se creó el ingreso "Saldo anterior período {{ rolloverResult.sourcePeriodName }}" en el período "{{ rolloverResult.targetPeriodName }}".
           </p>
           <p class="result-msg warning" *ngIf="!rolloverResult.rolloverCreated">
-            El periodo origen tiene déficit o saldo cero — no se generó ningún ingreso de rollover.
+            <i class="pi pi-info-circle"></i> El período origen tiene déficit o saldo cero — no se generó ningún ingreso de rollover.
           </p>
         </div>
       </div>
 
       <!-- FILTROS -->
-      <div class="filters-grid">
-        <label>
-          <span>Filtrar por edificio</span>
+      <div class="filters-bar">
+        <div class="field-block">
+          <span>Edificio</span>
           <select [(ngModel)]="filters.buildingId" name="filterBuildingId" (ngModelChange)="onBuildingFilterChange()">
             <option value="">Todos los edificios</option>
             <option *ngFor="let building of buildings" [value]="building.id">{{ building.name }}</option>
           </select>
-        </label>
-
-        <label>
-          <span>Filtrar por periodo</span>
-          <select [(ngModel)]="filters.expensePeriodId" name="filterExpensePeriodId" (ngModelChange)="applyFilters()">
-            <option value="">Todos los periodos</option>
-            <option *ngFor="let period of filteredPeriodsForSelector" [value]="period.id">{{ period.name }} - {{ period.buildingName }}</option>
-          </select>
-        </label>
-
-        <div class="filter-actions">
-          <p-button type="button" label="Limpiar filtros" severity="secondary" [text]="true" (onClick)="resetFilters()"></p-button>
         </div>
+        <div class="field-block">
+          <span>Período</span>
+          <select [(ngModel)]="filters.expensePeriodId" name="filterExpensePeriodId" (ngModelChange)="applyFilters()">
+            <option value="">Todos los períodos</option>
+            <option *ngFor="let period of filteredPeriodsForSelector" [value]="period.id">{{ period.name }} · {{ period.buildingName }}</option>
+          </select>
+        </div>
+        <p-button type="button" label="Limpiar" icon="pi pi-filter-slash" severity="secondary" [text]="true" (onClick)="resetFilters()"></p-button>
       </div>
 
       <!-- FORMULARIO NUEVO INGRESO -->
-      <form class="app-form-grid" *ngIf="showForm" (ngSubmit)="submitIncome()">
-        <label>
-          <span>Edificio</span>
-          <select [(ngModel)]="form.buildingId" name="buildingId" required (ngModelChange)="onFormBuildingChange()">
-            <option value="" disabled>Selecciona un edificio</option>
-            <option *ngFor="let building of buildings" [value]="building.id">{{ building.name }}</option>
-          </select>
-        </label>
-
-        <label>
-          <span>Periodo</span>
-          <select [(ngModel)]="form.expensePeriodId" name="expensePeriodId" required>
-            <option value="" disabled>Selecciona un periodo</option>
-            <option *ngFor="let period of availablePeriods" [value]="period.id">{{ period.name }}</option>
-          </select>
-        </label>
-
-        <label>
-          <span>Categoria</span>
-          <select [(ngModel)]="form.category" name="category" required>
-            <option *ngFor="let category of categories" [value]="category">{{ categoryLabel(category) }}</option>
-          </select>
-        </label>
-
-        <label>
-          <span>Fecha del ingreso</span>
-          <input [(ngModel)]="form.incomeDate" name="incomeDate" type="date" required />
-        </label>
-
-        <label>
-          <span>Monto</span>
-          <p-inputnumber [(ngModel)]="form.amount" name="amount" [useGrouping]="true" prefix="₲ " [min]="1" [minFractionDigits]="0" [maxFractionDigits]="0" [required]="true" styleClass="w-full"></p-inputnumber>
-        </label>
-
-        <label class="wide">
-          <span>Descripcion</span>
-          <input [(ngModel)]="form.description" name="description" type="text" required />
-        </label>
-
-        <label class="wide">
-          <span>Notas</span>
-          <input [(ngModel)]="form.notes" name="notes" type="text" />
-        </label>
-
-        <div class="wide form-actions">
-          <p-button
-            type="submit"
-            [disabled]="!buildings.length || !periods.length"
-            [loading]="isSaving"
-            [label]="editingId ? 'Guardar cambios' : 'Guardar ingreso'">
-          </p-button>
-          <p-button *ngIf="editingId" type="button" label="Cancelar" icon="pi pi-times" severity="secondary" [text]="true" (onClick)="cancelEdit()"></p-button>
+      <div class="panel-box form-panel" *ngIf="showForm">
+        <div class="panel-head">
+          <div class="panel-title">
+            <span class="panel-icon pi pi-wallet"></span>
+            <div>
+              <strong>{{ editingId ? 'Editar ingreso' : 'Registrar ingreso' }}</strong>
+              <small>Completá los datos del ingreso del edificio</small>
+            </div>
+          </div>
+          <p-button *ngIf="editingId" type="button" icon="pi pi-times" severity="secondary" [rounded]="true" [text]="true" (onClick)="cancelEdit()"></p-button>
         </div>
-      </form>
+
+        <form class="income-form" (ngSubmit)="submitIncome()">
+          <div class="form-row">
+            <label class="field-block">
+              <span>Edificio *</span>
+              <select [(ngModel)]="form.buildingId" name="buildingId" required (ngModelChange)="onFormBuildingChange()">
+                <option value="" disabled>— Seleccionar —</option>
+                <option *ngFor="let building of buildings" [value]="building.id">{{ building.name }}</option>
+              </select>
+            </label>
+            <label class="field-block">
+              <span>Período *</span>
+              <select [(ngModel)]="form.expensePeriodId" name="expensePeriodId" required>
+                <option value="" disabled>— Seleccionar —</option>
+                <option *ngFor="let period of availablePeriods" [value]="period.id">{{ period.name }}</option>
+              </select>
+            </label>
+            <label class="field-block">
+              <span>Categoría *</span>
+              <select [(ngModel)]="form.category" name="category" required>
+                <option *ngFor="let category of categories" [value]="category">{{ categoryLabel(category) }}</option>
+              </select>
+            </label>
+            <label class="field-block">
+              <span>Fecha del ingreso *</span>
+              <input [(ngModel)]="form.incomeDate" name="incomeDate" type="date" required />
+            </label>
+          </div>
+          <div class="form-row">
+            <label class="field-block wide2">
+              <span>Descripción *</span>
+              <input [(ngModel)]="form.description" name="description" type="text" required placeholder="Ej: Saldo a favor, alquiler SUM..." />
+            </label>
+            <label class="field-block">
+              <span>Monto *</span>
+              <p-inputnumber [(ngModel)]="form.amount" name="amount" [useGrouping]="true" prefix="₲ " [min]="1" [minFractionDigits]="0" [maxFractionDigits]="0" [required]="true" styleClass="w-full"></p-inputnumber>
+            </label>
+          </div>
+          <div class="form-row">
+            <label class="field-block wide2">
+              <span>Notas</span>
+              <input [(ngModel)]="form.notes" name="notes" type="text" />
+            </label>
+          </div>
+          <div class="form-actions">
+            <p-button *ngIf="editingId" type="button" label="Cancelar" severity="secondary" [text]="true" (onClick)="cancelEdit()"></p-button>
+            <p-button
+              type="submit"
+              [disabled]="!buildings.length || !periods.length"
+              [loading]="isSaving"
+              [label]="editingId ? 'Guardar cambios' : 'Guardar ingreso'"
+              icon="pi pi-check">
+            </p-button>
+          </div>
+        </form>
+      </div>
 
       <p class="app-state" *ngIf="loading">Cargando ingresos del edificio...</p>
       <p class="app-state" *ngIf="!loading && !items.length">No hay ingresos cargados.</p>
@@ -207,83 +211,120 @@ import {
       <div class="app-list" *ngIf="items.length">
         <div class="app-row header incomes-grid">
           <span>Fecha</span>
-          <span>Descripcion</span>
-          <span>Periodo</span>
-          <span>Categoria</span>
+          <span>Descripción</span>
+          <span>Período</span>
+          <span>Categoría</span>
           <span>Monto</span>
           <span class="actions-head" *ngIf="!isReadOnly">Acciones</span>
         </div>
 
         <div class="app-row incomes-grid" *ngFor="let item of items">
-          <strong>{{ item.incomeDate }}</strong>
-          <span>{{ item.description }}</span>
-          <span>{{ item.expensePeriodName }} - {{ item.buildingName }}</span>
-          <span>{{ categoryLabel(item.category) }}</span>
-          <span>{{ formatCurrency(item.amount) }}</span>
+          <strong>{{ item.incomeDate | date:'dd/MM/yyyy' }}</strong>
+          <span>
+            {{ item.description }}
+            <small class="sub-text" *ngIf="item.notes">{{ item.notes }}</small>
+          </span>
+          <span>{{ item.expensePeriodName }} <small class="sub-text">{{ item.buildingName }}</small></span>
+          <p-tag [value]="categoryLabel(item.category)" severity="info"></p-tag>
+          <strong class="amount-cell">{{ formatCurrency(item.amount) }}</strong>
           <div class="app-actions" *ngIf="!isReadOnly">
-            <p-button type="button" icon="pi pi-pencil" severity="secondary" [rounded]="true" [text]="true" (onClick)="startEdit(item)"></p-button>
-            <p-button type="button" icon="pi pi-trash" severity="danger" [rounded]="true" [text]="true" [disabled]="isSaving" (onClick)="deleteIncome(item)"></p-button>
+            <p-button type="button" icon="pi pi-pencil" severity="secondary" [rounded]="true" [text]="true" (onClick)="startEdit(item)" pTooltip="Editar" tooltipPosition="top"></p-button>
+            <p-button type="button" icon="pi pi-trash" severity="danger" [rounded]="true" [text]="true" [disabled]="isSaving" (onClick)="deleteIncome(item)" pTooltip="Eliminar" tooltipPosition="top"></p-button>
           </div>
         </div>
       </div>
     </p-card>
   `,
   styles: [`
-    .filters-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr auto;
-      gap: 1rem;
-      align-items: end;
-      margin-bottom: 1rem;
-    }
-    .incomes-grid { grid-template-columns: 0.7fr 1.4fr 1.2fr 0.9fr 0.7fr 0.45fr; }
-    .form-actions { display:flex; gap:0.75rem; justify-content:flex-end; }
-    .filter-actions { display:flex; justify-content:flex-end; }
-    .actions-head { text-align:right; }
-    .compact { margin-top:0; }
-    .action-box {
-      margin-bottom: 1rem;
-      padding: 1.1rem;
+    .toolbar-btns { display: flex; gap: 0.5rem; }
+
+    /* Panel boxes */
+    .panel-box {
+      margin-bottom: 1.25rem;
+      padding: 1.5rem;
       border-radius: 22px;
+      background: white;
+      border: 1.5px solid #dbe7e3;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.04);
+    }
+    .form-panel { border-color: rgba(19,133,182,0.25); background: rgba(19,133,182,0.02); }
+    .rec-panel { border-color: rgba(108,117,125,0.2); }
+
+    .panel-head { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.25rem; }
+    .panel-title { display: flex; align-items: center; gap: 0.85rem; }
+    .panel-icon {
+      width: 42px; height: 42px; border-radius: 14px;
+      background: rgba(19,133,182,0.1); color: #1385b6;
+      display: flex; align-items: center; justify-content: center; font-size: 1.1rem;
+    }
+    .rec-icon { background: rgba(108,117,125,0.1); color: #495057; }
+    .panel-title strong { display: block; color: #14363d; font-size: 1rem; }
+    .panel-title small { color: #6b878d; font-size: 0.82rem; }
+
+    /* Filters bar */
+    .filters-bar {
+      display: flex;
+      gap: 1rem;
+      align-items: flex-end;
+      margin-bottom: 1.25rem;
+      padding: 1rem 1.25rem;
       background: #f5faf9;
-      border: 1px solid #dbe7e3;
+      border-radius: 16px;
+      border: 1px solid #e5eeec;
     }
-    .action-head {
-      display:flex;
-      justify-content:space-between;
-      gap:1rem;
-      align-items:start;
-      margin-bottom:0.75rem;
+    .filters-bar .field-block { flex: 1; }
+
+    /* Form */
+    .income-form { display: grid; gap: 1rem; }
+    .form-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 1rem; align-items: end; }
+    .wide2 { grid-column: span 2; }
+
+    .field-block { display: grid; gap: 0.4rem; }
+    .field-block > span { font-weight: 700; color: #29484f; font-size: 0.85rem; }
+    .field-block select,
+    .field-block input {
+      border: 1.5px solid #d7e5e1; border-radius: 12px;
+      padding: 0.75rem 1rem; font: inherit;
+      background: white; color: #18353a; width: 100%; box-sizing: border-box;
     }
-    .action-head strong { display:block; color:#14363d; }
-    .action-head span { color:#6b878d; }
+    .field-block select:focus, .field-block input:focus {
+      outline: none; border-color: #1385b6; box-shadow: 0 0 0 3px rgba(19,133,182,0.12);
+    }
+    .form-actions { display: flex; justify-content: flex-end; gap: 0.75rem; padding-top: 0.25rem; }
+
+    /* Rollover result */
     .rollover-result {
-      margin-top: 1rem;
-      padding: 0.9rem 1rem;
-      border-radius: 14px;
-      background: #fff;
+      margin-top: 1.25rem;
+      padding: 1rem 1.25rem;
+      border-radius: 16px;
+      background: #f8fbfa;
       border: 1px solid #dbe7e3;
     }
     .result-row {
-      display:flex;
-      justify-content:space-between;
-      padding: 0.3rem 0;
-      border-bottom: 1px solid #f0f4f3;
+      display: flex; justify-content: space-between;
+      padding: 0.35rem 0;
+      border-bottom: 1px solid #eaf1ef;
     }
-    .result-row.total {
-      border-bottom: none;
-      padding-top: 0.6rem;
-      font-weight: 600;
-    }
-    .result-label { color:#4d6a6e; }
-    .result-value { font-weight:500; }
-    .result-value.positive { color:#1a8c5b; }
-    .result-value.negative { color:#c0392b; }
-    .result-msg { margin: 0.7rem 0 0; padding: 0.55rem 0.9rem; border-radius:10px; font-size:0.9rem; }
-    .result-msg.success { background:#d4f4e6; color:#0e5c3a; }
-    .result-msg.warning { background:#fef6e0; color:#7d5a00; }
+    .result-row.total { border-bottom: none; padding-top: 0.6rem; font-weight: 700; }
+    .result-label { color: #4d6a6e; }
+    .result-value { font-weight: 600; }
+    .result-value.positive { color: #1a8c5b; }
+    .result-value.negative { color: #c0392b; }
+    .result-msg { display: flex; align-items: center; gap: 0.5rem; margin: 0.85rem 0 0; padding: 0.6rem 0.9rem; border-radius: 12px; font-size: 0.88rem; }
+    .result-msg.success { background: #d4f4e6; color: #0e5c3a; }
+    .result-msg.warning { background: #fef6e0; color: #7d5a00; }
+
+    /* List */
+    .incomes-grid { grid-template-columns: 0.7fr 1.6fr 1.3fr 0.9fr 0.8fr 0.5fr; }
+    .actions-head { text-align: right; }
+    .sub-text { display: block; font-size: 0.78rem; color: #6b878d; }
+    .amount-cell { font-variant-numeric: tabular-nums; }
+
     @media (max-width: 900px) {
-      .filters-grid { grid-template-columns: 1fr; }
+      .filters-bar { flex-direction: column; align-items: stretch; }
+      .form-row { grid-template-columns: 1fr; }
+      .wide2 { grid-column: span 1; }
+      .incomes-grid { grid-template-columns: 1fr; }
     }
   `]
 })
