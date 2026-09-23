@@ -294,6 +294,17 @@ export interface RecurringBuildingExpenseUpsertRequest {
   isActive: boolean;
 }
 
+export interface RecurringBuildingExpenseCreateForAllRequest {
+  buildingIds: string[];
+  category: BuildingExpenseCategory;
+  supplierName: string;
+  description: string;
+  amount: number;
+  distributionType: BuildingExpenseDistributionType;
+  notes: string;
+  isActive: boolean;
+}
+
 export interface ApplyRecurringExpensesRequest {
   expensePeriodId: string;
 }
