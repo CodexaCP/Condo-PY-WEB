@@ -9,6 +9,7 @@ import { Card } from 'primeng/card';
 import { Tag } from 'primeng/tag';
 import { Tooltip } from 'primeng/tooltip';
 import { InputNumber } from 'primeng/inputnumber';
+import { MultiSelect } from 'primeng/multiselect';
 import { extractApiErrorMessage } from '../../api/api-error.util';
 import { BuildingExpensesApiService } from '../../api/building-expenses-api.service';
 import { RecurringBuildingExpensesApiService } from '../../api/recurring-building-expenses-api.service';
@@ -42,7 +43,7 @@ interface BuildingExpensesGroup {
 @Component({
   standalone: true,
   selector: 'app-building-expenses-page',
-  imports: [CommonModule, FormsModule, Button, Card, Tag, Tooltip, InputNumber],
+  imports: [CommonModule, FormsModule, Button, Card, Tag, Tooltip, InputNumber, MultiSelect],
   template: `
     <p-card styleClass="app-page-card">
       <div class="app-toolbar">
@@ -113,20 +114,13 @@ interface BuildingExpensesGroup {
               </label>
             </div>
 
-            <!-- Al crear (no al editar): elegis uno o varios edificios con checkbox, o marcas "Todos". -->
-            <div class="field-block building-checks-block" *ngIf="!editingRecurringId">
+            <!-- Al crear (no al editar): elegis uno o varios edificios, con "Seleccionar todos" incluido en el propio dropdown. -->
+            <div class="field-block" *ngIf="!editingRecurringId">
               <span>Edificios *</span>
-              <label class="check-row check-all">
-                <input type="checkbox" [(ngModel)]="recurringSelectAll" name="recSelectAll" [ngModelOptions]="{ standalone: true }" />
-                Todos los edificios
-              </label>
-              <div class="building-checks">
-                <label class="check-row" *ngFor="let b of buildings">
-                  <input type="checkbox" [checked]="recurringSelectAll || isRecurringBuildingSelected(b.id)"
-                         [disabled]="recurringSelectAll" (change)="toggleRecurringBuilding(b.id)" />
-                  {{ b.name }}
-                </label>
-              </div>
+              <p-multiselect [options]="buildings" [(ngModel)]="recurringSelectedBuildingIds" name="recBuildingIds"
+                             [ngModelOptions]="{ standalone: true }" optionLabel="name" optionValue="id"
+                             display="chip" [filter]="true" [showToggleAll]="true"
+                             placeholder="Seleccionar edificios..." styleClass="w-full"></p-multiselect>
             </div>
 
             <div class="form-row">
@@ -387,20 +381,6 @@ interface BuildingExpensesGroup {
       outline: none; border-color: #1385b6; box-shadow: 0 0 0 3px rgba(19,133,182,0.12);
     }
     .field-hint { font-size: 0.78rem; color: #6b878d; }
-    .building-checks-block { margin-top: -0.25rem; }
-    .check-row {
-      display: flex; align-items: center; gap: 0.5rem;
-      font-weight: 400; font-size: 0.9rem; color: #18353a;
-      padding: 0.15rem 0; cursor: pointer;
-    }
-    .check-row input { width: auto; }
-    .check-all { font-weight: 700; margin-bottom: 0.4rem; }
-    .building-checks {
-      display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-      gap: 0.1rem 1rem;
-      max-height: 180px; overflow-y: auto;
-      padding: 0.6rem 0.75rem; border: 1.5px solid #d7e5e1; border-radius: 12px; background: #fff;
-    }
     .form-actions { display: flex; justify-content: flex-end; gap: 0.75rem; padding-top: 0.25rem; }
 
     /* Apply recurring box */
@@ -466,7 +446,6 @@ export class BuildingExpensesPageComponent implements OnInit {
   units: Unit[] = [];
   recurringItems: RecurringBuildingExpense[] = [];
   recurringSelectedBuildingIds: string[] = [];
-  recurringSelectAll = false;
   loading = true;
   loadingRecurring = false;
   isSaving = false;
@@ -545,16 +524,6 @@ export class BuildingExpensesPageComponent implements OnInit {
     }
   }
 
-  isRecurringBuildingSelected(buildingId: string): boolean {
-    return this.recurringSelectedBuildingIds.includes(buildingId);
-  }
-
-  toggleRecurringBuilding(buildingId: string): void {
-    this.recurringSelectedBuildingIds = this.isRecurringBuildingSelected(buildingId)
-      ? this.recurringSelectedBuildingIds.filter((id) => id !== buildingId)
-      : [...this.recurringSelectedBuildingIds, buildingId];
-  }
-
   startEdit(item: BuildingExpense): void {
     this.editingId = item.id;
     this.showForm = true;
@@ -598,7 +567,6 @@ export class BuildingExpensesPageComponent implements OnInit {
     this.editingRecurringId = null;
     this.recurringForm = this.createInitialRecurringForm();
     this.recurringSelectedBuildingIds = [];
-    this.recurringSelectAll = false;
   }
 
   onFormBuildingChange(): void {
@@ -766,13 +734,13 @@ export class BuildingExpensesPageComponent implements OnInit {
   }
 
   private submitRecurringForAll(): void {
-    if (!this.recurringSelectAll && this.recurringSelectedBuildingIds.length === 0) {
-      this.msg.add({ severity: 'error', summary: 'Error', detail: 'Elegí al menos un edificio, o marcá "Todos los edificios".', life: 5000 });
+    if (this.recurringSelectedBuildingIds.length === 0) {
+      this.msg.add({ severity: 'error', summary: 'Error', detail: 'Elegí al menos un edificio.', life: 5000 });
       return;
     }
 
     const request: RecurringBuildingExpenseCreateForAllRequest = {
-      buildingIds: this.recurringSelectAll ? [] : this.recurringSelectedBuildingIds,
+      buildingIds: this.recurringSelectedBuildingIds,
       category: this.recurringForm.category,
       supplierName: this.recurringForm.supplierName.trim(),
       description: this.recurringForm.description.trim(),
