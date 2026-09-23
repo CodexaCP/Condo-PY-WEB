@@ -231,12 +231,15 @@ interface TimelineStep {
         <a routerLink="/expense-periods" style="display:contents">
           <p-button type="button" label="Ver liquidaciones" icon="pi pi-calculator" severity="secondary" [text]="true"></p-button>
         </a>
-        <!-- Anular y NC se hacen desde el detalle del pago (ahi vive la accion real); estos son solo
-             un atajo que lleva al mismo lugar, para no tener que ir a buscar el pago manualmente. -->
-        <a *ngIf="detail.ownerPaymentId && detail.status === 'Issued'" [routerLink]="['/owner-payments', detail.ownerPaymentId]" style="display:contents">
+        <!-- Anular y NC se hacen desde el detalle del pago (ahi vive la accion real); estos son un
+             atajo que navega ahi mismo y abre el formulario ya para esta factura puntual, en vez de
+             solo llevarte a la pagina y tener que buscarla vos. -->
+        <a *ngIf="detail.ownerPaymentId && detail.status === 'Issued'"
+           [routerLink]="['/owner-payments', detail.ownerPaymentId]" [queryParams]="{ action: 'void', invoiceId: detail.id }" style="display:contents">
           <p-button type="button" label="Anular factura" icon="pi pi-times" severity="danger" [text]="true"></p-button>
         </a>
-        <a *ngIf="detail.ownerPaymentId && detail.status === 'Issued'" [routerLink]="['/owner-payments', detail.ownerPaymentId]" style="display:contents">
+        <a *ngIf="detail.ownerPaymentId && detail.status === 'Issued'"
+           [routerLink]="['/owner-payments', detail.ownerPaymentId]" [queryParams]="{ action: 'nc', invoiceId: detail.id }" style="display:contents">
           <p-button type="button" label="Nueva NC" icon="pi pi-plus" severity="secondary" [text]="true"></p-button>
         </a>
       </div>

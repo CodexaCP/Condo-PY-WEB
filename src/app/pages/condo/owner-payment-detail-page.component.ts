@@ -137,7 +137,7 @@ const STATUS_SEVERITY: Record<string, 'warn' | 'info' | 'success' | 'danger' | '
           </div>
 
           <div class="pay-invoices" *ngIf="paymentInvoices.length > 0">
-            <div class="inv-card" *ngFor="let inv of paymentInvoices"
+            <div class="inv-card" *ngFor="let inv of paymentInvoices" [id]="'inv-' + inv.id"
                  [class.inv-issued]="inv.status === 'Issued'"
                  [class.inv-voided]="inv.status === 'Voided'"
                  [class.inv-draft]="inv.status === 'Draft'">
@@ -646,8 +646,16 @@ export class OwnerPaymentDetailPageComponent implements OnInit {
   cnApproveTargetId = '';
   cnApproveSeriesByCn: Record<string, string> = {};
 
+  // Atajo desde el detalle de una factura ("Anular factura" / "Nueva NC"): al llegar aca, en vez de
+  // solo navegar, abre el mismo formulario que se abriria si lo hicieras manualmente en esta pagina.
+  private pendingInvoiceAction: { action: string; invoiceId: string } | null = null;
+
   ngOnInit(): void {
     const id = this.route.snapshot.paramMap.get('id') ?? '';
+    const action = this.route.snapshot.queryParamMap.get('action');
+    const invoiceId = this.route.snapshot.queryParamMap.get('invoiceId');
+    if (action && invoiceId) this.pendingInvoiceAction = { action, invoiceId };
+
     this.api.getById(id)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
@@ -763,6 +771,7 @@ export class OwnerPaymentDetailPageComponent implements OnInit {
           for (const inv of ledger.items) {
             if (inv.status === 'Issued') this.loadCreditNotesForInvoice(inv.id);
           }
+          this.applyPendingInvoiceAction();
           this.cdr.markForCheck();
         },
         error: () => {}
@@ -771,6 +780,23 @@ export class OwnerPaymentDetailPageComponent implements OnInit {
       this.seriesApi.getAll().pipe(takeUntilDestroyed(this.destroyRef))
         .subscribe({ next: series => { this.allSeries = series; this.cdr.markForCheck(); }, error: () => {} });
     }
+  }
+
+  private applyPendingInvoiceAction(): void {
+    if (!this.pendingInvoiceAction) return;
+    const { action, invoiceId } = this.pendingInvoiceAction;
+    this.pendingInvoiceAction = null;
+
+    const inv = this.paymentInvoices.find(x => x.id === invoiceId);
+    if (!inv || inv.status !== 'Issued') return;
+
+    if (action === 'void') {
+      this.askVoid(inv);
+    } else if (action === 'nc' && this.canCreateCreditNotesRole) {
+      this.toggleNewCreditNote(inv);
+    }
+
+    setTimeout(() => document.getElementById('inv-' + inv.id)?.scrollIntoView({ behavior: 'smooth', block: 'center' }));
   }
 
   seriesFor(invoice: InvoiceLedgerRow): InvoiceSeries[] {
