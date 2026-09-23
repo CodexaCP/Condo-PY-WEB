@@ -269,7 +269,7 @@ export interface BuildingExpense {
 export interface RecurringBuildingExpense {
   id: string;
   companyId: string;
-  buildingId: string;
+  buildingId: string | null;
   buildingName: string;
   category: BuildingExpenseCategory;
   supplierName: string;
@@ -283,24 +283,13 @@ export interface RecurringBuildingExpense {
 }
 
 export interface RecurringBuildingExpenseUpsertRequest {
-  buildingId: string;
+  buildingId: string | null;
   category: BuildingExpenseCategory;
   supplierName: string;
   description: string;
   amount: number;
   distributionType: BuildingExpenseDistributionType;
   targetUnitId: string | null;
-  notes: string;
-  isActive: boolean;
-}
-
-export interface RecurringBuildingExpenseCreateForAllRequest {
-  buildingIds: string[];
-  category: BuildingExpenseCategory;
-  supplierName: string;
-  description: string;
-  amount: number;
-  distributionType: BuildingExpenseDistributionType;
   notes: string;
   isActive: boolean;
 }
