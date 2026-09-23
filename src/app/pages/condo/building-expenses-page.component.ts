@@ -25,7 +25,6 @@ import {
   CreateBuildingExpenseRequest,
   ExpensePeriod,
   RecurringBuildingExpense,
-  RecurringBuildingExpenseCreateForAllRequest,
   RecurringBuildingExpenseUpsertRequest,
   Unit
 } from '../../api/models';
@@ -85,7 +84,7 @@ interface BuildingExpensesGroup {
         <div class="panel-box inner-form" *ngIf="showRecurringForm">
           <form class="expense-form" (ngSubmit)="submitRecurring()">
             <div class="form-row">
-              <label class="field-block" *ngIf="editingRecurringId">
+              <label class="field-block">
                 <span>Edificio *</span>
                 <select [(ngModel)]="recurringForm.buildingId" name="recBuildingId" required>
                   <option value="" disabled>— Seleccionar —</option>
@@ -101,7 +100,7 @@ interface BuildingExpensesGroup {
               <label class="field-block">
                 <span>Distribución *</span>
                 <select [(ngModel)]="recurringForm.distributionType" name="recDistribution" required>
-                  <option *ngFor="let d of distributionTypes" [value]="d" [disabled]="!editingRecurringId && d === 'IndividualUnit'">{{ distributionTypeLabel(d) }}</option>
+                  <option *ngFor="let d of distributionTypes" [value]="d">{{ distributionTypeLabel(d) }}</option>
                 </select>
               </label>
               <label class="field-block">
@@ -112,23 +111,6 @@ interface BuildingExpensesGroup {
                 </select>
               </label>
             </div>
-
-            <!-- Al crear (no al editar): elegis uno o varios edificios con checkbox, o marcas "Todos". -->
-            <div class="field-block building-checks-block" *ngIf="!editingRecurringId">
-              <span>Edificios *</span>
-              <label class="check-row check-all">
-                <input type="checkbox" [(ngModel)]="recurringSelectAll" name="recSelectAll" [ngModelOptions]="{ standalone: true }" />
-                Todos los edificios
-              </label>
-              <div class="building-checks">
-                <label class="check-row" *ngFor="let b of buildings">
-                  <input type="checkbox" [checked]="recurringSelectAll || isRecurringBuildingSelected(b.id)"
-                         [disabled]="recurringSelectAll" (change)="toggleRecurringBuilding(b.id)" />
-                  {{ b.name }}
-                </label>
-              </div>
-            </div>
-
             <div class="form-row">
               <label class="field-block wide2">
                 <span>Descripción *</span>
@@ -386,21 +368,6 @@ interface BuildingExpensesGroup {
     .field-block select:focus, .field-block input:focus {
       outline: none; border-color: #1385b6; box-shadow: 0 0 0 3px rgba(19,133,182,0.12);
     }
-    .field-hint { font-size: 0.78rem; color: #6b878d; }
-    .building-checks-block { margin-top: -0.25rem; }
-    .check-row {
-      display: flex; align-items: center; gap: 0.5rem;
-      font-weight: 400; font-size: 0.9rem; color: #18353a;
-      padding: 0.15rem 0; cursor: pointer;
-    }
-    .check-row input { width: auto; }
-    .check-all { font-weight: 700; margin-bottom: 0.4rem; }
-    .building-checks {
-      display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-      gap: 0.1rem 1rem;
-      max-height: 180px; overflow-y: auto;
-      padding: 0.6rem 0.75rem; border: 1.5px solid #d7e5e1; border-radius: 12px; background: #fff;
-    }
     .form-actions { display: flex; justify-content: flex-end; gap: 0.75rem; padding-top: 0.25rem; }
 
     /* Apply recurring box */
@@ -465,8 +432,6 @@ export class BuildingExpensesPageComponent implements OnInit {
   periods: ExpensePeriod[] = [];
   units: Unit[] = [];
   recurringItems: RecurringBuildingExpense[] = [];
-  recurringSelectedBuildingIds: string[] = [];
-  recurringSelectAll = false;
   loading = true;
   loadingRecurring = false;
   isSaving = false;
@@ -545,16 +510,6 @@ export class BuildingExpensesPageComponent implements OnInit {
     }
   }
 
-  isRecurringBuildingSelected(buildingId: string): boolean {
-    return this.recurringSelectedBuildingIds.includes(buildingId);
-  }
-
-  toggleRecurringBuilding(buildingId: string): void {
-    this.recurringSelectedBuildingIds = this.isRecurringBuildingSelected(buildingId)
-      ? this.recurringSelectedBuildingIds.filter((id) => id !== buildingId)
-      : [...this.recurringSelectedBuildingIds, buildingId];
-  }
-
   startEdit(item: BuildingExpense): void {
     this.editingId = item.id;
     this.showForm = true;
@@ -597,8 +552,6 @@ export class BuildingExpensesPageComponent implements OnInit {
   cancelRecurringEdit(): void {
     this.editingRecurringId = null;
     this.recurringForm = this.createInitialRecurringForm();
-    this.recurringSelectedBuildingIds = [];
-    this.recurringSelectAll = false;
   }
 
   onFormBuildingChange(): void {
@@ -716,11 +669,6 @@ export class BuildingExpensesPageComponent implements OnInit {
   }
 
   submitRecurring(): void {
-    if (!this.editingRecurringId) {
-      this.submitRecurringForAll();
-      return;
-    }
-
     const request: RecurringBuildingExpenseUpsertRequest = {
       buildingId: this.recurringForm.buildingId,
       category: this.recurringForm.category,
@@ -747,62 +695,24 @@ export class BuildingExpensesPageComponent implements OnInit {
     }
 
     this.isSavingRecurring = true;
-    this.recurringApi.update(this.editingRecurringId, request).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+    const operation = this.editingRecurringId
+      ? this.recurringApi.update(this.editingRecurringId, request)
+      : this.recurringApi.create(request);
+
+    operation.pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (item) => {
-        this.recurringItems = this.recurringItems.map((r) => r.id === item.id ? item : r);
+        this.recurringItems = this.editingRecurringId
+          ? this.recurringItems.map((r) => r.id === item.id ? item : r)
+          : [...this.recurringItems, item];
         this.isSavingRecurring = false;
         this.showRecurringForm = false;
         this.cancelRecurringEdit();
-        this.msg.add({ severity: 'success', summary: 'Éxito', detail: 'Plantilla actualizada.', life: 4000 });
+        this.msg.add({ severity: 'success', summary: 'Éxito', detail: this.editingRecurringId ? 'Plantilla actualizada.' : 'Plantilla creada.', life: 4000 });
         this.editingRecurringId = null;
         this.cdr.markForCheck();
       },
       error: (error) => {
         this.msg.add({ severity: 'error', summary: 'Error', detail: extractApiErrorMessage(error, 'No se pudo guardar la plantilla.'), life: 5000 });
-        this.isSavingRecurring = false;
-        this.cdr.markForCheck();
-      }
-    });
-  }
-
-  private submitRecurringForAll(): void {
-    if (!this.recurringSelectAll && this.recurringSelectedBuildingIds.length === 0) {
-      this.msg.add({ severity: 'error', summary: 'Error', detail: 'Elegí al menos un edificio, o marcá "Todos los edificios".', life: 5000 });
-      return;
-    }
-
-    const request: RecurringBuildingExpenseCreateForAllRequest = {
-      buildingIds: this.recurringSelectAll ? [] : this.recurringSelectedBuildingIds,
-      category: this.recurringForm.category,
-      supplierName: this.recurringForm.supplierName.trim(),
-      description: this.recurringForm.description.trim(),
-      amount: Number(this.recurringForm.amount),
-      distributionType: this.recurringForm.distributionType,
-      notes: this.recurringForm.notes.trim(),
-      isActive: this.recurringForm.isActive
-    };
-
-    if (!request.description) {
-      this.msg.add({ severity: 'error', summary: 'Error', detail: 'La descripcion es obligatoria.', life: 5000 });
-      return;
-    }
-    if (request.amount <= 0) {
-      this.msg.add({ severity: 'error', summary: 'Error', detail: 'El monto debe ser mayor que cero.', life: 5000 });
-      return;
-    }
-
-    this.isSavingRecurring = true;
-    this.recurringApi.createForAll(request).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-      next: (items) => {
-        this.isSavingRecurring = false;
-        this.showRecurringForm = false;
-        this.cancelRecurringEdit();
-        this.msg.add({ severity: 'success', summary: 'Éxito', detail: `Plantilla creada para ${items.length} edificio(s).`, life: 4000 });
-        this.loadRecurring();
-        this.cdr.markForCheck();
-      },
-      error: (error) => {
-        this.msg.add({ severity: 'error', summary: 'Error', detail: extractApiErrorMessage(error, 'No se pudo crear la plantilla para todos los edificios.'), life: 5000 });
         this.isSavingRecurring = false;
         this.cdr.markForCheck();
       }

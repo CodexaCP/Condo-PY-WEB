@@ -6,7 +6,6 @@ import {
   ApplyRecurringExpensesRequest,
   ApplyRecurringExpensesResult,
   RecurringBuildingExpense,
-  RecurringBuildingExpenseCreateForAllRequest,
   RecurringBuildingExpenseUpsertRequest
 } from './models';
 
@@ -24,10 +23,6 @@ export class RecurringBuildingExpensesApiService {
 
   create(request: RecurringBuildingExpenseUpsertRequest): Observable<RecurringBuildingExpense> {
     return this.http.post<RecurringBuildingExpense>(`${API_BASE_URL}/recurring-building-expenses`, request);
-  }
-
-  createForAll(request: RecurringBuildingExpenseCreateForAllRequest): Observable<RecurringBuildingExpense[]> {
-    return this.http.post<RecurringBuildingExpense[]>(`${API_BASE_URL}/recurring-building-expenses/create-for-all`, request);
   }
 
   update(id: string, request: RecurringBuildingExpenseUpsertRequest): Observable<RecurringBuildingExpense> {
