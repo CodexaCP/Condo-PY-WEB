@@ -61,7 +61,7 @@
                 "serve": {
                     "builder": "@angular-devkit/build-angular:dev-server",
                     "options": {
-                        "allowedHosts": ["clumsily-snide-grove.ngrok-free.dev", "ophthalmometrical-zainab-irredeemable.ngrok-free.dev", "hcj9kqnr-4200.brs.devtunnels.ms", ".brs.devtunnels.ms"]
+                        "allowedHosts": ["clumsily-snide-grove.ngrok-free.dev", "ophthalmometrical-zainab-irredeemable.ngrok-free.dev", "hcj9kqnr-4200.brs.devtunnels.ms", ".brs.devtunnels.ms" , "undrilled-skeleton-snub.ngrok-free.dev"]
                     },
                     "configurations": {
                         "production": {

@@ -15,7 +15,7 @@ import { extractApiErrorMessage } from '../../api/api-error.util';
 import { BuildingsApiService } from '../../api/buildings-api.service';
 import { CompaniesApiService } from '../../api/companies-api.service';
 import { CondominiumsApiService } from '../../api/condominiums-api.service';
-import { Company, Condominium, LateFeeFrequency } from '../../api/models';
+import { Company, Condominium, InvoicingMode, LateFeeFrequency } from '../../api/models';
 import { UploadsApiService } from '../../api/uploads-api.service';
 import { AuthService } from '../../auth/auth.service';
 
@@ -199,6 +199,17 @@ function templateFile(url?: string | null, fileName?: string | null): TemplateFi
         </section>
 
         <section class="form-section" *ngIf="isSuperAdmin">
+          <h2 class="section-title">Modo de Facturación</h2>
+          <div class="field">
+            <label for="invoicingMode">Modo de facturación <span class="required">*</span></label>
+            <p-select id="invoicingMode" [options]="invoicingModeOptions" [(ngModel)]="form.invoicingMode"
+                      name="invoicingMode" optionLabel="label" optionValue="value"
+                      placeholder="Seleccionar..." styleClass="full-select">
+            </p-select>
+          </div>
+        </section>
+
+        <section class="form-section" *ngIf="isSuperAdmin">
           <h2 class="section-title">Modelos de documentos</h2>
           <div class="field checkbox-field">
             <label class="checkbox-label">
@@ -326,6 +337,7 @@ export class BuildingCreatePageComponent implements OnInit {
   form = { companyId:'', condominiumId:'', name:'', code:'', address:'', description:'', phonePrefix:'+595', phoneNumber:'', email:'', isActive:true,
            lateFeeRatePercentage: null as number | null, lateFeeFrequency: '' as '' | LateFeeFrequency,
            blockOverdueAmenityReservations: false,
+           invoicingMode: '' as '' | InvoicingMode,
            useStandardTemplates: true,
            templates: { invoice: null, creditNote: null, receipt: null } as Record<TemplateKind, TemplateFile | null> };
 
@@ -333,6 +345,12 @@ export class BuildingCreatePageComponent implements OnInit {
     { label: 'Diario', value: 'Daily' },
     { label: 'Semanal', value: 'Weekly' },
     { label: 'Quincenal', value: 'Biweekly' }
+  ];
+
+  readonly invoicingModeOptions = [
+    { label: 'Preimpresa', value: 'Preimpresa' },
+    { label: 'Autoimpresa', value: 'Autoimpresa' },
+    { label: 'Electrónica', value: 'Electronica' }
   ];
 
   get isSuperAdmin()       { return this.auth.hasRole('SuperAdmin'); }
@@ -373,6 +391,7 @@ export class BuildingCreatePageComponent implements OnInit {
             lateFeeRatePercentage: entity.lateFeeRatePercentage ?? null,
             lateFeeFrequency: entity.lateFeeFrequency ?? '',
             blockOverdueAmenityReservations: entity.blockOverdueAmenityReservations ?? false,
+            invoicingMode: entity.invoicingMode ?? '',
             useStandardTemplates: entity.useStandardTemplates ?? true,
             templates: {
               invoice:    templateFile(entity.invoiceTemplateUrl, entity.invoiceTemplateFileName),
@@ -468,6 +487,12 @@ export class BuildingCreatePageComponent implements OnInit {
     const lateFeeFrequency = (lateFeeRate && this.form.lateFeeFrequency) ? this.form.lateFeeFrequency : null;
     if (lateFeeRate && !lateFeeFrequency) { this.msg.add({ severity: 'error', summary: 'Error', detail: 'Definí el incremento de la mora (diario, semanal o quincenal).', life: 5000 }); return; }
 
+    // Solo el SuperAdmin configura el modo de facturación; es obligatorio para el, el resto no lo envia.
+    if (this.isSuperAdmin && !this.form.invoicingMode) {
+      this.msg.add({ severity: 'error', summary: 'Error', detail: 'El modo de facturación es obligatorio.', life: 5000 });
+      return;
+    }
+
     // Solo el SuperAdmin edita los modelos; el resto no los envia y el backend los deja como estan.
     const standard = this.form.useStandardTemplates;
     const { invoice, creditNote, receipt } = this.form.templates;
@@ -480,6 +505,7 @@ export class BuildingCreatePageComponent implements OnInit {
                   lateFeeRatePercentage: lateFeeRate, lateFeeFrequency,
                   blockOverdueAmenityReservations: this.form.blockOverdueAmenityReservations,
                   ...(this.isSuperAdmin ? {
+                    invoicingMode: this.form.invoicingMode || null,
                     useStandardTemplates: standard,
                     invoiceTemplateUrl:         standard ? null : invoice!.url,
                     invoiceTemplateFileName:    standard ? null : invoice!.fileName,

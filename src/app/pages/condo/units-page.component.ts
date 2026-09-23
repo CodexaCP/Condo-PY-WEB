@@ -128,7 +128,7 @@ export class UnitsPageComponent implements OnInit {
 
         this.groups = [...grouped.entries()]
           .map(([bid, us]) => ({
-            building: buildingMap.get(bid) ?? { id: bid, name: us[0].buildingName, code: '', companyId: '', condominiumId: null, condominiumName: '', address: '', isActive: true, blockOverdueAmenityReservations: false },
+            building: buildingMap.get(bid) ?? { id: bid, name: us[0].buildingName, code: '', companyId: '', condominiumId: null, condominiumName: '', address: '', isActive: true, blockOverdueAmenityReservations: false, invoicingMode: 'Preimpresa' as const },
             units: us.sort((a, b) => a.code.localeCompare(b.code))
           }))
           .sort((a, b) => a.building.name.localeCompare(b.building.name));

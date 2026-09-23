@@ -10,6 +10,7 @@ import { Tag } from 'primeng/tag';
 import { Tooltip } from 'primeng/tooltip';
 import { MessageService } from 'primeng/api';
 import { extractApiErrorMessage } from '../../api/api-error.util';
+import { printPdfFromUrl } from '../../api/print-pdf.util';
 import { AuthService } from '../../auth/auth.service';
 import { BuildingsApiService } from '../../api/buildings-api.service';
 import { CreditNotesApiService } from '../../api/credit-notes-api.service';
@@ -160,6 +161,7 @@ const STATUS_SEV: Record<CreditNoteStatus, 'warn' | 'success' | 'danger' | 'seco
         <a [href]="pdfUrl(detail.id)" target="_blank" rel="noopener" style="display:contents">
           <p-button type="button" label="Descargar PDF" icon="pi pi-file-pdf" severity="secondary" [outlined]="true"></p-button>
         </a>
+        <p-button type="button" label="Imprimir" icon="pi pi-print" severity="secondary" [outlined]="true" (onClick)="printDetail()"></p-button>
         <a *ngIf="detail.ownerPaymentId" [routerLink]="['/owner-payments', detail.ownerPaymentId]" style="display:contents">
           <p-button type="button" label="Ver pago" icon="pi pi-wallet" severity="secondary" [text]="true"></p-button>
         </a>
@@ -449,6 +451,14 @@ export class CreditNotesPageComponent implements OnInit {
 
   statusLabel(status: CreditNoteStatus): string { return STATUS_LABEL[status]; }
   pdfUrl(id: string): string { return this.creditNotesApi.getPdfUrl(id, this.auth.getToken() ?? ''); }
+
+  printDetail(): void {
+    if (!this.detail) return;
+    printPdfFromUrl(this.pdfUrl(this.detail.id)).catch(() => {
+      this.msg.add({ severity: 'error', summary: 'Error', detail: 'No se pudo imprimir la nota de crédito.', life: 5000 });
+      this.cdr.markForCheck();
+    });
+  }
   statusSeverity(status: CreditNoteStatus): 'warn' | 'success' | 'danger' | 'secondary' { return STATUS_SEV[status]; }
 
   // Toda NC se crea sobre una factura ya Emitida (el backend lo exige), así que en el uso normal

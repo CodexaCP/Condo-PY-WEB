@@ -11,6 +11,7 @@ import { Tag } from 'primeng/tag';
 import { Tooltip } from 'primeng/tooltip';
 import { MessageService } from 'primeng/api';
 import { extractApiErrorMessage } from '../../api/api-error.util';
+import { printPdfFromUrl } from '../../api/print-pdf.util';
 import { BuildingsApiService } from '../../api/buildings-api.service';
 import { InvoicesApiService } from '../../api/invoices-api.service';
 import { UnitsApiService } from '../../api/units-api.service';
@@ -223,6 +224,7 @@ interface TimelineStep {
         <a [href]="getPdfUrl(detail.id)" target="_blank" style="display:contents">
           <p-button type="button" label="Descargar PDF" icon="pi pi-file-pdf" severity="secondary" [outlined]="true"></p-button>
         </a>
+        <p-button type="button" label="Imprimir" icon="pi pi-print" severity="secondary" [outlined]="true" (onClick)="printDetail()"></p-button>
         <a *ngIf="detail.ownerPaymentId" [routerLink]="['/owner-payments', detail.ownerPaymentId]" style="display:contents">
           <p-button type="button" label="Ver pago" icon="pi pi-wallet" severity="secondary" [text]="true"></p-button>
         </a>
@@ -639,6 +641,14 @@ export class InvoicesPageComponent implements OnInit {
   // ─── Formato ─────────────────────────────────────────────────────────────
 
   getPdfUrl(id: string): string { return this.invoicesApi.getPdfUrl(id, this.auth.getToken() ?? ''); }
+
+  printDetail(): void {
+    if (!this.detail) return;
+    printPdfFromUrl(this.getPdfUrl(this.detail.id)).catch(() => {
+      this.msg.add({ severity: 'error', summary: 'Error', detail: 'No se pudo imprimir la factura.', life: 5000 });
+      this.cdr.markForCheck();
+    });
+  }
 
   statusLabel(s: InvoiceStatus): string { return STATUS_LABEL[s] ?? s; }
   statusSev(s: InvoiceStatus): 'warn' | 'success' | 'danger' { return STATUS_SEV[s] ?? 'warn'; }

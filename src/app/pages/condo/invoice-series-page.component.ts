@@ -106,12 +106,43 @@ import { Building, InvoiceSeries, InvoiceSeriesDocumentType } from '../../api/mo
             <input [(ngModel)]="form.rangoHasta" name="rangoHasta" type="number" min="1" required />
           </div>
           <div class="field-block">
+            <span>Próximo número <em>*</em></span>
+            <input [(ngModel)]="form.proximoNumero" name="proximoNumero" type="number" min="1" required />
+          </div>
+          <div class="field-block">
             <span>Vigencia desde <em>*</em></span>
             <input [(ngModel)]="form.vigenciaDesde" name="vigenciaDesde" type="date" required />
           </div>
           <div class="field-block">
             <span>Vigencia hasta <em>*</em></span>
             <input [(ngModel)]="form.vigenciaHasta" name="vigenciaHasta" type="date" required />
+          </div>
+          <div class="field-block wide2">
+            <span>Dirección del establecimiento <em>*</em></span>
+            <input [(ngModel)]="form.direccionEstablecimiento" name="direccionEstablecimiento" type="text" maxlength="300" placeholder="Ej: Av. España 123" required />
+          </div>
+          <div class="field-block wide2">
+            <span>Actividad económica <em>*</em></span>
+            <input [(ngModel)]="form.actividadEconomica" name="actividadEconomica" type="text" maxlength="200" placeholder="Ej: Administración de condominios" required />
+          </div>
+        </div>
+
+        <div class="panel-box-title imprenta-title">
+          <span class="pi pi-print"></span>
+          Imprenta <span class="optional">(opcional)</span>
+        </div>
+        <div class="series-form">
+          <div class="field-block">
+            <span>N.º habilitación</span>
+            <input [(ngModel)]="form.imprentaNumeroHabilitacion" name="imprentaNumeroHabilitacion" type="text" maxlength="20" />
+          </div>
+          <div class="field-block">
+            <span>RUC imprenta</span>
+            <input [(ngModel)]="form.imprentaRuc" name="imprentaRuc" type="text" maxlength="20" />
+          </div>
+          <div class="field-block wide2">
+            <span>Razón social imprenta</span>
+            <input [(ngModel)]="form.imprentaRazonSocial" name="imprentaRazonSocial" type="text" maxlength="200" />
           </div>
         </div>
 
@@ -177,6 +208,8 @@ import { Building, InvoiceSeries, InvoiceSeriesDocumentType } from '../../api/mo
     .field-block { display: flex; flex-direction: column; gap: 0.3rem; }
     .field-block span { font-size: 0.8rem; font-weight: 600; color: var(--brand-muted); text-transform: uppercase; letter-spacing: 0.03em; }
     .field-block em { color: #e53e3e; font-style: normal; }
+    .optional { font-weight: 400; font-size: 0.82rem; color: var(--brand-muted); text-transform: none; letter-spacing: normal; }
+    .imprenta-title { margin-top: -0.25rem; }
     .field-block select, .field-block input {
       border: 1.5px solid rgba(20,54,61,0.18); border-radius: 10px;
       padding: 0.5rem 0.75rem; font-size: 0.92rem; color: var(--brand-ink);
@@ -245,6 +278,18 @@ export class InvoiceSeriesPageComponent implements OnInit {
       this.msg.add({ severity: 'error', summary: 'Error', detail: 'La vigencia "desde" debe ser anterior a "hasta".', life: 5000 });
       return;
     }
+    if (this.form.proximoNumero < this.form.rangoDesde || this.form.proximoNumero > this.form.rangoHasta) {
+      this.msg.add({ severity: 'error', summary: 'Error', detail: 'El próximo número debe estar dentro del rango del timbrado.', life: 5000 });
+      return;
+    }
+    if (!this.form.direccionEstablecimiento.trim()) {
+      this.msg.add({ severity: 'error', summary: 'Error', detail: 'La dirección del establecimiento es obligatoria.', life: 5000 });
+      return;
+    }
+    if (!this.form.actividadEconomica.trim()) {
+      this.msg.add({ severity: 'error', summary: 'Error', detail: 'La actividad económica es obligatoria.', life: 5000 });
+      return;
+    }
 
     this.isSaving = true;
     this.seriesApi.create({
@@ -257,8 +302,14 @@ export class InvoiceSeriesPageComponent implements OnInit {
       numeroTimbrado: this.form.numeroTimbrado.trim(),
       rangoDesde: Number(this.form.rangoDesde),
       rangoHasta: Number(this.form.rangoHasta),
+      proximoNumero: Number(this.form.proximoNumero),
       vigenciaDesde: this.form.vigenciaDesde,
-      vigenciaHasta: this.form.vigenciaHasta
+      vigenciaHasta: this.form.vigenciaHasta,
+      direccionEstablecimiento: this.form.direccionEstablecimiento.trim(),
+      actividadEconomica: this.form.actividadEconomica.trim(),
+      imprentaNumeroHabilitacion: this.form.imprentaNumeroHabilitacion.trim() || null,
+      imprentaRuc: this.form.imprentaRuc.trim() || null,
+      imprentaRazonSocial: this.form.imprentaRazonSocial.trim() || null
     }).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (series) => {
         this.allItems = [series, ...this.allItems];
@@ -326,8 +377,14 @@ export class InvoiceSeriesPageComponent implements OnInit {
       numeroTimbrado: '',
       rangoDesde: 1,
       rangoHasta: 9999999,
+      proximoNumero: 1,
       vigenciaDesde: new Date().toISOString().slice(0, 10),
-      vigenciaHasta: new Date(new Date().getFullYear() + 1, new Date().getMonth(), new Date().getDate()).toISOString().slice(0, 10)
+      vigenciaHasta: new Date(new Date().getFullYear() + 1, new Date().getMonth(), new Date().getDate()).toISOString().slice(0, 10),
+      direccionEstablecimiento: '',
+      actividadEconomica: '',
+      imprentaNumeroHabilitacion: '',
+      imprentaRuc: '',
+      imprentaRazonSocial: ''
     };
   }
 }

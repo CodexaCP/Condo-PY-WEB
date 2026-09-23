@@ -1,4 +1,5 @@
 export type LateFeeFrequency = 'Daily' | 'Weekly' | 'Biweekly';
+export type InvoicingMode = 'Preimpresa' | 'Autoimpresa' | 'Electronica';
 
 export interface Building {
   id: string;
@@ -16,6 +17,7 @@ export interface Building {
   lateFeeRatePercentage?: number | null;
   lateFeeFrequency?: LateFeeFrequency | null;
   blockOverdueAmenityReservations: boolean;
+  invoicingMode: InvoicingMode;
   useStandardTemplates?: boolean | null;
   invoiceTemplateUrl?: string | null;
   invoiceTemplateFileName?: string | null;
@@ -39,6 +41,7 @@ export interface CreateBuildingRequest {
   lateFeeRatePercentage?: number | null;
   lateFeeFrequency?: LateFeeFrequency | null;
   blockOverdueAmenityReservations: boolean;
+  invoicingMode?: InvoicingMode | null;
   useStandardTemplates?: boolean | null;
   invoiceTemplateUrl?: string | null;
   invoiceTemplateFileName?: string | null;
@@ -627,6 +630,11 @@ export interface InvoiceSeries {
   activo: boolean;
   proximoAAgotarse: boolean;
   proximoAVencer: boolean;
+  direccionEstablecimiento: string;
+  actividadEconomica: string;
+  imprentaNumeroHabilitacion?: string | null;
+  imprentaRuc?: string | null;
+  imprentaRazonSocial?: string | null;
 }
 
 export interface CreateInvoiceSeriesRequest {
@@ -639,8 +647,14 @@ export interface CreateInvoiceSeriesRequest {
   numeroTimbrado: string;
   rangoDesde: number;
   rangoHasta: number;
+  proximoNumero: number;
   vigenciaDesde: string;
   vigenciaHasta: string;
+  direccionEstablecimiento: string;
+  actividadEconomica: string;
+  imprentaNumeroHabilitacion?: string | null;
+  imprentaRuc?: string | null;
+  imprentaRazonSocial?: string | null;
 }
 
 export interface InvoiceLine {
