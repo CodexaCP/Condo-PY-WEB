@@ -1119,6 +1119,12 @@ export class ExpensePeriodsPageComponent implements OnInit {
       return 'Resumen preliminar';
     }
 
+    if (status === 'Approved' && this.settlementSummary) {
+      if (this.settlementSummary.presidentApprovedByUserId) return 'Aprobada por el presidente';
+      if (this.settlementSummary.presidentRejectedByUserId) return 'Rechazada por el presidente';
+      return 'Pendiente de revisión del presidente';
+    }
+
     return status === 'Draft'
       ? 'Borrador'
       : status === 'Calculated'
@@ -1168,12 +1174,16 @@ export class ExpensePeriodsPageComponent implements OnInit {
     if (!this.approvedByManager) {
       return 'No se puede publicar: la liquidación debe ser aprobada primero por el Encargado de edificio (Building Manager).';
     }
+    if (summary.status === 'Approved' && !summary.presidentApprovedByUserId) {
+      return 'No se puede publicar: la liquidación todavía no fue aprobada por el presidente del consorcio.';
+    }
     return '';
   }
 
   canPublishSettlement(): boolean {
     return !!this.settlementSummary &&
       this.approvedByManager &&
+      !!this.settlementSummary.presidentApprovedByUserId &&
       (this.settlementSummary.status === 'Approved' || this.settlementSummary.status === 'Applied') &&
       this.settlementSummary.periodStatus !== 'Published' &&
       this.settlementSummary.generatedChargeCount > 0;

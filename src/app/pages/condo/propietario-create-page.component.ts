@@ -11,7 +11,9 @@ import { MessageService } from 'primeng/api';
 import { Select } from 'primeng/select';
 import { Tooltip } from 'primeng/tooltip';
 import { extractApiErrorMessage } from '../../api/api-error.util';
+import { OwnerEligibleBuilding, OwnerPresidentBuilding } from '../../api/models';
 import { OwnersApiService } from '../../api/owners-api.service';
+import { UploadsApiService } from '../../api/uploads-api.service';
 
 interface PhonePrefix { label: string; value: string; flag: string; }
 const PHONE_PREFIXES: PhonePrefix[] = [
@@ -165,6 +167,64 @@ const PHONE_PREFIXES: PhonePrefix[] = [
           </div>
         </section>
 
+        <!-- ══ PRESIDENTE DE CONSORCIO ═══════════════════════════════ -->
+        <section class="form-section" *ngIf="isEditing && eligibleBuildings.length">
+          <h2 class="section-title">Presidente de consorcio</h2>
+
+          <div class="field">
+            <label class="checkbox-label">
+              <input type="checkbox" [(ngModel)]="isPresidentChecked" name="isPresidentChecked"
+                     [ngModelOptions]="{standalone: true}" (ngModelChange)="onPresidentCheckboxChange()" />
+              <span>Es presidente de consorcio</span>
+            </label>
+            <small class="field-hint">
+              Único por edificio. Firma la liquidación de expensas antes de que se publique.
+            </small>
+          </div>
+
+          <div class="field" *ngIf="isPresidentChecked">
+            <label for="presidentBuildingId">Edificio</label>
+            <select id="presidentBuildingId" [(ngModel)]="presidentBuildingId" name="presidentBuildingId"
+                    [ngModelOptions]="{standalone: true}" (ngModelChange)="savePresidentBuilding()">
+              <option [ngValue]="null" disabled>— Seleccionar —</option>
+              <option *ngFor="let b of eligibleBuildings" [ngValue]="b.buildingId" [disabled]="b.hasOtherPresident">
+                {{ b.buildingName }}{{ b.hasOtherPresident ? ' (ya tiene presidente: ' + b.otherPresidentName + ')' : '' }}
+              </option>
+            </select>
+            <small class="field-hint" *ngIf="savingPresident"><i class="pi pi-spin pi-spinner"></i> Guardando...</small>
+          </div>
+        </section>
+
+        <!-- ══ FIRMA DIGITAL ═════════════════════════════════════════ -->
+        <section class="form-section" *ngIf="presidentOfBuildings.length">
+          <h2 class="section-title">Firma digital</h2>
+          <p class="section-desc">
+            Imagen de la firma manuscrita, usada para firmar la liquidación de expensas como presidente del consorcio.
+          </p>
+
+          <div class="field">
+            <label>Firma <span class="optional">(opcional)</span></label>
+            <div class="signature-upload-row">
+              <div class="signature-preview" *ngIf="form.signatureUrl">
+                <img [src]="form.signatureUrl" alt="Firma" />
+              </div>
+              <div class="signature-upload-area" (click)="signatureFileInput.click()">
+                <i class="pi pi-pencil"></i>
+                <span *ngIf="!uploadingSignature">
+                  {{ form.signatureUrl ? 'Cambiar firma' : 'Subir imagen de la firma (JPG/PNG, máx 10 MB)' }}
+                </span>
+                <span *ngIf="uploadingSignature"><i class="pi pi-spin pi-spinner"></i> Subiendo...</span>
+              </div>
+              <button type="button" class="signature-remove-btn" *ngIf="form.signatureUrl"
+                      (click)="removeSignature()" pTooltip="Quitar firma" tooltipPosition="top">
+                <i class="pi pi-times"></i>
+              </button>
+              <input #signatureFileInput type="file" accept=".jpg,.jpeg,.png,.webp,.gif" style="display:none"
+                     (change)="onSignatureFileChange($event)" />
+            </div>
+          </div>
+        </section>
+
         <!-- ══ ACCIONES ══════════════════════════════════════════════ -->
         <section class="form-actions">
           <div class="form-actions-left">
@@ -241,6 +301,27 @@ const PHONE_PREFIXES: PhonePrefix[] = [
     .optional  { font-weight:400; font-size:0.82rem; color:var(--brand-muted); }
     .checkbox-label { display:flex; align-items:center; gap:0.5rem; cursor:pointer; font-weight:500; }
     .checkbox-label input[type=checkbox] { width:16px; height:16px; cursor:pointer; accent-color:var(--brand-blue); }
+    .section-desc { margin:0; color:var(--brand-muted); font-size:0.88rem; }
+
+    .signature-upload-row { display:flex; align-items:center; gap:0.75rem; }
+    .signature-preview {
+      width:110px; height:64px; border-radius:10px; border:1px solid rgba(19,133,182,0.15);
+      background:#fff; display:grid; place-items:center; flex-shrink:0; overflow:hidden;
+    }
+    .signature-preview img { max-width:100%; max-height:100%; object-fit:contain; }
+    .signature-upload-area {
+      flex:1; display:flex; align-items:center; gap:0.5rem; justify-content:center;
+      padding:0.8rem 1rem; border:2px dashed rgba(19,133,182,0.3);
+      border-radius:12px; cursor:pointer; font-size:0.88rem; color:var(--brand-muted);
+      transition:border-color 0.15s, color 0.15s;
+    }
+    .signature-upload-area:hover { border-color:var(--brand-blue); color:var(--brand-blue); }
+    .signature-remove-btn {
+      background:none; border:1px solid rgba(231,76,60,0.3); border-radius:50%;
+      width:36px; height:36px; display:grid; place-items:center; cursor:pointer;
+      color:#e74c3c; flex-shrink:0; transition:background 0.15s;
+    }
+    .signature-remove-btn:hover { background:rgba(231,76,60,0.08); }
 
     .phone-row { display:flex; gap:0.6rem; align-items:stretch; }
     .phone-input { flex:1; padding:0.6rem 0.85rem; border:1px solid rgba(19,133,182,0.25);
@@ -299,6 +380,7 @@ const PHONE_PREFIXES: PhonePrefix[] = [
 })
 export class PropietarioCreatePageComponent implements OnInit {
   private readonly api        = inject(OwnersApiService);
+  private readonly uploadsApi = inject(UploadsApiService);
   private readonly route      = inject(ActivatedRoute);
   private readonly router     = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
@@ -315,6 +397,13 @@ export class PropietarioCreatePageComponent implements OnInit {
   isSaving       = false;
   isDeleting     = false;
   confirmVisible = false;
+  uploadingSignature = false;
+
+  eligibleBuildings: OwnerEligibleBuilding[] = [];
+  presidentOfBuildings: OwnerPresidentBuilding[] = [];
+  isPresidentChecked = false;
+  presidentBuildingId: string | null = null;
+  savingPresident = false;
 
   form = this.emptyForm();
 
@@ -346,11 +435,25 @@ export class PropietarioCreatePageComponent implements OnInit {
             phone:          owner.phone              || '',
             address:        owner.address            || '',
             isResident:     owner.isResident         ?? false,
-            isActive:       owner.isActive           ?? true
+            isActive:       owner.isActive           ?? true,
+            signatureUrl:   owner.signatureUrl        || ''
           };
+
+          this.presidentOfBuildings = owner.presidentOfBuildings || [];
+          this.isPresidentChecked   = this.presidentOfBuildings.length > 0;
+          this.presidentBuildingId  = this.presidentOfBuildings[0]?.buildingId ?? null;
 
           this.loading = false;
           this.cdr.markForCheck();
+
+          this.api.getEligiblePresidentBuildings(id)
+            .pipe(takeUntilDestroyed(this.destroyRef))
+            .subscribe({
+              next: buildings => {
+                this.eligibleBuildings = buildings;
+                this.cdr.markForCheck();
+              }
+            });
         },
         error: () => {
           this.loadError = 'No se encontró el propietario solicitado.';
@@ -397,6 +500,7 @@ export class PropietarioCreatePageComponent implements OnInit {
       address:        this.form.address.trim() || null,
       isResident:     this.form.isResident,
       isActive:       this.form.isActive,
+      signatureUrl:   this.presidentOfBuildings.length ? (this.form.signatureUrl || null) : null,
       password:       this.isEditing ? undefined : '123456'
     };
 
@@ -461,7 +565,78 @@ export class PropietarioCreatePageComponent implements OnInit {
       phone:          '',
       address:        '',
       isResident:     false,
-      isActive:       true
+      isActive:       true,
+      signatureUrl:   ''
     };
+  }
+
+  onPresidentCheckboxChange(): void {
+    if (!this.isPresidentChecked) {
+      this.savePresidentBuilding(null);
+      return;
+    }
+    if (this.presidentBuildingId) {
+      this.savePresidentBuilding();
+    }
+  }
+
+  savePresidentBuilding(explicitBuildingId?: string | null): void {
+    const buildingId = explicitBuildingId !== undefined ? explicitBuildingId : this.presidentBuildingId;
+
+    this.savingPresident = true;
+    this.api.setPresidentBuilding(this.editingId, buildingId)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: owner => {
+          this.presidentOfBuildings = owner.presidentOfBuildings || [];
+          this.isPresidentChecked   = this.presidentOfBuildings.length > 0;
+          this.presidentBuildingId  = this.presidentOfBuildings[0]?.buildingId ?? null;
+          if (!this.isPresidentChecked) {
+            this.form.signatureUrl = '';
+          }
+          this.savingPresident = false;
+          this.msg.add({ severity: 'success', summary: 'Éxito', detail: 'Presidencia actualizada.', life: 3000 });
+          this.cdr.markForCheck();
+        },
+        error: err => {
+          // Revertimos la selección visual al estado real, ya guardado en el servidor.
+          this.presidentBuildingId = this.presidentOfBuildings[0]?.buildingId ?? null;
+          this.isPresidentChecked  = this.presidentOfBuildings.length > 0;
+          this.savingPresident = false;
+          this.msg.add({ severity: 'error', summary: 'Error', detail: extractApiErrorMessage(err, 'No se pudo actualizar la presidencia.'), life: 6000 });
+          this.cdr.markForCheck();
+        }
+      });
+  }
+
+  onSignatureFileChange(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    input.value = '';
+    if (!file) return;
+
+    if (file.size > 10 * 1024 * 1024) {
+      this.msg.add({ severity: 'error', summary: 'Error', detail: 'La imagen supera el límite de 10 MB.', life: 5000 });
+      return;
+    }
+
+    this.uploadingSignature = true;
+    this.cdr.markForCheck();
+    this.uploadsApi.upload(file).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: ({ url }) => {
+        this.form.signatureUrl = url;
+        this.uploadingSignature = false;
+        this.cdr.markForCheck();
+      },
+      error: err => {
+        this.msg.add({ severity: 'error', summary: 'Error', detail: extractApiErrorMessage(err, 'No se pudo subir la imagen.'), life: 5000 });
+        this.uploadingSignature = false;
+        this.cdr.markForCheck();
+      }
+    });
+  }
+
+  removeSignature(): void {
+    this.form.signatureUrl = '';
   }
 }

@@ -2,7 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { API_BASE_URL } from '../config/api.config';
-import { Owner, OwnerUpsertRequest } from './models';
+import { Owner, OwnerEligibleBuilding, OwnerUpsertRequest } from './models';
 
 @Injectable({ providedIn: 'root' })
 export class OwnersApiService {
@@ -26,5 +26,13 @@ export class OwnersApiService {
 
   delete(id: string): Observable<void> {
     return this.http.delete<void>(`${API_BASE_URL}/owners/${id}`);
+  }
+
+  getEligiblePresidentBuildings(id: string): Observable<OwnerEligibleBuilding[]> {
+    return this.http.get<OwnerEligibleBuilding[]>(`${API_BASE_URL}/owners/${id}/eligible-president-buildings`);
+  }
+
+  setPresidentBuilding(id: string, buildingId: string | null): Observable<Owner> {
+    return this.http.put<Owner>(`${API_BASE_URL}/owners/${id}/president-building`, { buildingId });
   }
 }

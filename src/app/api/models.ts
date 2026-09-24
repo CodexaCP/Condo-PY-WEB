@@ -445,6 +445,15 @@ export interface ExpenseSettlementSummary {
   rejectedAtUtc: string | null;
   rejectedByUserId: string | null;
   rejectedByUserName: string;
+  presidentUserId: string | null;
+  presidentUserName: string;
+  presidentApprovedAtUtc: string | null;
+  presidentApprovedByUserId: string | null;
+  presidentApprovedByUserName: string;
+  presidentRejectionReason: string;
+  presidentRejectedAtUtc: string | null;
+  presidentRejectedByUserId: string | null;
+  presidentRejectedByUserName: string;
   status: ExpenseSettlementStatus | null;
   periodStatus: ExpensePeriodStatus;
   generatedChargeCount: number;
@@ -1114,6 +1123,20 @@ export interface Owner {
   address?: string | null;
   isResident: boolean;
   isActive: boolean;
+  signatureUrl?: string | null;
+  presidentOfBuildings: OwnerPresidentBuilding[];
+}
+
+export interface OwnerPresidentBuilding {
+  buildingId: string;
+  buildingName: string;
+}
+
+export interface OwnerEligibleBuilding {
+  buildingId: string;
+  buildingName: string;
+  hasOtherPresident: boolean;
+  otherPresidentName?: string | null;
 }
 
 export interface OwnerUpsertRequest {
@@ -1130,6 +1153,7 @@ export interface OwnerUpsertRequest {
   address?: string | null;
   isResident: boolean;
   isActive: boolean;
+  signatureUrl?: string | null;
 }
 
 export interface ManagedUser {
