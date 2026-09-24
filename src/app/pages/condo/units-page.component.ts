@@ -30,7 +30,7 @@ interface BuildingGroup {
             <p>Unidades y locales de cada edificio, con piso y coeficiente para expensas.</p>
           </div>
         </div>
-        <p-button *ngIf="canEdit" label="Nueva unidad" icon="pi pi-plus" (onClick)="goToCreate()"></p-button>
+        <p-button *ngIf="canCreateUnit" label="Nueva unidad" icon="pi pi-plus" (onClick)="goToCreate()"></p-button>
       </div>
 
       <p-message *ngIf="pageError" severity="error" [text]="pageError"></p-message>
@@ -111,6 +111,7 @@ export class UnitsPageComponent implements OnInit {
   pageError = '';
 
   get canEdit(): boolean { return !this.auth.hasRole('CompanyAdmin'); }
+  get canCreateUnit(): boolean { return this.canEdit && !this.auth.hasRole('BuildingManager'); }
 
   ngOnInit(): void {
     forkJoin({
