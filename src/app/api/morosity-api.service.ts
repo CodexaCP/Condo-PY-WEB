@@ -14,6 +14,11 @@ export interface MorosityReportFilters {
   pageSize?: number;
 }
 
+export interface MorosityReminderResult {
+  emailsSent: number;
+  unitsSkippedNoEmail: number;
+}
+
 @Injectable({ providedIn: 'root' })
 export class MorosityApiService {
   private readonly http = inject(HttpClient);
@@ -28,5 +33,15 @@ export class MorosityApiService {
     if (filters?.page) params = params.set('page', String(filters.page));
     if (filters?.pageSize) params = params.set('pageSize', String(filters.pageSize));
     return this.http.get<MorosityReport>(`${API_BASE_URL}/morosity`, { params });
+  }
+
+  sendReminders(filters?: MorosityReportFilters): Observable<MorosityReminderResult> {
+    let params = new HttpParams();
+    if (filters?.buildingId) params = params.set('buildingId', filters.buildingId);
+    if (filters?.unitId) params = params.set('unitId', filters.unitId);
+    if (filters?.expensePeriodId) params = params.set('expensePeriodId', filters.expensePeriodId);
+    if (filters?.ownerSearch) params = params.set('ownerSearch', filters.ownerSearch);
+    if (filters?.agingBucket) params = params.set('agingBucket', filters.agingBucket);
+    return this.http.post<MorosityReminderResult>(`${API_BASE_URL}/morosity/send-reminders`, null, { params });
   }
 }

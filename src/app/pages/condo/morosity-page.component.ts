@@ -73,6 +73,8 @@ const AGING_BUCKETS = [
           </label>
           <p-button label="Limpiar" icon="pi pi-times" severity="secondary" [outlined]="true" (onClick)="resetFilters()" [disabled]="!hasFilters"></p-button>
           <p-button label="Exportar Excel" icon="pi pi-download" severity="secondary" [outlined]="true" (onClick)="exportCsv()" [disabled]="!report || !report.totalCount"></p-button>
+          <p-button label="Enviar recordatorio por email" icon="pi pi-envelope" severity="secondary" [outlined]="true"
+                    (onClick)="sendReminders()" [disabled]="!report || !report.totalCount || sendingReminders" [loading]="sendingReminders"></p-button>
         </div>
       </div>
 
@@ -286,6 +288,7 @@ export class MorosityPageComponent implements OnInit {
 
   report: MorosityReport | null = null;
   loading = true;
+  sendingReminders = false;
 
   private readonly ownerSearch$ = new Subject<string>();
 
@@ -432,6 +435,40 @@ export class MorosityPageComponent implements OnInit {
       },
       error: (error) => {
         this.msg.add({ severity: 'error', summary: 'Error', detail: extractApiErrorMessage(error, 'No se pudo exportar.'), life: 5000 });
+      }
+    });
+  }
+
+  sendReminders(): void {
+    if (!this.report?.totalCount || this.sendingReminders) return;
+
+    const confirmed = confirm(
+      `Se va a enviar un email de recordatorio a cada unidad morosa del filtro actual (${this.report.summary.totalUnitsInArrears} unidades). ¿Continuar?`
+    );
+    if (!confirmed) return;
+
+    this.sendingReminders = true;
+    this.morosityApi.sendReminders({
+      buildingId: this.selectedBuildingId || undefined,
+      unitId: this.selectedUnitId || undefined,
+      expensePeriodId: this.selectedPeriodId || undefined,
+      ownerSearch: this.ownerSearch.trim() || undefined,
+      agingBucket: this.selectedAgingBucket || undefined
+    }).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: (result) => {
+        this.sendingReminders = false;
+        this.msg.add({
+          severity: 'success',
+          summary: 'Recordatorios enviados',
+          detail: `${result.emailsSent} email(s) enviados. ${result.unitsSkippedNoEmail} unidad(es) sin email registrado.`,
+          life: 6000
+        });
+        this.cdr.markForCheck();
+      },
+      error: (error) => {
+        this.sendingReminders = false;
+        this.msg.add({ severity: 'error', summary: 'Error', detail: extractApiErrorMessage(error, 'No se pudieron enviar los recordatorios.'), life: 5000 });
+        this.cdr.markForCheck();
       }
     });
   }
