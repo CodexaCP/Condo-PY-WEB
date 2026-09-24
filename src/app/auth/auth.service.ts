@@ -103,6 +103,14 @@ export class AuthService {
       );
   }
 
+  forgotPassword(identifier: string): Observable<void> {
+    return this.http.post<void>(`${API_BASE_URL}/auth/forgot-password`, { identifier: identifier.trim() });
+  }
+
+  resetPassword(token: string, newPassword: string): Observable<void> {
+    return this.http.post<void>(`${API_BASE_URL}/auth/reset-password`, { token, newPassword });
+  }
+
   logout(): void {
     localStorage.removeItem(SESSION_KEY);
     this.session.set(null);

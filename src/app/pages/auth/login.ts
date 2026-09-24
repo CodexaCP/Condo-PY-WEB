@@ -181,6 +181,10 @@ import { homeRoute } from '../../auth/auth.guard';
                         </p-password>
                     </div>
 
+                    <div class="lp-forgot-row">
+                        <a routerLink="/forgot-password">¿Olvidaste tu contraseña?</a>
+                    </div>
+
                     @if (errorMessage) {
                         <p-message severity="error" [text]="errorMessage" styleClass="w-full" />
                     }
@@ -200,7 +204,12 @@ import { homeRoute } from '../../auth/auth.guard';
                 </div>
             </div>
         </div>
-    `
+    `,
+    styles: [`
+        .lp-forgot-row { display: flex; justify-content: flex-end; margin: -0.5rem 0 1.25rem; }
+        .lp-forgot-row a { font-size: 0.82rem; color: var(--brand-blue, #1385b6); text-decoration: none; }
+        .lp-forgot-row a:hover { text-decoration: underline; }
+    `]
 })
 export class Login {
     private readonly auth = inject(AuthService);

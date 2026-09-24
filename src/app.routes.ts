@@ -8,6 +8,14 @@ export const appRoutes: Routes = [
         loadComponent: () => import('./app/pages/auth/login').then(m => m.Login),
         canActivate: [guestGuard]
     },
+    {
+        path: 'forgot-password',
+        loadComponent: () => import('./app/pages/auth/forgot-password').then(m => m.ForgotPassword)
+    },
+    {
+        path: 'reset-password',
+        loadComponent: () => import('./app/pages/auth/reset-password').then(m => m.ResetPassword)
+    },
 
     // Cambio de contraseña (protegido, sin requerir layout completo)
     {
