@@ -111,7 +111,9 @@ export class UnitsPageComponent implements OnInit {
   pageError = '';
 
   get canEdit(): boolean { return !this.auth.hasRole('CompanyAdmin'); }
-  get canCreateUnit(): boolean { return this.canEdit && !this.auth.hasRole('BuildingManager'); }
+  get canCreateUnit(): boolean {
+    return this.canEdit && !this.auth.hasRole('BuildingManager') && !this.auth.hasRole('CompanyOperator');
+  }
 
   ngOnInit(): void {
     forkJoin({
