@@ -102,6 +102,11 @@ export class ExpensePeriodsApiService {
     return this.http.post<VoidSettlementResult>(`${API_BASE_URL}/expense-periods/${id}/void-settlement`, {});
   }
 
+  unpublishSettlement(id: string, request: RejectSettlementRequest): Observable<ExpenseSettlementSummary> {
+    return this.http.post<ExpenseSettlementSummary>(`${API_BASE_URL}/expense-periods/${id}/unpublish-settlement`, request)
+      .pipe(tap(() => this.invalidateCache()));
+  }
+
   getSettlementPdfUrl(id: string, token: string): string {
     return `${API_BASE_URL}/expense-periods/${id}/settlement-pdf?access_token=${token}`;
   }

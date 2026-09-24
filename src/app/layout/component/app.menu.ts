@@ -50,6 +50,12 @@ export class AppMenu {
                         { label: 'Asignaciones', icon: 'pi pi-fw pi-sitemap', routerLink: ['/building-plans'] },
                         { label: 'Pagos de planes', icon: 'pi pi-fw pi-credit-card', routerLink: ['/building-plan-payments'] }
                     ]
+                },
+                {
+                    label: 'Liquidaciones',
+                    items: [
+                        { label: 'Todas las empresas', icon: 'pi pi-fw pi-history', routerLink: ['/superadmin-settlements'] }
+                    ]
                 }
             ];
         }

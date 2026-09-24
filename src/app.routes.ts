@@ -152,6 +152,10 @@ export const appRoutes: Routes = [
                 loadComponent: () => import('./app/pages/condo/units-page.component').then(m => m.UnitsPageComponent)
             },
             {
+                path: 'superadmin-settlements',
+                loadComponent: () => import('./app/pages/condo/superadmin-settlements-page.component').then(m => m.SuperadminSettlementsPageComponent)
+            },
+            {
                 path: 'residents',
                 loadComponent: () => import('./app/pages/condo/residents-page.component').then(m => m.ResidentsPageComponent)
             },
