@@ -39,7 +39,8 @@ export class AppMenu {
                         { label: 'Empresas', icon: 'pi pi-fw pi-building', routerLink: ['/companies'] },
                         { label: 'Condominios', icon: 'pi pi-fw pi-map', routerLink: ['/condominiums'] },
                         { label: 'Usuarios', icon: 'pi pi-fw pi-users', routerLink: ['/users'] },
-                        { label: 'Edificios', icon: 'pi pi-fw pi-home', routerLink: ['/buildings'] }
+                        { label: 'Edificios', icon: 'pi pi-fw pi-home', routerLink: ['/buildings'] },
+                        { label: 'Unidades', icon: 'pi pi-fw pi-th-large', routerLink: ['/units'] }
                     ]
                 },
                 {
