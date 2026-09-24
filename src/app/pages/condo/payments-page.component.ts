@@ -333,7 +333,7 @@ interface PaymentsGroup {
               <p-button type="button" icon="pi pi-file-pdf" severity="secondary" [rounded]="true" [text]="true" pTooltip="Descargar PDF"></p-button>
             </a>
             <p-button *ngIf="!isReadOnly && !item.isReversed" type="button" icon="pi pi-pencil" severity="secondary" [rounded]="true" [text]="true" (onClick)="startEdit(item)"></p-button>
-            <p-button *ngIf="canRevert" type="button" icon="pi pi-undo" severity="warn" [rounded]="true" [text]="true"
+            <p-button *ngIf="canRevertPayment" type="button" icon="pi pi-undo" severity="warn" [rounded]="true" [text]="true"
               [disabled]="isSaving || item.isReversed"
               [pTooltip]="item.isReversed ? 'Ya revertido' : 'Revertir pago'"
               (onClick)="revertPayment(item)"></p-button>
@@ -528,6 +528,7 @@ export class PaymentsPageComponent implements OnInit {
 
   get isReadOnly(): boolean { return this.auth.hasRole('CompanyAdmin'); }
   get canRevert(): boolean { return !this.auth.hasRole('Resident') && !this.auth.hasRole('Owner') && !this.auth.hasRole('Porter'); }
+  get canRevertPayment(): boolean { return this.auth.hasRole('SuperAdmin'); }
 
   items: Payment[] = [];
   groups: PaymentsGroup[] = [];

@@ -226,7 +226,7 @@ interface UnitGroup {
             <span [class.negative-amount]="charge.amount < 0">{{ formatCurrency(charge.amount) }}</span>
             <div class="app-actions" *ngIf="!isReadOnly">
               <p-button
-                *ngIf="!charge.isReversal && !charge.isReversed"
+                *ngIf="!charge.isReversal && !charge.isReversed && canReverseCharge"
                 type="button" icon="pi pi-replay" severity="warn"
                 [rounded]="true" [text]="true"
                 pTooltip="Revertir cargo — genera un ajuste negativo que anula este importe en el mismo periodo"
@@ -266,7 +266,7 @@ interface UnitGroup {
                 (onClick)="startEdit(row.charge)">
               </p-button>
               <p-button
-                *ngIf="!row.charge.isReversal && !row.charge.isReversed"
+                *ngIf="!row.charge.isReversal && !row.charge.isReversed && canReverseCharge"
                 type="button" icon="pi pi-replay" severity="warn"
                 [rounded]="true" [text]="true"
                 pTooltip="Revertir cargo — genera un ajuste negativo que anula este importe en el mismo periodo"
@@ -486,6 +486,7 @@ export class ExpenseChargesPageComponent implements OnInit {
   private readonly msg = inject(MessageService);
 
   get isReadOnly(): boolean { return this.auth.hasRole('CompanyAdmin'); }
+  get canReverseCharge(): boolean { return this.auth.hasRole('SuperAdmin'); }
 
   items: ExpenseCharge[] = [];
   displayRows: ChargeRow[] = [];
