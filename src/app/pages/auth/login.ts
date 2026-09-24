@@ -1,4 +1,4 @@
-import { Component, inject, OnDestroy, signal } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
 import { finalize } from 'rxjs';
@@ -77,18 +77,34 @@ import { homeRoute } from '../../auth/auth.guard';
                 <!-- Divisor -->
                 <div class="lp-divider"></div>
 
-                <!-- Reel: mockup compacto con capturas reales de la plataforma -->
-                <div class="lp-reel">
-                    <div class="lp-reel-glow"></div>
-                    <div class="lp-reel-frame">
-                        <div class="lp-reel-bar">
-                            <span></span><span></span><span></span>
+                <!-- Pilares en grid -->
+                <div class="lp-pillars">
+                    <div class="lp-pillar">
+                        <div class="lp-pillar-icon"><i class="pi pi-home"></i></div>
+                        <div>
+                            <strong>Multi-edificio</strong>
+                            <p>Gestiona varios condominios desde un solo panel unificado.</p>
                         </div>
-                        <div class="lp-reel-screen">
-                            @for (shot of reelShots; track shot; let i = $index) {
-                                <img [src]="shot" [class.active]="i === reelIndex()" alt="" />
-                            }
-                            <div class="lp-reel-scan"></div>
+                    </div>
+                    <div class="lp-pillar">
+                        <div class="lp-pillar-icon"><i class="pi pi-dollar"></i></div>
+                        <div>
+                            <strong>Finanzas en tiempo real</strong>
+                            <p>Gastos, ingresos, expensas y morosidad siempre al día.</p>
+                        </div>
+                    </div>
+                    <div class="lp-pillar">
+                        <div class="lp-pillar-icon"><i class="pi pi-bell"></i></div>
+                        <div>
+                            <strong>Comunicados</strong>
+                            <p>Avisos y anuncios para residentes y propietarios.</p>
+                        </div>
+                    </div>
+                    <div class="lp-pillar">
+                        <div class="lp-pillar-icon"><i class="pi pi-check-square"></i></div>
+                        <div>
+                            <strong>Votaciones formales</strong>
+                            <p>Decisiones con quórum, opciones y resultados trazables.</p>
                         </div>
                     </div>
                 </div>
@@ -193,89 +209,9 @@ import { homeRoute } from '../../auth/auth.guard';
         .lp-forgot-row { display: flex; justify-content: flex-end; margin: -0.5rem 0 1.25rem; }
         .lp-forgot-row a { font-size: 0.82rem; color: var(--brand-blue, #1385b6); text-decoration: none; }
         .lp-forgot-row a:hover { text-decoration: underline; }
-
-        .lp-reel {
-            position: relative;
-            display: flex;
-            justify-content: center;
-            flex: 0 0 auto;
-        }
-        .lp-reel-glow {
-            position: absolute;
-            inset: -12px;
-            background: radial-gradient(circle, rgba(26,183,175,0.35) 0%, rgba(19,133,182,0.15) 45%, transparent 75%);
-            filter: blur(20px);
-            animation: lp-glow-pulse 4s ease-in-out infinite;
-            pointer-events: none;
-        }
-        @keyframes lp-glow-pulse {
-            0%, 100% { opacity: 0.7; transform: scale(1); }
-            50% { opacity: 1; transform: scale(1.05); }
-        }
-        .lp-reel-frame {
-            position: relative;
-            width: 100%;
-            max-width: 260px;
-            border-radius: 12px;
-            overflow: hidden;
-            background: rgba(10,30,40,0.55);
-            border: 1px solid rgba(255,255,255,0.18);
-            box-shadow: 0 12px 32px rgba(0,0,0,0.3), 0 0 0 1px rgba(26,183,175,0.15);
-            backdrop-filter: blur(6px);
-        }
-        .lp-reel-bar {
-            display: flex;
-            gap: 5px;
-            padding: 0.4rem 0.55rem;
-            background: rgba(255,255,255,0.06);
-            border-bottom: 1px solid rgba(255,255,255,0.1);
-        }
-        .lp-reel-bar span {
-            width: 7px; height: 7px; border-radius: 50%;
-            background: rgba(255,255,255,0.25);
-        }
-        .lp-reel-bar span:nth-child(1) { background: #ef4444; opacity: 0.7; }
-        .lp-reel-bar span:nth-child(2) { background: #f59e0b; opacity: 0.7; }
-        .lp-reel-bar span:nth-child(3) { background: #22c55e; opacity: 0.7; }
-        .lp-reel-screen {
-            position: relative;
-            width: 100%;
-            aspect-ratio: 16 / 10;
-            overflow: hidden;
-        }
-        .lp-reel-screen img {
-            position: absolute;
-            inset: 0;
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            object-position: top;
-            opacity: 0;
-            transform: scale(1.02);
-            transition: opacity 1.1s ease, transform 6s ease;
-        }
-        .lp-reel-screen img.active {
-            opacity: 1;
-            transform: scale(1);
-        }
-        .lp-reel-scan {
-            position: absolute;
-            inset: 0;
-            background: linear-gradient(180deg, transparent 0%, rgba(26,183,175,0.12) 50%, transparent 100%);
-            background-size: 100% 200%;
-            animation: lp-scan 3.5s linear infinite;
-            pointer-events: none;
-        }
-        @keyframes lp-scan {
-            0% { background-position: 0 -100%; }
-            100% { background-position: 0 200%; }
-        }
-        @media (max-width: 1024px) {
-            .lp-reel { display: none; }
-        }
     `]
 })
-export class Login implements OnDestroy {
+export class Login {
     private readonly auth = inject(AuthService);
     private readonly router = inject(Router);
 
@@ -283,25 +219,6 @@ export class Login implements OnDestroy {
     password = '';
     errorMessage = '';
     isSubmitting = false;
-
-    reelShots = [
-        'assets/login-reel/dashboard.png',
-        'assets/login-reel/facturas.png',
-        'assets/login-reel/pago.png',
-        'assets/login-reel/periodos.png'
-    ];
-    reelIndex = signal(0);
-    private reelTimer?: ReturnType<typeof setInterval>;
-
-    constructor() {
-        this.reelTimer = setInterval(() => {
-            this.reelIndex.update(i => (i + 1) % this.reelShots.length);
-        }, 3200);
-    }
-
-    ngOnDestroy(): void {
-        if (this.reelTimer) clearInterval(this.reelTimer);
-    }
 
     submit(): void {
         if (!this.email || !this.password) {
