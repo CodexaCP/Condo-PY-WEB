@@ -366,10 +366,9 @@ export class UnitCreatePageComponent implements OnInit {
       next: saved => {
         this.isSaving = false;
         if (!this.isEditing) {
-          this.isEditing   = true;
-          this.editingId   = saved.id;
-          this.editingCode = saved.code;
           this.msg.add({ severity: 'success', summary: 'Éxito', detail: `Unidad ${saved.code} creada correctamente.`, life: 4000 });
+          this.router.navigate(['/units']);
+          return;
         } else {
           this.editingCode = saved.code;
           this.msg.add({ severity: 'success', summary: 'Éxito', detail: 'Cambios guardados correctamente.', life: 4000 });

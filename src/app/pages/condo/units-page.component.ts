@@ -15,6 +15,7 @@ import { AuthService } from '../../auth/auth.service';
 interface BuildingGroup {
   building: Building;
   units: Unit[];
+  expanded: boolean;
 }
 
 @Component({
@@ -39,14 +40,15 @@ interface BuildingGroup {
 
       <div class="groups" *ngIf="groups.length">
         <div class="building-group" *ngFor="let g of groups">
-          <div class="building-header">
+          <div class="building-header" (click)="g.expanded = !g.expanded">
+            <i class="pi" [class.pi-chevron-down]="!g.expanded" [class.pi-chevron-up]="g.expanded"></i>
             <i class="pi pi-building"></i>
             <span class="building-name">{{ g.building.name }}</span>
             <span class="building-code">{{ g.building.code }}</span>
             <span class="unit-count">{{ g.units.length }} unidad{{ g.units.length !== 1 ? 'es' : '' }}</span>
           </div>
 
-          <div class="app-list">
+          <div class="app-list" *ngIf="g.expanded">
             <div class="app-row header grid-unit">
               <span>Código</span>
               <span>Piso</span>
@@ -73,8 +75,10 @@ interface BuildingGroup {
     .building-header {
       display:flex; align-items:center; gap:0.6rem; margin-bottom:0.75rem;
       padding-bottom:0.5rem; border-bottom:2px solid rgba(19,133,182,0.12);
+      cursor:pointer; user-select:none;
     }
     .building-header i { color:var(--brand-blue); font-size:1rem; }
+    .building-header .pi-chevron-down, .building-header .pi-chevron-up { font-size:0.85rem; color:var(--brand-muted); }
     .building-name { font-weight:700; font-size:0.97rem; color:var(--brand-ink); }
     .building-code {
       font-family:monospace; font-size:0.8rem; color:var(--brand-muted);
@@ -132,7 +136,8 @@ export class UnitsPageComponent implements OnInit {
         this.groups = [...grouped.entries()]
           .map(([bid, us]) => ({
             building: buildingMap.get(bid) ?? { id: bid, name: us[0].buildingName, code: '', companyId: '', condominiumId: null, condominiumName: '', address: '', isActive: true, blockOverdueAmenityReservations: false, invoicingMode: 'Preimpresa' as const },
-            units: us.sort((a, b) => a.code.localeCompare(b.code))
+            units: us.sort((a, b) => a.code.localeCompare(b.code)),
+            expanded: true
           }))
           .sort((a, b) => a.building.name.localeCompare(b.building.name));
 
