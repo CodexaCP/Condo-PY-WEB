@@ -1044,7 +1044,11 @@ export interface MorosityItem {
   isOccupied: boolean;
   responsibleType: string;
   responsibleName: string;
+  responsiblePhone: string;
+  responsibleEmail: string;
   ownerName: string;
+  ownerPhone: string;
+  ownerEmail: string;
   agingBucket: string;
 }
 
