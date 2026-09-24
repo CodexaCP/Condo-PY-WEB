@@ -42,8 +42,5 @@ testem.log
 .DS_Store
 Thumbs.db
 angular.json
-angular.json
 public/assets/config.json
 src/assets/config.json
-public/assets/config.json
-public/assets/config.json
