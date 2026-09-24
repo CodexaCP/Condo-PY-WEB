@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, OnDestroy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
 import { finalize } from 'rxjs';
@@ -72,6 +72,22 @@ import { homeRoute } from '../../auth/auth.guard';
                         del edificio en una plataforma diseñada para brindar
                         <strong>transparencia, orden y tranquilidad.</strong>
                     </p>
+                </div>
+
+                <!-- Reel: mockup con capturas reales de la plataforma -->
+                <div class="lp-reel">
+                    <div class="lp-reel-glow"></div>
+                    <div class="lp-reel-frame">
+                        <div class="lp-reel-bar">
+                            <span></span><span></span><span></span>
+                        </div>
+                        <div class="lp-reel-screen">
+                            @for (shot of reelShots; track shot; let i = $index) {
+                                <img [src]="shot" [class.active]="i === reelIndex" alt="" />
+                            }
+                            <div class="lp-reel-scan"></div>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Divisor -->
@@ -209,9 +225,94 @@ import { homeRoute } from '../../auth/auth.guard';
         .lp-forgot-row { display: flex; justify-content: flex-end; margin: -0.5rem 0 1.25rem; }
         .lp-forgot-row a { font-size: 0.82rem; color: var(--brand-blue, #1385b6); text-decoration: none; }
         .lp-forgot-row a:hover { text-decoration: underline; }
+
+        .lp-reel {
+            position: relative;
+            margin: 1.5rem 0;
+            display: flex;
+            justify-content: center;
+        }
+        .lp-reel-glow {
+            position: absolute;
+            inset: -20px;
+            background: radial-gradient(circle, rgba(26,183,175,0.35) 0%, rgba(19,133,182,0.15) 45%, transparent 75%);
+            filter: blur(28px);
+            animation: lp-glow-pulse 4s ease-in-out infinite;
+            pointer-events: none;
+        }
+        @keyframes lp-glow-pulse {
+            0%, 100% { opacity: 0.7; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.05); }
+        }
+        .lp-reel-frame {
+            position: relative;
+            width: 100%;
+            max-width: 420px;
+            border-radius: 16px;
+            overflow: hidden;
+            background: rgba(10,30,40,0.55);
+            border: 1px solid rgba(255,255,255,0.18);
+            box-shadow: 0 20px 60px rgba(0,0,0,0.35), 0 0 0 1px rgba(26,183,175,0.15);
+            backdrop-filter: blur(6px);
+            animation: lp-reel-float 6s ease-in-out infinite;
+        }
+        @keyframes lp-reel-float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-8px); }
+        }
+        .lp-reel-bar {
+            display: flex;
+            gap: 6px;
+            padding: 0.6rem 0.75rem;
+            background: rgba(255,255,255,0.06);
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        .lp-reel-bar span {
+            width: 9px; height: 9px; border-radius: 50%;
+            background: rgba(255,255,255,0.25);
+        }
+        .lp-reel-bar span:nth-child(1) { background: #ef4444; opacity: 0.7; }
+        .lp-reel-bar span:nth-child(2) { background: #f59e0b; opacity: 0.7; }
+        .lp-reel-bar span:nth-child(3) { background: #22c55e; opacity: 0.7; }
+        .lp-reel-screen {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 16 / 9;
+            overflow: hidden;
+        }
+        .lp-reel-screen img {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            object-position: top;
+            opacity: 0;
+            transform: scale(1.02);
+            transition: opacity 1.1s ease, transform 6s ease;
+        }
+        .lp-reel-screen img.active {
+            opacity: 1;
+            transform: scale(1);
+        }
+        .lp-reel-scan {
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(180deg, transparent 0%, rgba(26,183,175,0.12) 50%, transparent 100%);
+            background-size: 100% 200%;
+            animation: lp-scan 3.5s linear infinite;
+            pointer-events: none;
+        }
+        @keyframes lp-scan {
+            0% { background-position: 0 -100%; }
+            100% { background-position: 0 200%; }
+        }
+        @media (max-width: 1024px) {
+            .lp-reel { display: none; }
+        }
     `]
 })
-export class Login {
+export class Login implements OnDestroy {
     private readonly auth = inject(AuthService);
     private readonly router = inject(Router);
 
@@ -219,6 +320,25 @@ export class Login {
     password = '';
     errorMessage = '';
     isSubmitting = false;
+
+    reelShots = [
+        'assets/login-reel/dashboard.png',
+        'assets/login-reel/facturas.png',
+        'assets/login-reel/pago.png',
+        'assets/login-reel/periodos.png'
+    ];
+    reelIndex = 0;
+    private reelTimer?: ReturnType<typeof setInterval>;
+
+    constructor() {
+        this.reelTimer = setInterval(() => {
+            this.reelIndex = (this.reelIndex + 1) % this.reelShots.length;
+        }, 3200);
+    }
+
+    ngOnDestroy(): void {
+        if (this.reelTimer) clearInterval(this.reelTimer);
+    }
 
     submit(): void {
         if (!this.email || !this.password) {
