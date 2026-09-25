@@ -652,6 +652,7 @@ export interface InvoiceSeries {
 export interface FieldOffset {
   dx: number;
   dy: number;
+  fontSize?: number | null;
 }
 
 export interface UpdateInvoiceSeriesCalibrationRequest {

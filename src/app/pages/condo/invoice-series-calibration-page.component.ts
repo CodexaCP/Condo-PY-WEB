@@ -21,28 +21,29 @@ interface CalibField {
   sample: string;
   x: number; // punto PDF, origen abajo-izquierda (igual que InvoicePdfDocument)
   y: number;
+  defaultFontSize: number; // debe coincidir con el tamano por defecto en InvoicePdfDocument.cs
 }
 
-// Mismas keys y coordenadas base que usa InvoicePdfDocument.cs — si se agrega un campo calibrable ahi,
-// hay que agregarlo aca tambien para poder arrastrarlo.
+// Mismas keys, coordenadas y tamanos base que usa InvoicePdfDocument.cs — si se agrega un campo
+// calibrable ahi, hay que agregarlo aca tambien para poder arrastrarlo.
 const FIELDS: CalibField[] = [
-  { key: 'headerEdificio', label: 'Edificio', sample: 'EDIFICIO DE EJEMPLO', x: 48, y: 758 },
-  { key: 'headerEmisor', label: 'Razón social / dirección / tel.', sample: 'RAZÓN SOCIAL — Dirección — Tel.', x: 182, y: 784 },
-  { key: 'headerTimbradoNumero', label: 'N° de timbrado', sample: 'TIMBRADO N°12345678', x: 362.8346, y: 795 },
-  { key: 'vigenciaDesde', label: 'Vigencia desde', sample: 'Fecha Inicio Vigencia:01/01/2026', x: 362.8346, y: 783 },
-  { key: 'vigenciaHasta', label: 'Vigencia hasta', sample: 'Fecha Fin Vigencia:01/01/2027', x: 362.8346, y: 773 },
-  { key: 'seriesRuc', label: 'RUC emisor', sample: 'RUC:80012345-6', x: 362.8346, y: 760 },
-  { key: 'docTitulo', label: 'Título "FACTURA"', sample: 'FACTURA', x: 362.8346, y: 738 },
-  { key: 'headerNumero', label: 'N° de factura', sample: 'N° 001-001-0000123', x: 362.8346, y: 712 },
-  { key: 'fechaEmision', label: 'Fecha de emisión', sample: '23 DE SEPTIEMBRE DE 2026', x: 148, y: 645 },
-  { key: 'clienteNombre', label: 'Nombre del cliente', sample: 'CLIENTE DE EJEMPLO', x: 172, y: 619 },
-  { key: 'clienteDocumento', label: 'RUC / C.I. del cliente', sample: '1234567', x: 497, y: 619 },
-  { key: 'unidad', label: 'Unidad', sample: '01-01', x: 420, y: 593 },
-  { key: 'conceptosBloque', label: 'Bloque de conceptos (todo junto)', sample: 'EXPENSAS CORRESPONDIENTE AL MES DE...', x: 76, y: 510 },
-  { key: 'vencimiento', label: 'Vencimiento', sample: 'Vto. 15/10/2026.', x: 76, y: 262 },
-  { key: 'subtotal', label: 'Subtotal', sample: '576.802', x: 328.8189, y: 226 },
-  { key: 'totalPagar', label: 'Total a pagar', sample: '576.802', x: 493.2283, y: 203 },
-  { key: 'sonEnLetras', label: 'Total en letras ("Son:")', sample: 'GUARANIES QUINIENTOS SETENTA Y SEIS MIL...', x: 82, y: 156 }
+  { key: 'headerEdificio', label: 'Edificio', sample: 'EDIFICIO DE EJEMPLO', x: 48, y: 758, defaultFontSize: 15 },
+  { key: 'headerEmisor', label: 'Razón social / dirección / tel.', sample: 'RAZÓN SOCIAL — Dirección — Tel.', x: 182, y: 784, defaultFontSize: 10 },
+  { key: 'headerTimbradoNumero', label: 'N° de timbrado', sample: 'TIMBRADO N°12345678', x: 362.8346, y: 795, defaultFontSize: 9.5 },
+  { key: 'vigenciaDesde', label: 'Vigencia desde', sample: 'Fecha Inicio Vigencia:01/01/2026', x: 362.8346, y: 783, defaultFontSize: 7.5 },
+  { key: 'vigenciaHasta', label: 'Vigencia hasta', sample: 'Fecha Fin Vigencia:01/01/2027', x: 362.8346, y: 773, defaultFontSize: 7.5 },
+  { key: 'seriesRuc', label: 'RUC emisor', sample: 'RUC:80012345-6', x: 362.8346, y: 760, defaultFontSize: 10.5 },
+  { key: 'docTitulo', label: 'Título "FACTURA"', sample: 'FACTURA', x: 362.8346, y: 738, defaultFontSize: 19 },
+  { key: 'headerNumero', label: 'N° de factura', sample: 'N° 001-001-0000123', x: 362.8346, y: 712, defaultFontSize: 14 },
+  { key: 'fechaEmision', label: 'Fecha de emisión', sample: '23 DE SEPTIEMBRE DE 2026', x: 148, y: 645, defaultFontSize: 8.5 },
+  { key: 'clienteNombre', label: 'Nombre del cliente', sample: 'CLIENTE DE EJEMPLO', x: 172, y: 619, defaultFontSize: 9 },
+  { key: 'clienteDocumento', label: 'RUC / C.I. del cliente', sample: '1234567', x: 497, y: 619, defaultFontSize: 9 },
+  { key: 'unidad', label: 'Unidad', sample: '01-01', x: 420, y: 593, defaultFontSize: 9 },
+  { key: 'conceptosBloque', label: 'Bloque de conceptos (todo junto)', sample: 'EXPENSAS CORRESPONDIENTE AL MES DE...', x: 76, y: 510, defaultFontSize: 8.5 },
+  { key: 'vencimiento', label: 'Vencimiento', sample: 'Vto. 15/10/2026.', x: 76, y: 262, defaultFontSize: 8.5 },
+  { key: 'subtotal', label: 'Subtotal', sample: '576.802', x: 328.8189, y: 226, defaultFontSize: 8.5 },
+  { key: 'totalPagar', label: 'Total a pagar', sample: '576.802', x: 493.2283, y: 203, defaultFontSize: 9.5 },
+  { key: 'sonEnLetras', label: 'Total en letras ("Son:")', sample: 'GUARANIES QUINIENTOS SETENTA Y SEIS MIL...', x: 82, y: 156, defaultFontSize: 8.5 }
 ];
 
 const PAGE_W_PT = 595.2756;
@@ -95,6 +96,7 @@ const SCALE = 0.72; // px por punto PDF
 
           <div class="calib-field" *ngFor="let f of fields"
                [style.left.px]="screenX(f)" [style.top.px]="screenY(f)"
+               [style.fontSize.px]="fontSizeOf(f) * SCALE"
                [class.dragging]="draggingKey === f.key"
                (mousedown)="startDrag(f, $event)">
             {{ f.sample }}
@@ -105,6 +107,14 @@ const SCALE = 0.72; // px por punto PDF
           <div class="calib-row" *ngFor="let f of fields">
             <span class="calib-row-label">{{ f.label }}</span>
             <span class="calib-row-offset">dx {{ (offsets[f.key]?.dx ?? 0) | number:'1.0-1' }} · dy {{ (offsets[f.key]?.dy ?? 0) | number:'1.0-1' }} pt</span>
+            <span class="calib-row-fontsize">
+              letra
+              <button type="button" class="font-step" (click)="stepFontSize(f, -0.5)">−</button>
+              <input type="number" step="0.5" min="4" max="60" class="font-input"
+                     [ngModel]="fontSizeOf(f)" (ngModelChange)="setFontSize(f, $event)" [ngModelOptions]="{ standalone: true }" />
+              <button type="button" class="font-step" (click)="stepFontSize(f, 0.5)">+</button>
+              pt
+            </span>
           </div>
         </div>
       </ng-container>
@@ -155,9 +165,19 @@ const SCALE = 0.72; // px por punto PDF
     }
     .calib-field.dragging { cursor: grabbing; background: rgba(19,133,182,0.25); z-index: 10; }
     .calib-list { display: grid; gap: 0.25rem; }
-    .calib-row { display: flex; justify-content: space-between; padding: 0.35rem 0.6rem; border-bottom: 1px solid #eef3f2; font-size: 0.82rem; }
+    .calib-row { display: flex; justify-content: space-between; align-items: center; padding: 0.35rem 0.6rem; border-bottom: 1px solid #eef3f2; font-size: 0.82rem; gap: 0.75rem; }
     .calib-row-label { color: #29484f; font-weight: 600; }
     .calib-row-offset { color: #6b878d; font-variant-numeric: tabular-nums; }
+    .calib-row-fontsize { display: flex; align-items: center; gap: 0.3rem; color: #6b878d; white-space: nowrap; }
+    .font-step {
+      width: 20px; height: 20px; border-radius: 4px; border: 1px solid #d7e5e1; background: #fff;
+      color: #29484f; font-weight: 700; line-height: 1; cursor: pointer; padding: 0;
+    }
+    .font-step:hover { border-color: #1385b6; }
+    .font-input {
+      width: 44px; text-align: center; border: 1px solid #d7e5e1; border-radius: 4px;
+      padding: 0.15rem 0.2rem; font-size: 0.8rem; font-variant-numeric: tabular-nums;
+    }
   `]
 })
 export class InvoiceSeriesCalibrationPageComponent implements OnInit {
@@ -174,6 +194,7 @@ export class InvoiceSeriesCalibrationPageComponent implements OnInit {
   readonly fields = FIELDS;
   readonly canvasW = Math.round(PAGE_W_PT * SCALE);
   readonly canvasH = Math.round(PAGE_H_PT * SCALE);
+  readonly SCALE = SCALE;
 
   series: InvoiceSeries | null = null;
   loading = true;
@@ -230,6 +251,21 @@ export class InvoiceSeriesCalibrationPageComponent implements OnInit {
   screenY(f: CalibField): number {
     const o = this.offsets[f.key];
     return (PAGE_H_PT - (f.y + (o?.dy ?? 0))) * SCALE;
+  }
+
+  fontSizeOf(f: CalibField): number {
+    return this.offsets[f.key]?.fontSize ?? f.defaultFontSize;
+  }
+
+  setFontSize(f: CalibField, value: number): void {
+    if (!value || value <= 0) return;
+    const o = this.offsets[f.key];
+    this.offsets = { ...this.offsets, [f.key]: { dx: o?.dx ?? 0, dy: o?.dy ?? 0, fontSize: value } };
+  }
+
+  stepFontSize(f: CalibField, delta: number): void {
+    const next = Math.max(4, Math.round((this.fontSizeOf(f) + delta) * 2) / 2);
+    this.setFontSize(f, next);
   }
 
   startDrag(field: CalibField, event: MouseEvent): void {
