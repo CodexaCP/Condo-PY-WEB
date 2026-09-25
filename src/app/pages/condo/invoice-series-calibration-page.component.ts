@@ -308,7 +308,8 @@ export class InvoiceSeriesCalibrationPageComponent implements OnInit {
     const deltaYPx = event.clientY - this.dragStartY;
     const dx = this.dragBaseDx + deltaXPx / SCALE;
     const dy = this.dragBaseDy - deltaYPx / SCALE; // pantalla abajo = Y de PDF decrece
-    this.offsets = { ...this.offsets, [this.draggingField.key]: { dx, dy } };
+    const fontSize = this.offsets[this.draggingField.key]?.fontSize;
+    this.offsets = { ...this.offsets, [this.draggingField.key]: { dx, dy, fontSize } };
     this.cdr.markForCheck();
   }
 
