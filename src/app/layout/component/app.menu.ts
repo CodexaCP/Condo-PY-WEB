@@ -114,6 +114,12 @@ export class AppMenu {
                     ]
                 },
                 {
+                    label: 'Reportes',
+                    items: [
+                        { label: 'Libro de movimientos', icon: 'pi pi-fw pi-book', routerLink: ['/reportes/libro-movimientos'] }
+                    ]
+                },
+                {
                     label: 'Comunicados',
                     items: [
                         { label: 'Notificaciones', icon: 'pi pi-fw pi-bell', routerLink: ['/notificaciones'] },

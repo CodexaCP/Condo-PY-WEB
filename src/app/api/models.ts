@@ -1130,6 +1130,31 @@ export interface CollectionReport {
   items: CollectionItem[];
 }
 
+export type LibroMovimientoType = 'Cobro' | 'IngresoEdificio' | 'GastoEdificio';
+
+export interface LibroMovimientoItem {
+  date: string;
+  type: LibroMovimientoType;
+  description: string;
+  unitCode: string | null;
+  reference: string | null;
+  credit: number;
+  debit: number;
+  runningBalance: number;
+}
+
+export interface LibroMovimientosReport {
+  buildingId: string;
+  buildingName: string;
+  fromDate: string;
+  toDate: string;
+  openingBalance: number;
+  totalCredits: number;
+  totalDebits: number;
+  closingBalance: number;
+  items: LibroMovimientoItem[];
+}
+
 export interface Owner {
   id: string;
   companyId: string | null;

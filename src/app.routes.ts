@@ -190,6 +190,12 @@ export const appRoutes: Routes = [
                 loadComponent: () => import('./app/pages/condo/collections-page.component').then(m => m.CollectionsPageComponent)
             },
 
+            // ── Reportes ──────────────────────────────────────────────────
+            {
+                path: 'reportes/libro-movimientos',
+                loadComponent: () => import('./app/pages/condo/reportes-libro-movimientos-page.component').then(m => m.ReportesLibroMovimientosPageComponent)
+            },
+
             // ── Notificaciones ────────────────────────────────────────────
             {
                 path: 'notificaciones',
