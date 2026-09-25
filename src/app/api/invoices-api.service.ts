@@ -2,7 +2,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { API_BASE_URL } from '../config/api.config';
-import { Invoice, InvoiceLedger, InvoiceLedgerQuery, InvoiceStatus } from './models';
+import { Invoice, InvoiceFunnel, InvoiceLedger, InvoiceLedgerQuery, InvoiceStatus } from './models';
 
 @Injectable({ providedIn: 'root' })
 export class InvoicesApiService {
@@ -49,5 +49,12 @@ export class InvoicesApiService {
 
   getPdfUrl(id: string, token: string): string {
     return `${API_BASE_URL}/invoices/${id}/pdf?access_token=${token}`;
+  }
+
+  // Embudo de facturación: pagos sin ninguna factura, borradores sin emitir, y emitidas.
+  getFunnel(buildingId?: string): Observable<InvoiceFunnel> {
+    let params = new HttpParams();
+    if (buildingId) params = params.set('buildingId', buildingId);
+    return this.http.get<InvoiceFunnel>(`${API_BASE_URL}/invoices/funnel`, { params });
   }
 }

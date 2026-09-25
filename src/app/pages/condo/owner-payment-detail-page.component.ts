@@ -119,14 +119,16 @@ const STATUS_SEVERITY: Record<string, 'warn' | 'info' | 'success' | 'danger' | '
           </div>
         </div>
 
-        <!-- Facturación: una factura por unidad con todo lo aplicado (capital + mora) -->
+        <!-- Facturación: una factura por unidad con todo lo aplicado (capital + mora). El borrador se
+             genera solo al aprobar el pago; este botón queda como respaldo manual para el caso raro de
+             que falte alguno (p.ej. un edificio fuera del alcance del usuario que aprobó). -->
         <div class="form-section action-section" *ngIf="payment.status === 'Approved' && canInvoice">
           <h3>Facturación</h3>
           <p class="action-hint">
-            Prepara un borrador de factura por comprobante (unidad y período) con lo que cubrió este pago (expensas y mora).
+            Las facturas (una por comprobante: unidad y período) se preparan automáticamente al aprobar el pago.
             Desde aquí las emitís y, si hace falta, las anulás. Para consultar todas las facturas, entrá a Facturación → Facturas.
           </p>
-          <div class="action-buttons">
+          <div class="action-buttons" *ngIf="paymentInvoices.length === 0">
             <p-button
               label="Generar facturas"
               icon="pi pi-file-edit"
@@ -714,7 +716,8 @@ export class OwnerPaymentDetailPageComponent implements OnInit {
         next: updated => {
           this.payment = updated;
           this.saving  = false;
-          this.msgSvc.add({ severity: 'success', summary: 'Pago aprobado', detail: 'La deuda ha sido liquidada automáticamente.' });
+          this.msgSvc.add({ severity: 'success', summary: 'Pago aprobado', detail: 'La deuda fue liquidada y las facturas quedaron preparadas como borrador.' });
+          this.loadPaymentInvoices();
           this.cdr.markForCheck();
         },
         error: err => {

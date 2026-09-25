@@ -906,6 +906,23 @@ export interface InvoiceLedger {
   summary: InvoiceLedgerSummary;
 }
 
+export interface InvoiceFunnelPaymentItem {
+  paymentId: string;
+  buildingId: string;
+  buildingName: string;
+  unitCode: string;
+  amount: number;
+  paymentDate: string;
+  reference: string;
+}
+
+export interface InvoiceFunnel {
+  paymentsWithoutInvoice: number;
+  draftsNotEmitted: number;
+  issued: number;
+  paymentsWithoutInvoiceItems: InvoiceFunnelPaymentItem[];
+}
+
 export interface AccountStatementPeriod {
   expensePeriodId: string;
   expensePeriodName: string;
