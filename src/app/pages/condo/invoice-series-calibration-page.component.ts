@@ -90,20 +90,30 @@ const SCALE = 0.72; // px por punto PDF
           Mi papel ya tiene su propio marco y casillas impresas — no dibujar el marco del sistema, solo el texto.
         </label>
 
-        <div class="calib-canvas" [style.width.px]="canvasW" [style.height.px]="canvasH">
-          <img *ngIf="referenceScanUrl && !isPdf" [src]="resolvedScanUrl" class="calib-bg" [style.width.px]="canvasW" [style.height.px]="canvasH" alt="Papel preimpreso" />
-          <iframe *ngIf="referenceScanUrl && isPdf" [src]="resolvedScanUrlSafe" class="calib-bg" [style.width.px]="canvasW" [style.height.px]="canvasH" title="Papel preimpreso"></iframe>
+        <div class="calib-workspace">
+          <div class="calib-list calib-side">
+            <ng-container *ngTemplateOutlet="rowTpl; context: { fields: leftFields }"></ng-container>
+          </div>
 
-          <div class="calib-field" *ngFor="let f of fields"
-               [style.left.px]="screenX(f)" [style.top.px]="screenY(f)"
-               [style.fontSize.px]="fontSizeOf(f) * SCALE"
-               [class.dragging]="draggingKey === f.key"
-               (mousedown)="startDrag(f, $event)">
-            {{ f.sample }}
+          <div class="calib-canvas" [style.width.px]="canvasW" [style.height.px]="canvasH">
+            <img *ngIf="referenceScanUrl && !isPdf" [src]="resolvedScanUrl" class="calib-bg" [style.width.px]="canvasW" [style.height.px]="canvasH" alt="Papel preimpreso" />
+            <iframe *ngIf="referenceScanUrl && isPdf" [src]="resolvedScanUrlSafe" class="calib-bg" [style.width.px]="canvasW" [style.height.px]="canvasH" title="Papel preimpreso"></iframe>
+
+            <div class="calib-field" *ngFor="let f of fields"
+                 [style.left.px]="screenX(f)" [style.top.px]="screenY(f)"
+                 [style.fontSize.px]="fontSizeOf(f) * SCALE"
+                 [class.dragging]="draggingKey === f.key"
+                 (mousedown)="startDrag(f, $event)">
+              {{ f.sample }}
+            </div>
+          </div>
+
+          <div class="calib-list calib-side">
+            <ng-container *ngTemplateOutlet="rowTpl; context: { fields: rightFields }"></ng-container>
           </div>
         </div>
 
-        <div class="calib-list">
+        <ng-template #rowTpl let-fields="fields">
           <div class="calib-row" *ngFor="let f of fields">
             <span class="calib-row-label">{{ f.label }}</span>
             <span class="calib-row-offset">dx {{ (offsets[f.key]?.dx ?? 0) | number:'1.0-1' }} · dy {{ (offsets[f.key]?.dy ?? 0) | number:'1.0-1' }} pt</span>
@@ -116,7 +126,7 @@ const SCALE = 0.72; // px por punto PDF
               pt
             </span>
           </div>
-        </div>
+        </ng-template>
       </ng-container>
     </p-card>
   `,
@@ -137,12 +147,13 @@ const SCALE = 0.72; // px por punto PDF
       margin-bottom: 1rem; cursor: pointer;
     }
     .hide-frame-check input { width: auto; }
+    .calib-workspace { display: flex; align-items: flex-start; justify-content: center; gap: 1.25rem; margin-bottom: 1.25rem; }
     .calib-canvas {
       position: relative;
       background: #fff;
       border: 1.5px solid #d7e5e1;
       border-radius: 6px;
-      margin: 0 auto 1.25rem;
+      flex: none;
       overflow: hidden;
       box-shadow: 0 2px 10px rgba(0,0,0,0.06);
     }
@@ -165,7 +176,11 @@ const SCALE = 0.72; // px por punto PDF
     }
     .calib-field.dragging { cursor: grabbing; background: rgba(19,133,182,0.25); z-index: 10; }
     .calib-list { display: grid; gap: 0.25rem; }
-    .calib-row { display: flex; justify-content: space-between; align-items: center; padding: 0.35rem 0.6rem; border-bottom: 1px solid #eef3f2; font-size: 0.82rem; gap: 0.75rem; }
+    .calib-side { flex: 1 1 0; min-width: 0; max-width: 250px; align-self: stretch; }
+    .calib-row {
+      display: flex; flex-direction: column; align-items: flex-start; gap: 0.15rem;
+      padding: 0.4rem 0.5rem; border-bottom: 1px solid #eef3f2; font-size: 0.78rem;
+    }
     .calib-row-label { color: #29484f; font-weight: 600; }
     .calib-row-offset { color: #6b878d; font-variant-numeric: tabular-nums; }
     .calib-row-fontsize { display: flex; align-items: center; gap: 0.3rem; color: #6b878d; white-space: nowrap; }
@@ -177,6 +192,10 @@ const SCALE = 0.72; // px por punto PDF
     .font-input {
       width: 44px; text-align: center; border: 1px solid #d7e5e1; border-radius: 4px;
       padding: 0.15rem 0.2rem; font-size: 0.8rem; font-variant-numeric: tabular-nums;
+    }
+    @media (max-width: 1000px) {
+      .calib-workspace { flex-direction: column; align-items: center; }
+      .calib-side { max-width: 100%; width: 100%; }
     }
   `]
 })
@@ -192,6 +211,8 @@ export class InvoiceSeriesCalibrationPageComponent implements OnInit {
   private readonly sanitizer = inject(DomSanitizer);
 
   readonly fields = FIELDS;
+  readonly leftFields = FIELDS.slice(0, Math.ceil(FIELDS.length / 2));
+  readonly rightFields = FIELDS.slice(Math.ceil(FIELDS.length / 2));
   readonly canvasW = Math.round(PAGE_W_PT * SCALE);
   readonly canvasH = Math.round(PAGE_H_PT * SCALE);
   readonly SCALE = SCALE;
