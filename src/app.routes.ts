@@ -195,6 +195,10 @@ export const appRoutes: Routes = [
                 path: 'reportes/libro-movimientos',
                 loadComponent: () => import('./app/pages/condo/reportes-libro-movimientos-page.component').then(m => m.ReportesLibroMovimientosPageComponent)
             },
+            {
+                path: 'reportes/estado-resultados',
+                loadComponent: () => import('./app/pages/condo/reportes-estado-resultados-page.component').then(m => m.ReportesEstadoResultadosPageComponent)
+            },
 
             // ── Notificaciones ────────────────────────────────────────────
             {

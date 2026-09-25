@@ -1155,6 +1155,23 @@ export interface LibroMovimientosReport {
   items: LibroMovimientoItem[];
 }
 
+export interface EstadoResultadosLine {
+  label: string;
+  amount: number;
+}
+
+export interface EstadoResultadosReport {
+  buildingId: string;
+  buildingName: string;
+  fromDate: string;
+  toDate: string;
+  incomeLines: EstadoResultadosLine[];
+  totalIncome: number;
+  expenseLines: EstadoResultadosLine[];
+  totalExpense: number;
+  netResult: number;
+}
+
 export interface Owner {
   id: string;
   companyId: string | null;
