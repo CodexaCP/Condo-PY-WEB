@@ -119,6 +119,9 @@ export class ReportesComparativoEdificiosPageComponent implements OnInit {
   }
 
   loadReport(): void {
+    // El input nativo de fecha emite valores vacios mientras el usuario todavia esta
+    // escribiendo un segmento (dia/mes/anio) — no disparar el pedido hasta tener ambas fechas completas.
+    if (!this.fromDate || !this.toDate) return;
     this.loading = true;
     this.comparisonApi.getReport(this.buildFilters())
       .pipe(takeUntilDestroyed(this.destroyRef))

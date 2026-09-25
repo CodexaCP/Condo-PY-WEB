@@ -208,7 +208,9 @@ export class ReportesLibroMovimientosPageComponent implements OnInit {
   }
 
   loadReport(): void {
-    if (!this.buildingId) return;
+    // El input nativo de fecha emite valores vacios mientras el usuario todavia esta
+    // escribiendo un segmento (dia/mes/anio) — no disparar el pedido hasta tener ambas fechas completas.
+    if (!this.buildingId || !this.fromDate || !this.toDate) return;
     this.loading = true;
     this.libroMovimientosApi.getReport(this.buildFilters())
       .pipe(takeUntilDestroyed(this.destroyRef))
