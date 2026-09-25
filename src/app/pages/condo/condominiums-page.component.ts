@@ -28,7 +28,7 @@ import { AuthService } from '../../auth/auth.service';
             <p>Agrupacion opcional de edificios para operaciones medianas o grandes.</p>
           </div>
         </div>
-        <p-button label="Nuevo condominio" icon="pi pi-plus" (onClick)="goToCreate()"></p-button>
+        <p-button *ngIf="isSuperAdmin" label="Nuevo condominio" icon="pi pi-plus" (onClick)="goToCreate()"></p-button>
       </div>
 
       <p-message *ngIf="pageError" severity="error" [text]="pageError"></p-message>
