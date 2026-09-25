@@ -199,6 +199,10 @@ export const appRoutes: Routes = [
                 path: 'reportes/estado-resultados',
                 loadComponent: () => import('./app/pages/condo/reportes-estado-resultados-page.component').then(m => m.ReportesEstadoResultadosPageComponent)
             },
+            {
+                path: 'reportes/comparativo-edificios',
+                loadComponent: () => import('./app/pages/condo/reportes-comparativo-edificios-page.component').then(m => m.ReportesComparativoEdificiosPageComponent)
+            },
 
             // ── Notificaciones ────────────────────────────────────────────
             {

@@ -1172,6 +1172,22 @@ export interface EstadoResultadosReport {
   netResult: number;
 }
 
+export interface BuildingComparisonItem {
+  buildingId: string;
+  buildingName: string;
+  totalCollected: number;
+  totalExpenses: number;
+  netResult: number;
+  overdueAmount: number;
+  unitsWithOverdueBalance: number;
+}
+
+export interface BuildingComparisonReport {
+  fromDate: string;
+  toDate: string;
+  items: BuildingComparisonItem[];
+}
+
 export interface Owner {
   id: string;
   companyId: string | null;
