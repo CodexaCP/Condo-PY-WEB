@@ -93,7 +93,7 @@ function today(): string {
               </tr>
             </thead>
             <tbody>
-              <tr *ngFor="let item of report.items">
+              <tr *ngFor="let item of pagedItems">
                 <td>{{ item.date | date:'dd/MM/yyyy' }}</td>
                 <td><span class="type-chip" [class]="typeClass(item.type)">{{ typeLabel(item.type) }}</span></td>
                 <td>{{ item.description }}</td>
@@ -105,6 +105,12 @@ function today(): string {
               </tr>
             </tbody>
           </table>
+
+          <div class="pager" *ngIf="report.items.length > pageSize">
+            <p-button icon="pi pi-angle-left" [text]="true" [disabled]="page === 1" (onClick)="prevPage()"></p-button>
+            <span>Página {{ page }} de {{ totalPages }} · {{ report.items.length }} movimientos</span>
+            <p-button icon="pi pi-angle-right" [text]="true" [disabled]="page >= totalPages" (onClick)="nextPage()"></p-button>
+          </div>
         </div>
       </ng-container>
     </p-card>
@@ -138,6 +144,8 @@ function today(): string {
 
     .app-state { color: var(--brand-muted); padding: 1rem 0; }
 
+    .pager { display: flex; align-items: center; justify-content: center; gap: 0.75rem; margin-top: 0.9rem; font-size: 0.85rem; color: var(--brand-muted); }
+
     @media (max-width: 980px) { .stats-grid { grid-template-columns: 1fr 1fr; } }
     @media (max-width: 640px) { .stats-grid { grid-template-columns: 1fr; } }
   `]
@@ -157,9 +165,26 @@ export class ReportesLibroMovimientosPageComponent implements OnInit {
   report: LibroMovimientosReport | null = null;
   loading = false;
 
+  readonly pageSize = 50;
+  page = 1;
+
   get canExport(): boolean {
     return !!(this.buildingId && this.report && this.report.items.length > 0);
   }
+
+  get totalPages(): number {
+    if (!this.report) return 1;
+    return Math.max(1, Math.ceil(this.report.items.length / this.pageSize));
+  }
+
+  get pagedItems(): LibroMovimientosReport['items'] {
+    if (!this.report) return [];
+    const start = (this.page - 1) * this.pageSize;
+    return this.report.items.slice(start, start + this.pageSize);
+  }
+
+  prevPage(): void { if (this.page > 1) this.page--; }
+  nextPage(): void { if (this.page < this.totalPages) this.page++; }
 
   ngOnInit(): void {
     this.buildingsApi.getAll().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
@@ -188,7 +213,7 @@ export class ReportesLibroMovimientosPageComponent implements OnInit {
     this.libroMovimientosApi.getReport(this.buildFilters())
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: report => { this.report = report; this.loading = false; this.cdr.markForCheck(); },
+        next: report => { this.report = report; this.page = 1; this.loading = false; this.cdr.markForCheck(); },
         error: error => {
           this.loading = false;
           this.msg.add({ severity: 'error', summary: 'Error', detail: extractApiErrorMessage(error, 'No se pudo generar el libro de movimientos.'), life: 5000 });
