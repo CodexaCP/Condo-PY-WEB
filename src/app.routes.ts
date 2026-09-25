@@ -153,6 +153,10 @@ export const appRoutes: Routes = [
                 path: 'credit-notes',
                 loadComponent: () => import('./app/pages/condo/credit-notes-page.component').then(m => m.CreditNotesPageComponent)
             },
+            {
+                path: 'unbilled-payments',
+                loadComponent: () => import('./app/pages/condo/unbilled-payments-page.component').then(m => m.UnbilledPaymentsPageComponent)
+            },
 
             // ── Condo: Residentes ─────────────────────────────────────────
             {

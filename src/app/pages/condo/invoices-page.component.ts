@@ -17,7 +17,7 @@ import { InvoicesApiService } from '../../api/invoices-api.service';
 import { UnitsApiService } from '../../api/units-api.service';
 import { AuthService } from '../../auth/auth.service';
 import {
-  Building, Invoice, InvoiceFunnel, InvoiceLedger, InvoiceLedgerQuery, InvoiceLedgerRow, InvoiceStatus, Unit
+  Building, Invoice, InvoiceLedger, InvoiceLedgerQuery, InvoiceLedgerRow, InvoiceStatus, Unit
 } from '../../api/models';
 
 const STATUS_LABEL: Record<InvoiceStatus, string> = { Draft: 'Borrador', Issued: 'Emitida', Voided: 'Anulada' };
@@ -54,46 +54,6 @@ interface TimelineStep {
           label="Exportar CSV" icon="pi pi-download" severity="secondary" [outlined]="true"
           [loading]="exporting" [disabled]="!ledger || ledger.totalCount === 0" (onClick)="exportCsv()">
         </p-button>
-      </div>
-
-      <!-- Embudo de facturación: pagos que se quedaron sin factura, sin depender de que alguien lo note -->
-      <div class="funnel-section" *ngIf="funnel">
-        <h3 class="funnel-title">Embudo de facturación</h3>
-        <div class="kpi-grid">
-          <div class="kpi" [class.kpi-bad]="funnel.paymentsWithoutInvoice > 0">
-            <span class="kpi-label">Pagos sin factura</span>
-            <strong>{{ funnel.paymentsWithoutInvoice }}</strong>
-            <small>sin borrador ni emisión</small>
-          </div>
-          <div class="kpi kpi-warn">
-            <span class="kpi-label">Borradores sin emitir</span>
-            <strong>{{ funnel.draftsNotEmitted }}</strong>
-            <small>esperando timbrado</small>
-          </div>
-          <div class="kpi kpi-ok">
-            <span class="kpi-label">Emitidas</span>
-            <strong>{{ funnel.issued }}</strong>
-            <small>en todo el alcance</small>
-          </div>
-        </div>
-
-        <div class="funnel-gap" *ngIf="funnel.paymentsWithoutInvoiceItems.length > 0">
-          <p class="funnel-gap-hint">Estos pagos no tienen ninguna factura asociada — revisalos:</p>
-          <table class="funnel-gap-table">
-            <thead>
-              <tr><th>Edificio</th><th>Unidad</th><th>Fecha</th><th>Monto</th><th>Referencia</th></tr>
-            </thead>
-            <tbody>
-              <tr *ngFor="let item of funnel.paymentsWithoutInvoiceItems">
-                <td>{{ item.buildingName }}</td>
-                <td>{{ item.unitCode }}</td>
-                <td>{{ item.paymentDate | date:'dd/MM/yyyy' }}</td>
-                <td>{{ formatCurrency(item.amount) }}</td>
-                <td>{{ item.reference }}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
       </div>
 
       <!-- Resumen del filtro actual -->
@@ -351,14 +311,6 @@ interface TimelineStep {
     .kpi small { color: var(--brand-muted); font-size: 0.8rem; }
     .kpi-ok { border-left-color: #16a34a; } .kpi-warn { border-left-color: #f59e0b; } .kpi-bad { border-left-color: #dc2626; }
 
-    .funnel-section { margin-bottom: 1.4rem; padding-bottom: 1.1rem; border-bottom: 1px solid rgba(20,54,61,0.1); }
-    .funnel-title { font-size: 0.9rem; font-weight: 700; color: var(--brand-ink); margin: 0 0 0.6rem; }
-    .funnel-gap { margin-top: 0.75rem; background: #FEF2F2; border: 1px solid #FECACA; border-radius: 12px; padding: 0.75rem 0.9rem; }
-    .funnel-gap-hint { margin: 0 0 0.5rem; font-size: 0.82rem; color: #991B1B; font-weight: 600; }
-    .funnel-gap-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
-    .funnel-gap-table th { text-align: left; color: #7f1d1d; font-weight: 700; padding: 0.25rem 0.5rem; }
-    .funnel-gap-table td { padding: 0.25rem 0.5rem; border-top: 1px solid #FECACA; color: var(--brand-ink); }
-
     .filters-bar { display: flex; align-items: flex-end; gap: 0.85rem; flex-wrap: wrap; padding: 0.8rem 1rem; background: rgba(20,54,61,0.04); border: 1px solid rgba(20,54,61,0.1); border-radius: 14px; margin-bottom: 1.1rem; }
     .field-block { display: flex; flex-direction: column; gap: 0.3rem; min-width: 130px; }
     .field-block span { font-size: 0.72rem; font-weight: 700; color: var(--brand-muted); text-transform: uppercase; letter-spacing: 0.04em; }
@@ -448,7 +400,6 @@ export class InvoicesPageComponent implements OnInit {
   private readonly msg = inject(MessageService);
 
   ledger: InvoiceLedger | null = null;
-  funnel: InvoiceFunnel | null = null;
   buildings: Building[] = [];
   units: Unit[] = [];
   loading = true;
@@ -480,14 +431,6 @@ export class InvoicesPageComponent implements OnInit {
       });
 
     this.reload(false);
-    this.loadFunnel();
-  }
-
-  private loadFunnel(): void {
-    this.invoicesApi.getFunnel().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-      next: funnel => { this.funnel = funnel; this.cdr.markForCheck(); },
-      error: () => { /* el embudo es informativo; si falla, la lista de facturas igual carga */ }
-    });
   }
 
   // ─── Filtros / carga ─────────────────────────────────────────────────────
