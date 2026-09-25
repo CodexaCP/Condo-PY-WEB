@@ -52,9 +52,12 @@ export class InvoicesApiService {
   }
 
   // Embudo de facturación: pagos sin ninguna factura, borradores sin emitir, y emitidas.
-  getFunnel(buildingId?: string, page = 1, pageSize = 25): Observable<InvoiceFunnel> {
+  getFunnel(filters: { buildingId?: string; from?: string; to?: string; search?: string }, page = 1, pageSize = 25): Observable<InvoiceFunnel> {
     let params = new HttpParams().set('page', String(page)).set('pageSize', String(pageSize));
-    if (buildingId) params = params.set('buildingId', buildingId);
+    if (filters.buildingId) params = params.set('buildingId', filters.buildingId);
+    if (filters.from) params = params.set('from', filters.from);
+    if (filters.to) params = params.set('to', filters.to);
+    if (filters.search) params = params.set('search', filters.search);
     return this.http.get<InvoiceFunnel>(`${API_BASE_URL}/invoices/funnel`, { params });
   }
 }

@@ -2,8 +2,11 @@ import { CommonModule } from '@angular/common';
 import { ChangeDetectorRef, Component, DestroyRef, inject, OnInit } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
+import { Subject } from 'rxjs';
+import { debounceTime, distinctUntilChanged } from 'rxjs/operators';
 import { Button } from 'primeng/button';
 import { Card } from 'primeng/card';
+import * as XLSX from 'xlsx';
 import { extractApiErrorMessage } from '../../api/api-error.util';
 import { BuildingsApiService } from '../../api/buildings-api.service';
 import { InvoicesApiService } from '../../api/invoices-api.service';
@@ -26,8 +29,8 @@ const PAGE_SIZE = 25;
           </div>
         </div>
         <p-button
-          label="Exportar CSV" icon="pi pi-download" severity="secondary" [outlined]="true"
-          [loading]="exporting" [disabled]="!funnel || funnel.paymentsWithoutInvoice === 0" (onClick)="exportCsv()">
+          label="Exportar Excel" icon="pi pi-file-excel" severity="secondary" [outlined]="true"
+          [loading]="exporting" [disabled]="!funnel || funnel.paymentsWithoutInvoice === 0" (onClick)="exportExcel()">
         </p-button>
       </div>
 
@@ -35,7 +38,7 @@ const PAGE_SIZE = 25;
         <div class="kpi" [class.kpi-bad]="funnel.paymentsWithoutInvoice > 0">
           <span class="kpi-label">Pagos sin factura</span>
           <strong>{{ funnel.paymentsWithoutInvoice }}</strong>
-          <small>sin borrador ni emisión</small>
+          <small>en el filtro actual</small>
         </div>
         <div class="kpi kpi-warn">
           <span class="kpi-label">Borradores sin emitir</span>
@@ -45,11 +48,19 @@ const PAGE_SIZE = 25;
         <div class="kpi kpi-ok">
           <span class="kpi-label">Emitidas</span>
           <strong>{{ funnel.issued }}</strong>
-          <small>en el alcance filtrado</small>
+          <small>en el edificio filtrado</small>
         </div>
       </div>
 
       <div class="filters-bar">
+        <div class="field-block search-field">
+          <span>Buscar</span>
+          <div class="search-box">
+            <span class="pi pi-search"></span>
+            <input type="text" [(ngModel)]="search" name="fSearch" (ngModelChange)="onSearchInput($event)"
+                   placeholder="Referencia o unidad" />
+          </div>
+        </div>
         <div class="field-block">
           <span>Edificio</span>
           <select [(ngModel)]="buildingId" name="fBuilding" (ngModelChange)="reload()">
@@ -57,11 +68,21 @@ const PAGE_SIZE = 25;
             <option *ngFor="let b of buildings" [value]="b.id">{{ b.name }}</option>
           </select>
         </div>
+        <div class="field-block">
+          <span>Pago desde</span>
+          <input type="date" [(ngModel)]="from" name="fFrom" (ngModelChange)="reload()" />
+        </div>
+        <div class="field-block">
+          <span>Hasta</span>
+          <input type="date" [(ngModel)]="to" name="fTo" (ngModelChange)="reload()" />
+        </div>
+        <p-button type="button" label="Limpiar" icon="pi pi-times" severity="secondary" [outlined]="true" size="small"
+                  (onClick)="resetFilters()" [disabled]="!hasFilters"></p-button>
       </div>
 
       <p class="app-state" *ngIf="loading">Cargando...</p>
       <p class="app-state" *ngIf="!loading && funnel && funnel.paymentsWithoutInvoiceItems.length === 0">
-        No hay pagos sin facturar en este alcance. 🎉
+        No hay pagos sin facturar en este filtro. 🎉
       </p>
 
       <div class="table-wrap" *ngIf="!loading && funnel && funnel.paymentsWithoutInvoiceItems.length > 0">
@@ -99,9 +120,13 @@ const PAGE_SIZE = 25;
     .kpi-ok { border-left-color: #16a34a; } .kpi-warn { border-left-color: #f59e0b; } .kpi-bad { border-left-color: #dc2626; }
 
     .filters-bar { display: flex; align-items: flex-end; gap: 0.85rem; flex-wrap: wrap; padding: 0.8rem 1rem; background: rgba(20,54,61,0.04); border: 1px solid rgba(20,54,61,0.1); border-radius: 14px; margin-bottom: 1.1rem; }
-    .field-block { display: flex; flex-direction: column; gap: 0.3rem; min-width: 200px; }
+    .field-block { display: flex; flex-direction: column; gap: 0.3rem; min-width: 170px; }
     .field-block span { font-size: 0.75rem; font-weight: 700; color: var(--brand-muted); }
-    .field-block select { padding: 0.45rem 0.6rem; border-radius: 8px; border: 1px solid rgba(20,54,61,0.15); }
+    .field-block select, .field-block input[type="date"] { padding: 0.45rem 0.6rem; border-radius: 8px; border: 1px solid rgba(20,54,61,0.15); }
+    .search-field { min-width: 220px; flex: 1 1 220px; }
+    .search-box { display: flex; align-items: center; gap: 0.4rem; padding: 0.45rem 0.6rem; border-radius: 8px; border: 1px solid rgba(20,54,61,0.15); background: #fff; }
+    .search-box input { border: none; outline: none; flex: 1; font-size: 0.85rem; }
+    .search-box .pi { color: var(--brand-muted); }
 
     .table-wrap { overflow-x: auto; }
     .gap-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
@@ -122,21 +147,43 @@ export class UnbilledPaymentsPageComponent implements OnInit {
   funnel: InvoiceFunnel | null = null;
   buildings: Building[] = [];
   buildingId = '';
+  from = '';
+  to = '';
+  search = '';
   page = 1;
   readonly pageSize = PAGE_SIZE;
   loading = true;
   exporting = false;
+
+  private readonly search$ = new Subject<string>();
 
   get totalPages(): number {
     if (!this.funnel) return 1;
     return Math.max(1, Math.ceil(this.funnel.paymentsWithoutInvoice / this.pageSize));
   }
 
+  get hasFilters(): boolean {
+    return !!(this.buildingId || this.from || this.to || this.search);
+  }
+
   ngOnInit(): void {
+    this.search$.pipe(debounceTime(350), distinctUntilChanged(), takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => this.reload());
+
     this.buildingsApi.getAll().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: buildings => { this.buildings = buildings; this.cdr.markForCheck(); },
       error: () => { /* el filtro de edificio queda vacío; la lista igual carga */ }
     });
+    this.reload();
+  }
+
+  onSearchInput(value: string): void { this.search$.next((value ?? '').trim()); }
+
+  resetFilters(): void {
+    this.buildingId = '';
+    this.from = '';
+    this.to = '';
+    this.search = '';
     this.reload();
   }
 
@@ -148,9 +195,18 @@ export class UnbilledPaymentsPageComponent implements OnInit {
   prevPage(): void { if (this.page > 1) { this.page--; this.load(); } }
   nextPage(): void { if (this.page < this.totalPages) { this.page++; this.load(); } }
 
+  private buildFilters() {
+    return {
+      buildingId: this.buildingId || undefined,
+      from: this.from || undefined,
+      to: this.to || undefined,
+      search: this.search.trim() || undefined
+    };
+  }
+
   private load(): void {
     this.loading = true;
-    this.invoicesApi.getFunnel(this.buildingId || undefined, this.page, this.pageSize)
+    this.invoicesApi.getFunnel(this.buildFilters(), this.page, this.pageSize)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: funnel => { this.funnel = funnel; this.loading = false; this.cdr.markForCheck(); },
@@ -162,25 +218,24 @@ export class UnbilledPaymentsPageComponent implements OnInit {
       });
   }
 
-  exportCsv(): void {
+  exportExcel(): void {
     if (this.exporting) return;
     this.exporting = true;
-    this.invoicesApi.getFunnel(this.buildingId || undefined, 1, 5000)
+    this.invoicesApi.getFunnel(this.buildFilters(), 1, 5000)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: data => {
-          const header = ['Edificio', 'Unidad', 'Fecha', 'Monto', 'Referencia'];
-          const rows = data.paymentsWithoutInvoiceItems.map(r => [
-            r.buildingName, r.unitCode, this.fmtDate(r.paymentDate), String(Math.round(r.amount)), r.reference
-          ]);
-          const csv = [header, ...rows].map(cols => cols.map(c => `"${String(c).replace(/"/g, '""')}"`).join(';')).join('\r\n');
-          const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = `pagos_sin_facturar_${new Date().toISOString().slice(0, 10)}.csv`;
-          a.click();
-          URL.revokeObjectURL(url);
+          const rows = data.paymentsWithoutInvoiceItems.map(r => ({
+            'Edificio': r.buildingName,
+            'Unidad': r.unitCode,
+            'Fecha': this.fmtDate(r.paymentDate),
+            'Monto': r.amount,
+            'Referencia': r.reference
+          }));
+          const ws = XLSX.utils.json_to_sheet(rows);
+          const wb = XLSX.utils.book_new();
+          XLSX.utils.book_append_sheet(wb, ws, 'Pagos sin facturar');
+          XLSX.writeFile(wb, `pagos_sin_facturar_${new Date().toISOString().slice(0, 10)}.xlsx`);
           this.exporting = false;
           this.cdr.markForCheck();
         },
