@@ -9,6 +9,7 @@ import { Card } from 'primeng/card';
 import { MessageService } from 'primeng/api';
 import { extractApiErrorMessage } from '../../api/api-error.util';
 import { isPdfUrl, resolveUploadUrl } from '../../api/file-url.util';
+import { isPdfFile, pdfFirstPageToPngFile } from '../../api/pdf-to-image.util';
 import { InvoiceSeriesApiService } from '../../api/invoice-series-api.service';
 import { UploadsApiService } from '../../api/uploads-api.service';
 import { AuthService } from '../../auth/auth.service';
@@ -70,7 +71,7 @@ const SCALE = 0.72; // px por punto PDF
         <div class="calib-toolbar">
           <label class="upload-btn">
             <i class="pi pi-image"></i> {{ uploadingScan ? 'Subiendo...' : (referenceScanUrl ? 'Cambiar escaneo de referencia' : 'Subir escaneo de referencia') }}
-            <input type="file" accept="image/*" hidden [disabled]="uploadingScan" (change)="onScanSelected($event)" />
+            <input type="file" accept="image/*,application/pdf" hidden [disabled]="uploadingScan" (change)="onScanSelected($event)" />
           </label>
           <p-button label="Reiniciar posiciones" icon="pi pi-refresh" severity="secondary" [text]="true" (onClick)="resetAll()"></p-button>
           <span class="spacer"></span>
@@ -266,13 +267,27 @@ export class InvoiceSeriesCalibrationPageComponent implements OnInit {
     this.offsets = {};
   }
 
-  onScanSelected(event: Event): void {
+  async onScanSelected(event: Event): Promise<void> {
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0];
     if (!file) return;
 
     this.uploadingScan = true;
-    this.uploadsApi.upload(file).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+    this.cdr.markForCheck();
+
+    let toUpload = file;
+    if (isPdfFile(file)) {
+      try {
+        toUpload = await pdfFirstPageToPngFile(file);
+      } catch (error) {
+        this.msg.add({ severity: 'error', summary: 'Error', detail: 'No se pudo convertir el PDF a imagen. Probá subir una foto o captura del papel en su lugar.', life: 6000 });
+        this.uploadingScan = false;
+        this.cdr.markForCheck();
+        return;
+      }
+    }
+
+    this.uploadsApi.upload(toUpload).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: ({ url }) => {
         this.referenceScanUrl = url;
         this.uploadingScan = false;
