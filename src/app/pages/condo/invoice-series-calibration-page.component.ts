@@ -308,9 +308,28 @@ export class InvoiceSeriesCalibrationPageComponent implements OnInit {
     });
   }
 
+  // El backend genera el PDF de prueba con lo que ya esta guardado en el timbrado, no con lo que
+  // esta en pantalla sin guardar — por eso hay que guardar posiciones/escaneo antes de abrirlo.
   openSamplePdf(): void {
     if (!this.series) return;
-    const url = this.seriesApi.getSamplePdfUrl(this.series.id, this.auth.getToken() ?? '');
-    window.open(url, '_blank');
+    this.saving = true;
+    this.seriesApi.updateFieldPositions(this.series.id, {
+      positions: this.offsets,
+      referenceScanUrl: this.referenceScanUrl,
+      hideFrame: this.hideFrame
+    }).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: (updated) => {
+        this.series = updated;
+        this.saving = false;
+        this.cdr.markForCheck();
+        const url = this.seriesApi.getSamplePdfUrl(updated.id, this.auth.getToken() ?? '');
+        window.open(url, '_blank');
+      },
+      error: (error) => {
+        this.msg.add({ severity: 'error', summary: 'Error', detail: extractApiErrorMessage(error, 'No se pudieron guardar las posiciones.'), life: 5000 });
+        this.saving = false;
+        this.cdr.markForCheck();
+      }
+    });
   }
 }
