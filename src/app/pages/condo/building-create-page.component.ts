@@ -16,6 +16,7 @@ import { BuildingsApiService } from '../../api/buildings-api.service';
 import { CompaniesApiService } from '../../api/companies-api.service';
 import { CondominiumsApiService } from '../../api/condominiums-api.service';
 import { Company, Condominium, InvoicingMode, LateFeeFrequency } from '../../api/models';
+import { isPdfFile, pdfFirstPageToPngFile } from '../../api/pdf-to-image.util';
 import { UploadsApiService } from '../../api/uploads-api.service';
 import { AuthService } from '../../auth/auth.service';
 
@@ -426,7 +427,7 @@ export class BuildingCreatePageComponent implements OnInit {
     this.filteredCondominiumOptions = list.sort((a, b) => a.name.localeCompare(b.name)).map(c => ({ label: c.name, value: c.id }));
   }
 
-  onTemplateSelected(kind: TemplateKind, event: Event): void {
+  async onTemplateSelected(kind: TemplateKind, event: Event): Promise<void> {
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0];
     input.value = '';
@@ -439,7 +440,22 @@ export class BuildingCreatePageComponent implements OnInit {
 
     this.uploadingTemplate = kind;
     this.cdr.markForCheck();
-    this.uploadsApi.upload(file).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+
+    // El PDF se usa como fondo de la factura/NC/comprobante real: eso solo puede incrustar imagenes
+    // rasterizadas, asi que si suben un PDF se convierte a PNG en el navegador antes de subirlo.
+    let toUpload = file;
+    if (isPdfFile(file)) {
+      try {
+        toUpload = await pdfFirstPageToPngFile(file);
+      } catch {
+        this.msg.add({ severity: 'error', summary: 'Error', detail: 'No se pudo convertir el PDF a imagen. Probá subir una foto o captura del papel en su lugar.', life: 6000 });
+        this.uploadingTemplate = null;
+        this.cdr.markForCheck();
+        return;
+      }
+    }
+
+    this.uploadsApi.upload(toUpload).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: ({ url }) => {
         this.form.templates[kind] = { url, fileName: file.name };
         this.uploadingTemplate = null;
