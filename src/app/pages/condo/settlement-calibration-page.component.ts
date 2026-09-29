@@ -19,7 +19,8 @@ type ColumnKey = 'colConcepto' | 'colDescripcion' | 'colReserva' | 'colMonto';
 interface CalibField {
   key: string;
   label: string;
-  group: string;
+  section: string; // seccion desplegable de la pantalla (Encabezado, Ingresos, Cuerpo...)
+  group: string;   // subgrupo dentro de la seccion (p. ej. cada categoria de ingreso); '' = sin subgrupo
   kind: BlockKind;
   sample: string;
   x: number;   // punto PDF, desde la esquina superior izquierda (igual que SettlementPdfDocument.cs)
@@ -29,6 +30,9 @@ interface CalibField {
   align?: 'L' | 'C' | 'R'; // alineacion dentro del ancho (montos a la derecha, nombres centrados)
 }
 
+interface CalibSection { name: string; fields: CalibField[]; }
+const SECTION_ORDER = ['Encabezado', 'Ingresos', 'Cuerpo', 'Totales', 'Fechas', 'Firmas'];
+
 const IMAGE_H_PT = 40; // alto del cajetin de una firma (imagen)
 
 // Cada dato es un bloque propio (etiqueta y valor por separado). Mismas keys, posiciones, anchos, alineacion y
@@ -36,59 +40,66 @@ const IMAGE_H_PT = 40; // alto del cajetin de una firma (imagen)
 // agregarlo aca tambien para poder arrastrarlo.
 const FIELDS: CalibField[] = [
   // Encabezado
-  { key: 'titulo',   group: 'Encabezado', label: 'Título',           kind: 'text', sample: 'LIQUIDACIÓN EXPENSAS COMUNES', x: 195, top: 86,  width: 0, defaultFontSize: 11 },
-  { key: 'edificio', group: 'Encabezado', label: 'Edificio (valor)', kind: 'text', sample: 'EDIFICIO DE EJEMPLO',           x: 66,  top: 100, width: 0, defaultFontSize: 8 },
-  { key: 'mes',      group: 'Encabezado', label: 'Mes (valor)',      kind: 'text', sample: 'ABRIL',                         x: 215, top: 112, width: 0, defaultFontSize: 10 },
-  { key: 'anio',     group: 'Encabezado', label: 'Año (valor)',      kind: 'text', sample: '2026',                          x: 330, top: 112, width: 0, defaultFontSize: 10 },
+  { key: 'titulo',   section: 'Encabezado', group: '', label: 'Título',           kind: 'text', sample: 'LIQUIDACIÓN EXPENSAS COMUNES', x: 195, top: 86,  width: 0, defaultFontSize: 11 },
+  { key: 'edificio', section: 'Encabezado', group: '', label: 'Edificio (valor)', kind: 'text', sample: 'EDIFICIO DE EJEMPLO',           x: 66,  top: 100, width: 0, defaultFontSize: 8 },
+  { key: 'mes',      section: 'Encabezado', group: '', label: 'Mes (valor)',      kind: 'text', sample: 'ABRIL',                         x: 215, top: 112, width: 0, defaultFontSize: 10 },
+  { key: 'anio',     section: 'Encabezado', group: '', label: 'Año (valor)',      kind: 'text', sample: '2026',                          x: 330, top: 112, width: 0, defaultFontSize: 10 },
 
-  // Saldo acumulado: título y valor aparte de los conceptos (solo en la primera hoja)
-  { key: 'saldoLabel', group: 'Saldo acumulado', label: 'Saldo acumulado — título', kind: 'text', sample: 'SALDO ACUMULADO', x: 50,  top: 130, width: 200, defaultFontSize: 8 },
-  { key: 'saldoValor', group: 'Saldo acumulado', label: 'Saldo acumulado — valor',  kind: 'text', sample: '2.500.000',       x: 475, top: 130, width: 70,  defaultFontSize: 8, align: 'R' },
+  // Saldo acumulado: título, descripción y valor aparte de los conceptos (solo en la primera hoja)
+  { key: 'saldoLabel', section: 'Ingresos', group: 'Saldo acumulado', label: 'Saldo acumulado — título', kind: 'text', sample: 'SALDO ACUMULADO', x: 50,  top: 130, width: 200, defaultFontSize: 8 },
+  { key: 'saldoDescripcion', section: 'Ingresos', group: 'Saldo acumulado', label: 'Saldo acumulado — descripción', kind: 'text', sample: 'Saldo anterior período', x: 255, top: 130, width: 110, defaultFontSize: 8 },
+  { key: 'saldoValor', section: 'Ingresos', group: 'Saldo acumulado', label: 'Saldo acumulado — valor',  kind: 'text', sample: '2.500.000',       x: 475, top: 130, width: 70,  defaultFontSize: 8, align: 'R' },
 
-  // Fondo operativo: título y valor aparte de los conceptos (solo en la primera hoja)
-  { key: 'fondoOperativoLabel', group: 'Fondo operativo', label: 'Fondo operativo — título', kind: 'text', sample: 'FONDO OPERATIVO', x: 50,  top: 118, width: 200, defaultFontSize: 8 },
-  { key: 'fondoOperativoValor', group: 'Fondo operativo', label: 'Fondo operativo — valor',  kind: 'text', sample: '1.200.000',       x: 475, top: 118, width: 70,  defaultFontSize: 8, align: 'R' },
+  // Fondo operativo: título, descripción y valor aparte de los conceptos (solo en la primera hoja)
+  { key: 'fondoOperativoLabel', section: 'Ingresos', group: 'Fondo operativo', label: 'Fondo operativo — título', kind: 'text', sample: 'FONDO OPERATIVO', x: 50,  top: 118, width: 200, defaultFontSize: 8 },
+  { key: 'fondoOperativoDescripcion', section: 'Ingresos', group: 'Fondo operativo', label: 'Fondo operativo — descripción', kind: 'text', sample: 'Gs. 121.700.000', x: 255, top: 118, width: 110, defaultFontSize: 8 },
+  { key: 'fondoOperativoValor', section: 'Ingresos', group: 'Fondo operativo', label: 'Fondo operativo — valor',  kind: 'text', sample: '1.200.000',       x: 475, top: 118, width: 70,  defaultFontSize: 8, align: 'R' },
 
-  // Resto de las categorías de ingreso: cada una con su título y su valor (solo en la primera hoja)
-  { key: 'alquilerLabel', group: 'Alquiler / uso de salón', label: 'Alquiler / uso de salón — título', kind: 'text', sample: 'ALQUILER/USO DE SALÓN', x: 370, top: 106, width: 105, defaultFontSize: 8 },
-  { key: 'alquilerValor', group: 'Alquiler / uso de salón', label: 'Alquiler / uso de salón — valor',  kind: 'text', sample: '900.000', x: 475, top: 106, width: 70,  defaultFontSize: 8, align: 'R' },
-  { key: 'interesLabel', group: 'Interés', label: 'Interés — título', kind: 'text', sample: 'INTERÉS', x: 370, top: 94, width: 105, defaultFontSize: 8 },
-  { key: 'interesValor', group: 'Interés', label: 'Interés — valor',  kind: 'text', sample: '150.000', x: 475, top: 94, width: 70,  defaultFontSize: 8, align: 'R' },
-  { key: 'ajusteLabel', group: 'Ajuste a favor', label: 'Ajuste a favor — título', kind: 'text', sample: 'AJUSTE A FAVOR', x: 370, top: 82, width: 105, defaultFontSize: 8 },
-  { key: 'ajusteValor', group: 'Ajuste a favor', label: 'Ajuste a favor — valor',  kind: 'text', sample: '100.000', x: 475, top: 82, width: 70,  defaultFontSize: 8, align: 'R' },
-  { key: 'aporteExtraLabel', group: 'Aporte extraordinario', label: 'Aporte extraordinario — título', kind: 'text', sample: 'APORTE EXTRAORDINARIO', x: 370, top: 70, width: 105, defaultFontSize: 8 },
-  { key: 'aporteExtraValor', group: 'Aporte extraordinario', label: 'Aporte extraordinario — valor',  kind: 'text', sample: '350.000', x: 475, top: 70, width: 70,  defaultFontSize: 8, align: 'R' },
-  { key: 'otroLabel', group: 'Otros ingresos', label: 'Otros ingresos — título', kind: 'text', sample: 'OTROS INGRESOS', x: 370, top: 58, width: 105, defaultFontSize: 8 },
-  { key: 'otroValor', group: 'Otros ingresos', label: 'Otros ingresos — valor',  kind: 'text', sample: '50.000', x: 475, top: 58, width: 70,  defaultFontSize: 8, align: 'R' },
+  // Resto de las categorías de ingreso: cada una con su título, su descripción y su valor (solo en la primera hoja)
+  { key: 'alquilerLabel', section: 'Ingresos', group: 'Alquiler / uso de salón', label: 'Alquiler / uso de salón — título', kind: 'text', sample: 'ALQUILER/USO DE SALÓN', x: 370, top: 106, width: 105, defaultFontSize: 8 },
+  { key: 'alquilerDescripcion', section: 'Ingresos', group: 'Alquiler / uso de salón', label: 'Alquiler / uso de salón — descripción', kind: 'text', sample: 'Alquiler / uso de salón', x: 250, top: 106, width: 115, defaultFontSize: 8 },
+  { key: 'alquilerValor', section: 'Ingresos', group: 'Alquiler / uso de salón', label: 'Alquiler / uso de salón — valor',  kind: 'text', sample: '900.000', x: 475, top: 106, width: 70,  defaultFontSize: 8, align: 'R' },
+  { key: 'interesLabel', section: 'Ingresos', group: 'Interés', label: 'Interés — título', kind: 'text', sample: 'INTERÉS', x: 370, top: 94, width: 105, defaultFontSize: 8 },
+  { key: 'interesDescripcion', section: 'Ingresos', group: 'Interés', label: 'Interés — descripción', kind: 'text', sample: 'Fondo mutuo Gs. 100.000.000', x: 250, top: 94, width: 115, defaultFontSize: 8 },
+  { key: 'interesValor', section: 'Ingresos', group: 'Interés', label: 'Interés — valor',  kind: 'text', sample: '150.000', x: 475, top: 94, width: 70,  defaultFontSize: 8, align: 'R' },
+  { key: 'ajusteLabel', section: 'Ingresos', group: 'Ajuste a favor', label: 'Ajuste a favor — título', kind: 'text', sample: 'AJUSTE A FAVOR', x: 370, top: 82, width: 105, defaultFontSize: 8 },
+  { key: 'ajusteDescripcion', section: 'Ingresos', group: 'Ajuste a favor', label: 'Ajuste a favor — descripción', kind: 'text', sample: 'Ajuste de ejemplo', x: 250, top: 82, width: 115, defaultFontSize: 8 },
+  { key: 'ajusteValor', section: 'Ingresos', group: 'Ajuste a favor', label: 'Ajuste a favor — valor',  kind: 'text', sample: '100.000', x: 475, top: 82, width: 70,  defaultFontSize: 8, align: 'R' },
+  { key: 'aporteExtraLabel', section: 'Ingresos', group: 'Aporte extraordinario', label: 'Aporte extraordinario — título', kind: 'text', sample: 'APORTE EXTRAORDINARIO', x: 370, top: 70, width: 105, defaultFontSize: 8 },
+  { key: 'aporteExtraDescripcion', section: 'Ingresos', group: 'Aporte extraordinario', label: 'Aporte extraordinario — descripción', kind: 'text', sample: 'Aporte extraordinario', x: 250, top: 70, width: 115, defaultFontSize: 8 },
+  { key: 'aporteExtraValor', section: 'Ingresos', group: 'Aporte extraordinario', label: 'Aporte extraordinario — valor',  kind: 'text', sample: '350.000', x: 475, top: 70, width: 70,  defaultFontSize: 8, align: 'R' },
+  { key: 'otroLabel', section: 'Ingresos', group: 'Otros ingresos', label: 'Otros ingresos — título', kind: 'text', sample: 'OTROS INGRESOS', x: 370, top: 58, width: 105, defaultFontSize: 8 },
+  { key: 'otroDescripcion', section: 'Ingresos', group: 'Otros ingresos', label: 'Otros ingresos — descripción', kind: 'text', sample: 'Otros ingresos', x: 250, top: 58, width: 115, defaultFontSize: 8 },
+  { key: 'otroValor', section: 'Ingresos', group: 'Otros ingresos', label: 'Otros ingresos — valor',  kind: 'text', sample: '50.000', x: 475, top: 58, width: 70,  defaultFontSize: 8, align: 'R' },
 
   // Cuerpo: una columna por bloque
-  { key: 'colConcepto',    group: 'Cuerpo', label: 'Columna CONCEPTO (proveedor)',      kind: 'column', sample: '', x: 50,  top: 145, width: 135, defaultFontSize: 8 },
-  { key: 'colDescripcion', group: 'Cuerpo', label: 'Columna DESCRIPCIÓN DE CONCEPTO',   kind: 'column', sample: '', x: 185, top: 145, width: 220, defaultFontSize: 8 },
-  { key: 'colReserva',     group: 'Cuerpo', label: 'Columna MONTO fondo de reserva',    kind: 'column', sample: '', x: 405, top: 145, width: 70,  defaultFontSize: 8, align: 'R' },
-  { key: 'colMonto',       group: 'Cuerpo', label: 'Columna MONTO gastos comunes',      kind: 'column', sample: '', x: 475, top: 145, width: 70,  defaultFontSize: 8, align: 'R' },
+  { key: 'colConcepto',    section: 'Cuerpo', group: '', label: 'Columna CONCEPTO (proveedor)',      kind: 'column', sample: '', x: 50,  top: 145, width: 135, defaultFontSize: 8 },
+  { key: 'colDescripcion', section: 'Cuerpo', group: '', label: 'Columna DESCRIPCIÓN DE CONCEPTO',   kind: 'column', sample: '', x: 185, top: 145, width: 220, defaultFontSize: 8 },
+  { key: 'colReserva',     section: 'Cuerpo', group: '', label: 'Columna MONTO fondo de reserva',    kind: 'column', sample: '', x: 405, top: 145, width: 70,  defaultFontSize: 8, align: 'R' },
+  { key: 'colMonto',       section: 'Cuerpo', group: '', label: 'Columna MONTO gastos comunes',      kind: 'column', sample: '', x: 475, top: 145, width: 70,  defaultFontSize: 8, align: 'R' },
 
   // Totales (solo en la última hoja)
-  { key: 'totIngresosLabel', group: 'Totales', label: 'Total para gastos — título',        kind: 'text', sample: 'TOTAL PARA GASTOS',     x: 50,  top: 585, width: 200, defaultFontSize: 8 },
-  { key: 'totIngresosValor', group: 'Totales', label: 'Total para gastos — valor',         kind: 'text', sample: '3.400.000',             x: 475, top: 585, width: 70,  defaultFontSize: 8, align: 'R' },
-  { key: 'totGastosLabel',   group: 'Totales', label: 'Total gastos del mes — título',     kind: 'text', sample: 'TOTAL GASTOS DEL MES',  x: 50,  top: 598, width: 200, defaultFontSize: 8 },
-  { key: 'totGastosReserva', group: 'Totales', label: 'Total gastos — valor fondo de reserva', kind: 'text', sample: '2.640.000',        x: 405, top: 598, width: 70,  defaultFontSize: 8, align: 'R' },
-  { key: 'totGastosComunes', group: 'Totales', label: 'Total gastos — valor gastos comunes',   kind: 'text', sample: '37.180.000',       x: 475, top: 598, width: 70,  defaultFontSize: 8, align: 'R' },
-  { key: 'subTotalValor',    group: 'Totales', label: 'Sub total general — valor',         kind: 'text', sample: '39.820.000',            x: 475, top: 611, width: 70,  defaultFontSize: 8, align: 'R' },
-  { key: 'totalValor',       group: 'Totales', label: 'Total general — valor',             kind: 'text', sample: '40.190.000',            x: 475, top: 624, width: 70,  defaultFontSize: 8, align: 'R' },
+  { key: 'totIngresosLabel', section: 'Totales', group: '', label: 'Total para gastos — título',        kind: 'text', sample: 'TOTAL PARA GASTOS',     x: 50,  top: 585, width: 200, defaultFontSize: 8 },
+  { key: 'totIngresosValor', section: 'Totales', group: '', label: 'Total para gastos — valor',         kind: 'text', sample: '3.400.000',             x: 475, top: 585, width: 70,  defaultFontSize: 8, align: 'R' },
+  { key: 'totGastosLabel',   section: 'Totales', group: '', label: 'Total gastos del mes — título',     kind: 'text', sample: 'TOTAL GASTOS DEL MES',  x: 50,  top: 598, width: 200, defaultFontSize: 8 },
+  { key: 'totGastosReserva', section: 'Totales', group: '', label: 'Total gastos — valor fondo de reserva', kind: 'text', sample: '2.640.000',        x: 405, top: 598, width: 70,  defaultFontSize: 8, align: 'R' },
+  { key: 'totGastosComunes', section: 'Totales', group: '', label: 'Total gastos — valor gastos comunes',   kind: 'text', sample: '37.180.000',       x: 475, top: 598, width: 70,  defaultFontSize: 8, align: 'R' },
+  { key: 'subTotalValor',    section: 'Totales', group: '', label: 'Sub total general — valor',         kind: 'text', sample: '39.820.000',            x: 475, top: 611, width: 70,  defaultFontSize: 8, align: 'R' },
+  { key: 'totalValor',       section: 'Totales', group: '', label: 'Total general — valor',             kind: 'text', sample: '40.190.000',            x: 475, top: 624, width: 70,  defaultFontSize: 8, align: 'R' },
 
   // Fechas
-  { key: 'fechaEmision',     group: 'Fechas', label: 'Fecha de emisión (solo el valor)', kind: 'text', sample: '30/04/2026',  x: 165, top: 705, width: 0, defaultFontSize: 8 },
-  { key: 'vigenciaLabel',    group: 'Fechas', label: 'Vigencia — título',                kind: 'text', sample: 'VIGENCIA',    x: 52,  top: 745, width: 0, defaultFontSize: 8 },
-  { key: 'vigenciaDesde',    group: 'Fechas', label: 'Vigencia — desde',                 kind: 'text', sample: '01/04/2026',  x: 110, top: 745, width: 0, defaultFontSize: 8 },
-  { key: 'vigenciaHasta',    group: 'Fechas', label: 'Vigencia — hasta',                 kind: 'text', sample: '30/04/2026',  x: 165, top: 745, width: 0, defaultFontSize: 8 },
-  { key: 'vencimientoLabel', group: 'Fechas', label: 'Vencimiento — título',             kind: 'text', sample: 'VENCIMIENTO', x: 52,  top: 757, width: 0, defaultFontSize: 8 },
-  { key: 'vencimiento',      group: 'Fechas', label: 'Vencimiento — valor',              kind: 'text', sample: '20/05/2026',  x: 120, top: 757, width: 0, defaultFontSize: 8 },
+  { key: 'fechaEmision',     section: 'Fechas', group: '', label: 'Fecha de emisión (solo el valor)', kind: 'text', sample: '30/04/2026',  x: 165, top: 705, width: 0, defaultFontSize: 8 },
+  { key: 'vigenciaLabel',    section: 'Fechas', group: '', label: 'Vigencia — título',                kind: 'text', sample: 'VIGENCIA',    x: 52,  top: 745, width: 0, defaultFontSize: 8 },
+  { key: 'vigenciaDesde',    section: 'Fechas', group: '', label: 'Vigencia — desde',                 kind: 'text', sample: '01/04/2026',  x: 110, top: 745, width: 0, defaultFontSize: 8 },
+  { key: 'vigenciaHasta',    section: 'Fechas', group: '', label: 'Vigencia — hasta',                 kind: 'text', sample: '30/04/2026',  x: 165, top: 745, width: 0, defaultFontSize: 8 },
+  { key: 'vencimientoLabel', section: 'Fechas', group: '', label: 'Vencimiento — título',             kind: 'text', sample: 'VENCIMIENTO', x: 52,  top: 757, width: 0, defaultFontSize: 8 },
+  { key: 'vencimiento',      section: 'Fechas', group: '', label: 'Vencimiento — valor',              kind: 'text', sample: '20/05/2026',  x: 120, top: 757, width: 0, defaultFontSize: 8 },
 
   // Firmas: Autorizado = presidente (imagen, nombre y cargo por separado); Verificación = building manager (solo la imagen)
-  { key: 'firmaAutorizado',       group: 'Firma AUTORIZADO POR (presidente)', label: 'Imagen de la firma', kind: 'image', sample: 'firma',                   x: 250, top: 655, width: 110, defaultFontSize: 8 },
-  { key: 'firmaAutorizadoNombre', group: 'Firma AUTORIZADO POR (presidente)', label: 'Nombre',             kind: 'text',  sample: 'Nombre Apellido',         x: 215, top: 700, width: 175, defaultFontSize: 8, align: 'C' },
-  { key: 'firmaAutorizadoCargo',  group: 'Firma AUTORIZADO POR (presidente)', label: 'Cargo',              kind: 'text',  sample: 'Presidente del consorcio', x: 215, top: 711, width: 175, defaultFontSize: 8, align: 'C' },
-  { key: 'firmaVerificacion',       group: 'Firma VERIFICACIÓN (building manager)', label: 'Imagen de la firma', kind: 'image', sample: 'firma',              x: 420, top: 655, width: 110, defaultFontSize: 8 }
+  { key: 'firmaAutorizado',       section: 'Firmas', group: 'Autorizado por (presidente)', label: 'Imagen de la firma', kind: 'image', sample: 'firma',                   x: 250, top: 655, width: 110, defaultFontSize: 8 },
+  { key: 'firmaAutorizadoNombre', section: 'Firmas', group: 'Autorizado por (presidente)', label: 'Nombre',             kind: 'text',  sample: 'Nombre Apellido',         x: 215, top: 700, width: 175, defaultFontSize: 8, align: 'C' },
+  { key: 'firmaAutorizadoCargo',  section: 'Firmas', group: 'Autorizado por (presidente)', label: 'Cargo',              kind: 'text',  sample: 'Presidente del consorcio', x: 215, top: 711, width: 175, defaultFontSize: 8, align: 'C' },
+  { key: 'firmaVerificacion',       section: 'Firmas', group: 'Verificación (building manager)', label: 'Imagen de la firma', kind: 'image', sample: 'firma',              x: 420, top: 655, width: 110, defaultFontSize: 8 }
 ];
 
 // Filas de ejemplo de cada columna (una fila por renglon del cuerpo).
@@ -148,6 +159,10 @@ const SCALE = 0.72; // px por punto PDF
             <input type="checkbox" [(ngModel)]="hideFrame" name="hideFrame" [ngModelOptions]="{ standalone: true }" />
             Mi modelo ya tiene su propio marco, fondos y líneas impresos — dibujar solo el texto.
           </label>
+          <span class="section-actions">
+            <button type="button" class="link-btn" (click)="setAllSections(true)">Expandir todo</button>
+            <button type="button" class="link-btn" (click)="setAllSections(false)">Contraer todo</button>
+          </span>
           <span class="row-height">
             Alto de cada fila
             <button type="button" class="font-step" (click)="stepRowHeight(-0.5)">−</button>
@@ -160,7 +175,7 @@ const SCALE = 0.72; // px por punto PDF
 
         <div class="calib-workspace">
           <div class="calib-list calib-side">
-            <ng-container *ngTemplateOutlet="rowTpl; context: { fields: leftFields }"></ng-container>
+            <ng-container *ngTemplateOutlet="sectionsTpl; context: { sections: leftSections }"></ng-container>
           </div>
 
           <div class="calib-canvas" [style.width.px]="canvasW" [style.height.px]="canvasH">
@@ -191,13 +206,26 @@ const SCALE = 0.72; // px por punto PDF
           </div>
 
           <div class="calib-list calib-side">
-            <ng-container *ngTemplateOutlet="rowTpl; context: { fields: rightFields }"></ng-container>
+            <ng-container *ngTemplateOutlet="sectionsTpl; context: { sections: rightSections }"></ng-container>
           </div>
         </div>
 
+        <ng-template #sectionsTpl let-sections="sections">
+          <div class="calib-section" *ngFor="let sec of sections">
+            <button type="button" class="calib-section-head" (click)="toggleSection(sec.name)" [attr.aria-expanded]="isOpen(sec.name)">
+              <i class="pi" [ngClass]="isOpen(sec.name) ? 'pi-chevron-down' : 'pi-chevron-right'"></i>
+              <span>{{ sec.name }}</span>
+              <span class="calib-section-count">{{ sec.fields.length }}</span>
+            </button>
+            <div class="calib-section-body" *ngIf="isOpen(sec.name)">
+              <ng-container *ngTemplateOutlet="rowTpl; context: { fields: sec.fields }"></ng-container>
+            </div>
+          </div>
+        </ng-template>
+
         <ng-template #rowTpl let-fields="fields">
           <ng-container *ngFor="let f of fields; let i = index">
-          <div class="calib-group" *ngIf="i === 0 || fields[i - 1].group !== f.group">{{ f.group }}</div>
+          <div class="calib-group" *ngIf="f.group && (i === 0 || fields[i - 1].group !== f.group)">{{ f.group }}</div>
           <div class="calib-row" [class.is-hidden]="isHidden(f)">
             <span class="calib-row-label">{{ f.label }}</span>
             <span class="calib-row-offset">dx {{ (offsets[f.key]?.dx ?? 0) | number:'1.0-1' }} · dy {{ (offsets[f.key]?.dy ?? 0) | number:'1.0-1' }} pt</span>
@@ -270,6 +298,18 @@ const SCALE = 0.72; // px por punto PDF
     .calib-field.dragging { cursor: grabbing; background: rgba(19,133,182,0.25); z-index: 10; }
     .mock-cell { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .mock-sign-img { height: 100%; display: flex; align-items: flex-end; justify-content: center; opacity: 0.5; }
+    .calib-section { border: 1px solid #e3ecea; border-radius: 8px; overflow: hidden; background: #fff; }
+    .calib-section-head {
+      display: flex; align-items: center; gap: 0.5rem; width: 100%;
+      padding: 0.5rem 0.65rem; border: 0; background: #f4f9f8; cursor: pointer;
+      font-size: 0.85rem; font-weight: 700; color: #29484f; text-align: left;
+    }
+    .calib-section-head:hover { background: #eaf4f3; }
+    .calib-section-count { margin-left: auto; font-size: 0.72rem; font-weight: 600; color: #6b878d; background: #fff; border-radius: 999px; padding: 0 0.5rem; }
+    .calib-section-body { padding-bottom: 0.25rem; }
+    .section-actions { display: flex; gap: 0.75rem; }
+    .link-btn { border: 0; background: none; padding: 0; cursor: pointer; color: #1385b6; font-size: 0.8rem; font-weight: 600; }
+    .link-btn:hover { text-decoration: underline; }
     .calib-group { margin-top: 0.6rem; padding: 0.2rem 0.5rem; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: #1385b6; }
     .calib-list { display: grid; gap: 0.25rem; align-content: start; }
     .calib-side { flex: 1 1 0; min-width: 0; max-width: 250px; }
@@ -310,8 +350,11 @@ export class SettlementCalibrationPageComponent implements OnInit {
   private readonly sanitizer = inject(DomSanitizer);
 
   readonly fields = FIELDS;
-  readonly leftFields = FIELDS.slice(0, Math.ceil(FIELDS.length / 2));
-  readonly rightFields = FIELDS.slice(Math.ceil(FIELDS.length / 2));
+  // Los controles van agrupados en secciones desplegables (todo lo de ingresos junto, etc.).
+  readonly sections: CalibSection[] = SECTION_ORDER.map((name) => ({ name, fields: FIELDS.filter((f) => f.section === name) }));
+  readonly leftSections = this.sections.slice(0, 3);
+  readonly rightSections = this.sections.slice(3);
+  openSections: Record<string, boolean> = {};
   readonly canvasW = Math.round(PAGE_W_PT * SCALE);
   readonly canvasH = Math.round(PAGE_H_PT * SCALE);
   readonly SCALE = SCALE;
@@ -411,6 +454,12 @@ export class SettlementCalibrationPageComponent implements OnInit {
   }
 
   // Alto del bloque solo para la imagen de la firma (los demas toman el de su contenido).
+  isOpen(name: string): boolean { return this.openSections[name] === true; }
+  toggleSection(name: string): void { this.openSections = { ...this.openSections, [name]: !this.isOpen(name) }; }
+  setAllSections(open: boolean): void {
+    this.openSections = Object.fromEntries(SECTION_ORDER.map((name) => [name, open]));
+  }
+
   heightOf(f: CalibField): number | null {
     return f.kind === 'image' ? IMAGE_H_PT * SCALE : null;
   }
