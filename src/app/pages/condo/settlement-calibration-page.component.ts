@@ -27,11 +27,12 @@ interface CalibField {
   top: number;
   width: number; // ancho del bloque en puntos; 0 = texto de una linea sin ancho propio
   defaultFontSize: number; // debe coincidir con el tamano por defecto en SettlementPdfDocument.cs
+  hiddenByDefault?: boolean; // arranca oculto hasta que se destilde "No dibujar"
   align?: 'L' | 'C' | 'R'; // alineacion dentro del ancho (montos a la derecha, nombres centrados)
 }
 
 interface CalibSection { name: string; fields: CalibField[]; }
-const SECTION_ORDER = ['Encabezado', 'Ingresos', 'Cuerpo', 'Totales', 'Fechas', 'Firmas'];
+const SECTION_ORDER = ['Encabezado', 'Ingresos', 'Gastos', 'Cuerpo', 'Totales', 'Fechas', 'Firmas'];
 
 const IMAGE_H_PT = 40; // alto del cajetin de una firma (imagen)
 
@@ -72,11 +73,61 @@ const FIELDS: CalibField[] = [
   { key: 'otroDescripcion', section: 'Ingresos', group: 'Otros ingresos', label: 'Otros ingresos — descripción', kind: 'text', sample: 'Otros ingresos', x: 250, top: 58, width: 115, defaultFontSize: 8 },
   { key: 'otroValor', section: 'Ingresos', group: 'Otros ingresos', label: 'Otros ingresos — valor',  kind: 'text', sample: '50.000', x: 475, top: 58, width: 70,  defaultFontSize: 8, align: 'R' },
 
-  // Cuerpo: una columna por bloque
-  { key: 'colConcepto',    section: 'Cuerpo', group: '', label: 'Columna CONCEPTO (proveedor)',      kind: 'column', sample: '', x: 50,  top: 145, width: 135, defaultFontSize: 8 },
-  { key: 'colDescripcion', section: 'Cuerpo', group: '', label: 'Columna DESCRIPCIÓN DE CONCEPTO',   kind: 'column', sample: '', x: 185, top: 145, width: 220, defaultFontSize: 8 },
-  { key: 'colReserva',     section: 'Cuerpo', group: '', label: 'Columna MONTO fondo de reserva',    kind: 'column', sample: '', x: 405, top: 145, width: 70,  defaultFontSize: 8, align: 'R' },
-  { key: 'colMonto',       section: 'Cuerpo', group: '', label: 'Columna MONTO gastos comunes',      kind: 'column', sample: '', x: 475, top: 145, width: 70,  defaultFontSize: 8, align: 'R' },
+  // Gastos: cada categoría con su título, su descripción y su valor (solo en la primera hoja; el valor es el total de la categoría)
+  { key: 'gastoAndeLabel',       section: 'Gastos', group: 'ANDE', label: 'ANDE — título',      kind: 'text', sample: 'ANDE', x: 50,  top: 145, width: 135, defaultFontSize: 8 },
+  { key: 'gastoAndeDescripcion', section: 'Gastos', group: 'ANDE', label: 'ANDE — descripción', kind: 'text', sample: 'CONSUMO CICLO 03/26', x: 185, top: 145, width: 220, defaultFontSize: 8 },
+  { key: 'gastoAndeValor',       section: 'Gastos', group: 'ANDE', label: 'ANDE — valor',       kind: 'text', sample: '3.150.000', x: 475, top: 145, width: 70,  defaultFontSize: 8, align: 'R' },
+  { key: 'gastoEssapLabel',       section: 'Gastos', group: 'ESSAP', label: 'ESSAP — título',      kind: 'text', sample: 'ESSAP S.A.', x: 50,  top: 160, width: 135, defaultFontSize: 8 },
+  { key: 'gastoEssapDescripcion', section: 'Gastos', group: 'ESSAP', label: 'ESSAP — descripción', kind: 'text', sample: 'CONSUMO CICLO 03/26', x: 185, top: 160, width: 220, defaultFontSize: 8 },
+  { key: 'gastoEssapValor',       section: 'Gastos', group: 'ESSAP', label: 'ESSAP — valor',       kind: 'text', sample: '1.090.000', x: 475, top: 160, width: 70,  defaultFontSize: 8, align: 'R' },
+  { key: 'gastoUtilitiesLabel',       section: 'Gastos', group: 'Servicios', label: 'Servicios — título',      kind: 'text', sample: 'SERVICIOS', x: 50,  top: 175, width: 135, defaultFontSize: 8 },
+  { key: 'gastoUtilitiesDescripcion', section: 'Gastos', group: 'Servicios', label: 'Servicios — descripción', kind: 'text', sample: 'SERVICIOS VARIOS', x: 185, top: 175, width: 220, defaultFontSize: 8 },
+  { key: 'gastoUtilitiesValor',       section: 'Gastos', group: 'Servicios', label: 'Servicios — valor',       kind: 'text', sample: '500.000', x: 475, top: 175, width: 70,  defaultFontSize: 8, align: 'R' },
+  { key: 'gastoInternetPhoneLabel',       section: 'Gastos', group: 'Internet y telefonía', label: 'Internet y telefonía — título',      kind: 'text', sample: 'INTERNET Y TELEFONÍA', x: 50,  top: 190, width: 135, defaultFontSize: 8 },
+  { key: 'gastoInternetPhoneDescripcion', section: 'Gastos', group: 'Internet y telefonía', label: 'Internet y telefonía — descripción', kind: 'text', sample: 'SERVICIO DE INTERNET', x: 185, top: 190, width: 220, defaultFontSize: 8 },
+  { key: 'gastoInternetPhoneValor',       section: 'Gastos', group: 'Internet y telefonía', label: 'Internet y telefonía — valor',       kind: 'text', sample: '300.000', x: 475, top: 190, width: 70,  defaultFontSize: 8, align: 'R' },
+  { key: 'gastoCleaningLabel',       section: 'Gastos', group: 'Limpieza', label: 'Limpieza — título',      kind: 'text', sample: 'LIMPIEZA', x: 50,  top: 205, width: 135, defaultFontSize: 8 },
+  { key: 'gastoCleaningDescripcion', section: 'Gastos', group: 'Limpieza', label: 'Limpieza — descripción', kind: 'text', sample: 'SERVICIO DE LIMPIEZA', x: 185, top: 205, width: 220, defaultFontSize: 8 },
+  { key: 'gastoCleaningValor',       section: 'Gastos', group: 'Limpieza', label: 'Limpieza — valor',       kind: 'text', sample: '11.290.000', x: 475, top: 205, width: 70,  defaultFontSize: 8, align: 'R' },
+  { key: 'gastoSecurityLabel',       section: 'Gastos', group: 'Seguridad', label: 'Seguridad — título',      kind: 'text', sample: 'SEGURIDAD', x: 50,  top: 220, width: 135, defaultFontSize: 8 },
+  { key: 'gastoSecurityDescripcion', section: 'Gastos', group: 'Seguridad', label: 'Seguridad — descripción', kind: 'text', sample: 'SEGURIDAD - VALET PARKING', x: 185, top: 220, width: 220, defaultFontSize: 8 },
+  { key: 'gastoSecurityValor',       section: 'Gastos', group: 'Seguridad', label: 'Seguridad — valor',       kind: 'text', sample: '21.650.000', x: 475, top: 220, width: 70,  defaultFontSize: 8, align: 'R' },
+  { key: 'gastoMaintenanceLabel',       section: 'Gastos', group: 'Mantenimiento', label: 'Mantenimiento — título',      kind: 'text', sample: 'MANTENIMIENTO', x: 50,  top: 235, width: 135, defaultFontSize: 8 },
+  { key: 'gastoMaintenanceDescripcion', section: 'Gastos', group: 'Mantenimiento', label: 'Mantenimiento — descripción', kind: 'text', sample: 'MANTENIMIENTO DE ASCENSORES', x: 185, top: 235, width: 220, defaultFontSize: 8 },
+  { key: 'gastoMaintenanceValor',       section: 'Gastos', group: 'Mantenimiento', label: 'Mantenimiento — valor',       kind: 'text', sample: '4.230.000', x: 475, top: 235, width: 70,  defaultFontSize: 8, align: 'R' },
+  { key: 'gastoElevatorLabel',       section: 'Gastos', group: 'Ascensor', label: 'Ascensor — título',      kind: 'text', sample: 'ASCENSOR', x: 50,  top: 250, width: 135, defaultFontSize: 8 },
+  { key: 'gastoElevatorDescripcion', section: 'Gastos', group: 'Ascensor', label: 'Ascensor — descripción', kind: 'text', sample: 'REPARACIÓN DE ASCENSOR', x: 185, top: 250, width: 220, defaultFontSize: 8 },
+  { key: 'gastoElevatorValor',       section: 'Gastos', group: 'Ascensor', label: 'Ascensor — valor',       kind: 'text', sample: '800.000', x: 475, top: 250, width: 70,  defaultFontSize: 8, align: 'R' },
+  { key: 'gastoInsuranceLabel',       section: 'Gastos', group: 'Seguro', label: 'Seguro — título',      kind: 'text', sample: 'SEGURO', x: 50,  top: 265, width: 135, defaultFontSize: 8 },
+  { key: 'gastoInsuranceDescripcion', section: 'Gastos', group: 'Seguro', label: 'Seguro — descripción', kind: 'text', sample: 'SEGURO TODO RIESGO', x: 185, top: 265, width: 220, defaultFontSize: 8 },
+  { key: 'gastoInsuranceValor',       section: 'Gastos', group: 'Seguro', label: 'Seguro — valor',       kind: 'text', sample: '3.116.667', x: 475, top: 265, width: 70,  defaultFontSize: 8, align: 'R' },
+  { key: 'gastoSuppliesLabel',       section: 'Gastos', group: 'Insumos', label: 'Insumos — título',      kind: 'text', sample: 'INSUMOS', x: 50,  top: 280, width: 135, defaultFontSize: 8 },
+  { key: 'gastoSuppliesDescripcion', section: 'Gastos', group: 'Insumos', label: 'Insumos — descripción', kind: 'text', sample: 'ARTÍCULOS ELÉCTRICOS', x: 185, top: 280, width: 220, defaultFontSize: 8 },
+  { key: 'gastoSuppliesValor',       section: 'Gastos', group: 'Insumos', label: 'Insumos — valor',       kind: 'text', sample: '793.500', x: 475, top: 280, width: 70,  defaultFontSize: 8, align: 'R' },
+  { key: 'gastoPayrollLabel',       section: 'Gastos', group: 'Salarios', label: 'Salarios — título',      kind: 'text', sample: 'SALARIOS', x: 50,  top: 295, width: 135, defaultFontSize: 8 },
+  { key: 'gastoPayrollDescripcion', section: 'Gastos', group: 'Salarios', label: 'Salarios — descripción', kind: 'text', sample: 'SALARIO MES DE ABRIL', x: 185, top: 295, width: 220, defaultFontSize: 8 },
+  { key: 'gastoPayrollValor',       section: 'Gastos', group: 'Salarios', label: 'Salarios — valor',       kind: 'text', sample: '4.100.739', x: 475, top: 295, width: 70,  defaultFontSize: 8, align: 'R' },
+  { key: 'gastoTaxesLabel',       section: 'Gastos', group: 'Impuestos', label: 'Impuestos — título',      kind: 'text', sample: 'IMPUESTOS', x: 50,  top: 310, width: 135, defaultFontSize: 8 },
+  { key: 'gastoTaxesDescripcion', section: 'Gastos', group: 'Impuestos', label: 'Impuestos — descripción', kind: 'text', sample: 'ASISTENCIA TRIBUTARIA', x: 185, top: 310, width: 220, defaultFontSize: 8 },
+  { key: 'gastoTaxesValor',       section: 'Gastos', group: 'Impuestos', label: 'Impuestos — valor',       kind: 'text', sample: '550.000', x: 475, top: 310, width: 70,  defaultFontSize: 8, align: 'R' },
+  { key: 'gastoAdministrationLabel',       section: 'Gastos', group: 'Administración', label: 'Administración — título',      kind: 'text', sample: 'ADMINISTRACIÓN', x: 50,  top: 325, width: 135, defaultFontSize: 8 },
+  { key: 'gastoAdministrationDescripcion', section: 'Gastos', group: 'Administración', label: 'Administración — descripción', kind: 'text', sample: 'ADMINISTRACIÓN CONSORCIO', x: 185, top: 325, width: 220, defaultFontSize: 8 },
+  { key: 'gastoAdministrationValor',       section: 'Gastos', group: 'Administración', label: 'Administración — valor',       kind: 'text', sample: '7.535.000', x: 475, top: 325, width: 70,  defaultFontSize: 8, align: 'R' },
+  { key: 'gastoExtraordinaryLabel',       section: 'Gastos', group: 'Extraordinario', label: 'Extraordinario — título',      kind: 'text', sample: 'EXTRAORDINARIO', x: 50,  top: 340, width: 135, defaultFontSize: 8 },
+  { key: 'gastoExtraordinaryDescripcion', section: 'Gastos', group: 'Extraordinario', label: 'Extraordinario — descripción', kind: 'text', sample: 'GASTO EXTRAORDINARIO', x: 185, top: 340, width: 220, defaultFontSize: 8 },
+  { key: 'gastoExtraordinaryValor',       section: 'Gastos', group: 'Extraordinario', label: 'Extraordinario — valor',       kind: 'text', sample: '1.000.000', x: 475, top: 340, width: 70,  defaultFontSize: 8, align: 'R' },
+  { key: 'gastoOtherLabel',       section: 'Gastos', group: 'Otros gastos', label: 'Otros gastos — título',      kind: 'text', sample: 'OTROS GASTOS', x: 50,  top: 355, width: 135, defaultFontSize: 8 },
+  { key: 'gastoOtherDescripcion', section: 'Gastos', group: 'Otros gastos', label: 'Otros gastos — descripción', kind: 'text', sample: 'FOTOCOPIAS Y PAPELERÍA', x: 185, top: 355, width: 220, defaultFontSize: 8 },
+  { key: 'gastoOtherValor',       section: 'Gastos', group: 'Otros gastos', label: 'Otros gastos — valor',       kind: 'text', sample: '120.400', x: 475, top: 355, width: 70,  defaultFontSize: 8, align: 'R' },
+  { key: 'gastoReserveFundLabel',       section: 'Gastos', group: 'Fondo de reserva', label: 'Fondo de reserva — título',      kind: 'text', sample: 'FONDO DE RESERVA', x: 50,  top: 370, width: 135, defaultFontSize: 8 },
+  { key: 'gastoReserveFundDescripcion', section: 'Gastos', group: 'Fondo de reserva', label: 'Fondo de reserva — descripción', kind: 'text', sample: 'CAMBIO DE BARRERA', x: 185, top: 370, width: 220, defaultFontSize: 8 },
+  { key: 'gastoReserveFundValor',       section: 'Gastos', group: 'Fondo de reserva', label: 'Fondo de reserva — valor',       kind: 'text', sample: '2.640.000', x: 475, top: 370, width: 70,  defaultFontSize: 8, align: 'R' },
+
+  // Cuerpo: una columna por bloque (arranca oculto: los gastos salen por categoría; destildá "No dibujar" para usar una fila por gasto)
+  { key: 'colConcepto',    section: 'Cuerpo', group: '', label: 'Columna CONCEPTO (proveedor)',      kind: 'column', sample: '', x: 50,  top: 145, width: 135, defaultFontSize: 8, hiddenByDefault: true },
+  { key: 'colDescripcion', section: 'Cuerpo', group: '', label: 'Columna DESCRIPCIÓN DE CONCEPTO',   kind: 'column', sample: '', x: 185, top: 145, width: 220, defaultFontSize: 8, hiddenByDefault: true },
+  { key: 'colReserva',     section: 'Cuerpo', group: '', label: 'Columna MONTO fondo de reserva',    kind: 'column', sample: '', x: 405, top: 145, width: 70,  defaultFontSize: 8, align: 'R', hiddenByDefault: true },
+  { key: 'colMonto',       section: 'Cuerpo', group: '', label: 'Columna MONTO gastos comunes',      kind: 'column', sample: '', x: 475, top: 145, width: 70,  defaultFontSize: 8, align: 'R', hiddenByDefault: true },
 
   // Totales (solo en la última hoja)
   { key: 'totIngresosLabel', section: 'Totales', group: '', label: 'Total para gastos — título',        kind: 'text', sample: 'TOTAL PARA GASTOS',     x: 50,  top: 585, width: 200, defaultFontSize: 8 },
@@ -422,7 +473,7 @@ export class SettlementCalibrationPageComponent implements OnInit {
           fontSize: (pick(value, 'fontSize') ?? null) as number | null,
           width: (pick(value, 'width') ?? null) as number | null,
           rowHeight: (pick(value, 'rowHeight') ?? null) as number | null,
-          hidden: Boolean(pick(value, 'hidden') ?? false)
+          hidden: (pick(value, 'hidden') ?? undefined) as boolean | undefined
         };
       }
       return result;
@@ -469,7 +520,7 @@ export class SettlementCalibrationPageComponent implements OnInit {
   }
 
   isHidden(f: CalibField): boolean {
-    return this.offsets[f.key]?.hidden === true;
+    return this.offsets[f.key]?.hidden ?? f.hiddenByDefault === true;
   }
 
   samplesOf(f: CalibField): string[] {
