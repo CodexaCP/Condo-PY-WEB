@@ -356,8 +356,18 @@ const STATUS_SEVERITY: Record<string, 'warn' | 'info' | 'success' | 'danger' | '
           <p *ngIf="!payment.units.length" class="app-state">Sin unidades registradas.</p>
         </div>
 
+        <!-- Pago con unidades de edificios no asignados a este usuario: solo lectura -->
+        <div class="form-section action-section"
+             *ngIf="payment.canProcess === false && (payment.status === 'Pending' || payment.status === 'UnderReview')">
+          <h3>Solo lectura</h3>
+          <p class="action-hint">
+            Este pago incluye unidades de edificios que no tenés asignados, por eso no podés revisarlo, aprobarlo ni
+            rechazarlo. Debe procesarlo un Administrador de empresa o un encargado con acceso a todos esos edificios.
+          </p>
+        </div>
+
         <!-- Acción: PENDIENTE → Introducir monto y marcar en revisión -->
-        <div class="form-section action-section" *ngIf="payment.status === 'Pending'">
+        <div class="form-section action-section" *ngIf="payment.status === 'Pending' && payment.canProcess !== false">
           <h3>Revisar pago</h3>
           <p class="action-hint">
             Introduce el monto que refleja el comprobante y marca el pago como en revisión.
@@ -385,7 +395,7 @@ const STATUS_SEVERITY: Record<string, 'warn' | 'info' | 'success' | 'danger' | '
         </div>
 
         <!-- Acción: EN REVISIÓN → Aprobar o Rechazar -->
-        <div class="form-section action-section" *ngIf="payment.status === 'UnderReview'">
+        <div class="form-section action-section" *ngIf="payment.status === 'UnderReview' && payment.canProcess !== false">
           <h3>Resolución</h3>
           <p class="action-hint">
             Monto revisado: <strong>{{ payment.reviewedAmount | number:'1.0-2' }}</strong>

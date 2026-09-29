@@ -1430,6 +1430,8 @@ export interface OwnerPayment {
   resolvedAt: string | null;
   createdAtUtc: string;
   units: OwnerPaymentUnit[];
+  // false: el pago incluye unidades de edificios no asignados al usuario -> solo lectura.
+  canProcess?: boolean;
 }
 
 export interface OwnerPaymentCreateRequest {

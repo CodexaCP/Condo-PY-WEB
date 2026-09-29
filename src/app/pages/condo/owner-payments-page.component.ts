@@ -22,6 +22,8 @@ const STATUS_SEVERITY: Record<string, 'warn' | 'info' | 'success' | 'danger' | '
   Rejected:    'danger'
 };
 
+type BuildingGroup = { label: string; items: OwnerPayment[]; pendingCount: number };
+
 const FILTERS: { label: string; value: string }[] = [
   { label: 'Todos',        value: '' },
   { label: 'Pendiente',    value: 'Pending' },
@@ -62,29 +64,42 @@ const FILTERS: { label: string; value: string }[] = [
         No hay pagos {{ selectedStatus ? 'con este estado' : 'registrados' }}.
       </p>
 
-      <div class="app-list" *ngIf="filtered.length">
-        <div class="app-row header grid-op">
-          <span>Referencia</span>
-          <span>Propietario</span>
-          <span>Fecha Pago</span>
-          <span class="right">Monto Declarado</span>
-          <span>Estado</span>
-          <span>Enviado</span>
+      <!-- Agrupado por edificio: cada usuario solo recibe del backend los pagos de sus edificios asignados. -->
+      <section class="building-group" *ngFor="let group of groups">
+        <h2 class="group-title">
+          <i class="pi pi-building"></i>
+          {{ group.label }}
+          <span class="group-count">{{ group.items.length }}</span>
+          <span *ngIf="group.pendingCount > 0" class="group-pending">{{ group.pendingCount }} por procesar</span>
+        </h2>
+        <div class="app-list">
+          <div class="app-row header grid-op">
+            <span>Referencia</span>
+            <span>Propietario</span>
+            <span>Fecha Pago</span>
+            <span class="right">Monto Declarado</span>
+            <span>Estado</span>
+            <span>Enviado</span>
+          </div>
+          <div class="app-row grid-op" *ngFor="let item of group.items">
+            <button class="row-link monospace" (click)="goToDetail(item.id)">
+              {{ item.reference }}
+            </button>
+            <span>
+              {{ item.ownerFullName }}
+              <span *ngIf="item.canProcess === false" class="readonly-hint"
+                    title="Incluye unidades de edificios que no tenés asignados: solo lectura.">solo lectura</span>
+            </span>
+            <span>{{ item.paymentDate | date:'dd/MM/yyyy' }}</span>
+            <span class="right amount-col">{{ item.declaredAmount | number:'1.0-2' }}</span>
+            <p-tag
+              [value]="statusLabel(item.status)"
+              [severity]="statusSeverity(item.status)">
+            </p-tag>
+            <span class="date-col">{{ item.createdAtUtc | date:'dd/MM/yyyy HH:mm' }}</span>
+          </div>
         </div>
-        <div class="app-row grid-op" *ngFor="let item of filtered">
-          <button class="row-link monospace" (click)="goToDetail(item.id)">
-            {{ item.reference }}
-          </button>
-          <span>{{ item.ownerFullName }}</span>
-          <span>{{ item.paymentDate | date:'dd/MM/yyyy' }}</span>
-          <span class="right amount-col">{{ item.declaredAmount | number:'1.0-2' }}</span>
-          <p-tag
-            [value]="statusLabel(item.status)"
-            [severity]="statusSeverity(item.status)">
-          </p-tag>
-          <span class="date-col">{{ item.createdAtUtc | date:'dd/MM/yyyy HH:mm' }}</span>
-        </div>
-      </div>
+      </section>
     </p-card>
   `,
   styles: [`
@@ -101,6 +116,20 @@ const FILTERS: { label: string; value: string }[] = [
       padding: 0 0.4rem; font-size: 0.75rem; min-width: 1.2rem; text-align: center;
     }
     .active .tab-count { background: rgba(255,255,255,0.25); }
+    .building-group { margin-bottom: 1.6rem; }
+    .group-title   {
+      display: flex; align-items: center; gap: 0.5rem; margin: 0 0 0.6rem;
+      font-size: 1.05rem; font-weight: 700; color: var(--brand-ink);
+    }
+    .group-count   {
+      background: rgba(0,0,0,0.08); border-radius: 10px; padding: 0 0.5rem;
+      font-size: 0.78rem; font-weight: 600;
+    }
+    .group-pending { font-size: 0.78rem; font-weight: 600; color: var(--p-orange-600, #ea580c); }
+    .readonly-hint {
+      margin-left: 0.4rem; padding: 0 0.4rem; border-radius: 8px; font-size: 0.7rem;
+      background: rgba(0,0,0,0.08); color: var(--brand-muted);
+    }
     .grid-op       { grid-template-columns: 1.3fr 1.4fr 0.9fr 1fr 0.9fr 1.1fr; }
     .monospace     { font-family: monospace; font-size: 0.88rem; }
     .right         { text-align: right; }
@@ -123,6 +152,7 @@ export class OwnerPaymentsPageComponent implements OnInit {
 
   all:            OwnerPayment[] = [];
   filtered:       OwnerPayment[] = [];
+  groups:         BuildingGroup[] = [];
   selectedStatus  = '';
   loading         = true;
   pageError       = '';
@@ -168,5 +198,28 @@ export class OwnerPaymentsPageComponent implements OnInit {
     this.filtered = this.selectedStatus
       ? this.all.filter(p => p.status === this.selectedStatus)
       : this.all;
+    this.groups = this.buildGroups(this.filtered);
+  }
+
+  // Un pago va bajo el edificio de sus unidades; si abarca varios edificios, bajo la combinacion
+  // ("Edificio A + Edificio B") para que no aparezca duplicado en cada uno.
+  private buildGroups(items: OwnerPayment[]): BuildingGroup[] {
+    const byLabel = new Map<string, OwnerPayment[]>();
+
+    for (const payment of items) {
+      const names = [...new Set(payment.units.map(u => u.buildingName).filter(Boolean))]
+        .sort((a, b) => a.localeCompare(b, 'es'));
+      const label = names.length ? names.join(' + ') : 'Sin edificio';
+      const bucket = byLabel.get(label);
+      if (bucket) bucket.push(payment); else byLabel.set(label, [payment]);
+    }
+
+    return [...byLabel.entries()]
+      .sort(([a], [b]) => a.localeCompare(b, 'es'))
+      .map(([label, groupItems]) => ({
+        label,
+        items: groupItems,
+        pendingCount: groupItems.filter(p => p.status === 'Pending' || p.status === 'UnderReview').length
+      }));
   }
 }

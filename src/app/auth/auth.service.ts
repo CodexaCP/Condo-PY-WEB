@@ -38,6 +38,12 @@ type LoginResponse = {
 
 const SESSION_KEY = 'condopy-admin-session';
 
+// El panel web es solo para el personal administrativo. Propietarios, residentes y porteria usan la app movil:
+// no se les abre sesion en el web (el backend ademas valida el rol en cada endpoint).
+const WEB_ALLOWED_ROLES = ['SuperAdmin', 'CompanyAdmin', 'CompanyOperator', 'BuildingManager'];
+const WEB_ACCESS_DENIED_MESSAGE =
+  'Tu cuenta de propietario o residente no tiene acceso al panel web. Ingresá desde la app CondoPY.';
+
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private readonly http = inject(HttpClient);
@@ -52,6 +58,13 @@ export class AuthService {
         password
       })
       .pipe(
+        map((response) => {
+          if (!WEB_ALLOWED_ROLES.includes(response.role)) {
+            // No se guarda el token ni la sesion; se reporta con el mismo formato que los errores del backend.
+            throw { status: 403, error: { error: 'web_access_denied', message: WEB_ACCESS_DENIED_MESSAGE } };
+          }
+          return response;
+        }),
         tap((response) => {
           const session: SessionState = {
             token: response.token,
@@ -152,6 +165,12 @@ export class AuthService {
     try {
       const session = JSON.parse(raw) as SessionState;
       if (!session.token || !session.expiresAtUtc || !session.user) {
+        localStorage.removeItem(SESSION_KEY);
+        return null;
+      }
+
+      // Sesiones viejas de propietario/residente guardadas antes de esta restriccion.
+      if (!WEB_ALLOWED_ROLES.includes(session.user.role)) {
         localStorage.removeItem(SESSION_KEY);
         return null;
       }

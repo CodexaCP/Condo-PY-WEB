@@ -240,6 +240,8 @@ export class Login {
                     const body = error?.error;
                     if (body?.error === 'duplicate_username') {
                         this.errorMessage = body.message ?? 'El usuario tiene cuentas en varias empresas. Usa el formato usuario@empresa para iniciar sesión.';
+                    } else if (body?.error === 'web_access_denied') {
+                        this.errorMessage = body.message;
                     } else {
                         this.errorMessage = 'No se pudo iniciar sesión. Verifica credenciales y backend.';
                     }
