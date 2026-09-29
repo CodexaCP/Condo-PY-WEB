@@ -49,6 +49,18 @@ const FIELDS: CalibField[] = [
   { key: 'fondoOperativoLabel', group: 'Fondo operativo', label: 'Fondo operativo — título', kind: 'text', sample: 'FONDO OPERATIVO', x: 50,  top: 118, width: 200, defaultFontSize: 8 },
   { key: 'fondoOperativoValor', group: 'Fondo operativo', label: 'Fondo operativo — valor',  kind: 'text', sample: '1.200.000',       x: 475, top: 118, width: 70,  defaultFontSize: 8, align: 'R' },
 
+  // Resto de las categorías de ingreso: cada una con su título y su valor (solo en la primera hoja)
+  { key: 'alquilerLabel', group: 'Alquiler / uso de salón', label: 'Alquiler / uso de salón — título', kind: 'text', sample: 'ALQUILER/USO DE SALÓN', x: 370, top: 106, width: 105, defaultFontSize: 8 },
+  { key: 'alquilerValor', group: 'Alquiler / uso de salón', label: 'Alquiler / uso de salón — valor',  kind: 'text', sample: '900.000', x: 475, top: 106, width: 70,  defaultFontSize: 8, align: 'R' },
+  { key: 'interesLabel', group: 'Interés', label: 'Interés — título', kind: 'text', sample: 'INTERÉS', x: 370, top: 94, width: 105, defaultFontSize: 8 },
+  { key: 'interesValor', group: 'Interés', label: 'Interés — valor',  kind: 'text', sample: '150.000', x: 475, top: 94, width: 70,  defaultFontSize: 8, align: 'R' },
+  { key: 'ajusteLabel', group: 'Ajuste a favor', label: 'Ajuste a favor — título', kind: 'text', sample: 'AJUSTE A FAVOR', x: 370, top: 82, width: 105, defaultFontSize: 8 },
+  { key: 'ajusteValor', group: 'Ajuste a favor', label: 'Ajuste a favor — valor',  kind: 'text', sample: '100.000', x: 475, top: 82, width: 70,  defaultFontSize: 8, align: 'R' },
+  { key: 'aporteExtraLabel', group: 'Aporte extraordinario', label: 'Aporte extraordinario — título', kind: 'text', sample: 'APORTE EXTRAORDINARIO', x: 370, top: 70, width: 105, defaultFontSize: 8 },
+  { key: 'aporteExtraValor', group: 'Aporte extraordinario', label: 'Aporte extraordinario — valor',  kind: 'text', sample: '350.000', x: 475, top: 70, width: 70,  defaultFontSize: 8, align: 'R' },
+  { key: 'otroLabel', group: 'Otros ingresos', label: 'Otros ingresos — título', kind: 'text', sample: 'OTROS INGRESOS', x: 370, top: 58, width: 105, defaultFontSize: 8 },
+  { key: 'otroValor', group: 'Otros ingresos', label: 'Otros ingresos — valor',  kind: 'text', sample: '50.000', x: 475, top: 58, width: 70,  defaultFontSize: 8, align: 'R' },
+
   // Cuerpo: una columna por bloque
   { key: 'colConcepto',    group: 'Cuerpo', label: 'Columna CONCEPTO (proveedor)',      kind: 'column', sample: '', x: 50,  top: 145, width: 135, defaultFontSize: 8 },
   { key: 'colDescripcion', group: 'Cuerpo', label: 'Columna DESCRIPCIÓN DE CONCEPTO',   kind: 'column', sample: '', x: 185, top: 145, width: 220, defaultFontSize: 8 },
