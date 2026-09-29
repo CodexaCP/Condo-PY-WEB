@@ -23,8 +23,8 @@ export interface Building {
   invoiceTemplateFileName?: string | null;
   creditNoteTemplateUrl?: string | null;
   creditNoteTemplateFileName?: string | null;
-  receiptTemplateUrl?: string | null;
-  receiptTemplateFileName?: string | null;
+  settlementTemplateUrl?: string | null;
+  settlementTemplateFileName?: string | null;
 }
 
 export interface CreateBuildingRequest {
@@ -47,8 +47,8 @@ export interface CreateBuildingRequest {
   invoiceTemplateFileName?: string | null;
   creditNoteTemplateUrl?: string | null;
   creditNoteTemplateFileName?: string | null;
-  receiptTemplateUrl?: string | null;
-  receiptTemplateFileName?: string | null;
+  settlementTemplateUrl?: string | null;
+  settlementTemplateFileName?: string | null;
 }
 
 export interface Company {

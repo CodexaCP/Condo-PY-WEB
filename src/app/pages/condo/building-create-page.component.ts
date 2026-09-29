@@ -20,14 +20,14 @@ import { isPdfFile, pdfFirstPageToPngFile } from '../../api/pdf-to-image.util';
 import { UploadsApiService } from '../../api/uploads-api.service';
 import { AuthService } from '../../auth/auth.service';
 
-type TemplateKind = 'invoice' | 'creditNote' | 'receipt';
+type TemplateKind = 'invoice' | 'creditNote' | 'settlement';
 interface TemplateFile { url: string; fileName: string; }
 
 // Un modelo por concepto; si el edificio no usa los estandar de CONDOPY tiene que adjuntar los tres.
 const TEMPLATE_KINDS: { kind: TemplateKind; label: string }[] = [
   { kind: 'invoice',    label: 'Factura' },
   { kind: 'creditNote', label: 'Nota de crédito' },
-  { kind: 'receipt',    label: 'Comprobante' },
+  { kind: 'settlement', label: 'Liquidación' },
 ];
 
 interface PhonePrefix { label: string; value: string; flag: string; pattern: RegExp; hint: string; }
@@ -218,7 +218,7 @@ function templateFile(url?: string | null, fileName?: string | null): TemplateFi
               <span>Usar modelos estándar de CONDOPY</span>
             </label>
             <small class="field-hint">
-              Factura, nota de crédito y comprobante se descargan con el diseño estándar de CONDOPY (colores de la marca).
+              Factura, nota de crédito y liquidación se descargan con el diseño estándar de CONDOPY (colores de la marca).
               Si lo desmarcás, adjuntá los 3 modelos propios del edificio, uno por concepto.
             </small>
           </div>
@@ -340,7 +340,7 @@ export class BuildingCreatePageComponent implements OnInit {
            blockOverdueAmenityReservations: false,
            invoicingMode: '' as '' | InvoicingMode,
            useStandardTemplates: true,
-           templates: { invoice: null, creditNote: null, receipt: null } as Record<TemplateKind, TemplateFile | null> };
+           templates: { invoice: null, creditNote: null, settlement: null } as Record<TemplateKind, TemplateFile | null> };
 
   readonly lateFeeFrequencyOptions = [
     { label: 'Diario', value: 'Daily' },
@@ -397,7 +397,7 @@ export class BuildingCreatePageComponent implements OnInit {
             templates: {
               invoice:    templateFile(entity.invoiceTemplateUrl, entity.invoiceTemplateFileName),
               creditNote: templateFile(entity.creditNoteTemplateUrl, entity.creditNoteTemplateFileName),
-              receipt:    templateFile(entity.receiptTemplateUrl, entity.receiptTemplateFileName)
+              settlement: templateFile(entity.settlementTemplateUrl, entity.settlementTemplateFileName)
             }
           };
         }
@@ -441,7 +441,7 @@ export class BuildingCreatePageComponent implements OnInit {
     this.uploadingTemplate = kind;
     this.cdr.markForCheck();
 
-    // El PDF se usa como fondo de la factura/NC/comprobante real: eso solo puede incrustar imagenes
+    // El PDF se usa como fondo de la factura/NC/liquidacion real: eso solo puede incrustar imagenes
     // rasterizadas, asi que si suben un PDF se convierte a PNG en el navegador antes de subirlo.
     let toUpload = file;
     if (isPdfFile(file)) {
@@ -511,9 +511,9 @@ export class BuildingCreatePageComponent implements OnInit {
 
     // Solo el SuperAdmin edita los modelos; el resto no los envia y el backend los deja como estan.
     const standard = this.form.useStandardTemplates;
-    const { invoice, creditNote, receipt } = this.form.templates;
-    if (this.isSuperAdmin && !standard && (!invoice || !creditNote || !receipt)) {
-      this.msg.add({ severity: 'error', summary: 'Error', detail: 'Adjuntá los 3 modelos (factura, nota de crédito y comprobante) o marcá "Usar modelos estándar de CONDOPY".', life: 5000 });
+    const { invoice, creditNote, settlement } = this.form.templates;
+    if (this.isSuperAdmin && !standard && (!invoice || !creditNote || !settlement)) {
+      this.msg.add({ severity: 'error', summary: 'Error', detail: 'Adjuntá los 3 modelos (factura, nota de crédito y liquidación) o marcá "Usar modelos estándar de CONDOPY".', life: 5000 });
       return;
     }
 
@@ -527,8 +527,8 @@ export class BuildingCreatePageComponent implements OnInit {
                     invoiceTemplateFileName:    standard ? null : invoice!.fileName,
                     creditNoteTemplateUrl:      standard ? null : creditNote!.url,
                     creditNoteTemplateFileName: standard ? null : creditNote!.fileName,
-                    receiptTemplateUrl:         standard ? null : receipt!.url,
-                    receiptTemplateFileName:    standard ? null : receipt!.fileName
+                    settlementTemplateUrl:      standard ? null : settlement!.url,
+                    settlementTemplateFileName: standard ? null : settlement!.fileName
                   } : {}) };
     this.isSaving = true;
     const op = this.isEditing ? this.api.update(this.editingId, req) : this.api.create(req);
