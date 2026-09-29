@@ -352,7 +352,7 @@ export class BuildingIncomesPageComponent implements OnInit {
   rolloverResult: RolloverIncomeResult | null = null;
   rollover = { buildingId: '', sourcePeriodId: '', targetPeriodId: '' };
 
-  readonly categories: BuildingIncomeCategory[] = ['AccumulatedBalance', 'CommonAreaRental', 'Interest', 'OperationalFund', 'CreditAdjustment', 'Other'];
+  readonly categories: BuildingIncomeCategory[] = ['AccumulatedBalance', 'CommonAreaRental', 'Interest', 'OperationalFund', 'CreditAdjustment', 'ExtraordinaryContribution', 'Other'];
   filters = { buildingId: '', expensePeriodId: '' };
   form = this.createInitialForm();
 
@@ -548,6 +548,7 @@ export class BuildingIncomesPageComponent implements OnInit {
       Interest: 'Interes',
       OperationalFund: 'Fondo operativo',
       CreditAdjustment: 'Ajuste a favor',
+      ExtraordinaryContribution: 'Aporte extraordinario',
       Other: 'Otro'
     })[category];
   }

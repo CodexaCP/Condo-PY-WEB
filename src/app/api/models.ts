@@ -326,6 +326,7 @@ export type BuildingIncomeCategory =
   | 'Interest'
   | 'OperationalFund'
   | 'CreditAdjustment'
+  | 'ExtraordinaryContribution'
   | 'Other';
 
 export interface BuildingIncome {
