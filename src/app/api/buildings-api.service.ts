@@ -2,7 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { Observable, shareReplay, tap } from 'rxjs';
 import { API_BASE_URL } from '../config/api.config';
-import { Building, CreateBuildingRequest } from './models';
+import { Building, CreateBuildingRequest, UpdateSettlementCalibrationRequest } from './models';
 
 @Injectable({ providedIn: 'root' })
 export class BuildingsApiService {
@@ -33,6 +33,14 @@ export class BuildingsApiService {
 
   delete(id: string): Observable<void> {
     return this.http.delete<void>(`${API_BASE_URL}/buildings/${id}`).pipe(tap(() => this.invalidateCache()));
+  }
+
+  updateSettlementPositions(id: string, request: UpdateSettlementCalibrationRequest): Observable<Building> {
+    return this.http.put<Building>(`${API_BASE_URL}/buildings/${id}/settlement-positions`, request).pipe(tap(() => this.invalidateCache()));
+  }
+
+  getSettlementSamplePdfUrl(id: string, token: string): string {
+    return `${API_BASE_URL}/buildings/${id}/settlement-sample-pdf?access_token=${token}`;
   }
 
   private invalidateCache(): void { this.cache$ = null; }

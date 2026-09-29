@@ -25,6 +25,8 @@ export interface Building {
   creditNoteTemplateFileName?: string | null;
   settlementTemplateUrl?: string | null;
   settlementTemplateFileName?: string | null;
+  settlementFieldPositionsJson?: string | null;
+  settlementHideFrame?: boolean;
 }
 
 export interface CreateBuildingRequest {
@@ -1743,4 +1745,9 @@ export interface AdCampaignUpdateRequest {
   isActive: boolean;
   notifyBeforeExpiry: boolean;
   buildingIds: string[];
+}
+
+export interface UpdateSettlementCalibrationRequest {
+  positions: Record<string, FieldOffset>;
+  hideFrame: boolean;
 }

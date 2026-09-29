@@ -52,7 +52,13 @@ import { AuthService } from '../../auth/auth.service';
           <span>{{ item.code }}</span>
           <span>{{ item.condominiumName || 'Directo' }}</span>
           <span>{{ item.address }}</span>
-          <p-tag [value]="item.isActive ? 'Activo' : 'Inactivo'" [severity]="item.isActive ? 'success' : 'secondary'"></p-tag>
+          <span class="state-cell">
+            <p-tag [value]="item.isActive ? 'Activo' : 'Inactivo'" [severity]="item.isActive ? 'success' : 'secondary'"></p-tag>
+            <button *ngIf="canCalibrateSettlement(item)" type="button" class="calib-link" title="Ajustar liquidación sobre el modelo del edificio"
+                    (click)="goToCalibrateSettlement(item.id)">
+              <i class="pi pi-sliders-h"></i> Ajustar liquidación
+            </button>
+          </span>
         </div>
       </div>
     </p-card>
@@ -149,6 +155,9 @@ import { AuthService } from '../../auth/auth.service';
   styles: [`
     .bld-grid    { grid-template-columns: 1.1fr 0.7fr 1fr 1.2fr 0.7fr; }
     .bld-grid-sa { grid-template-columns: 0.9fr 1.1fr 0.7fr 1fr 1.2fr 0.7fr; }
+    .state-cell { display: flex; flex-direction: column; align-items: flex-start; gap: 0.35rem; }
+    .calib-link { background: none; border: 0; padding: 0; cursor: pointer; color: var(--brand-blue); font-size: 0.78rem; font-weight: 600; }
+    .calib-link:hover { text-decoration: underline; }
     .company-label { color: var(--brand-blue); font-weight: 600; font-size: 0.88rem; }
     .row-link { background: none; border: none; padding: 0; font: inherit; font-weight: 700;
                 color: var(--brand-blue); cursor: pointer; text-align: left; text-decoration: underline dotted; }
@@ -242,6 +251,13 @@ export class BuildingsPageComponent implements OnInit {
 
   goToCreate(): void { this.router.navigate(['/buildings/create']); }
   goToEdit(id: string): void { this.router.navigate(['/buildings', id]); }
+
+  // Solo quien administra el edificio (empresa o encargado) ajusta la liquidacion, y solo si tiene modelo propio.
+  canCalibrateSettlement(item: Building): boolean {
+    return this.auth.hasRole('CompanyAdmin', 'BuildingManager')
+      && item.useStandardTemplates === false && !!item.settlementTemplateUrl;
+  }
+  goToCalibrateSettlement(id: string): void { this.router.navigate(['/buildings', id, 'calibrate-settlement']); }
 
   openCreate(): void {
     this.selected = null; this.form = this.emptyForm();

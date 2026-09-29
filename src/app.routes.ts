@@ -106,6 +106,10 @@ export const appRoutes: Routes = [
                 path: 'buildings/:id',
                 loadComponent: () => import('./app/pages/condo/building-create-page.component').then(m => m.BuildingCreatePageComponent)
             },
+            {
+                path: 'buildings/:id/calibrate-settlement',
+                loadComponent: () => import('./app/pages/condo/settlement-calibration-page.component').then(m => m.SettlementCalibrationPageComponent)
+            },
 
             {
                 path: 'units/create',
