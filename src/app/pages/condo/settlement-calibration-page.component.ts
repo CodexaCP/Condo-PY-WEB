@@ -13,7 +13,7 @@ import { BuildingsApiService } from '../../api/buildings-api.service';
 import { AuthService } from '../../auth/auth.service';
 import { Building, FieldOffset } from '../../api/models';
 
-type BlockKind = 'text' | 'column' | 'control' | 'signatures' | 'footer';
+type BlockKind = 'text' | 'column' | 'signature' | 'footer';
 type ColumnKey = 'colConcepto' | 'colDescripcion' | 'colReserva' | 'colMonto';
 
 interface CalibField {
@@ -38,8 +38,12 @@ const FIELDS: CalibField[] = [
   { key: 'colDescripcion', label: 'Columna DESCRIPCIÓN DE CONCEPTO', kind: 'column', sample: '',                             x: 185, top: 145, width: 220, defaultFontSize: 8 },
   { key: 'colReserva',     label: 'Columna MONTO fondo de reserva', kind: 'column', sample: '',                              x: 405, top: 145, width: 70,  defaultFontSize: 8, right: true },
   { key: 'colMonto',       label: 'Columna MONTO gastos comunes', kind: 'column',   sample: '',                               x: 475, top: 145, width: 70,  defaultFontSize: 8, right: true },
-  { key: 'control',        label: 'Control (emisión, vigencia y vencimiento)', kind: 'control', sample: '',                  x: 60,  top: 668, width: 260, defaultFontSize: 8 },
-  { key: 'firmas',         label: 'Firmas',                     kind: 'signatures', sample: '',                               x: 50,  top: 725, width: 495, defaultFontSize: 9 },
+  { key: 'fechaEmision',    label: 'Fecha de emisión (solo el valor)', kind: 'text', sample: '30/04/2026',  x: 165, top: 705, width: 0, defaultFontSize: 8 },
+  { key: 'vigencia',       label: 'Vigencia',                   kind: 'text',       sample: 'Vigencia: 01/04/2026 al 30/04/2026', x: 52, top: 745, width: 0, defaultFontSize: 8 },
+  { key: 'vencimiento',    label: 'Vencimiento',                kind: 'text',       sample: 'Vencimiento: 20/05/2026', x: 52, top: 757, width: 0, defaultFontSize: 8 },
+  { key: 'firmaAutorizado', label: 'Firma AUTORIZADO POR (presidente)', kind: 'signature', sample: 'Presidente del consorcio', x: 215, top: 660, width: 175, defaultFontSize: 8 },
+  { key: 'firmaVerificacion', label: 'Firma VERIFICACIÓN (building manager)', kind: 'signature', sample: 'Encargado de edificio', x: 400, top: 660, width: 145, defaultFontSize: 8 },
+  { key: 'firmaAdmin',      label: 'Firma administración (company admin)', kind: 'signature', sample: 'Administrador de la empresa', x: 215, top: 735, width: 175, defaultFontSize: 8 },
   { key: 'pie',            label: 'Pie (generado y N° de hoja)', kind: 'footer',    sample: '',                               x: 50,  top: 815, width: 495, defaultFontSize: 7 }
 ];
 
@@ -134,14 +138,10 @@ const SCALE = 0.72; // px por punto PDF
                          [class.right]="f.right"
                          [style.height.px]="rowHeight * SCALE" [style.lineHeight.px]="rowHeight * SCALE">{{ text }}</div>
                   </ng-container>
-                  <div *ngSwitchCase="'control'">
-                    <div>Fecha de emisión: 30/04/2026</div>
-                    <div>Vigencia: 01/04/2026 al 30/04/2026</div>
-                    <div>Vencimiento: 20/05/2026</div>
-                  </div>
-                  <div *ngSwitchCase="'signatures'" class="mock-sign">
-                    <span>Nombre Apellido<br />Administrador</span>
-                    <span>Nombre Apellido<br />Presidente del consorcio</span>
+                  <div *ngSwitchCase="'signature'" class="mock-sign">
+                    <div class="mock-sign-img">firma</div>
+                    <b>Nombre Apellido</b>
+                    <span>{{ f.sample }}</span>
                   </div>
                   <div *ngSwitchCase="'footer'" class="mock-foot"><span>Generado el 30/04/2026</span><span>1 / 1</span></div>
                 </ng-container>
@@ -225,7 +225,8 @@ const SCALE = 0.72; // px por punto PDF
     .calib-field.dragging { cursor: grabbing; background: rgba(19,133,182,0.25); z-index: 10; }
     .mock-cell { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .mock-cell.right { text-align: right; }
-    .mock-sign { display: flex; justify-content: space-around; text-align: center; }
+    .mock-sign { display: flex; flex-direction: column; align-items: center; text-align: center; line-height: 1.2; }
+    .mock-sign-img { height: 36px; display: flex; align-items: flex-end; opacity: 0.5; }
     .mock-foot { display: flex; justify-content: space-between; }
     .calib-list { display: grid; gap: 0.25rem; align-content: start; }
     .calib-side { flex: 1 1 0; min-width: 0; max-width: 250px; }
