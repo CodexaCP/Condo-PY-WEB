@@ -41,6 +41,10 @@ const FIELDS: CalibField[] = [
   { key: 'mes',      group: 'Encabezado', label: 'Mes (valor)',      kind: 'text', sample: 'ABRIL',                         x: 215, top: 112, width: 0, defaultFontSize: 10 },
   { key: 'anio',     group: 'Encabezado', label: 'Año (valor)',      kind: 'text', sample: '2026',                          x: 330, top: 112, width: 0, defaultFontSize: 10 },
 
+  // Saldo acumulado: título y valor aparte de los conceptos (solo en la primera hoja)
+  { key: 'saldoLabel', group: 'Saldo acumulado', label: 'Saldo acumulado — título', kind: 'text', sample: 'SALDO ACUMULADO', x: 50,  top: 130, width: 200, defaultFontSize: 8 },
+  { key: 'saldoValor', group: 'Saldo acumulado', label: 'Saldo acumulado — valor',  kind: 'text', sample: '2.500.000',       x: 475, top: 130, width: 70,  defaultFontSize: 8, align: 'R' },
+
   // Cuerpo: una columna por bloque
   { key: 'colConcepto',    group: 'Cuerpo', label: 'Columna CONCEPTO (proveedor)',      kind: 'column', sample: '', x: 50,  top: 145, width: 135, defaultFontSize: 8 },
   { key: 'colDescripcion', group: 'Cuerpo', label: 'Columna DESCRIPCIÓN DE CONCEPTO',   kind: 'column', sample: '', x: 185, top: 145, width: 220, defaultFontSize: 8 },
@@ -53,9 +57,7 @@ const FIELDS: CalibField[] = [
   { key: 'totGastosLabel',   group: 'Totales', label: 'Total gastos del mes — título',     kind: 'text', sample: 'TOTAL GASTOS DEL MES',  x: 50,  top: 598, width: 200, defaultFontSize: 8 },
   { key: 'totGastosReserva', group: 'Totales', label: 'Total gastos — valor fondo de reserva', kind: 'text', sample: '2.640.000',        x: 405, top: 598, width: 70,  defaultFontSize: 8, align: 'R' },
   { key: 'totGastosComunes', group: 'Totales', label: 'Total gastos — valor gastos comunes',   kind: 'text', sample: '37.180.000',       x: 475, top: 598, width: 70,  defaultFontSize: 8, align: 'R' },
-  { key: 'subTotalLabel',    group: 'Totales', label: 'Sub total general — título',        kind: 'text', sample: 'SUB TOTAL GENERAL GS.', x: 300, top: 611, width: 170, defaultFontSize: 8 },
   { key: 'subTotalValor',    group: 'Totales', label: 'Sub total general — valor',         kind: 'text', sample: '39.820.000',            x: 475, top: 611, width: 70,  defaultFontSize: 8, align: 'R' },
-  { key: 'totalLabel',       group: 'Totales', label: 'Total general — título',            kind: 'text', sample: 'TOTAL GENERAL GS. (MONTO NETO A DISTRIBUIR)', x: 300, top: 624, width: 170, defaultFontSize: 8 },
   { key: 'totalValor',       group: 'Totales', label: 'Total general — valor',             kind: 'text', sample: '40.190.000',            x: 475, top: 624, width: 70,  defaultFontSize: 8, align: 'R' },
 
   // Fechas
@@ -66,20 +68,11 @@ const FIELDS: CalibField[] = [
   { key: 'vencimientoLabel', group: 'Fechas', label: 'Vencimiento — título',             kind: 'text', sample: 'VENCIMIENTO', x: 52,  top: 757, width: 0, defaultFontSize: 8 },
   { key: 'vencimiento',      group: 'Fechas', label: 'Vencimiento — valor',              kind: 'text', sample: '20/05/2026',  x: 120, top: 757, width: 0, defaultFontSize: 8 },
 
-  // Firmas: imagen, nombre y cargo por separado. Autorizado = presidente; Verificación = building manager; Admin = company admin
+  // Firmas: Autorizado = presidente (imagen, nombre y cargo por separado); Verificación = building manager (solo la imagen)
   { key: 'firmaAutorizado',       group: 'Firma AUTORIZADO POR (presidente)', label: 'Imagen de la firma', kind: 'image', sample: 'firma',                   x: 250, top: 655, width: 110, defaultFontSize: 8 },
   { key: 'firmaAutorizadoNombre', group: 'Firma AUTORIZADO POR (presidente)', label: 'Nombre',             kind: 'text',  sample: 'Nombre Apellido',         x: 215, top: 700, width: 175, defaultFontSize: 8, align: 'C' },
   { key: 'firmaAutorizadoCargo',  group: 'Firma AUTORIZADO POR (presidente)', label: 'Cargo',              kind: 'text',  sample: 'Presidente del consorcio', x: 215, top: 711, width: 175, defaultFontSize: 8, align: 'C' },
-  { key: 'firmaVerificacion',       group: 'Firma VERIFICACIÓN (building manager)', label: 'Imagen de la firma', kind: 'image', sample: 'firma',              x: 420, top: 655, width: 110, defaultFontSize: 8 },
-  { key: 'firmaVerificacionNombre', group: 'Firma VERIFICACIÓN (building manager)', label: 'Nombre',             kind: 'text',  sample: 'Nombre Apellido',    x: 400, top: 700, width: 145, defaultFontSize: 8, align: 'C' },
-  { key: 'firmaVerificacionCargo',  group: 'Firma VERIFICACIÓN (building manager)', label: 'Cargo',              kind: 'text',  sample: 'Encargado de edificio', x: 400, top: 711, width: 145, defaultFontSize: 8, align: 'C' },
-  { key: 'firmaAdmin',       group: 'Firma administración (company admin)', label: 'Imagen de la firma', kind: 'image', sample: 'firma',                    x: 250, top: 730, width: 110, defaultFontSize: 8 },
-  { key: 'firmaAdminNombre', group: 'Firma administración (company admin)', label: 'Nombre',             kind: 'text',  sample: 'Nombre Apellido',          x: 215, top: 775, width: 175, defaultFontSize: 8, align: 'C' },
-  { key: 'firmaAdminCargo',  group: 'Firma administración (company admin)', label: 'Cargo',              kind: 'text',  sample: 'Administrador de la empresa', x: 215, top: 786, width: 175, defaultFontSize: 8, align: 'C' },
-
-  // Pie
-  { key: 'pieGenerado', group: 'Pie', label: 'Generado el (fecha y hora)', kind: 'text', sample: 'Generado el 30/04/2026 12:00', x: 50,  top: 815, width: 300, defaultFontSize: 7 },
-  { key: 'piePagina',   group: 'Pie', label: 'N° de hoja',                 kind: 'text', sample: '1 / 1',                        x: 500, top: 815, width: 45,  defaultFontSize: 7, align: 'R' }
+  { key: 'firmaVerificacion',       group: 'Firma VERIFICACIÓN (building manager)', label: 'Imagen de la firma', kind: 'image', sample: 'firma',              x: 420, top: 655, width: 110, defaultFontSize: 8 }
 ];
 
 // Filas de ejemplo de cada columna (una fila por renglon del cuerpo).
