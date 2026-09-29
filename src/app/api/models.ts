@@ -655,6 +655,9 @@ export interface FieldOffset {
   dx: number;
   dy: number;
   fontSize?: number | null;
+  width?: number | null;     // liquidacion: ancho del bloque en puntos
+  rowHeight?: number | null; // liquidacion: alto de fila (solo la key "filas")
+  hidden?: boolean;           // liquidacion: no dibujar el bloque
 }
 
 export interface UpdateInvoiceSeriesCalibrationRequest {

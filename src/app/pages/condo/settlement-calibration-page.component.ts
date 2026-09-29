@@ -13,7 +13,8 @@ import { BuildingsApiService } from '../../api/buildings-api.service';
 import { AuthService } from '../../auth/auth.service';
 import { Building, FieldOffset } from '../../api/models';
 
-type BlockKind = 'text' | 'columns' | 'body' | 'control' | 'signatures' | 'footer';
+type BlockKind = 'text' | 'column' | 'control' | 'signatures' | 'footer';
+type ColumnKey = 'colConcepto' | 'colDescripcion' | 'colReserva' | 'colMonto';
 
 interface CalibField {
   key: string;
@@ -22,22 +23,36 @@ interface CalibField {
   sample: string;
   x: number;   // punto PDF, desde la esquina superior izquierda (igual que SettlementPdfDocument.cs)
   top: number;
-  width: number; // ancho del bloque en puntos (solo bloques; el texto va en una linea)
+  width: number; // ancho del bloque en puntos; 0 = texto de una linea sin ancho propio
   defaultFontSize: number; // debe coincidir con el tamano por defecto en SettlementPdfDocument.cs
+  right?: boolean; // columnas de monto: alineadas a la derecha
 }
 
-// Mismas keys, posiciones y tamanos base que FieldDefaults en SettlementPdfDocument.cs — si se agrega un
-// bloque calibrable ahi, hay que agregarlo aca tambien para poder arrastrarlo.
+// Mismas keys, posiciones, anchos y tamanos base que FieldDefaults en SettlementPdfDocument.cs — si se agrega
+// un bloque calibrable ahi, hay que agregarlo aca tambien para poder arrastrarlo.
 const FIELDS: CalibField[] = [
-  { key: 'titulo',   label: 'Título',                       kind: 'text',       sample: 'LIQUIDACIÓN EXPENSAS COMUNES', x: 195, top: 86,  width: 0,   defaultFontSize: 11 },
-  { key: 'edificio', label: 'Edificio',                     kind: 'text',       sample: 'EDIFICIO DE EJEMPLO',           x: 66,  top: 100, width: 0,   defaultFontSize: 8 },
-  { key: 'periodo',  label: 'Mes / período',                kind: 'text',       sample: 'MES: ABRIL 2026',               x: 215, top: 112, width: 0,   defaultFontSize: 10 },
-  { key: 'columnas', label: 'Títulos de las 2 columnas',    kind: 'columns',    sample: '',                               x: 385, top: 128, width: 160, defaultFontSize: 6.5 },
-  { key: 'cuerpo',   label: 'Cuerpo (ingresos, gastos y totales)', kind: 'body', sample: '',                             x: 50,  top: 145, width: 495, defaultFontSize: 8 },
-  { key: 'control',  label: 'Control (emisión, vigencia y vencimiento)', kind: 'control', sample: '',                    x: 60,  top: 668, width: 260, defaultFontSize: 8 },
-  { key: 'firmas',   label: 'Firmas',                       kind: 'signatures', sample: '',                               x: 50,  top: 725, width: 495, defaultFontSize: 9 },
-  { key: 'pie',      label: 'Pie (generado y N° de hoja)',  kind: 'footer',     sample: '',                               x: 50,  top: 815, width: 495, defaultFontSize: 7 }
+  { key: 'titulo',         label: 'Título',                     kind: 'text',       sample: 'LIQUIDACIÓN EXPENSAS COMUNES', x: 195, top: 86,  width: 0,   defaultFontSize: 11 },
+  { key: 'edificio',       label: 'Edificio',                   kind: 'text',       sample: 'EDIFICIO DE EJEMPLO',           x: 66,  top: 100, width: 0,   defaultFontSize: 8 },
+  { key: 'periodo',        label: 'Mes / período',              kind: 'text',       sample: 'MES: ABRIL 2026',               x: 215, top: 112, width: 0,   defaultFontSize: 10 },
+  { key: 'colConcepto',    label: 'Columna CONCEPTO (proveedor)', kind: 'column',   sample: '',                               x: 50,  top: 145, width: 135, defaultFontSize: 8 },
+  { key: 'colDescripcion', label: 'Columna DESCRIPCIÓN DE CONCEPTO', kind: 'column', sample: '',                             x: 185, top: 145, width: 220, defaultFontSize: 8 },
+  { key: 'colReserva',     label: 'Columna MONTO fondo de reserva', kind: 'column', sample: '',                              x: 405, top: 145, width: 70,  defaultFontSize: 8, right: true },
+  { key: 'colMonto',       label: 'Columna MONTO gastos comunes', kind: 'column',   sample: '',                               x: 475, top: 145, width: 70,  defaultFontSize: 8, right: true },
+  { key: 'control',        label: 'Control (emisión, vigencia y vencimiento)', kind: 'control', sample: '',                  x: 60,  top: 668, width: 260, defaultFontSize: 8 },
+  { key: 'firmas',         label: 'Firmas',                     kind: 'signatures', sample: '',                               x: 50,  top: 725, width: 495, defaultFontSize: 9 },
+  { key: 'pie',            label: 'Pie (generado y N° de hoja)', kind: 'footer',    sample: '',                               x: 50,  top: 815, width: 495, defaultFontSize: 7 }
 ];
+
+// Filas de ejemplo de cada columna (una fila por renglon del cuerpo).
+const COLUMN_SAMPLES: Record<ColumnKey, string[]> = {
+  colConcepto:    ['SALDO ACUMULADO', 'ANDE', 'TODO BRILLO S.A.', 'CGI S.R.L.', 'TOTAL GASTOS DEL MES'],
+  colDescripcion: ['', 'CONSUMO CICLO 03/26', 'SERVICIO DE LIMPIEZA', 'CAMBIO DE BARRERA', ''],
+  colReserva:     ['', '', '', '2.640.000', '2.640.000'],
+  colMonto:       ['2.500.000', '3.150.000', '11.290.000', '', '37.180.000']
+};
+
+const ROWS_KEY = 'filas'; // guarda el alto de fila comun de las cuatro columnas
+const DEFAULT_ROW_HEIGHT = 15;
 
 const PAGE_W_PT = 595.2756;
 const PAGE_H_PT = 841.8898;
@@ -74,15 +89,26 @@ const SCALE = 0.72; // px por punto PDF
         </div>
 
         <p class="calib-hint">
-          Arrastrá cada bloque hasta que calce sobre el modelo. Los datos son de ejemplo (no es una liquidación real).
+          Arrastrá cada bloque hasta que calce sobre el modelo. Cada columna del cuerpo (concepto, descripción y montos) se
+          mueve y se ensancha por separado, y el alto de fila se ajusta para que las filas caigan sobre las líneas del papel.
+          Cada renglón ocupa una sola línea (si el texto no entra en el ancho se corta con "..."). Los datos son de ejemplo.
           Después de guardar, generá el PDF de prueba e imprimilo sobre el papel para verificar.
-          El cuerpo crece hacia abajo según la cantidad de gastos y, si no entra en la hoja, sigue en la siguiente.
         </p>
 
-        <label class="hide-frame-check">
-          <input type="checkbox" [(ngModel)]="hideFrame" name="hideFrame" [ngModelOptions]="{ standalone: true }" />
-          Mi modelo ya tiene su propio marco, fondos y líneas impresos — dibujar solo el texto.
-        </label>
+        <div class="calib-options">
+          <label class="hide-frame-check">
+            <input type="checkbox" [(ngModel)]="hideFrame" name="hideFrame" [ngModelOptions]="{ standalone: true }" />
+            Mi modelo ya tiene su propio marco, fondos y líneas impresos — dibujar solo el texto.
+          </label>
+          <span class="row-height">
+            Alto de cada fila
+            <button type="button" class="font-step" (click)="stepRowHeight(-0.5)">−</button>
+            <input type="number" step="0.5" min="6" max="80" class="font-input"
+                   [ngModel]="rowHeight" (ngModelChange)="setRowHeight($event)" [ngModelOptions]="{ standalone: true }" />
+            <button type="button" class="font-step" (click)="stepRowHeight(0.5)">+</button>
+            pt
+          </span>
+        </div>
 
         <div class="calib-workspace">
           <div class="calib-list calib-side">
@@ -93,40 +119,34 @@ const SCALE = 0.72; // px por punto PDF
             <img *ngIf="!isPdf" [src]="resolvedTemplateUrl" class="calib-bg" [style.width.px]="canvasW" [style.height.px]="canvasH" alt="Modelo de liquidación" />
             <iframe *ngIf="isPdf" [src]="resolvedTemplateUrlSafe" class="calib-bg" [style.width.px]="canvasW" [style.height.px]="canvasH" title="Modelo de liquidación"></iframe>
 
-            <div class="calib-field" *ngFor="let f of fields"
-                 [style.left.px]="screenX(f)" [style.top.px]="screenY(f)"
-                 [style.fontSize.px]="fontSizeOf(f) * SCALE"
-                 [style.width.px]="f.width ? f.width * SCALE : null"
-                 [class.calib-block]="f.kind !== 'text'"
-                 [class.dragging]="draggingKey === f.key"
-                 (mousedown)="startDrag(f, $event)">
-              <ng-container [ngSwitch]="f.kind">
-                <ng-container *ngSwitchCase="'text'">{{ f.sample }}</ng-container>
-                <div *ngSwitchCase="'columns'" class="mock-cols"><b>FONDOS DE RESERVA</b><b>GASTOS COMUNES</b></div>
-                <div *ngSwitchCase="'body'" class="mock-body">
-                  <div class="mock-row"><span>SALDO ACUMULADO</span><span></span><span>2.500.000</span></div>
-                  <div class="mock-row"><span><b>TOTAL PARA GASTOS</b></span><span></span><span><b>3.400.000</b></span></div>
-                  <div class="mock-row gap"></div>
-                  <div class="mock-row"><span>ANDE · CONSUMO CICLO 03/26</span><span></span><span>3.150.000</span></div>
-                  <div class="mock-row"><span>TODO BRILLO · LIMPIEZA</span><span></span><span>11.290.000</span></div>
-                  <div class="mock-row"><span>CGI · CAMBIO DE BARRERA</span><span>2.640.000</span><span></span></div>
-                  <div class="mock-row"><span>… un gasto por línea …</span><span></span><span></span></div>
-                  <div class="mock-row gap"></div>
-                  <div class="mock-row"><span><b>TOTAL GASTOS DEL MES</b></span><span><b>2.640.000</b></span><span><b>37.180.000</b></span></div>
-                  <div class="mock-row"><span><b>MONTO NETO A DISTRIBUIR</b></span><span></span><span><b>40.190.000</b></span></div>
-                </div>
-                <div *ngSwitchCase="'control'">
-                  <div>Fecha de emisión: 30/04/2026</div>
-                  <div>Vigencia: 01/04/2026 al 30/04/2026</div>
-                  <div>Vencimiento: 20/05/2026</div>
-                </div>
-                <div *ngSwitchCase="'signatures'" class="mock-sign">
-                  <span>Nombre Apellido<br />Administrador</span>
-                  <span>Nombre Apellido<br />Presidente del consorcio</span>
-                </div>
-                <div *ngSwitchCase="'footer'" class="mock-foot"><span>Generado el 30/04/2026</span><span>1 / 1</span></div>
-              </ng-container>
-            </div>
+            <ng-container *ngFor="let f of fields">
+              <div class="calib-field" *ngIf="!isHidden(f)"
+                   [style.left.px]="screenX(f)" [style.top.px]="screenY(f)"
+                   [style.fontSize.px]="fontSizeOf(f) * SCALE"
+                   [style.width.px]="widthOf(f) ? widthOf(f) * SCALE : null"
+                   [class.calib-block]="f.kind !== 'text'"
+                   [class.dragging]="draggingKey === f.key"
+                   (mousedown)="startDrag(f, $event)">
+                <ng-container [ngSwitch]="f.kind">
+                  <ng-container *ngSwitchCase="'text'">{{ f.sample }}</ng-container>
+                  <ng-container *ngSwitchCase="'column'">
+                    <div class="mock-cell" *ngFor="let text of samplesOf(f)"
+                         [class.right]="f.right"
+                         [style.height.px]="rowHeight * SCALE" [style.lineHeight.px]="rowHeight * SCALE">{{ text }}</div>
+                  </ng-container>
+                  <div *ngSwitchCase="'control'">
+                    <div>Fecha de emisión: 30/04/2026</div>
+                    <div>Vigencia: 01/04/2026 al 30/04/2026</div>
+                    <div>Vencimiento: 20/05/2026</div>
+                  </div>
+                  <div *ngSwitchCase="'signatures'" class="mock-sign">
+                    <span>Nombre Apellido<br />Administrador</span>
+                    <span>Nombre Apellido<br />Presidente del consorcio</span>
+                  </div>
+                  <div *ngSwitchCase="'footer'" class="mock-foot"><span>Generado el 30/04/2026</span><span>1 / 1</span></div>
+                </ng-container>
+              </div>
+            </ng-container>
           </div>
 
           <div class="calib-list calib-side">
@@ -135,7 +155,7 @@ const SCALE = 0.72; // px por punto PDF
         </div>
 
         <ng-template #rowTpl let-fields="fields">
-          <div class="calib-row" *ngFor="let f of fields">
+          <div class="calib-row" *ngFor="let f of fields" [class.is-hidden]="isHidden(f)">
             <span class="calib-row-label">{{ f.label }}</span>
             <span class="calib-row-offset">dx {{ (offsets[f.key]?.dx ?? 0) | number:'1.0-1' }} · dy {{ (offsets[f.key]?.dy ?? 0) | number:'1.0-1' }} pt</span>
             <span class="calib-row-fontsize">
@@ -146,6 +166,18 @@ const SCALE = 0.72; // px por punto PDF
               <button type="button" class="font-step" (click)="stepFontSize(f, 0.5)">+</button>
               pt
             </span>
+            <span class="calib-row-fontsize" *ngIf="f.width">
+              ancho
+              <button type="button" class="font-step" (click)="stepWidth(f, -5)">−</button>
+              <input type="number" step="1" min="10" max="600" class="font-input wide"
+                     [ngModel]="widthOf(f)" (ngModelChange)="setWidth(f, $event)" [ngModelOptions]="{ standalone: true }" />
+              <button type="button" class="font-step" (click)="stepWidth(f, 5)">+</button>
+              pt
+            </span>
+            <label class="hide-check">
+              <input type="checkbox" [ngModel]="isHidden(f)" (ngModelChange)="setHidden(f, $event)" [ngModelOptions]="{ standalone: true }" />
+              No dibujar (mi papel ya lo trae impreso)
+            </label>
           </div>
         </ng-template>
       </ng-container>
@@ -156,12 +188,13 @@ const SCALE = 0.72; // px por punto PDF
     .calib-toolbar { display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; margin-bottom: 0.75rem; }
     .spacer { flex: 1; }
     .calib-hint { font-size: 0.82rem; color: #6b878d; margin: 0 0 1rem; }
+    .calib-options { display: flex; align-items: center; gap: 1.5rem; flex-wrap: wrap; margin-bottom: 1rem; }
     .hide-frame-check {
       display: flex; align-items: center; gap: 0.5rem;
-      font-size: 0.85rem; color: #29484f; font-weight: 600;
-      margin-bottom: 1rem; cursor: pointer;
+      font-size: 0.85rem; color: #29484f; font-weight: 600; cursor: pointer;
     }
     .hide-frame-check input { width: auto; }
+    .row-height { display: flex; align-items: center; gap: 0.3rem; font-size: 0.85rem; color: #29484f; font-weight: 600; }
     .calib-workspace { display: flex; align-items: flex-start; justify-content: center; gap: 1.25rem; margin-bottom: 1.25rem; }
     .calib-canvas {
       position: relative;
@@ -172,7 +205,7 @@ const SCALE = 0.72; // px por punto PDF
       overflow: hidden;
       box-shadow: 0 2px 10px rgba(0,0,0,0.06);
     }
-    /* fit contain sobre el lienzo A4, igual que el PDF (FitArea): si la proporcion de la imagen no es A4 queda
+    /* contain sobre el lienzo A4, igual que el PDF (FitArea): si la proporcion de la imagen no es A4 queda
        con el mismo margen en blanco que va a tener el PDF, asi lo que se ve aca es lo que sale impreso. */
     .calib-bg { position: absolute; top: 0; left: 0; object-fit: contain; object-position: top left; pointer-events: none; border: 0; }
     .calib-field {
@@ -182,7 +215,7 @@ const SCALE = 0.72; // px por punto PDF
       color: #0c5878;
       font-size: 10px;
       line-height: 1.3;
-      padding: 1px 4px;
+      padding: 0 2px;
       white-space: nowrap;
       cursor: grab;
       user-select: none;
@@ -190,22 +223,22 @@ const SCALE = 0.72; // px por punto PDF
     }
     .calib-field.calib-block { white-space: normal; box-sizing: border-box; overflow: hidden; }
     .calib-field.dragging { cursor: grabbing; background: rgba(19,133,182,0.25); z-index: 10; }
-    .mock-cols { display: flex; }
-    .mock-cols b { flex: 0 0 50%; text-align: center; }
-    .mock-row { display: grid; grid-template-columns: 1fr 16% 16%; gap: 2px; }
-    .mock-row span:nth-child(2), .mock-row span:nth-child(3) { text-align: right; }
-    .mock-row.gap { height: 0.6em; }
+    .mock-cell { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .mock-cell.right { text-align: right; }
     .mock-sign { display: flex; justify-content: space-around; text-align: center; }
     .mock-foot { display: flex; justify-content: space-between; }
-    .calib-list { display: grid; gap: 0.25rem; }
-    .calib-side { flex: 1 1 0; min-width: 0; max-width: 250px; align-self: stretch; }
+    .calib-list { display: grid; gap: 0.25rem; align-content: start; }
+    .calib-side { flex: 1 1 0; min-width: 0; max-width: 250px; }
     .calib-row {
       display: flex; flex-direction: column; align-items: flex-start; gap: 0.15rem;
       padding: 0.4rem 0.5rem; border-bottom: 1px solid #eef3f2; font-size: 0.78rem;
     }
+    .calib-row.is-hidden { opacity: 0.55; }
     .calib-row-label { color: #29484f; font-weight: 600; }
     .calib-row-offset { color: #6b878d; font-variant-numeric: tabular-nums; }
     .calib-row-fontsize { display: flex; align-items: center; gap: 0.3rem; color: #6b878d; white-space: nowrap; }
+    .hide-check { display: flex; align-items: center; gap: 0.35rem; color: #6b878d; cursor: pointer; }
+    .hide-check input { width: auto; }
     .font-step {
       width: 20px; height: 20px; border-radius: 4px; border: 1px solid #d7e5e1; background: #fff;
       color: #29484f; font-weight: 700; line-height: 1; cursor: pointer; padding: 0;
@@ -215,6 +248,7 @@ const SCALE = 0.72; // px por punto PDF
       width: 44px; text-align: center; border: 1px solid #d7e5e1; border-radius: 4px;
       padding: 0.15rem 0.2rem; font-size: 0.8rem; font-variant-numeric: tabular-nums;
     }
+    .font-input.wide { width: 52px; }
     @media (max-width: 1000px) {
       .calib-workspace { flex-direction: column; align-items: center; }
       .calib-side { max-width: 100%; width: 100%; }
@@ -291,19 +325,29 @@ export class SettlementCalibrationPageComponent implements OnInit {
   private parseOffsets(json?: string | null): Record<string, FieldOffset> {
     if (!json) return {};
     try {
-      const raw = JSON.parse(json) as Record<string, Record<string, number | null>>;
+      const raw = JSON.parse(json) as Record<string, Record<string, unknown>>;
+      const pick = (v: Record<string, unknown>, name: string): unknown => v[name] ?? v[name.charAt(0).toUpperCase() + name.slice(1)];
       const result: Record<string, FieldOffset> = {};
       for (const [key, value] of Object.entries(raw)) {
         result[key] = {
-          dx: Number(value['dx'] ?? value['Dx'] ?? 0),
-          dy: Number(value['dy'] ?? value['Dy'] ?? 0),
-          fontSize: (value['fontSize'] ?? value['FontSize'] ?? null) as number | null
+          dx: Number(pick(value, 'dx') ?? 0),
+          dy: Number(pick(value, 'dy') ?? 0),
+          fontSize: (pick(value, 'fontSize') ?? null) as number | null,
+          width: (pick(value, 'width') ?? null) as number | null,
+          rowHeight: (pick(value, 'rowHeight') ?? null) as number | null,
+          hidden: Boolean(pick(value, 'hidden') ?? false)
         };
       }
       return result;
     } catch {
       return {};
     }
+  }
+
+  // Cambia solo lo indicado de un bloque y conserva el resto (posicion, letra, ancho, oculto).
+  private patch(key: string, change: Partial<FieldOffset>): void {
+    const current = this.offsets[key] ?? { dx: 0, dy: 0 };
+    this.offsets = { ...this.offsets, [key]: { ...current, ...change } };
   }
 
   screenX(f: CalibField): number {
@@ -318,15 +362,51 @@ export class SettlementCalibrationPageComponent implements OnInit {
     return this.offsets[f.key]?.fontSize ?? f.defaultFontSize;
   }
 
+  widthOf(f: CalibField): number {
+    return this.offsets[f.key]?.width ?? f.width;
+  }
+
+  isHidden(f: CalibField): boolean {
+    return this.offsets[f.key]?.hidden === true;
+  }
+
+  samplesOf(f: CalibField): string[] {
+    return COLUMN_SAMPLES[f.key as ColumnKey] ?? [];
+  }
+
+  get rowHeight(): number {
+    return this.offsets[ROWS_KEY]?.rowHeight ?? DEFAULT_ROW_HEIGHT;
+  }
+
+  setRowHeight(value: number): void {
+    if (!value || value < 6 || value > 80) return;
+    this.patch(ROWS_KEY, { rowHeight: value });
+  }
+
+  stepRowHeight(delta: number): void {
+    this.setRowHeight(Math.round((this.rowHeight + delta) * 2) / 2);
+  }
+
   setFontSize(f: CalibField, value: number): void {
     if (!value || value <= 0) return;
-    const o = this.offsets[f.key];
-    this.offsets = { ...this.offsets, [f.key]: { dx: o?.dx ?? 0, dy: o?.dy ?? 0, fontSize: value } };
+    this.patch(f.key, { fontSize: value });
   }
 
   stepFontSize(f: CalibField, delta: number): void {
-    const next = Math.max(4, Math.round((this.fontSizeOf(f) + delta) * 2) / 2);
-    this.setFontSize(f, next);
+    this.setFontSize(f, Math.max(4, Math.round((this.fontSizeOf(f) + delta) * 2) / 2));
+  }
+
+  setWidth(f: CalibField, value: number): void {
+    if (!value || value < 10 || value > 600) return;
+    this.patch(f.key, { width: value });
+  }
+
+  stepWidth(f: CalibField, delta: number): void {
+    this.setWidth(f, Math.max(10, Math.round(this.widthOf(f) + delta)));
+  }
+
+  setHidden(f: CalibField, hidden: boolean): void {
+    this.patch(f.key, { hidden });
   }
 
   startDrag(field: CalibField, event: MouseEvent): void {
@@ -346,8 +426,7 @@ export class SettlementCalibrationPageComponent implements OnInit {
     if (!this.draggingField) return;
     const dx = this.dragBaseDx + (event.clientX - this.dragStartX) / SCALE;
     const dy = this.dragBaseDy - (event.clientY - this.dragStartY) / SCALE; // pantalla abajo = dy negativo
-    const fontSize = this.offsets[this.draggingField.key]?.fontSize;
-    this.offsets = { ...this.offsets, [this.draggingField.key]: { dx, dy, fontSize } };
+    this.patch(this.draggingField.key, { dx, dy });
     this.cdr.markForCheck();
   }
 
@@ -359,7 +438,7 @@ export class SettlementCalibrationPageComponent implements OnInit {
   }
 
   resetAll(): void {
-    if (!confirm('¿Reiniciar todas las posiciones a los valores por defecto?')) return;
+    if (!confirm('¿Reiniciar todas las posiciones, anchos y el alto de fila a los valores por defecto?')) return;
     this.offsets = {};
   }
 
