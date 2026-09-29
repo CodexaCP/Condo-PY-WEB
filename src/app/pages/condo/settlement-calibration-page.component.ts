@@ -13,38 +13,73 @@ import { BuildingsApiService } from '../../api/buildings-api.service';
 import { AuthService } from '../../auth/auth.service';
 import { Building, FieldOffset } from '../../api/models';
 
-type BlockKind = 'text' | 'column' | 'signature' | 'footer';
+type BlockKind = 'text' | 'column' | 'image';
 type ColumnKey = 'colConcepto' | 'colDescripcion' | 'colReserva' | 'colMonto';
 
 interface CalibField {
   key: string;
   label: string;
+  group: string;
   kind: BlockKind;
   sample: string;
   x: number;   // punto PDF, desde la esquina superior izquierda (igual que SettlementPdfDocument.cs)
   top: number;
   width: number; // ancho del bloque en puntos; 0 = texto de una linea sin ancho propio
   defaultFontSize: number; // debe coincidir con el tamano por defecto en SettlementPdfDocument.cs
-  right?: boolean; // columnas de monto: alineadas a la derecha
+  align?: 'L' | 'C' | 'R'; // alineacion dentro del ancho (montos a la derecha, nombres centrados)
 }
 
-// Mismas keys, posiciones, anchos y tamanos base que FieldDefaults en SettlementPdfDocument.cs — si se agrega
-// un bloque calibrable ahi, hay que agregarlo aca tambien para poder arrastrarlo.
+const IMAGE_H_PT = 40; // alto del cajetin de una firma (imagen)
+
+// Cada dato es un bloque propio (etiqueta y valor por separado). Mismas keys, posiciones, anchos, alineacion y
+// tamanos base que FieldDefaults en SettlementPdfDocument.cs — si se agrega un bloque calibrable ahi, hay que
+// agregarlo aca tambien para poder arrastrarlo.
 const FIELDS: CalibField[] = [
-  { key: 'titulo',         label: 'Título',                     kind: 'text',       sample: 'LIQUIDACIÓN EXPENSAS COMUNES', x: 195, top: 86,  width: 0,   defaultFontSize: 11 },
-  { key: 'edificio',       label: 'Edificio',                   kind: 'text',       sample: 'EDIFICIO DE EJEMPLO',           x: 66,  top: 100, width: 0,   defaultFontSize: 8 },
-  { key: 'periodo',        label: 'Mes / período',              kind: 'text',       sample: 'MES: ABRIL 2026',               x: 215, top: 112, width: 0,   defaultFontSize: 10 },
-  { key: 'colConcepto',    label: 'Columna CONCEPTO (proveedor)', kind: 'column',   sample: '',                               x: 50,  top: 145, width: 135, defaultFontSize: 8 },
-  { key: 'colDescripcion', label: 'Columna DESCRIPCIÓN DE CONCEPTO', kind: 'column', sample: '',                             x: 185, top: 145, width: 220, defaultFontSize: 8 },
-  { key: 'colReserva',     label: 'Columna MONTO fondo de reserva', kind: 'column', sample: '',                              x: 405, top: 145, width: 70,  defaultFontSize: 8, right: true },
-  { key: 'colMonto',       label: 'Columna MONTO gastos comunes', kind: 'column',   sample: '',                               x: 475, top: 145, width: 70,  defaultFontSize: 8, right: true },
-  { key: 'fechaEmision',    label: 'Fecha de emisión (solo el valor)', kind: 'text', sample: '30/04/2026',  x: 165, top: 705, width: 0, defaultFontSize: 8 },
-  { key: 'vigencia',       label: 'Vigencia',                   kind: 'text',       sample: 'Vigencia: 01/04/2026 al 30/04/2026', x: 52, top: 745, width: 0, defaultFontSize: 8 },
-  { key: 'vencimiento',    label: 'Vencimiento',                kind: 'text',       sample: 'Vencimiento: 20/05/2026', x: 52, top: 757, width: 0, defaultFontSize: 8 },
-  { key: 'firmaAutorizado', label: 'Firma AUTORIZADO POR (presidente)', kind: 'signature', sample: 'Presidente del consorcio', x: 215, top: 660, width: 175, defaultFontSize: 8 },
-  { key: 'firmaVerificacion', label: 'Firma VERIFICACIÓN (building manager)', kind: 'signature', sample: 'Encargado de edificio', x: 400, top: 660, width: 145, defaultFontSize: 8 },
-  { key: 'firmaAdmin',      label: 'Firma administración (company admin)', kind: 'signature', sample: 'Administrador de la empresa', x: 215, top: 735, width: 175, defaultFontSize: 8 },
-  { key: 'pie',            label: 'Pie (generado y N° de hoja)', kind: 'footer',    sample: '',                               x: 50,  top: 815, width: 495, defaultFontSize: 7 }
+  // Encabezado
+  { key: 'titulo',   group: 'Encabezado', label: 'Título',           kind: 'text', sample: 'LIQUIDACIÓN EXPENSAS COMUNES', x: 195, top: 86,  width: 0, defaultFontSize: 11 },
+  { key: 'edificio', group: 'Encabezado', label: 'Edificio (valor)', kind: 'text', sample: 'EDIFICIO DE EJEMPLO',           x: 66,  top: 100, width: 0, defaultFontSize: 8 },
+  { key: 'mes',      group: 'Encabezado', label: 'Mes (valor)',      kind: 'text', sample: 'ABRIL',                         x: 215, top: 112, width: 0, defaultFontSize: 10 },
+  { key: 'anio',     group: 'Encabezado', label: 'Año (valor)',      kind: 'text', sample: '2026',                          x: 330, top: 112, width: 0, defaultFontSize: 10 },
+
+  // Cuerpo: una columna por bloque
+  { key: 'colConcepto',    group: 'Cuerpo', label: 'Columna CONCEPTO (proveedor)',      kind: 'column', sample: '', x: 50,  top: 145, width: 135, defaultFontSize: 8 },
+  { key: 'colDescripcion', group: 'Cuerpo', label: 'Columna DESCRIPCIÓN DE CONCEPTO',   kind: 'column', sample: '', x: 185, top: 145, width: 220, defaultFontSize: 8 },
+  { key: 'colReserva',     group: 'Cuerpo', label: 'Columna MONTO fondo de reserva',    kind: 'column', sample: '', x: 405, top: 145, width: 70,  defaultFontSize: 8, align: 'R' },
+  { key: 'colMonto',       group: 'Cuerpo', label: 'Columna MONTO gastos comunes',      kind: 'column', sample: '', x: 475, top: 145, width: 70,  defaultFontSize: 8, align: 'R' },
+
+  // Totales (solo en la última hoja)
+  { key: 'totIngresosLabel', group: 'Totales', label: 'Total para gastos — título',        kind: 'text', sample: 'TOTAL PARA GASTOS',     x: 50,  top: 585, width: 200, defaultFontSize: 8 },
+  { key: 'totIngresosValor', group: 'Totales', label: 'Total para gastos — valor',         kind: 'text', sample: '3.400.000',             x: 475, top: 585, width: 70,  defaultFontSize: 8, align: 'R' },
+  { key: 'totGastosLabel',   group: 'Totales', label: 'Total gastos del mes — título',     kind: 'text', sample: 'TOTAL GASTOS DEL MES',  x: 50,  top: 598, width: 200, defaultFontSize: 8 },
+  { key: 'totGastosReserva', group: 'Totales', label: 'Total gastos — valor fondo de reserva', kind: 'text', sample: '2.640.000',        x: 405, top: 598, width: 70,  defaultFontSize: 8, align: 'R' },
+  { key: 'totGastosComunes', group: 'Totales', label: 'Total gastos — valor gastos comunes',   kind: 'text', sample: '37.180.000',       x: 475, top: 598, width: 70,  defaultFontSize: 8, align: 'R' },
+  { key: 'subTotalLabel',    group: 'Totales', label: 'Sub total general — título',        kind: 'text', sample: 'SUB TOTAL GENERAL GS.', x: 300, top: 611, width: 170, defaultFontSize: 8 },
+  { key: 'subTotalValor',    group: 'Totales', label: 'Sub total general — valor',         kind: 'text', sample: '39.820.000',            x: 475, top: 611, width: 70,  defaultFontSize: 8, align: 'R' },
+  { key: 'totalLabel',       group: 'Totales', label: 'Total general — título',            kind: 'text', sample: 'TOTAL GENERAL GS. (MONTO NETO A DISTRIBUIR)', x: 300, top: 624, width: 170, defaultFontSize: 8 },
+  { key: 'totalValor',       group: 'Totales', label: 'Total general — valor',             kind: 'text', sample: '40.190.000',            x: 475, top: 624, width: 70,  defaultFontSize: 8, align: 'R' },
+
+  // Fechas
+  { key: 'fechaEmision',     group: 'Fechas', label: 'Fecha de emisión (solo el valor)', kind: 'text', sample: '30/04/2026',  x: 165, top: 705, width: 0, defaultFontSize: 8 },
+  { key: 'vigenciaLabel',    group: 'Fechas', label: 'Vigencia — título',                kind: 'text', sample: 'VIGENCIA',    x: 52,  top: 745, width: 0, defaultFontSize: 8 },
+  { key: 'vigenciaDesde',    group: 'Fechas', label: 'Vigencia — desde',                 kind: 'text', sample: '01/04/2026',  x: 110, top: 745, width: 0, defaultFontSize: 8 },
+  { key: 'vigenciaHasta',    group: 'Fechas', label: 'Vigencia — hasta',                 kind: 'text', sample: '30/04/2026',  x: 165, top: 745, width: 0, defaultFontSize: 8 },
+  { key: 'vencimientoLabel', group: 'Fechas', label: 'Vencimiento — título',             kind: 'text', sample: 'VENCIMIENTO', x: 52,  top: 757, width: 0, defaultFontSize: 8 },
+  { key: 'vencimiento',      group: 'Fechas', label: 'Vencimiento — valor',              kind: 'text', sample: '20/05/2026',  x: 120, top: 757, width: 0, defaultFontSize: 8 },
+
+  // Firmas: imagen, nombre y cargo por separado. Autorizado = presidente; Verificación = building manager; Admin = company admin
+  { key: 'firmaAutorizado',       group: 'Firma AUTORIZADO POR (presidente)', label: 'Imagen de la firma', kind: 'image', sample: 'firma',                   x: 250, top: 655, width: 110, defaultFontSize: 8 },
+  { key: 'firmaAutorizadoNombre', group: 'Firma AUTORIZADO POR (presidente)', label: 'Nombre',             kind: 'text',  sample: 'Nombre Apellido',         x: 215, top: 700, width: 175, defaultFontSize: 8, align: 'C' },
+  { key: 'firmaAutorizadoCargo',  group: 'Firma AUTORIZADO POR (presidente)', label: 'Cargo',              kind: 'text',  sample: 'Presidente del consorcio', x: 215, top: 711, width: 175, defaultFontSize: 8, align: 'C' },
+  { key: 'firmaVerificacion',       group: 'Firma VERIFICACIÓN (building manager)', label: 'Imagen de la firma', kind: 'image', sample: 'firma',              x: 420, top: 655, width: 110, defaultFontSize: 8 },
+  { key: 'firmaVerificacionNombre', group: 'Firma VERIFICACIÓN (building manager)', label: 'Nombre',             kind: 'text',  sample: 'Nombre Apellido',    x: 400, top: 700, width: 145, defaultFontSize: 8, align: 'C' },
+  { key: 'firmaVerificacionCargo',  group: 'Firma VERIFICACIÓN (building manager)', label: 'Cargo',              kind: 'text',  sample: 'Encargado de edificio', x: 400, top: 711, width: 145, defaultFontSize: 8, align: 'C' },
+  { key: 'firmaAdmin',       group: 'Firma administración (company admin)', label: 'Imagen de la firma', kind: 'image', sample: 'firma',                    x: 250, top: 730, width: 110, defaultFontSize: 8 },
+  { key: 'firmaAdminNombre', group: 'Firma administración (company admin)', label: 'Nombre',             kind: 'text',  sample: 'Nombre Apellido',          x: 215, top: 775, width: 175, defaultFontSize: 8, align: 'C' },
+  { key: 'firmaAdminCargo',  group: 'Firma administración (company admin)', label: 'Cargo',              kind: 'text',  sample: 'Administrador de la empresa', x: 215, top: 786, width: 175, defaultFontSize: 8, align: 'C' },
+
+  // Pie
+  { key: 'pieGenerado', group: 'Pie', label: 'Generado el (fecha y hora)', kind: 'text', sample: 'Generado el 30/04/2026 12:00', x: 50,  top: 815, width: 300, defaultFontSize: 7 },
+  { key: 'piePagina',   group: 'Pie', label: 'N° de hoja',                 kind: 'text', sample: '1 / 1',                        x: 500, top: 815, width: 45,  defaultFontSize: 7, align: 'R' }
 ];
 
 // Filas de ejemplo de cada columna (una fila por renglon del cuerpo).
@@ -128,6 +163,8 @@ const SCALE = 0.72; // px por punto PDF
                    [style.left.px]="screenX(f)" [style.top.px]="screenY(f)"
                    [style.fontSize.px]="fontSizeOf(f) * SCALE"
                    [style.width.px]="widthOf(f) ? widthOf(f) * SCALE : null"
+                   [style.height.px]="heightOf(f)"
+                   [style.textAlign]="alignOf(f)"
                    [class.calib-block]="f.kind !== 'text'"
                    [class.dragging]="draggingKey === f.key"
                    (mousedown)="startDrag(f, $event)">
@@ -135,15 +172,10 @@ const SCALE = 0.72; // px por punto PDF
                   <ng-container *ngSwitchCase="'text'">{{ f.sample }}</ng-container>
                   <ng-container *ngSwitchCase="'column'">
                     <div class="mock-cell" *ngFor="let text of samplesOf(f)"
-                         [class.right]="f.right"
+                         [style.textAlign]="alignOf(f)"
                          [style.height.px]="rowHeight * SCALE" [style.lineHeight.px]="rowHeight * SCALE">{{ text }}</div>
                   </ng-container>
-                  <div *ngSwitchCase="'signature'" class="mock-sign">
-                    <div class="mock-sign-img">firma</div>
-                    <b>Nombre Apellido</b>
-                    <span>{{ f.sample }}</span>
-                  </div>
-                  <div *ngSwitchCase="'footer'" class="mock-foot"><span>Generado el 30/04/2026</span><span>1 / 1</span></div>
+                  <div *ngSwitchCase="'image'" class="mock-sign-img">{{ f.sample }}</div>
                 </ng-container>
               </div>
             </ng-container>
@@ -155,10 +187,12 @@ const SCALE = 0.72; // px por punto PDF
         </div>
 
         <ng-template #rowTpl let-fields="fields">
-          <div class="calib-row" *ngFor="let f of fields" [class.is-hidden]="isHidden(f)">
+          <ng-container *ngFor="let f of fields; let i = index">
+          <div class="calib-group" *ngIf="i === 0 || fields[i - 1].group !== f.group">{{ f.group }}</div>
+          <div class="calib-row" [class.is-hidden]="isHidden(f)">
             <span class="calib-row-label">{{ f.label }}</span>
             <span class="calib-row-offset">dx {{ (offsets[f.key]?.dx ?? 0) | number:'1.0-1' }} · dy {{ (offsets[f.key]?.dy ?? 0) | number:'1.0-1' }} pt</span>
-            <span class="calib-row-fontsize">
+            <span class="calib-row-fontsize" *ngIf="f.kind !== 'image'">
               letra
               <button type="button" class="font-step" (click)="stepFontSize(f, -0.5)">−</button>
               <input type="number" step="0.5" min="4" max="60" class="font-input"
@@ -179,6 +213,7 @@ const SCALE = 0.72; // px por punto PDF
               No dibujar (mi papel ya lo trae impreso)
             </label>
           </div>
+          </ng-container>
         </ng-template>
       </ng-container>
     </p-card>
@@ -221,13 +256,12 @@ const SCALE = 0.72; // px por punto PDF
       user-select: none;
       border-radius: 3px;
     }
-    .calib-field.calib-block { white-space: normal; box-sizing: border-box; overflow: hidden; }
+    .calib-field { box-sizing: border-box; }
+    .calib-field.calib-block { white-space: normal; overflow: hidden; }
     .calib-field.dragging { cursor: grabbing; background: rgba(19,133,182,0.25); z-index: 10; }
     .mock-cell { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .mock-cell.right { text-align: right; }
-    .mock-sign { display: flex; flex-direction: column; align-items: center; text-align: center; line-height: 1.2; }
-    .mock-sign-img { height: 36px; display: flex; align-items: flex-end; opacity: 0.5; }
-    .mock-foot { display: flex; justify-content: space-between; }
+    .mock-sign-img { height: 100%; display: flex; align-items: flex-end; justify-content: center; opacity: 0.5; }
+    .calib-group { margin-top: 0.6rem; padding: 0.2rem 0.5rem; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: #1385b6; }
     .calib-list { display: grid; gap: 0.25rem; align-content: start; }
     .calib-side { flex: 1 1 0; min-width: 0; max-width: 250px; }
     .calib-row {
@@ -365,6 +399,15 @@ export class SettlementCalibrationPageComponent implements OnInit {
 
   widthOf(f: CalibField): number {
     return this.offsets[f.key]?.width ?? f.width;
+  }
+
+  // Alto del bloque solo para la imagen de la firma (los demas toman el de su contenido).
+  heightOf(f: CalibField): number | null {
+    return f.kind === 'image' ? IMAGE_H_PT * SCALE : null;
+  }
+
+  alignOf(f: CalibField): string | null {
+    return f.align === 'R' ? 'right' : f.align === 'C' ? 'center' : null;
   }
 
   isHidden(f: CalibField): boolean {
