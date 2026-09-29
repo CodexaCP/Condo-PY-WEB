@@ -9,6 +9,7 @@ import { MessageModule } from 'primeng/message';
 import { AppFloatingConfigurator } from '../../layout/component/app.floatingconfigurator';
 import { AuthService } from '../../auth/auth.service';
 import { homeRoute } from '../../auth/auth.guard';
+import { PushService } from '../../core/push.service';
 
 @Component({
     selector: 'app-login',
@@ -214,6 +215,7 @@ import { homeRoute } from '../../auth/auth.guard';
 export class Login {
     private readonly auth = inject(AuthService);
     private readonly router = inject(Router);
+    private readonly pushSvc = inject(PushService);
 
     email = '';
     password = '';
@@ -234,6 +236,9 @@ export class Login {
             .pipe(finalize(() => (this.isSubmitting = false)))
             .subscribe({
                 next: (mustChangePassword) => {
+                    if (!mustChangePassword) {
+                        void this.pushSvc.init();
+                    }
                     void this.router.navigateByUrl(mustChangePassword ? '/change-password' : homeRoute(this.auth));
                 },
                 error: (error) => {

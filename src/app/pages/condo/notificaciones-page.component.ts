@@ -6,7 +6,7 @@ import { Button } from 'primeng/button';
 import { Card } from 'primeng/card';
 import { Message } from 'primeng/message';
 import { Tag } from 'primeng/tag';
-import { NotificationsApiService } from '../../api/notifications-api.service';
+import { NotificationsApiService, resolveNotificationRoute } from '../../api/notifications-api.service';
 import { AppNotification } from '../../api/models';
 
 const TYPE_ICON: Record<string, string> = {
@@ -145,8 +145,9 @@ export class NotificacionesPageComponent implements OnInit {
       this.api.markRead(n.id).subscribe();
       this.cdr.markForCheck();
     }
-    if (n.entityType === 'OwnerPayment' && n.entityId) {
-      void this.router.navigate(['/owner-payments', n.entityId]);
+    const route = resolveNotificationRoute(n);
+    if (route) {
+      void this.router.navigate(route.path);
     }
   }
 

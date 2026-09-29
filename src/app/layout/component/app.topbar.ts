@@ -2,10 +2,11 @@ import { Component, DestroyRef, inject, OnInit, signal } from '@angular/core';
 import { Router, RouterModule } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { interval, startWith, switchMap } from 'rxjs';
+import { interval, merge, startWith, switchMap } from 'rxjs';
 import { LayoutService } from '@/app/layout/service/layout.service';
 import { AuthService } from '@/app/auth/auth.service';
 import { NotificationsApiService } from '@/app/api/notifications-api.service';
+import { PushService } from '@/app/core/push.service';
 
 @Component({
     selector: 'app-topbar',
@@ -88,14 +89,14 @@ export class AppTopbar implements OnInit {
     private readonly auth       = inject(AuthService);
     private readonly router     = inject(Router);
     private readonly notifSvc   = inject(NotificationsApiService);
+    private readonly pushSvc    = inject(PushService);
     private readonly destroyRef = inject(DestroyRef);
 
     readonly currentUser = this.auth.currentUser;
     readonly unreadCount = signal(0);
 
     ngOnInit(): void {
-        interval(30_000).pipe(
-            startWith(0),
+        merge(interval(30_000).pipe(startWith(0)), this.notifSvc.refreshRequested$).pipe(
             switchMap(() => this.notifSvc.getUnreadCount()),
             takeUntilDestroyed(this.destroyRef)
         ).subscribe({
@@ -109,6 +110,7 @@ export class AppTopbar implements OnInit {
     }
 
     logout() {
+        this.pushSvc.unregister();
         this.auth.logout();
         void this.router.navigateByUrl('/login');
     }
