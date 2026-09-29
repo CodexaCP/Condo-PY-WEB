@@ -45,6 +45,10 @@ const FIELDS: CalibField[] = [
   { key: 'saldoLabel', group: 'Saldo acumulado', label: 'Saldo acumulado — título', kind: 'text', sample: 'SALDO ACUMULADO', x: 50,  top: 130, width: 200, defaultFontSize: 8 },
   { key: 'saldoValor', group: 'Saldo acumulado', label: 'Saldo acumulado — valor',  kind: 'text', sample: '2.500.000',       x: 475, top: 130, width: 70,  defaultFontSize: 8, align: 'R' },
 
+  // Fondo operativo: título y valor aparte de los conceptos (solo en la primera hoja)
+  { key: 'fondoOperativoLabel', group: 'Fondo operativo', label: 'Fondo operativo — título', kind: 'text', sample: 'FONDO OPERATIVO', x: 50,  top: 118, width: 200, defaultFontSize: 8 },
+  { key: 'fondoOperativoValor', group: 'Fondo operativo', label: 'Fondo operativo — valor',  kind: 'text', sample: '1.200.000',       x: 475, top: 118, width: 70,  defaultFontSize: 8, align: 'R' },
+
   // Cuerpo: una columna por bloque
   { key: 'colConcepto',    group: 'Cuerpo', label: 'Columna CONCEPTO (proveedor)',      kind: 'column', sample: '', x: 50,  top: 145, width: 135, defaultFontSize: 8 },
   { key: 'colDescripcion', group: 'Cuerpo', label: 'Columna DESCRIPCIÓN DE CONCEPTO',   kind: 'column', sample: '', x: 185, top: 145, width: 220, defaultFontSize: 8 },
