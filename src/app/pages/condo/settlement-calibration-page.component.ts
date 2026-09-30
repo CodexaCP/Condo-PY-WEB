@@ -143,6 +143,7 @@ const FIELDS: CalibField[] = [
   { key: 'totGastosLabel',   section: 'Totales', group: '', label: 'Total gastos del mes — título',     kind: 'text', sample: 'TOTAL GASTOS DEL MES',  x: 50,  top: 598, width: 200, defaultFontSize: 8 },
   { key: 'totGastosValor', section: 'Totales', group: '', label: 'Total gastos del mes — valor (suma de todos los conceptos)', kind: 'text', sample: '66.626.695', x: 335, top: 598, width: 70, defaultFontSize: 8, align: 'R' },
   { key: 'totGastosReserva', section: 'Totales', group: '', label: 'Total gastos — valor fondo de reserva', kind: 'text', sample: '2.640.000',        x: 405, top: 598, width: 70,  defaultFontSize: 8, align: 'R' },
+  { key: 'totPagadoFondoValor', section: 'Totales', group: '', label: 'Total gastos — pagado por el fondo de reserva (× -1)', kind: 'text', sample: '-2.641.814', x: 405, top: 598, width: 70, defaultFontSize: 8, align: 'R' },
   { key: 'totGastosComunes', section: 'Totales', group: '', label: 'Total gastos — valor gastos comunes',   kind: 'text', sample: '37.180.000',       x: 475, top: 598, width: 70,  defaultFontSize: 8, align: 'R' },
   { key: 'subTotalValor',    section: 'Totales', group: '', label: 'Sub total general — valor',         kind: 'text', sample: '39.820.000',            x: 475, top: 611, width: 70,  defaultFontSize: 8, align: 'R' },
   { key: 'totalValor',       section: 'Totales', group: '', label: 'Total general — valor',             kind: 'text', sample: '40.190.000',            x: 475, top: 624, width: 70,  defaultFontSize: 8, align: 'R' },
