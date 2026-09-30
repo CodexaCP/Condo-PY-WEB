@@ -438,6 +438,8 @@ export interface BulkCreateExpensePeriodsResult {
 export interface CloneExpensePeriodResult {
   period: ExpensePeriod;
   copiedExpenses: number;
+  copiedIncomes: number;
+  accumulatedBalance: number;
 }
 
 export type GenerateExpenseChargesMode = 'FixedAmount' | 'ByCoefficient';

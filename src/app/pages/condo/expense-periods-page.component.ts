@@ -756,7 +756,9 @@ export class ExpensePeriodsPageComponent implements OnInit {
         this.sortItems();
         this.isCloning = false;
         const expMsg = result.copiedExpenses > 0 ? ` Se copiaron ${result.copiedExpenses} gasto(s) como base.` : '';
-        this.msg.add({ severity: 'success', summary: 'Éxito', detail: `Período ${result.period.name} creado.${expMsg}`, life: 5000 });
+        const incMsg = result.copiedIncomes > 0 ? ` Se copiaron ${result.copiedIncomes} ingreso(s).` : '';
+        const balMsg = result.accumulatedBalance > 0 ? ` Saldo acumulado: ${new Intl.NumberFormat('es-PY', { maximumFractionDigits: 0 }).format(result.accumulatedBalance)}.` : '';
+        this.msg.add({ severity: 'success', summary: 'Éxito', detail: `Período ${result.period.name} creado.${expMsg}${incMsg}${balMsg}`, life: 5000 });
         this.cdr.markForCheck();
       },
       error: (error) => {
