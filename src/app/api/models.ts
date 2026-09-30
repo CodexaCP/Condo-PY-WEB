@@ -271,6 +271,7 @@ export interface BuildingExpense {
   targetUnitId: string | null;
   targetUnitCode: string;
   notes: string;
+  paidByReserveFund: boolean;
   hasReceipt: boolean;
   receiptFileName: string | null;
 }
@@ -322,6 +323,7 @@ export interface BuildingExpenseImportRow {
   supplier: string;
   description: string;
   amount: number | null;
+  paidByReserveFund: boolean;
   status: BuildingExpenseImportRowStatus;
   message: string;
 }
@@ -349,6 +351,7 @@ export interface CreateBuildingExpenseRequest {
   distributionType: BuildingExpenseDistributionType;
   targetUnitId: string | null;
   notes: string;
+  paidByReserveFund: boolean;
 }
 
 export type BuildingIncomeCategory =

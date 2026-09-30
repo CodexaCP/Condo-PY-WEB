@@ -222,7 +222,10 @@ interface BuildingExpensesGroup {
               <span>{{ row.category }}</span>
               <span>{{ row.supplier || '—' }}</span>
               <span>{{ row.description }}</span>
-              <strong>{{ row.amount === null ? '—' : formatCurrency(row.amount) }}</strong>
+              <div>
+                <strong>{{ row.amount === null ? '—' : formatCurrency(row.amount) }}</strong>
+                <small class="import-message" *ngIf="row.paidByReserveFund">Por fondo de reserva</small>
+              </div>
               <div>
                 <p-tag [value]="importStatusLabel(row.status)" [severity]="importStatusSeverity(row.status)"></p-tag>
                 <small class="import-message" *ngIf="row.message">{{ row.message }}</small>
@@ -338,6 +341,13 @@ interface BuildingExpensesGroup {
               <span>Notas</span>
               <input [(ngModel)]="form.notes" name="notes" type="text" maxlength="500" placeholder="Observaciones opcionales..." />
             </label>
+            <label class="field-block check-block">
+              <span>Fondo de reserva</span>
+              <span class="check-line">
+                <input [(ngModel)]="form.paidByReserveFund" name="paidByReserveFund" type="checkbox" />
+                Pagado por el fondo de reserva
+              </span>
+            </label>
           </div>
           <div class="form-actions">
             <p-button type="submit" [disabled]="!buildings.length || !periods.length" [loading]="isSaving" [label]="editingId ? 'Guardar cambios' : 'Registrar gasto'" icon="pi pi-check"></p-button>
@@ -368,6 +378,7 @@ interface BuildingExpensesGroup {
           <div>
             <strong>{{ item.description }}</strong>
             <small *ngIf="item.supplierName" class="supplier-tag">{{ item.supplierName }}</small>
+            <p-tag *ngIf="item.paidByReserveFund" value="Pagado por fondo de reserva" severity="info"></p-tag>
           </div>
           <div>
             <span>{{ item.expensePeriodName }}</span>
@@ -480,6 +491,7 @@ interface BuildingExpensesGroup {
     .expenses-grid { grid-template-columns: 0.6fr 1.6fr 1.2fr 1fr 0.8fr 0.55fr; }
     .recurring-grid { grid-template-columns: 1.3fr 1fr 0.9fr 1fr 0.7fr 0.5fr 0.4fr; }
     .import-grid { grid-template-columns: 0.3fr 0.8fr 1fr 1.6fr 0.8fr 1.4fr; }
+    .check-line { display: flex; gap: 0.5rem; align-items: center; font-weight: 400; min-height: 2.4rem; }
     .import-panel { border-color: rgba(22,163,74,0.25); }
     .import-toolbar { display: flex; gap: 0.75rem; align-items: flex-end; flex-wrap: wrap; margin-bottom: 1rem; }
     .import-summary { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.75rem; }
@@ -752,7 +764,8 @@ export class BuildingExpensesPageComponent implements OnInit {
       amount: item.amount,
       distributionType: item.distributionType,
       targetUnitId: item.targetUnitId ?? '',
-      notes: item.notes
+      notes: item.notes,
+      paidByReserveFund: item.paidByReserveFund
     };
   }
 
@@ -865,7 +878,8 @@ export class BuildingExpensesPageComponent implements OnInit {
       amount: Number(this.form.amount),
       distributionType: this.form.distributionType,
       targetUnitId: this.requiresTargetUnit ? this.form.targetUnitId || null : null,
-      notes: this.form.notes.trim()
+      notes: this.form.notes.trim(),
+      paidByReserveFund: this.form.paidByReserveFund
     };
 
     const validationError = this.validateForm(request);
@@ -1191,7 +1205,8 @@ export class BuildingExpensesPageComponent implements OnInit {
       amount: 0,
       distributionType: 'ByCoefficient' as BuildingExpenseDistributionType,
       targetUnitId: '',
-      notes: ''
+      notes: '',
+      paidByReserveFund: false
     };
   }
 
