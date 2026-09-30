@@ -2,7 +2,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { API_BASE_URL } from '../config/api.config';
-import { BuildingExpense, CreateBuildingExpenseRequest } from './models';
+import { BuildingExpense, BuildingExpenseImportResult, CreateBuildingExpenseRequest } from './models';
 
 @Injectable({ providedIn: 'root' })
 export class BuildingExpensesApiService {
@@ -32,6 +32,26 @@ export class BuildingExpensesApiService {
 
   delete(id: string): Observable<void> {
     return this.http.delete<void>(`${API_BASE_URL}/building-expenses/${id}`);
+  }
+
+  downloadImportTemplate(): Observable<Blob> {
+    return this.http.get(`${API_BASE_URL}/building-expenses/import-template`, { responseType: 'blob' });
+  }
+
+  // Sin confirm solo valida el Excel (vista previa); con confirm guarda todas las filas o ninguna.
+  importFromExcel(
+    file: File,
+    buildingId: string,
+    expensePeriodId: string,
+    options: { confirm: boolean; replaceExisting: boolean }
+  ): Observable<BuildingExpenseImportResult> {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('buildingId', buildingId);
+    formData.append('expensePeriodId', expensePeriodId);
+    formData.append('confirm', String(options.confirm));
+    formData.append('replaceExisting', String(options.replaceExisting));
+    return this.http.post<BuildingExpenseImportResult>(`${API_BASE_URL}/building-expenses/import`, formData);
   }
 
   uploadReceipt(id: string, file: File): Observable<BuildingExpense> {

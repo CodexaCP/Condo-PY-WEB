@@ -22,6 +22,8 @@ import {
   BuildingExpense,
   BuildingExpenseCategory,
   BuildingExpenseDistributionType,
+  BuildingExpenseImportResult,
+  BuildingExpenseImportRowStatus,
   CreateBuildingExpenseRequest,
   ExpensePeriod,
   RecurringBuildingExpense,
@@ -52,6 +54,7 @@ interface BuildingExpensesGroup {
           </div>
         </div>
         <div class="toolbar-btns">
+          <p-button label="Importar Excel" icon="pi pi-file-excel" severity="secondary" (onClick)="toggleImportSection()"></p-button>
           <p-button label="Plantillas recurrentes" icon="pi pi-sync" severity="secondary" (onClick)="toggleRecurringSection()"></p-button>
           <p-button [label]="showForm ? 'Cerrar' : 'Nuevo gasto'" [icon]="showForm ? 'pi pi-times' : 'pi pi-plus'" (onClick)="toggleForm()"></p-button>
         </div>
@@ -167,6 +170,75 @@ interface BuildingExpensesGroup {
           </div>
           <p-button label="Aplicar" icon="pi pi-play" severity="success" [loading]="isApplyingRecurring" [disabled]="!applyRecurringPeriodId" (onClick)="applyRecurring()"></p-button>
         </div>
+      </div>
+
+      <!-- IMPORTAR GASTOS DESDE EXCEL -->
+      <div class="panel-box import-panel" *ngIf="showImportSection">
+        <div class="panel-head">
+          <div class="panel-title">
+            <span class="panel-icon rec-icon pi pi-file-excel"></span>
+            <div>
+              <strong>Importar gastos desde Excel</strong>
+              <small>Columnas obligatorias: Categoría, Proveedor, Descripción y Monto — una fila por gasto (fecha: primer día del periodo, reparto por coeficiente)</small>
+            </div>
+          </div>
+          <p-button type="button" icon="pi pi-times" severity="secondary" [rounded]="true" [text]="true" (onClick)="toggleImportSection()"></p-button>
+        </div>
+
+        <div class="import-toolbar">
+          <div class="field-block" style="flex:1">
+            <span>Periodo (en borrador)</span>
+            <select [(ngModel)]="importPeriodId" name="importPeriodId" (ngModelChange)="onImportPeriodChange()">
+              <option value="">— Seleccionar periodo —</option>
+              <option *ngFor="let p of draftPeriodsForImport" [value]="p.id">{{ p.name }} · {{ p.buildingName }}</option>
+            </select>
+          </div>
+          <p-button label="Descargar plantilla" icon="pi pi-download" severity="secondary" (onClick)="downloadImportTemplate()"></p-button>
+          <p-button [label]="importFile ? importFile.name : 'Elegir archivo .xlsx'" icon="pi pi-upload" severity="secondary" (onClick)="importInput.click()"></p-button>
+          <p-button label="Validar" icon="pi pi-search" [loading]="isImporting" [disabled]="!importFile || !importPeriodId" (onClick)="previewImport()"></p-button>
+        </div>
+
+        <ng-container *ngIf="importPreview as preview">
+          <div class="import-summary">
+            <p-tag [value]="preview.okCount + ' listas'" severity="success"></p-tag>
+            <p-tag *ngIf="preview.warningCount" [value]="preview.warningCount + ' con advertencia'" severity="warn"></p-tag>
+            <p-tag *ngIf="preview.duplicateCount" [value]="preview.duplicateCount + ' duplicadas (se omiten)'" severity="secondary"></p-tag>
+            <p-tag *ngIf="preview.errorCount" [value]="preview.errorCount + ' con error'" severity="danger"></p-tag>
+          </div>
+
+          <div class="app-list">
+            <div class="app-row header import-grid">
+              <span>Fila</span><span>Categoría</span><span>Proveedor</span><span>Descripción</span><span>Monto</span><span>Estado</span>
+            </div>
+            <div class="app-row import-grid" *ngFor="let row of preview.rows">
+              <span>{{ row.rowNumber }}</span>
+              <span>{{ row.category }}</span>
+              <span>{{ row.supplier || '—' }}</span>
+              <span>{{ row.description }}</span>
+              <strong>{{ row.amount === null ? '—' : formatCurrency(row.amount) }}</strong>
+              <div>
+                <p-tag [value]="importStatusLabel(row.status)" [severity]="importStatusSeverity(row.status)"></p-tag>
+                <small class="import-message" *ngIf="row.message">{{ row.message }}</small>
+              </div>
+            </div>
+          </div>
+
+          <p class="field-hint" *ngIf="preview.errorCount">Corregí las filas con error en el Excel y volvé a validarlo: no se importa nada mientras haya errores.</p>
+
+          <div class="import-actions">
+            <label class="import-replace" *ngIf="!isOperator && preview.existingCount > 0">
+              <input type="checkbox" [(ngModel)]="importReplace" name="importReplace" (ngModelChange)="previewImport()" />
+              <span>Reemplazar los {{ preview.existingCount }} gastos que ya tiene el periodo (se eliminan)</span>
+            </label>
+            <p-button
+              [label]="importReplace ? 'Reemplazar e importar' : 'Importar ' + (preview.okCount + preview.warningCount) + ' gastos'"
+              icon="pi pi-check"
+              [severity]="importReplace ? 'danger' : 'success'"
+              [loading]="isImporting"
+              [disabled]="preview.errorCount > 0 || (preview.okCount + preview.warningCount === 0 && !importReplace)"
+              (onClick)="confirmImport()"></p-button>
+          </div>
+        </ng-container>
       </div>
 
       <!-- FILTROS -->
@@ -310,6 +382,7 @@ interface BuildingExpensesGroup {
       </div>
 
       <input #receiptInput type="file" accept=".pdf,.jpg,.jpeg,.png" style="display:none" (change)="onReceiptFileSelected($event)" />
+      <input #importInput type="file" accept=".xlsx" style="display:none" (change)="onImportFileSelected($event)" />
     </p-card>
   `,
   styles: [`
@@ -399,6 +472,13 @@ interface BuildingExpensesGroup {
     /* Expense list */
     .expenses-grid { grid-template-columns: 0.6fr 1.6fr 1.2fr 1fr 0.8fr 0.55fr; }
     .recurring-grid { grid-template-columns: 1.3fr 1fr 0.9fr 1fr 0.7fr 0.5fr 0.4fr; }
+    .import-grid { grid-template-columns: 0.3fr 0.8fr 1fr 1.6fr 0.8fr 1.4fr; }
+    .import-panel { border-color: rgba(22,163,74,0.25); }
+    .import-toolbar { display: flex; gap: 0.75rem; align-items: flex-end; flex-wrap: wrap; margin-bottom: 1rem; }
+    .import-summary { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.75rem; }
+    .import-message { display: block; font-size: 0.78rem; color: #6b878d; margin-top: 0.2rem; }
+    .import-actions { display: flex; gap: 1rem; align-items: center; justify-content: flex-end; flex-wrap: wrap; margin-top: 1rem; }
+    .import-replace { display: flex; gap: 0.5rem; align-items: center; font-size: 0.9rem; color: #b91c1c; }
     .txt-right { text-align: right; }
 
     .expense-date { font-size: 0.88rem; color: #5f787d; font-weight: 600; }
@@ -448,6 +528,12 @@ export class BuildingExpensesPageComponent implements OnInit {
   editingRecurringId: string | null = null;
   recurringBuildingFilter = '';
   applyRecurringPeriodId = '';
+  showImportSection = false;
+  importPeriodId = '';
+  importFile: File | null = null;
+  importPreview: BuildingExpenseImportResult | null = null;
+  importReplace = false;
+  isImporting = false;
   pendingReceiptExpense: BuildingExpense | null = null;
 
   readonly categories: BuildingExpenseCategory[] = ['Utilities', 'Cleaning', 'Security', 'Maintenance', 'Elevator', 'Insurance', 'Payroll', 'Taxes', 'Administration', 'ReserveFund', 'Extraordinary', 'Supplies', 'Ande', 'Essap', 'InternetPhone', 'Other'];
@@ -485,8 +571,128 @@ export class BuildingExpensesPageComponent implements OnInit {
       : this.periods.filter((p) => p.status === 'Draft');
   }
 
+  get draftPeriodsForImport(): ExpensePeriod[] {
+    return this.periods.filter((p) => p.status === 'Draft');
+  }
+
   ngOnInit(): void {
     this.loadData();
+  }
+
+  toggleImportSection(): void {
+    this.showImportSection = !this.showImportSection;
+    if (!this.showImportSection) {
+      this.resetImport();
+    }
+  }
+
+  onImportFileSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    this.importFile = input.files?.[0] ?? null;
+    input.value = '';
+    this.importPreview = null;
+    this.importReplace = false;
+    if (this.importFile && this.importPeriodId) {
+      this.previewImport();
+    }
+  }
+
+  onImportPeriodChange(): void {
+    this.importPreview = null;
+    this.importReplace = false;
+    if (this.importFile && this.importPeriodId) {
+      this.previewImport();
+    }
+  }
+
+  downloadImportTemplate(): void {
+    this.expensesApi.downloadImportTemplate().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: (blob) => {
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'plantilla-gastos.xlsx';
+        link.click();
+        URL.revokeObjectURL(url);
+      },
+      error: (error) => {
+        this.msg.add({ severity: 'error', summary: 'Error', detail: extractApiErrorMessage(error, 'No se pudo descargar la plantilla.'), life: 5000 });
+      }
+    });
+  }
+
+  // Valida el Excel contra el periodo sin guardar nada.
+  previewImport(): void {
+    const period = this.periods.find((p) => p.id === this.importPeriodId);
+    if (!this.importFile || !period) {
+      return;
+    }
+    this.isImporting = true;
+    this.expensesApi.importFromExcel(this.importFile, period.buildingId, period.id, { confirm: false, replaceExisting: this.importReplace })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (result) => {
+          this.importPreview = result;
+          this.isImporting = false;
+          this.cdr.markForCheck();
+        },
+        error: (error) => {
+          this.importPreview = null;
+          this.isImporting = false;
+          this.msg.add({ severity: 'error', summary: 'Error', detail: extractApiErrorMessage(error, 'No se pudo leer el archivo.'), life: 6000 });
+          this.cdr.markForCheck();
+        }
+      });
+  }
+
+  confirmImport(): void {
+    const period = this.periods.find((p) => p.id === this.importPeriodId);
+    const preview = this.importPreview;
+    if (!this.importFile || !period || !preview) {
+      return;
+    }
+    if (this.importReplace && !confirm(`Se van a eliminar los ${preview.existingCount} gastos que ya tiene el periodo y se cargarán los del Excel. ¿Continuar?`)) {
+      return;
+    }
+    this.isImporting = true;
+    this.expensesApi.importFromExcel(this.importFile, period.buildingId, period.id, { confirm: true, replaceExisting: this.importReplace })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (result) => {
+          this.isImporting = false;
+          if (!result.imported) {
+            this.importPreview = result;
+            this.msg.add({ severity: 'warn', summary: 'No se importó', detail: 'Revisá el archivo: no se guardó ningún gasto.', life: 6000 });
+          } else {
+            const deleted = result.deletedCount ? ` (se reemplazaron ${result.deletedCount})` : '';
+            this.msg.add({ severity: 'success', summary: 'Éxito', detail: `Se importaron ${result.importedCount} gastos${deleted}.`, life: 6000 });
+            this.resetImport();
+            this.showImportSection = false;
+            this.reloadExpenses();
+          }
+          this.cdr.markForCheck();
+        },
+        error: (error) => {
+          this.isImporting = false;
+          this.msg.add({ severity: 'error', summary: 'Error', detail: extractApiErrorMessage(error, 'No se pudieron importar los gastos.'), life: 6000 });
+          this.cdr.markForCheck();
+        }
+      });
+  }
+
+  importStatusLabel(status: BuildingExpenseImportRowStatus): string {
+    return { Ok: 'Lista', Warning: 'Advertencia', Duplicate: 'Duplicada', Error: 'Error' }[status] ?? status;
+  }
+
+  importStatusSeverity(status: BuildingExpenseImportRowStatus): 'success' | 'warn' | 'secondary' | 'danger' {
+    return ({ Ok: 'success', Warning: 'warn', Duplicate: 'secondary', Error: 'danger' } as const)[status] ?? 'secondary';
+  }
+
+  private resetImport(): void {
+    this.importPeriodId = '';
+    this.importFile = null;
+    this.importPreview = null;
+    this.importReplace = false;
   }
 
   toggleForm(): void {

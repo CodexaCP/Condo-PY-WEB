@@ -314,6 +314,30 @@ export interface ApplyRecurringExpensesResult {
   appliedDescriptions: string[];
 }
 
+export type BuildingExpenseImportRowStatus = 'Ok' | 'Warning' | 'Duplicate' | 'Error';
+
+export interface BuildingExpenseImportRow {
+  rowNumber: number;
+  category: string;
+  supplier: string;
+  description: string;
+  amount: number | null;
+  status: BuildingExpenseImportRowStatus;
+  message: string;
+}
+
+export interface BuildingExpenseImportResult {
+  imported: boolean;
+  importedCount: number;
+  existingCount: number;
+  deletedCount: number;
+  okCount: number;
+  warningCount: number;
+  duplicateCount: number;
+  errorCount: number;
+  rows: BuildingExpenseImportRow[];
+}
+
 export interface CreateBuildingExpenseRequest {
   buildingId: string;
   expensePeriodId: string;
