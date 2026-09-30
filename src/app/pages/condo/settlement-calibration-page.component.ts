@@ -130,6 +130,7 @@ const FIELDS: CalibField[] = [
   { key: 'colMonto',       section: 'Cuerpo', group: '', label: 'Columna MONTO gastos comunes',      kind: 'column', sample: '', x: 475, top: 145, width: 70,  defaultFontSize: 8, align: 'R', hiddenByDefault: true },
 
   // Totales (solo en la última hoja)
+  { key: 'mesTotales', section: 'Totales', group: '', label: 'Mes (valor) — en los totales', kind: 'text', sample: 'ABRIL', x: 250, top: 598, width: 100, defaultFontSize: 8, align: 'C' },
   { key: 'totIngresosLabel', section: 'Totales', group: '', label: 'Total para gastos — título',        kind: 'text', sample: 'TOTAL PARA GASTOS',     x: 50,  top: 585, width: 200, defaultFontSize: 8 },
   { key: 'totIngresosValor', section: 'Totales', group: '', label: 'Total para gastos — valor',         kind: 'text', sample: '3.400.000',             x: 475, top: 585, width: 70,  defaultFontSize: 8, align: 'R' },
   { key: 'totGastosLabel',   section: 'Totales', group: '', label: 'Total gastos del mes — título',     kind: 'text', sample: 'TOTAL GASTOS DEL MES',  x: 50,  top: 598, width: 200, defaultFontSize: 8 },
