@@ -1,5 +1,6 @@
 export type LateFeeFrequency = 'Daily' | 'Weekly' | 'Biweekly';
 export type InvoicingMode = 'Preimpresa' | 'Autoimpresa' | 'Electronica';
+export type IncomeTreatment = 'CreditToOwners' | 'ToReserveFund';
 
 export interface Building {
   id: string;
@@ -15,6 +16,7 @@ export interface Building {
   contactPhone?: string | null;
   contactEmail?: string | null;
   lateFeeRatePercentage?: number | null;
+  incomeTreatment?: IncomeTreatment | null;
   reserveFundPercentage?: number | null;
   extraordinaryPercentage?: number | null;
   lateFeeFrequency?: LateFeeFrequency | null;
@@ -43,6 +45,7 @@ export interface CreateBuildingRequest {
   contactPhone?: string | null;
   contactEmail?: string | null;
   lateFeeRatePercentage?: number | null;
+  incomeTreatment?: IncomeTreatment | null;
   reserveFundPercentage?: number | null;
   extraordinaryPercentage?: number | null;
   lateFeeFrequency?: LateFeeFrequency | null;

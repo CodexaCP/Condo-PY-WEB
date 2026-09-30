@@ -15,7 +15,7 @@ import { extractApiErrorMessage } from '../../api/api-error.util';
 import { BuildingsApiService } from '../../api/buildings-api.service';
 import { CompaniesApiService } from '../../api/companies-api.service';
 import { CondominiumsApiService } from '../../api/condominiums-api.service';
-import { Company, Condominium, InvoicingMode, LateFeeFrequency } from '../../api/models';
+import { Company, Condominium, IncomeTreatment, InvoicingMode, LateFeeFrequency } from '../../api/models';
 import { isPdfFile, pdfFirstPageToPngFile } from '../../api/pdf-to-image.util';
 import { UploadsApiService } from '../../api/uploads-api.service';
 import { AuthService } from '../../auth/auth.service';
@@ -165,6 +165,14 @@ function templateFile(url?: string | null, fileName?: string | null): TemplateFi
 
         <section class="form-section">
           <h2 class="section-title">Aportes de la liquidación</h2>
+          <div class="field">
+            <label for="incomeTreatment">Ingresos del período (saldo acumulado, alquileres, intereses...)</label>
+            <p-select id="incomeTreatment" [options]="incomeTreatmentOptions" [(ngModel)]="form.incomeTreatment"
+                      name="incomeTreatment" optionLabel="label" optionValue="value"
+                      styleClass="full-select" [disabled]="isBuildingManager">
+            </p-select>
+            <small class="field-hint">Acreditar: se reparten como descuento en la expensa de cada propietario. Ir al fondo de reserva: no reducen lo que se cobra.</small>
+          </div>
           <div class="field-row">
             <div class="field">
               <label for="reservePct">Aporte al fondo de reserva (%) <span class="optional">(opcional)</span></label>
@@ -356,6 +364,7 @@ export class BuildingCreatePageComponent implements OnInit {
   form = { companyId:'', condominiumId:'', name:'', code:'', address:'', description:'', phonePrefix:'+595', phoneNumber:'', email:'', isActive:true,
            lateFeeRatePercentage: null as number | null, lateFeeFrequency: '' as '' | LateFeeFrequency,
            reserveFundPercentage: null as number | null, extraordinaryPercentage: null as number | null,
+           incomeTreatment: 'CreditToOwners' as IncomeTreatment,
            blockOverdueAmenityReservations: false,
            invoicingMode: '' as '' | InvoicingMode,
            useStandardTemplates: true,
@@ -365,6 +374,11 @@ export class BuildingCreatePageComponent implements OnInit {
     { label: 'Diario', value: 'Daily' },
     { label: 'Semanal', value: 'Weekly' },
     { label: 'Quincenal', value: 'Biweekly' }
+  ];
+
+  readonly incomeTreatmentOptions: { label: string; value: IncomeTreatment }[] = [
+    { label: 'Acreditar a los propietarios (descuento en la expensa)', value: 'CreditToOwners' },
+    { label: 'Van al fondo de reserva (no reducen la expensa)', value: 'ToReserveFund' }
   ];
 
   readonly invoicingModeOptions = [
@@ -410,6 +424,7 @@ export class BuildingCreatePageComponent implements OnInit {
             email: entity.contactEmail ?? '',
             isActive: entity.isActive,
             lateFeeRatePercentage: entity.lateFeeRatePercentage ?? null,
+            incomeTreatment: entity.incomeTreatment ?? 'CreditToOwners',
             reserveFundPercentage: entity.reserveFundPercentage ?? null,
             extraordinaryPercentage: entity.extraordinaryPercentage ?? null,
             lateFeeFrequency: entity.lateFeeFrequency ?? '',
@@ -541,6 +556,7 @@ export class BuildingCreatePageComponent implements OnInit {
 
     const req = { companyId, condominiumId, name, code, address, isActive: this.form.isActive, description, contactPhonePrefix: phonePrefix, contactPhone: phoneNumber, contactEmail: email,
                   lateFeeRatePercentage: lateFeeRate, lateFeeFrequency,
+                  incomeTreatment: this.form.incomeTreatment,
                   reserveFundPercentage: this.form.reserveFundPercentage || null,
                   extraordinaryPercentage: this.form.extraordinaryPercentage || null,
                   blockOverdueAmenityReservations: this.form.blockOverdueAmenityReservations,
