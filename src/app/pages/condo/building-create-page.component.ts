@@ -178,13 +178,13 @@ function templateFile(url?: string | null, fileName?: string | null): TemplateFi
               <label for="reservePct">Aporte al fondo de reserva (%) <span class="optional">(opcional)</span></label>
               <input id="reservePct" type="number" [(ngModel)]="form.reserveFundPercentage" name="reserveFundPercentage"
                      placeholder="Ej: 10" min="0" max="100" step="0.01" [disabled]="isBuildingManager" />
-              <small class="field-hint">Porcentaje de los gastos comunes. Vacío = no se calcula.</small>
+              <small class="field-hint">Porcentaje de los gastos comunes. Se cobra solo a las unidades (por coeficiente) al generar los cargos: no lo cargues también como gasto. Vacío = no se calcula.</small>
             </div>
             <div class="field">
               <label for="extraPct">Aporte extraordinario (%) <span class="optional">(opcional)</span></label>
               <input id="extraPct" type="number" [(ngModel)]="form.extraordinaryPercentage" name="extraordinaryPercentage"
                      placeholder="Ej: 20" min="0" max="100" step="0.01" [disabled]="isBuildingManager" />
-              <small class="field-hint">Porcentaje del sub total (gastos comunes + aporte de reserva). Vacío = no se calcula.</small>
+              <small class="field-hint">Porcentaje del sub total (gastos comunes + aporte de reserva). Se cobra solo a las unidades, como aporte extraordinario, al generar los cargos: no lo cargues también como gasto. Vacío = no se calcula.</small>
             </div>
           </div>
         </section>
