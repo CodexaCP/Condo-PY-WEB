@@ -179,7 +179,7 @@ interface BuildingExpensesGroup {
             <span class="panel-icon rec-icon pi pi-file-excel"></span>
             <div>
               <strong>Importar gastos desde Excel</strong>
-              <small>Columnas obligatorias: Categoría, Proveedor, Descripción y Monto — una fila por gasto (fecha: primer día del periodo, reparto por coeficiente)</small>
+              <small>Generá la plantilla del edificio (solo sirve para ese edificio) y completá una fila por gasto: Categoría, Proveedor, Descripción y Monto. Fecha: primer día del periodo, reparto por coeficiente.</small>
             </div>
           </div>
           <p-button type="button" icon="pi pi-times" severity="secondary" [rounded]="true" [text]="true" (onClick)="toggleImportSection()"></p-button>
@@ -187,13 +187,20 @@ interface BuildingExpensesGroup {
 
         <div class="import-toolbar">
           <div class="field-block" style="flex:1">
+            <span>Edificio</span>
+            <select [(ngModel)]="importBuildingId" name="importBuildingId" (ngModelChange)="onImportBuildingChange()">
+              <option value="">— Seleccionar edificio —</option>
+              <option *ngFor="let b of buildings" [value]="b.id">{{ b.name }}</option>
+            </select>
+          </div>
+          <div class="field-block" style="flex:1">
             <span>Periodo (en borrador)</span>
             <select [(ngModel)]="importPeriodId" name="importPeriodId" (ngModelChange)="onImportPeriodChange()">
               <option value="">— Seleccionar periodo —</option>
               <option *ngFor="let p of draftPeriodsForImport" [value]="p.id">{{ p.name }} · {{ p.buildingName }}</option>
             </select>
           </div>
-          <p-button label="Descargar plantilla" icon="pi pi-download" severity="secondary" (onClick)="downloadImportTemplate()"></p-button>
+          <p-button label="Generar plantilla" icon="pi pi-download" severity="secondary" [disabled]="!importBuildingId" (onClick)="downloadImportTemplate()"></p-button>
           <p-button [label]="importFile ? importFile.name : 'Elegir archivo .xlsx'" icon="pi pi-upload" severity="secondary" (onClick)="importInput.click()"></p-button>
           <p-button label="Validar" icon="pi pi-search" [loading]="isImporting" [disabled]="!importFile || !importPeriodId" (onClick)="previewImport()"></p-button>
         </div>
@@ -529,6 +536,7 @@ export class BuildingExpensesPageComponent implements OnInit {
   recurringBuildingFilter = '';
   applyRecurringPeriodId = '';
   showImportSection = false;
+  importBuildingId = '';
   importPeriodId = '';
   importFile: File | null = null;
   importPreview: BuildingExpenseImportResult | null = null;
@@ -572,7 +580,7 @@ export class BuildingExpensesPageComponent implements OnInit {
   }
 
   get draftPeriodsForImport(): ExpensePeriod[] {
-    return this.periods.filter((p) => p.status === 'Draft');
+    return this.periods.filter((p) => p.status === 'Draft' && p.buildingId === this.importBuildingId);
   }
 
   ngOnInit(): void {
@@ -597,6 +605,12 @@ export class BuildingExpensesPageComponent implements OnInit {
     }
   }
 
+  onImportBuildingChange(): void {
+    this.importPeriodId = '';
+    this.importPreview = null;
+    this.importReplace = false;
+  }
+
   onImportPeriodChange(): void {
     this.importPreview = null;
     this.importReplace = false;
@@ -606,12 +620,16 @@ export class BuildingExpensesPageComponent implements OnInit {
   }
 
   downloadImportTemplate(): void {
-    this.expensesApi.downloadImportTemplate().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+    const building = this.buildings.find((b) => b.id === this.importBuildingId);
+    if (!building) {
+      return;
+    }
+    this.expensesApi.downloadImportTemplate(building.id).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (blob) => {
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = url;
-        link.download = 'plantilla-gastos.xlsx';
+        link.download = `plantilla-gastos-${building.name.replace(/[^A-Za-z0-9]+/g, '-')}.xlsx`;
         link.click();
         URL.revokeObjectURL(url);
       },
@@ -689,6 +707,7 @@ export class BuildingExpensesPageComponent implements OnInit {
   }
 
   private resetImport(): void {
+    this.importBuildingId = '';
     this.importPeriodId = '';
     this.importFile = null;
     this.importPreview = null;

@@ -34,8 +34,9 @@ export class BuildingExpensesApiService {
     return this.http.delete<void>(`${API_BASE_URL}/building-expenses/${id}`);
   }
 
-  downloadImportTemplate(): Observable<Blob> {
-    return this.http.get(`${API_BASE_URL}/building-expenses/import-template`, { responseType: 'blob' });
+  downloadImportTemplate(buildingId: string): Observable<Blob> {
+    const params = new HttpParams().set('buildingId', buildingId);
+    return this.http.get(`${API_BASE_URL}/building-expenses/import-template`, { params, responseType: 'blob' });
   }
 
   // Sin confirm solo valida el Excel (vista previa); con confirm guarda todas las filas o ninguna.
