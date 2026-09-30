@@ -686,6 +686,7 @@ export interface InvoiceSeries {
   fieldPositionsJson?: string | null;
   referenceScanUrl?: string | null;
   hideFrame: boolean;
+  halfPage: boolean;
 }
 
 export interface FieldOffset {
@@ -701,6 +702,7 @@ export interface UpdateInvoiceSeriesCalibrationRequest {
   positions: Record<string, FieldOffset>;
   referenceScanUrl?: string | null;
   hideFrame: boolean;
+  halfPage: boolean;
 }
 
 export interface CreateInvoiceSeriesRequest {

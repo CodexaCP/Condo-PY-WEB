@@ -53,6 +53,33 @@ const PAGE_H_PT = 841.8898;
 const BASE_SCALE = 96 / 72;
 const ZOOM_LEVELS = [0.5, 0.75, 1, 1.25, 1.5];
 
+// Media A4: pares (A4 completa -> media A4) en puntos PDF. Deben coincidir con HalfX / HalfY de
+// InvoicePdfDocument.cs. El lienzo muestra solo la mitad superior de la hoja (hasta y = 400).
+const HALF_X: [number, number][] = [
+  [34.01575, 14.2], [70.86614, 44], [328.8189, 316.4], [351.4961, 344.8],
+  [362.8346, 353.7], [411.0236, 405.2], [493.2283, 495.5], [561.2598, 587.3]
+];
+const HALF_Y: [number, number][] = [
+  [147.4016, 443.4], [172.9134, 459], [195.5906, 479.2], [218.2677, 497.9],
+  [243.7795, 515], [524.4094, 641.1], [542.8346, 655.4], [552, 658.3],
+  [561.2598, 667.2], [572.5984, 671.7], [663.3071, 720.2], [674.6457, 726.2],
+  [712, 754], [718, 760], [738, 775], [760, 793], [773, 804], [783, 812.5], [795, 822],
+  [807.874, 830.7]
+];
+const HALF_VIEW_H_PT = 441.8898;
+
+function interpolate(table: [number, number][], v: number): number {
+  if (v <= table[0][0]) return table[0][1] + (v - table[0][0]);
+  for (let i = 1; i < table.length; i++) {
+    if (v > table[i][0]) continue;
+    const [f0, t0] = table[i - 1];
+    const [f1, t1] = table[i];
+    return t0 + (v - f0) * (t1 - t0) / (f1 - f0);
+  }
+  const last = table[table.length - 1];
+  return last[1] + (v - last[0]);
+}
+
 @Component({
   standalone: true,
   selector: 'app-invoice-series-calibration-page',
@@ -99,14 +126,19 @@ const ZOOM_LEVELS = [0.5, 0.75, 1, 1.25, 1.5];
           Mi papel ya tiene su propio marco y casillas impresas — no dibujar el marco del sistema, solo el texto.
         </label>
 
+        <label class="hide-frame-check">
+          <input type="checkbox" [(ngModel)]="halfPage" name="halfPage" [ngModelOptions]="{ standalone: true }" />
+          Mi papel es de media A4 (210 × 148 mm): la factura ocupa solo la mitad superior de la hoja.
+        </label>
+
         <div class="calib-workspace">
           <div class="calib-list calib-side">
             <ng-container *ngTemplateOutlet="rowTpl; context: { fields: leftFields }"></ng-container>
           </div>
 
           <div class="calib-canvas" [style.width.px]="canvasW" [style.height.px]="canvasH">
-            <img *ngIf="referenceScanUrl && !isPdf" [src]="resolvedScanUrl" class="calib-bg" [style.width.px]="canvasW" [style.height.px]="canvasH" alt="Papel preimpreso" />
-            <iframe *ngIf="referenceScanUrl && isPdf" [src]="resolvedScanUrlSafe" class="calib-bg" [style.width.px]="canvasW" [style.height.px]="canvasH" title="Papel preimpreso"></iframe>
+            <img *ngIf="referenceScanUrl && !isPdf" [src]="resolvedScanUrl" class="calib-bg" [style.width.px]="pageW" [style.height.px]="pageH" alt="Papel preimpreso" />
+            <iframe *ngIf="referenceScanUrl && isPdf" [src]="resolvedScanUrlSafe" class="calib-bg" [style.width.px]="pageW" [style.height.px]="pageH" title="Papel preimpreso"></iframe>
 
             <div class="calib-field" *ngFor="let f of fields"
                  [style.left.px]="screenX(f)" [style.top.px]="screenY(f)"
@@ -168,9 +200,10 @@ const ZOOM_LEVELS = [0.5, 0.75, 1, 1.25, 1.5];
       overflow: hidden;
       box-shadow: 0 2px 10px rgba(0,0,0,0.06);
     }
-    /* fill (no contain): la imagen se estira exacto al tamano del lienzo A4. Si la proporcion original
-       no es perfecta, se deforma un poco en vez de dejar margenes en blanco que desalinearian todo. */
-    .calib-bg { position: absolute; top: 0; left: 0; object-fit: fill; pointer-events: none; border: 0; }
+    /* Igual que el PDF de prueba (QuestPDF FitArea): la imagen se ajusta a la A4 completa conservando su
+       proporcion y pegada arriba a la izquierda. Con media A4 el lienzo (overflow hidden) solo deja ver
+       la mitad superior de esa hoja. */
+    .calib-bg { position: absolute; top: 0; left: 0; object-fit: contain; object-position: top left; pointer-events: none; border: 0; }
     .calib-field {
       position: absolute;
       transform: translateY(-100%);
@@ -234,10 +267,18 @@ export class InvoiceSeriesCalibrationPageComponent implements OnInit {
   referenceScanUrl: string | null = null;
   offsets: Record<string, FieldOffset> = {};
   hideFrame = false;
+  halfPage = false;
+
+  // Las x/y de FIELDS estan en puntos de A4 completa; con media A4 se llevan al papel real igual que
+  // hace InvoicePdfDocument.cs (MX/MY), y recien ahi se suma el offset calibrado.
+  mapX(x: number): number { return this.halfPage ? interpolate(HALF_X, x) : x; }
+  mapY(y: number): number { return this.halfPage ? interpolate(HALF_Y, y) : y; }
 
   get scale(): number { return BASE_SCALE * this.zoom; }
   get canvasW(): number { return Math.round(PAGE_W_PT * this.scale); }
-  get canvasH(): number { return Math.round(PAGE_H_PT * this.scale); }
+  get canvasH(): number { return Math.round((this.halfPage ? HALF_VIEW_H_PT : PAGE_H_PT) * this.scale); }
+  get pageW(): number { return Math.round(PAGE_W_PT * this.scale); }
+  get pageH(): number { return Math.round(PAGE_H_PT * this.scale); }
 
   setZoom(value: number): void {
     if (ZOOM_LEVELS.includes(value)) this.zoom = value;
@@ -271,6 +312,7 @@ export class InvoiceSeriesCalibrationPageComponent implements OnInit {
         this.referenceScanUrl = found.referenceScanUrl ?? null;
         this.offsets = found.fieldPositionsJson ? JSON.parse(found.fieldPositionsJson) : {};
         this.hideFrame = found.hideFrame;
+        this.halfPage = found.halfPage ?? false;
         this.loading = false;
         this.cdr.markForCheck();
       },
@@ -284,12 +326,12 @@ export class InvoiceSeriesCalibrationPageComponent implements OnInit {
 
   screenX(f: CalibField): number {
     const o = this.offsets[f.key];
-    return (f.x + (o?.dx ?? 0)) * this.scale;
+    return (this.mapX(f.x) + (o?.dx ?? 0)) * this.scale;
   }
 
   screenY(f: CalibField): number {
     const o = this.offsets[f.key];
-    return (PAGE_H_PT - (f.y + (o?.dy ?? 0))) * this.scale;
+    return (PAGE_H_PT - (this.mapY(f.y) + (o?.dy ?? 0))) * this.scale;
   }
 
   fontSizeOf(f: CalibField): number {
@@ -383,7 +425,8 @@ export class InvoiceSeriesCalibrationPageComponent implements OnInit {
     this.seriesApi.updateFieldPositions(this.series.id, {
       positions: this.offsets,
       referenceScanUrl: this.referenceScanUrl,
-      hideFrame: this.hideFrame
+      hideFrame: this.hideFrame,
+      halfPage: this.halfPage
     }).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (updated) => {
         this.series = updated;
@@ -407,7 +450,8 @@ export class InvoiceSeriesCalibrationPageComponent implements OnInit {
     this.seriesApi.updateFieldPositions(this.series.id, {
       positions: this.offsets,
       referenceScanUrl: this.referenceScanUrl,
-      hideFrame: this.hideFrame
+      hideFrame: this.hideFrame,
+      halfPage: this.halfPage
     }).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (updated) => {
         this.series = updated;
