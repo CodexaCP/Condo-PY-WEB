@@ -15,6 +15,8 @@ export interface Building {
   contactPhone?: string | null;
   contactEmail?: string | null;
   lateFeeRatePercentage?: number | null;
+  reserveFundPercentage?: number | null;
+  extraordinaryPercentage?: number | null;
   lateFeeFrequency?: LateFeeFrequency | null;
   blockOverdueAmenityReservations: boolean;
   invoicingMode: InvoicingMode;
@@ -41,6 +43,8 @@ export interface CreateBuildingRequest {
   contactPhone?: string | null;
   contactEmail?: string | null;
   lateFeeRatePercentage?: number | null;
+  reserveFundPercentage?: number | null;
+  extraordinaryPercentage?: number | null;
   lateFeeFrequency?: LateFeeFrequency | null;
   blockOverdueAmenityReservations: boolean;
   invoicingMode?: InvoicingMode | null;

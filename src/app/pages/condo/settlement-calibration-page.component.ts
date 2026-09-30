@@ -131,6 +131,11 @@ const FIELDS: CalibField[] = [
 
   // Totales (solo en la última hoja)
   { key: 'mesTotales', section: 'Totales', group: '', label: 'Mes (valor) — en los totales', kind: 'text', sample: 'ABRIL', x: 250, top: 598, width: 100, defaultFontSize: 8, align: 'C' },
+  { key: 'reservaPctLabel', section: 'Totales', group: '', label: 'Aporte de fondo de reserva — título', kind: 'text', sample: 'APORTE DE FONDO DE RESERVA 10%', x: 50, top: 637, width: 250, defaultFontSize: 8 },
+  { key: 'reservaPctValorReserva', section: 'Totales', group: '', label: 'Aporte de fondo de reserva — valor (fondo de reserva)', kind: 'text', sample: '6.398.488', x: 405, top: 637, width: 70, defaultFontSize: 8, align: 'R' },
+  { key: 'reservaPctValorComunes', section: 'Totales', group: '', label: 'Aporte de fondo de reserva — valor (gastos comunes)', kind: 'text', sample: '6.398.488', x: 475, top: 637, width: 70, defaultFontSize: 8, align: 'R' },
+  { key: 'extraPctLabel', section: 'Totales', group: '', label: 'Aporte extraordinario (%) — título', kind: 'text', sample: 'APORTE EXTRAORDINARIO 20%', x: 50, top: 650, width: 250, defaultFontSize: 8 },
+  { key: 'extraPctValor', section: 'Totales', group: '', label: 'Aporte extraordinario (%) — valor', kind: 'text', sample: '14.076.674', x: 475, top: 650, width: 70, defaultFontSize: 8, align: 'R' },
   { key: 'totIngresosLabel', section: 'Totales', group: '', label: 'Total para gastos — título',        kind: 'text', sample: 'TOTAL PARA GASTOS',     x: 50,  top: 585, width: 200, defaultFontSize: 8 },
   { key: 'totIngresosValor', section: 'Totales', group: '', label: 'Total para gastos — valor',         kind: 'text', sample: '3.400.000',             x: 475, top: 585, width: 70,  defaultFontSize: 8, align: 'R' },
   { key: 'totGastosLabel',   section: 'Totales', group: '', label: 'Total gastos del mes — título',     kind: 'text', sample: 'TOTAL GASTOS DEL MES',  x: 50,  top: 598, width: 200, defaultFontSize: 8 },

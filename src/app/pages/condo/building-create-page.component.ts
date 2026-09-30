@@ -164,6 +164,24 @@ function templateFile(url?: string | null, fileName?: string | null): TemplateFi
         </section>
 
         <section class="form-section">
+          <h2 class="section-title">Aportes de la liquidación</h2>
+          <div class="field-row">
+            <div class="field">
+              <label for="reservePct">Aporte al fondo de reserva (%) <span class="optional">(opcional)</span></label>
+              <input id="reservePct" type="number" [(ngModel)]="form.reserveFundPercentage" name="reserveFundPercentage"
+                     placeholder="Ej: 10" min="0" max="100" step="0.01" [disabled]="isBuildingManager" />
+              <small class="field-hint">Porcentaje de los gastos comunes. Vacío = no se calcula.</small>
+            </div>
+            <div class="field">
+              <label for="extraPct">Aporte extraordinario (%) <span class="optional">(opcional)</span></label>
+              <input id="extraPct" type="number" [(ngModel)]="form.extraordinaryPercentage" name="extraordinaryPercentage"
+                     placeholder="Ej: 20" min="0" max="100" step="0.01" [disabled]="isBuildingManager" />
+              <small class="field-hint">Porcentaje del sub total (gastos comunes + aporte de reserva). Vacío = no se calcula.</small>
+            </div>
+          </div>
+        </section>
+
+        <section class="form-section">
           <h2 class="section-title">Interés por mora</h2>
           <div class="field-row">
             <div class="field">
@@ -337,6 +355,7 @@ export class BuildingCreatePageComponent implements OnInit {
 
   form = { companyId:'', condominiumId:'', name:'', code:'', address:'', description:'', phonePrefix:'+595', phoneNumber:'', email:'', isActive:true,
            lateFeeRatePercentage: null as number | null, lateFeeFrequency: '' as '' | LateFeeFrequency,
+           reserveFundPercentage: null as number | null, extraordinaryPercentage: null as number | null,
            blockOverdueAmenityReservations: false,
            invoicingMode: '' as '' | InvoicingMode,
            useStandardTemplates: true,
@@ -355,6 +374,7 @@ export class BuildingCreatePageComponent implements OnInit {
   ];
 
   get isSuperAdmin()       { return this.auth.hasRole('SuperAdmin'); }
+  get isBuildingManager()  { return this.auth.hasRole('BuildingManager'); }
   get isCompanyAdmin()     { return this.auth.hasRole('CompanyAdmin'); }
   get condominiumLocked()  { return this.isCompanyAdmin && !!this.auth.currentUser()?.condominiumId; }
   get lockedCondominiumName() {
@@ -390,6 +410,8 @@ export class BuildingCreatePageComponent implements OnInit {
             email: entity.contactEmail ?? '',
             isActive: entity.isActive,
             lateFeeRatePercentage: entity.lateFeeRatePercentage ?? null,
+            reserveFundPercentage: entity.reserveFundPercentage ?? null,
+            extraordinaryPercentage: entity.extraordinaryPercentage ?? null,
             lateFeeFrequency: entity.lateFeeFrequency ?? '',
             blockOverdueAmenityReservations: entity.blockOverdueAmenityReservations ?? false,
             invoicingMode: entity.invoicingMode ?? '',
@@ -519,6 +541,8 @@ export class BuildingCreatePageComponent implements OnInit {
 
     const req = { companyId, condominiumId, name, code, address, isActive: this.form.isActive, description, contactPhonePrefix: phonePrefix, contactPhone: phoneNumber, contactEmail: email,
                   lateFeeRatePercentage: lateFeeRate, lateFeeFrequency,
+                  reserveFundPercentage: this.form.reserveFundPercentage || null,
+                  extraordinaryPercentage: this.form.extraordinaryPercentage || null,
                   blockOverdueAmenityReservations: this.form.blockOverdueAmenityReservations,
                   ...(this.isSuperAdmin ? {
                     invoicingMode: this.form.invoicingMode || null,
