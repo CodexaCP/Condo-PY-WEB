@@ -166,7 +166,9 @@ const DEFAULT_ROW_HEIGHT = 15;
 
 const PAGE_W_PT = 595.2756;
 const PAGE_H_PT = 841.8898;
-const SCALE = 0.72; // px por punto PDF
+const DEFAULT_ZOOM = 0.9; // px por punto PDF (ajustable con el zoom de la pantalla)
+const ZOOM_MIN = 0.5;
+const ZOOM_MAX = 1.6;
 
 @Component({
   standalone: true,
@@ -193,16 +195,21 @@ const SCALE = 0.72; // px por punto PDF
       <ng-container *ngIf="!loading && building && templateUrl">
         <div class="calib-toolbar">
           <p-button label="Reiniciar posiciones" icon="pi pi-refresh" severity="secondary" [text]="true" (onClick)="resetAll()"></p-button>
+          <span class="zoom-ctl">
+            Zoom
+            <button type="button" class="font-step" (click)="stepZoom(-0.1)" title="Achicar la hoja">−</button>
+            <span class="zoom-value">{{ zoom * 100 | number:'1.0-0' }}%</span>
+            <button type="button" class="font-step" (click)="stepZoom(0.1)" title="Agrandar la hoja">+</button>
+          </span>
           <span class="spacer"></span>
           <p-button label="Generar PDF de prueba" icon="pi pi-file-pdf" severity="secondary" [outlined]="true" (onClick)="openSamplePdf()"></p-button>
           <p-button label="Guardar posiciones" icon="pi pi-check" [loading]="saving" (onClick)="save()"></p-button>
         </div>
 
         <p class="calib-hint">
-          Arrastrá cada bloque hasta que calce sobre el modelo. Cada columna del cuerpo (concepto, descripción y montos) se
-          mueve y se ensancha por separado, y el alto de fila se ajusta para que las filas caigan sobre las líneas del papel.
-          Cada renglón ocupa una sola línea (si el texto no entra en el ancho se corta con "..."). Los datos son de ejemplo.
-          Después de guardar, generá el PDF de prueba e imprimilo sobre el papel para verificar.
+          Arrastrá cada bloque sobre el modelo, o ajustalo con los controles de los paneles (cada panel tiene su propio scroll).
+          Cada texto va en una sola línea (si no entra en su ancho se corta con "..."). Los datos son de ejemplo. Guardá y generá
+          el PDF de prueba para verificar.
         </p>
 
         <div class="calib-options">
@@ -229,6 +236,7 @@ const SCALE = 0.72; // px por punto PDF
             <ng-container *ngTemplateOutlet="sectionsTpl; context: { sections: leftSections }"></ng-container>
           </div>
 
+          <div class="calib-canvas-wrap">
           <div class="calib-canvas" [style.width.px]="canvasW" [style.height.px]="canvasH">
             <img *ngIf="!isPdf" [src]="resolvedTemplateUrl" class="calib-bg" [style.width.px]="canvasW" [style.height.px]="canvasH" alt="Modelo de liquidación" />
             <iframe *ngIf="isPdf" [src]="resolvedTemplateUrlSafe" class="calib-bg" [style.width.px]="canvasW" [style.height.px]="canvasH" title="Modelo de liquidación"></iframe>
@@ -255,6 +263,7 @@ const SCALE = 0.72; // px por punto PDF
               </div>
             </ng-container>
           </div>
+          </div>
 
           <div class="calib-list calib-side">
             <ng-container *ngTemplateOutlet="sectionsTpl; context: { sections: rightSections }"></ng-container>
@@ -278,28 +287,30 @@ const SCALE = 0.72; // px por punto PDF
           <ng-container *ngFor="let f of fields; let i = index">
           <div class="calib-group" *ngIf="f.group && (i === 0 || fields[i - 1].group !== f.group)">{{ f.group }}</div>
           <div class="calib-row" [class.is-hidden]="isHidden(f)">
-            <span class="calib-row-label">{{ f.label }}</span>
-            <span class="calib-row-offset">dx {{ (offsets[f.key]?.dx ?? 0) | number:'1.0-1' }} · dy {{ (offsets[f.key]?.dy ?? 0) | number:'1.0-1' }} pt</span>
-            <span class="calib-row-fontsize" *ngIf="f.kind !== 'image'">
-              letra
-              <button type="button" class="font-step" (click)="stepFontSize(f, -0.5)">−</button>
-              <input type="number" step="0.5" min="4" max="60" class="font-input"
-                     [ngModel]="fontSizeOf(f)" (ngModelChange)="setFontSize(f, $event)" [ngModelOptions]="{ standalone: true }" />
-              <button type="button" class="font-step" (click)="stepFontSize(f, 0.5)">+</button>
-              pt
-            </span>
-            <span class="calib-row-fontsize" *ngIf="f.width">
-              ancho
-              <button type="button" class="font-step" (click)="stepWidth(f, -5)">−</button>
-              <input type="number" step="1" min="10" max="600" class="font-input wide"
-                     [ngModel]="widthOf(f)" (ngModelChange)="setWidth(f, $event)" [ngModelOptions]="{ standalone: true }" />
-              <button type="button" class="font-step" (click)="stepWidth(f, 5)">+</button>
-              pt
-            </span>
-            <label class="hide-check">
-              <input type="checkbox" [ngModel]="isHidden(f)" (ngModelChange)="setHidden(f, $event)" [ngModelOptions]="{ standalone: true }" />
-              No dibujar (mi papel ya lo trae impreso)
-            </label>
+            <div class="calib-row-head">
+              <span class="calib-row-label">{{ f.label }}</span>
+              <span class="calib-row-offset">dx {{ (offsets[f.key]?.dx ?? 0) | number:'1.0-1' }} · dy {{ (offsets[f.key]?.dy ?? 0) | number:'1.0-1' }}</span>
+            </div>
+            <div class="calib-row-controls">
+              <span class="ctl" *ngIf="f.kind !== 'image'">
+                letra
+                <button type="button" class="font-step" (click)="stepFontSize(f, -0.5)">−</button>
+                <input type="number" step="0.5" min="4" max="60" class="font-input"
+                       [ngModel]="fontSizeOf(f)" (ngModelChange)="setFontSize(f, $event)" [ngModelOptions]="{ standalone: true }" />
+                <button type="button" class="font-step" (click)="stepFontSize(f, 0.5)">+</button>
+              </span>
+              <span class="ctl" *ngIf="f.width">
+                ancho
+                <button type="button" class="font-step" (click)="stepWidth(f, -5)">−</button>
+                <input type="number" step="1" min="10" max="600" class="font-input wide"
+                       [ngModel]="widthOf(f)" (ngModelChange)="setWidth(f, $event)" [ngModelOptions]="{ standalone: true }" />
+                <button type="button" class="font-step" (click)="stepWidth(f, 5)">+</button>
+              </span>
+              <label class="hide-check" title="Marcalo si tu papel ya lo trae impreso: el sistema no lo dibuja">
+                <input type="checkbox" [ngModel]="isHidden(f)" (ngModelChange)="setHidden(f, $event)" [ngModelOptions]="{ standalone: true }" />
+                No dibujar
+              </label>
+            </div>
           </div>
           </ng-container>
         </ng-template>
@@ -318,7 +329,16 @@ const SCALE = 0.72; // px por punto PDF
     }
     .hide-frame-check input { width: auto; }
     .row-height { display: flex; align-items: center; gap: 0.3rem; font-size: 0.85rem; color: #29484f; font-weight: 600; }
-    .calib-workspace { display: flex; align-items: flex-start; justify-content: center; gap: 1.25rem; margin-bottom: 1.25rem; }
+    .zoom-ctl { display: flex; align-items: center; gap: 0.3rem; font-size: 0.85rem; color: #29484f; font-weight: 600; }
+    .zoom-value { min-width: 2.6rem; text-align: center; font-variant-numeric: tabular-nums; }
+    /* Tres paneles: controles | hoja | controles. Los de los costados usan todo el ancho libre y cada panel
+       tiene su propio scroll, asi la hoja se ve completa sin tener que bajar la pagina. */
+    .calib-workspace {
+      display: grid; grid-template-columns: minmax(300px, 1fr) auto minmax(300px, 1fr);
+      gap: 1rem; align-items: start; margin-bottom: 1rem;
+      height: calc(100vh - 330px); min-height: 480px;
+    }
+    .calib-canvas-wrap { overflow: auto; max-height: 100%; }
     .calib-canvas {
       position: relative;
       background: #fff;
@@ -363,15 +383,14 @@ const SCALE = 0.72; // px por punto PDF
     .link-btn:hover { text-decoration: underline; }
     .calib-group { margin-top: 0.6rem; padding: 0.2rem 0.5rem; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: #1385b6; }
     .calib-list { display: grid; gap: 0.25rem; align-content: start; }
-    .calib-side { flex: 1 1 0; min-width: 0; max-width: 250px; }
-    .calib-row {
-      display: flex; flex-direction: column; align-items: flex-start; gap: 0.15rem;
-      padding: 0.4rem 0.5rem; border-bottom: 1px solid #eef3f2; font-size: 0.78rem;
-    }
+    .calib-side { min-width: 0; max-height: 100%; overflow-y: auto; padding-right: 0.25rem; }
+    .calib-row { padding: 0.3rem 0.5rem; border-bottom: 1px solid #eef3f2; font-size: 0.78rem; }
+    .calib-row-head { display: flex; justify-content: space-between; align-items: baseline; gap: 0.5rem; }
+    .calib-row-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 0.2rem 0.85rem; margin-top: 0.15rem; }
+    .ctl { display: inline-flex; align-items: center; gap: 0.25rem; color: #6b878d; white-space: nowrap; }
     .calib-row.is-hidden { opacity: 0.55; }
     .calib-row-label { color: #29484f; font-weight: 600; }
     .calib-row-offset { color: #6b878d; font-variant-numeric: tabular-nums; }
-    .calib-row-fontsize { display: flex; align-items: center; gap: 0.3rem; color: #6b878d; white-space: nowrap; }
     .hide-check { display: flex; align-items: center; gap: 0.35rem; color: #6b878d; cursor: pointer; }
     .hide-check input { width: auto; }
     .font-step {
@@ -384,9 +403,10 @@ const SCALE = 0.72; // px por punto PDF
       padding: 0.15rem 0.2rem; font-size: 0.8rem; font-variant-numeric: tabular-nums;
     }
     .font-input.wide { width: 52px; }
-    @media (max-width: 1000px) {
-      .calib-workspace { flex-direction: column; align-items: center; }
-      .calib-side { max-width: 100%; width: 100%; }
+    @media (max-width: 1100px) {
+      .calib-workspace { grid-template-columns: 1fr; height: auto; }
+      .calib-side { max-height: none; overflow: visible; }
+      .calib-canvas-wrap { max-height: none; }
     }
   `]
 })
@@ -406,9 +426,16 @@ export class SettlementCalibrationPageComponent implements OnInit {
   readonly leftSections = this.sections.slice(0, 3);
   readonly rightSections = this.sections.slice(3);
   openSections: Record<string, boolean> = {};
-  readonly canvasW = Math.round(PAGE_W_PT * SCALE);
-  readonly canvasH = Math.round(PAGE_H_PT * SCALE);
-  readonly SCALE = SCALE;
+  zoom = DEFAULT_ZOOM;
+  // px por punto PDF: la hoja se agranda o achica con el zoom, el resto (posiciones guardadas) no cambia.
+  get SCALE(): number { return this.zoom; }
+  get canvasW(): number { return Math.round(PAGE_W_PT * this.zoom); }
+  get canvasH(): number { return Math.round(PAGE_H_PT * this.zoom); }
+
+  setZoom(value: number): void {
+    this.zoom = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, Math.round(value * 100) / 100));
+  }
+  stepZoom(delta: number): void { this.setZoom(this.zoom + delta); }
 
   building: Building | null = null;
   templateUrl: string | null = null;
@@ -489,11 +516,11 @@ export class SettlementCalibrationPageComponent implements OnInit {
   }
 
   screenX(f: CalibField): number {
-    return (f.x + (this.offsets[f.key]?.dx ?? 0)) * SCALE;
+    return (f.x + (this.offsets[f.key]?.dx ?? 0)) * this.SCALE;
   }
 
   screenY(f: CalibField): number {
-    return (f.top - (this.offsets[f.key]?.dy ?? 0)) * SCALE;
+    return (f.top - (this.offsets[f.key]?.dy ?? 0)) * this.SCALE;
   }
 
   fontSizeOf(f: CalibField): number {
@@ -512,7 +539,7 @@ export class SettlementCalibrationPageComponent implements OnInit {
   }
 
   heightOf(f: CalibField): number | null {
-    return f.kind === 'image' ? IMAGE_H_PT * SCALE : null;
+    return f.kind === 'image' ? IMAGE_H_PT * this.SCALE : null;
   }
 
   alignOf(f: CalibField): string | null {
@@ -577,8 +604,8 @@ export class SettlementCalibrationPageComponent implements OnInit {
 
   private handleMouseMove(event: MouseEvent): void {
     if (!this.draggingField) return;
-    const dx = this.dragBaseDx + (event.clientX - this.dragStartX) / SCALE;
-    const dy = this.dragBaseDy - (event.clientY - this.dragStartY) / SCALE; // pantalla abajo = dy negativo
+    const dx = this.dragBaseDx + (event.clientX - this.dragStartX) / this.SCALE;
+    const dy = this.dragBaseDy - (event.clientY - this.dragStartY) / this.SCALE; // pantalla abajo = dy negativo
     this.patch(this.draggingField.key, { dx, dy });
     this.cdr.markForCheck();
   }
