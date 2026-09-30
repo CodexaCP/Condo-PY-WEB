@@ -48,7 +48,10 @@ const FIELDS: CalibField[] = [
 
 const PAGE_W_PT = 595.2756;
 const PAGE_H_PT = 841.8898;
-const SCALE = 0.72; // px por punto PDF
+// px por punto PDF a zoom 100%: 96/72 = tamano real de una A4 en pantalla (794 x 1123 px), para poder
+// calibrar al milimetro. El zoom del selector multiplica esta base.
+const BASE_SCALE = 96 / 72;
+const ZOOM_LEVELS = [0.5, 0.75, 1, 1.25, 1.5];
 
 @Component({
   standalone: true,
@@ -76,6 +79,12 @@ const SCALE = 0.72; // px por punto PDF
           </label>
           <p-button label="Reiniciar posiciones" icon="pi pi-refresh" severity="secondary" [text]="true" (onClick)="resetAll()"></p-button>
           <span class="spacer"></span>
+          <span class="zoom-ctl">
+            Zoom
+            <select class="zoom-select" [ngModel]="zoom" (ngModelChange)="setZoom($event)" [ngModelOptions]="{ standalone: true }">
+              <option *ngFor="let z of zoomLevels" [ngValue]="z">{{ z * 100 }}%</option>
+            </select>
+          </span>
           <p-button label="Generar PDF de prueba" icon="pi pi-file-pdf" severity="secondary" [outlined]="true" (onClick)="openSamplePdf()"></p-button>
           <p-button label="Guardar posiciones" icon="pi pi-check" [loading]="saving" (onClick)="save()"></p-button>
         </div>
@@ -101,7 +110,7 @@ const SCALE = 0.72; // px por punto PDF
 
             <div class="calib-field" *ngFor="let f of fields"
                  [style.left.px]="screenX(f)" [style.top.px]="screenY(f)"
-                 [style.fontSize.px]="fontSizeOf(f) * SCALE"
+                 [style.fontSize.px]="fontSizeOf(f) * scale"
                  [class.dragging]="draggingKey === f.key"
                  (mousedown)="startDrag(f, $event)">
               {{ f.sample }}
@@ -134,6 +143,8 @@ const SCALE = 0.72; // px por punto PDF
     .app-page-head { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem; }
     .calib-toolbar { display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; margin-bottom: 0.75rem; }
     .spacer { flex: 1; }
+    .zoom-ctl { display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.85rem; color: #29484f; font-weight: 600; }
+    .zoom-select { border: 1px solid #d7e5e1; border-radius: 6px; padding: 0.3rem 0.4rem; font-size: 0.85rem; }
     .upload-btn {
       display: inline-flex; align-items: center; gap: 0.4rem;
       padding: 0.55rem 0.9rem; border-radius: 10px; cursor: pointer;
@@ -213,9 +224,8 @@ export class InvoiceSeriesCalibrationPageComponent implements OnInit {
   readonly fields = FIELDS;
   readonly leftFields = FIELDS.slice(0, Math.ceil(FIELDS.length / 2));
   readonly rightFields = FIELDS.slice(Math.ceil(FIELDS.length / 2));
-  readonly canvasW = Math.round(PAGE_W_PT * SCALE);
-  readonly canvasH = Math.round(PAGE_H_PT * SCALE);
-  readonly SCALE = SCALE;
+  readonly zoomLevels = ZOOM_LEVELS;
+  zoom = 1;
 
   series: InvoiceSeries | null = null;
   loading = true;
@@ -224,6 +234,14 @@ export class InvoiceSeriesCalibrationPageComponent implements OnInit {
   referenceScanUrl: string | null = null;
   offsets: Record<string, FieldOffset> = {};
   hideFrame = false;
+
+  get scale(): number { return BASE_SCALE * this.zoom; }
+  get canvasW(): number { return Math.round(PAGE_W_PT * this.scale); }
+  get canvasH(): number { return Math.round(PAGE_H_PT * this.scale); }
+
+  setZoom(value: number): void {
+    if (ZOOM_LEVELS.includes(value)) this.zoom = value;
+  }
 
   get resolvedScanUrl(): string { return resolveUploadUrl(this.referenceScanUrl); }
   get resolvedScanUrlSafe(): SafeResourceUrl { return this.sanitizer.bypassSecurityTrustResourceUrl(this.resolvedScanUrl); }
@@ -266,12 +284,12 @@ export class InvoiceSeriesCalibrationPageComponent implements OnInit {
 
   screenX(f: CalibField): number {
     const o = this.offsets[f.key];
-    return (f.x + (o?.dx ?? 0)) * SCALE;
+    return (f.x + (o?.dx ?? 0)) * this.scale;
   }
 
   screenY(f: CalibField): number {
     const o = this.offsets[f.key];
-    return (PAGE_H_PT - (f.y + (o?.dy ?? 0))) * SCALE;
+    return (PAGE_H_PT - (f.y + (o?.dy ?? 0))) * this.scale;
   }
 
   fontSizeOf(f: CalibField): number {
@@ -306,8 +324,8 @@ export class InvoiceSeriesCalibrationPageComponent implements OnInit {
     if (!this.draggingField) return;
     const deltaXPx = event.clientX - this.dragStartX;
     const deltaYPx = event.clientY - this.dragStartY;
-    const dx = this.dragBaseDx + deltaXPx / SCALE;
-    const dy = this.dragBaseDy - deltaYPx / SCALE; // pantalla abajo = Y de PDF decrece
+    const dx = this.dragBaseDx + deltaXPx / this.scale;
+    const dy = this.dragBaseDy - deltaYPx / this.scale; // pantalla abajo = Y de PDF decrece
     const fontSize = this.offsets[this.draggingField.key]?.fontSize;
     this.offsets = { ...this.offsets, [this.draggingField.key]: { dx, dy, fontSize } };
     this.cdr.markForCheck();
