@@ -261,6 +261,18 @@ export const appRoutes: Routes = [
                 loadComponent: () => import('./app/pages/condo/finance-cash-flow-page.component').then(m => m.FinanceCashFlowPageComponent)
             },
             {
+                path: 'finance/budget',
+                loadComponent: () => import('./app/pages/condo/finance-budget-page.component').then(m => m.FinanceBudgetPageComponent)
+            },
+            {
+                path: 'finance/budget-vs-actual',
+                loadComponent: () => import('./app/pages/condo/finance-budget-vs-actual-page.component').then(m => m.FinanceBudgetVsActualPageComponent)
+            },
+            {
+                path: 'finance/reserve-fund',
+                loadComponent: () => import('./app/pages/condo/finance-reserve-fund-page.component').then(m => m.FinanceReserveFundPageComponent)
+            },
+            {
                 path: 'finance/settings',
                 loadComponent: () => import('./app/pages/condo/finance-settings-page.component').then(m => m.FinanceSettingsPageComponent)
             },

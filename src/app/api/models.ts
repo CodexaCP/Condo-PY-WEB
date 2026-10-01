@@ -1831,6 +1831,8 @@ export interface FinanceDashboard {
   fiscalYearStart: string;
   fiscalYearToDate: FinanceFlow;
   series: FinanceMonthPoint[];
+  budget: FinanceBudgetSummary;
+  reserveFund: FinanceReserveSummary;
 }
 
 export interface FinanceCashFlowLine {
@@ -2036,4 +2038,132 @@ export interface AdCampaignUpdateRequest {
 export interface UpdateSettlementCalibrationRequest {
   positions: Record<string, FieldOffset>;
   hideFrame: boolean;
+}
+
+// ── Finanzas del edificio: presupuesto y fondo de reserva ─────────────────────
+
+// Semaforo del presupuesto vs. real: verde dentro de lo presupuestado, amarillo hasta 10 % de desvio, rojo mas alla.
+export type BudgetStatus = 'None' | 'Green' | 'Amber' | 'Red';
+
+export interface FinanceBudgetRow {
+  categoryId: string;
+  code: string;
+  name: string;
+  groupCode: string;
+  groupName: string;
+  type: LedgerCategoryType;
+  isActive: boolean;
+  // Un importe por mes del ejercicio (en el mismo orden que `months`).
+  amounts: number[];
+  total: number;
+}
+
+export interface FinanceBudget {
+  buildingId: string;
+  fiscalYear: number;
+  fiscalYearStart: string;
+  fiscalYearEnd: string;
+  months: FinanceMonthRef[];
+  rows: FinanceBudgetRow[];
+  totalIncome: number[];
+  totalExpense: number[];
+  affectedCells: number;
+}
+
+export interface FinanceBudgetCell {
+  categoryId: string;
+  year: number;
+  month: number;
+  amount: number;
+}
+
+export interface FinanceBudgetVsActualLine {
+  categoryId: string;
+  code: string;
+  name: string;
+  groupCode: string;
+  groupName: string;
+  type: LedgerCategoryType;
+  monthBudget: number;
+  monthActual: number;
+  monthVariance: number;
+  monthVariancePct: number | null;
+  monthStatus: BudgetStatus;
+  ytdBudget: number;
+  ytdActual: number;
+  ytdVariance: number;
+  ytdVariancePct: number | null;
+  ytdStatus: BudgetStatus;
+}
+
+export interface FinanceBudgetTotals {
+  monthBudget: number;
+  monthActual: number;
+  ytdBudget: number;
+  ytdActual: number;
+  monthStatus: BudgetStatus;
+  ytdStatus: BudgetStatus;
+}
+
+export interface FinanceBudgetVsActual {
+  buildingId: string;
+  buildingName: string;
+  year: number;
+  month: number;
+  fiscalYear: number;
+  fiscalYearStart: string;
+  fiscalYearEnd: string;
+  asOf: string;
+  expenseBasis: string;
+  incomeBasis: string;
+  amberThresholdPct: number;
+  incomeLines: FinanceBudgetVsActualLine[];
+  expenseLines: FinanceBudgetVsActualLine[];
+  incomeTotals: FinanceBudgetTotals;
+  expenseTotals: FinanceBudgetTotals;
+}
+
+export interface FinanceBudgetSummary {
+  monthExpenseBudget: number;
+  monthExpenseActual: number;
+  monthIncomeBudget: number;
+  monthIncomeActual: number;
+  redCount: number;
+  amberCount: number;
+  hasBudget: boolean;
+  topOverBudget: FinanceBudgetVsActualLine[];
+}
+
+export interface FinanceReserveMonth {
+  year: number;
+  month: number;
+  opening: number;
+  contributions: number;
+  uses: number;
+  closing: number;
+}
+
+export interface FinanceReserveFund {
+  buildingId: string;
+  buildingName: string;
+  // Sin cuenta de fondo de reserva el libro no puede separar sus movimientos.
+  hasFundAccount: boolean;
+  accountId: string | null;
+  accountName: string;
+  financeStartDate: string;
+  asOf: string;
+  reserveFundPercentage: number | null;
+  openingBalance: number;
+  contributions: number;
+  uses: number;
+  balance: number;
+  months: FinanceReserveMonth[];
+  movements: FinanceMovementsPage;
+}
+
+export interface FinanceReserveSummary {
+  hasFundAccount: boolean;
+  balance: number;
+  monthContributions: number;
+  monthUses: number;
 }

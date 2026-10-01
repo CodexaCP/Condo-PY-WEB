@@ -131,6 +131,54 @@ import { FinanceStateComponent } from './finance-state.component';
         <div class="chart-box" *ngIf="chartData">
           <p-chart type="bar" [data]="chartData" [options]="chartOptions" height="320px"></p-chart>
         </div>
+
+        <h2>Presupuesto de {{ monthText }}</h2>
+        <ng-container *ngIf="d.budget.hasBudget; else noBudget">
+          <div class="kpis three">
+            <div class="kpi">
+              <span>Gastos del mes</span>
+              <strong>{{ d.budget.monthExpenseActual | gs }}</strong>
+              <small class="muted">presupuestado {{ d.budget.monthExpenseBudget | gs }}</small>
+            </div>
+            <div class="kpi">
+              <span>Ingresos cobrados del mes</span>
+              <strong>{{ d.budget.monthIncomeActual | gs }}</strong>
+              <small class="muted">presupuestado {{ d.budget.monthIncomeBudget | gs }}</small>
+            </div>
+            <div class="kpi">
+              <span>Rubros con desvío</span>
+              <strong><i class="dot red"></i> {{ d.budget.redCount }} <i class="dot amber"></i> {{ d.budget.amberCount }}</strong>
+              <small class="muted">rojo: más de 10 % · amarillo: hasta 10 %</small>
+            </div>
+          </div>
+          <ng-container *ngIf="d.budget.topOverBudget.length">
+            <h3 class="mt">Gastos que más se pasaron</h3>
+            <div class="bar-row" *ngFor="let l of d.budget.topOverBudget">
+              <div class="bar-label">
+                <span>{{ l.code }} · {{ l.name }} <small class="muted">(presupuesto {{ l.monthBudget | gs }})</small></span>
+                <strong class="neg">+{{ l.monthVariance | gs }}</strong>
+              </div>
+            </div>
+          </ng-container>
+          <p class="link"><a [routerLink]="['/finance/budget-vs-actual']" [queryParams]="{ buildingId: d.buildingId }">Ver presupuesto vs. real</a></p>
+        </ng-container>
+        <ng-template #noBudget>
+          <p class="muted">Todavía no cargaste un presupuesto para este ejercicio.
+            <a [routerLink]="['/finance/budget']" [queryParams]="{ buildingId: d.buildingId }">Cargar el presupuesto</a></p>
+        </ng-template>
+
+        <h2>Fondo de reserva</h2>
+        <ng-container *ngIf="d.reserveFund.hasFundAccount; else noFund">
+          <div class="kpis three">
+            <div class="kpi"><span>Saldo del fondo</span><strong>{{ d.reserveFund.balance | gs }}</strong></div>
+            <div class="kpi"><span>Aportes de {{ monthText }}</span><strong class="pos">{{ d.reserveFund.monthContributions | gs }}</strong></div>
+            <div class="kpi"><span>Usos de {{ monthText }}</span><strong class="neg">{{ d.reserveFund.monthUses | gs }}</strong></div>
+          </div>
+          <p class="link"><a [routerLink]="['/finance/reserve-fund']" [queryParams]="{ buildingId: d.buildingId }">Ver el libro del fondo</a></p>
+        </ng-container>
+        <ng-template #noFund>
+          <p class="muted">Este edificio no tiene una cuenta de fondo de reserva. Se crea en Configuración → Cuentas.</p>
+        </ng-template>
       </ng-container>
     </p-card>
   `,
@@ -176,6 +224,10 @@ import { FinanceStateComponent } from './finance-state.component';
     .fill.in { background: var(--brand-c3); }
     .fill.out { background: #e5675d; }
     .chart-box { padding: 0.5rem 0; }
+    .mt { margin-top: 1.1rem; }
+    .dot { display: inline-block; width: 0.8rem; height: 0.8rem; border-radius: 50%; vertical-align: middle; }
+    .dot.red { background: #d6483b; }
+    .dot.amber { background: #e0a526; margin-left: 0.6rem; }
     @media (max-width: 900px) {
       .kpis, .kpis.three, .two-cols { grid-template-columns: 1fr 1fr; }
       .two-cols { grid-template-columns: 1fr; }

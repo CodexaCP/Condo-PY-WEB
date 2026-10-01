@@ -5,11 +5,15 @@ import { API_BASE_URL } from '../config/api.config';
 import {
   FinanceAdminBuilding,
   FinanceBalances,
+  FinanceBudget,
+  FinanceBudgetCell,
+  FinanceBudgetVsActual,
   FinanceBuildingAccess,
   FinanceCashFlow,
   FinanceDashboard,
   FinanceMovementFilters,
   FinanceMovementsPage,
+  FinanceReserveFund,
   FinanceSettings,
   FinanceSettingsUpdateRequest,
   FinancialAccount,
@@ -111,6 +115,43 @@ export class FinanceApiService {
     let params = this.params(buildingId);
     if (fiscalYear) params = params.set('fiscalYear', fiscalYear);
     return this.http.get<FinanceCashFlow>(`${API_BASE_URL}/finance/cash-flow`, { params });
+  }
+
+  // ── Presupuesto, presupuesto vs. real y fondo de reserva ──
+
+  getBudget(buildingId: string, fiscalYear?: number): Observable<FinanceBudget> {
+    let params = this.params(buildingId);
+    if (fiscalYear) params = params.set('fiscalYear', fiscalYear);
+    return this.http.get<FinanceBudget>(`${API_BASE_URL}/finance/budget`, { params });
+  }
+
+  updateBudget(buildingId: string, fiscalYear: number, cells: FinanceBudgetCell[]): Observable<FinanceBudget> {
+    const params = this.params(buildingId).set('fiscalYear', fiscalYear);
+    return this.http.put<FinanceBudget>(`${API_BASE_URL}/finance/budget`, { cells }, { params });
+  }
+
+  copyPreviousBudget(buildingId: string, fiscalYear: number, overwrite: boolean): Observable<FinanceBudget> {
+    const params = this.params(buildingId).set('fiscalYear', fiscalYear).set('overwrite', overwrite);
+    return this.http.post<FinanceBudget>(`${API_BASE_URL}/finance/budget/copy-previous`, {}, { params });
+  }
+
+  fillBudgetFromAverage(buildingId: string, fiscalYear: number, months: number, overwrite: boolean): Observable<FinanceBudget> {
+    const params = this.params(buildingId).set('fiscalYear', fiscalYear).set('months', months).set('overwrite', overwrite);
+    return this.http.post<FinanceBudget>(`${API_BASE_URL}/finance/budget/fill-from-average`, {}, { params });
+  }
+
+  getBudgetVsActual(buildingId: string, year?: number, month?: number): Observable<FinanceBudgetVsActual> {
+    let params = this.params(buildingId);
+    if (year) params = params.set('year', year);
+    if (month) params = params.set('month', month);
+    return this.http.get<FinanceBudgetVsActual>(`${API_BASE_URL}/finance/budget-vs-actual`, { params });
+  }
+
+  getReserveFund(buildingId: string, from?: string, to?: string): Observable<FinanceReserveFund> {
+    let params = this.params(buildingId);
+    if (from) params = params.set('from', from);
+    if (to) params = params.set('to', to);
+    return this.http.get<FinanceReserveFund>(`${API_BASE_URL}/finance/reserve-fund`, { params });
   }
 
   getCategories(buildingId: string): Observable<LedgerCategory[]> {
