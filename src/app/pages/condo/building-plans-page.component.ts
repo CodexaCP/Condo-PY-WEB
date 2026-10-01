@@ -22,11 +22,11 @@ import {
 
 const STATUS_LABEL: Record<BuildingPlanStatus, string> = {
   Active: 'Activo', ExpiringSoon: 'Por vencer', Expired: 'Vencido',
-  Suspended: 'Suspendido', Archived: 'Archivado',
+  ReadOnly: 'Solo lectura', Blocked: 'Bloqueado', Archived: 'Archivado',
 };
 const STATUS_SEV: Record<BuildingPlanStatus, 'success' | 'warn' | 'danger' | 'secondary'> = {
   Active: 'success', ExpiringSoon: 'warn', Expired: 'danger',
-  Suspended: 'danger', Archived: 'secondary',
+  ReadOnly: 'danger', Blocked: 'danger', Archived: 'secondary',
 };
 
 type AssignTab = 'individual' | 'bulk';
@@ -57,7 +57,8 @@ type AssignTab = 'individual' | 'bulk';
           <option value="Active">Activo</option>
           <option value="ExpiringSoon">Por vencer</option>
           <option value="Expired">Vencido</option>
-          <option value="Suspended">Suspendido</option>
+          <option value="ReadOnly">Solo lectura</option>
+          <option value="Blocked">Bloqueado</option>
           <option value="Archived">Archivado</option>
         </select>
         <select [(ngModel)]="filterPlanId" (ngModelChange)="applyFilters()">
@@ -140,7 +141,7 @@ type AssignTab = 'individual' | 'bulk';
       </div>
 
       <!-- Renovación -->
-      <div class="renewal-section" *ngIf="detail && !detail.isArchived && detail.status !== 'Suspended'">
+      <div class="renewal-section" *ngIf="detail && !detail.isArchived && detail.status !== 'Blocked'">
         <h3>Establecer renovación</h3>
         <form class="ficha-form" (ngSubmit)="saveRenewal()">
           <div class="date-row">

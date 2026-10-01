@@ -14,11 +14,11 @@ import { BuildingPlanPaymentCreateRequest, BuildingPlanStatus, BuildingPlanSumma
 
 const STATUS_LABEL: Record<BuildingPlanStatus, string> = {
   Active: 'Activo', ExpiringSoon: 'Por vencer', Expired: 'Vencido',
-  Suspended: 'Suspendido', Archived: 'Archivado',
+  ReadOnly: 'Solo lectura', Blocked: 'Bloqueado', Archived: 'Archivado',
 };
 const STATUS_SEV: Record<BuildingPlanStatus, 'success' | 'warn' | 'danger' | 'secondary'> = {
   Active: 'success', ExpiringSoon: 'warn', Expired: 'danger',
-  Suspended: 'danger', Archived: 'secondary',
+  ReadOnly: 'danger', Blocked: 'danger', Archived: 'secondary',
 };
 
 @Component({
@@ -86,17 +86,32 @@ const STATUS_SEV: Record<BuildingPlanStatus, 'success' | 'warn' | 'danger' | 'se
           <span>Renovación programada. Está pendiente de aprobación por el administrador.</span>
         </div>
 
-        <!-- Suspendido -->
-        <div class="warn-banner" *ngIf="plan.status === 'Suspended'">
+        <!-- Solo lectura: terminó la gracia -->
+        <div class="warn-banner" *ngIf="plan.status === 'ReadOnly'">
           <span class="pi pi-exclamation-triangle"></span>
-          <span>Tu plan está <strong>suspendido</strong> por falta de pago. Enviá un comprobante para reactivarlo.</span>
+          <span>
+            Tu plan está vencido y el sistema quedó en <strong>solo lectura</strong>: podés consultar la información,
+            pero no modificarla. Lo único habilitado es enviar el comprobante de pago.
+            <ng-container *ngIf="plan.daysUntilBlocked !== null">
+              En <strong>{{ plan.daysUntilBlocked }} día(s)</strong> se bloqueará todo el acceso hasta que se apruebe el pago.
+            </ng-container>
+          </span>
+        </div>
+
+        <!-- Bloqueo total -->
+        <div class="warn-banner" *ngIf="plan.status === 'Blocked'">
+          <span class="pi pi-lock"></span>
+          <span>
+            El acceso está <strong>bloqueado</strong> por falta de pago. Enviá el comprobante: el sistema se habilita
+            apenas el administrador apruebe el pago.
+          </span>
         </div>
 
         <!-- Vencido / Por vencer -->
         <div class="warn-banner warn-banner-soft" *ngIf="plan.status === 'ExpiringSoon' || plan.status === 'Expired'">
           <span class="pi pi-clock"></span>
           <span *ngIf="plan.status === 'ExpiringSoon'">Tu plan vence en <strong>{{ plan.daysUntilExpiry }} día(s)</strong>. Enviá el comprobante cuanto antes.</span>
-          <span *ngIf="plan.status === 'Expired'">Tu plan está vencido. Estás en el período de gracia. Enviá el comprobante para evitar la suspensión.</span>
+          <span *ngIf="plan.status === 'Expired'">Tu plan está vencido. Estás en el período de gracia. Enviá el comprobante para evitar que el sistema pase a solo lectura.</span>
         </div>
 
         <!-- Pagado y activo -->
@@ -297,8 +312,9 @@ export class MyPlanPageComponent implements OnInit {
   ngOnInit(): void {
     this.bpApi.getMyPlan().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: plans => {
-        // Prioritize: active/expiring > expired > suspended > archived
-        const priority: Record<BuildingPlanStatus, number> = { Active: 0, ExpiringSoon: 1, Expired: 2, Suspended: 3, Archived: 4 };
+        // Se muestra primero el plan en peor estado (bloqueado > solo lectura > vencido > por vencer > activo),
+        // porque es el que hay que regularizar.
+        const priority: Record<BuildingPlanStatus, number> = { Blocked: 0, ReadOnly: 1, Expired: 2, ExpiringSoon: 3, Active: 4, Archived: 5 };
         this.plan = [...plans].sort((a, b) => priority[a.status] - priority[b.status])[0] ?? null;
         this.loading = false;
         this.cdr.markForCheck();

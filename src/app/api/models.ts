@@ -1585,7 +1585,8 @@ export type PlanAssignmentScope = 'Building' | 'Condominium' | 'Company';
 
 export type BuildingPlanPaymentStatus = 'Pending' | 'Approved' | 'Rejected';
 
-export type BuildingPlanStatus = 'Active' | 'ExpiringSoon' | 'Expired' | 'Suspended' | 'Archived';
+// Expired = vencido en período de gracia · ReadOnly = solo consulta + pago · Blocked = bloqueo total hasta el pago
+export type BuildingPlanStatus = 'Active' | 'ExpiringSoon' | 'Expired' | 'ReadOnly' | 'Blocked' | 'Archived';
 
 export interface Plan {
   id: string;
@@ -1645,6 +1646,7 @@ export interface BuildingPlan {
   createdAtUtc: string;
   status: BuildingPlanStatus;
   daysUntilExpiry: number;
+  daysUntilBlocked: number | null;
   hasPendingPayment: boolean;
 }
 
@@ -1660,6 +1662,7 @@ export interface BuildingPlanSummary {
   isActive: boolean;
   status: BuildingPlanStatus;
   daysUntilExpiry: number;
+  daysUntilBlocked: number | null;
 }
 
 export interface BuildingPlanAssignRequest {
