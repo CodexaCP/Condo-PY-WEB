@@ -168,10 +168,17 @@ const PHONE_PREFIXES: PhonePrefix[] = [
         </section>
 
         <!-- ══ PRESIDENTE DE CONSORCIO ═══════════════════════════════ -->
-        <section class="form-section" *ngIf="isEditing && eligibleBuildings.length">
+        <section class="form-section" *ngIf="isEditing">
           <h2 class="section-title">Presidente de consorcio</h2>
 
-          <div class="field">
+          <div class="field" *ngIf="!eligibleBuildings.length">
+            <small class="field-hint">
+              Para nombrarlo presidente, primero el propietario debe estar vinculado a una unidad de un edificio.
+              Luego podrás marcarlo como presidente y cargar su firma.
+            </small>
+          </div>
+
+          <div class="field" *ngIf="eligibleBuildings.length">
             <label class="checkbox-label">
               <input type="checkbox" [(ngModel)]="isPresidentChecked" name="isPresidentChecked"
                      [ngModelOptions]="{standalone: true}" (ngModelChange)="onPresidentCheckboxChange()" />
