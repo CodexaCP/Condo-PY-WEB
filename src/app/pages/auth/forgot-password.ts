@@ -91,6 +91,9 @@ export class ForgotPassword {
   sent = false;
 
   submit(): void {
+    // Evita pedidos duplicados (Enter + clic, doble clic): cada pedido cuenta para el limite de 3 por hora.
+    if (this.isSubmitting || this.sent) return;
+
     if (!this.identifier.trim()) {
       this.errorMessage = 'Ingresá tu correo o nombre de usuario.';
       return;
