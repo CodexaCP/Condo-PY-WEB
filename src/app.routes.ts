@@ -249,6 +249,18 @@ export const appRoutes: Routes = [
             },
             // ── Finanzas del edificio ─────────────────────────────────────
             {
+                path: 'finance/dashboard',
+                loadComponent: () => import('./app/pages/condo/finance-dashboard-page.component').then(m => m.FinanceDashboardPageComponent)
+            },
+            {
+                path: 'finance/movements',
+                loadComponent: () => import('./app/pages/condo/finance-movements-page.component').then(m => m.FinanceMovementsPageComponent)
+            },
+            {
+                path: 'finance/cash-flow',
+                loadComponent: () => import('./app/pages/condo/finance-cash-flow-page.component').then(m => m.FinanceCashFlowPageComponent)
+            },
+            {
                 path: 'finance/settings',
                 loadComponent: () => import('./app/pages/condo/finance-settings-page.component').then(m => m.FinanceSettingsPageComponent)
             },

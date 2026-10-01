@@ -1,8 +1,7 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, DestroyRef, inject, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, DestroyRef, inject } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute, Router } from '@angular/router';
 import { Button } from 'primeng/button';
 import { Card } from 'primeng/card';
 import { Message } from 'primeng/message';
@@ -12,6 +11,7 @@ import { extractApiErrorMessage } from '../../api/api-error.util';
 import { FinanceApiService } from '../../api/finance-api.service';
 import { FinanceBuildingAccess, FinanceSettings } from '../../api/models';
 import { FinanceAccountsEditorComponent } from './finance-accounts-editor.component';
+import { FinanceBuildingPickerComponent } from './finance-building-picker.component';
 import { FinanceChartEditorComponent } from './finance-chart-editor.component';
 
 type Section = 'general' | 'accounts' | 'chart' | 'review';
@@ -32,7 +32,7 @@ const MONTHS = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 
   standalone: true,
   selector: 'app-finance-settings-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, FormsModule, Button, Card, Message, Tag, FinanceAccountsEditorComponent, FinanceChartEditorComponent],
+  imports: [CommonModule, FormsModule, Button, Card, Message, Tag, FinanceAccountsEditorComponent, FinanceChartEditorComponent, FinanceBuildingPickerComponent],
   template: `
     <p-card styleClass="app-page-card">
       <div class="app-toolbar">
@@ -42,13 +42,7 @@ const MONTHS = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 
             <p>{{ wizard ? 'Configuración inicial: completala para empezar a usar el módulo.' : 'Configuración del módulo.' }}</p>
           </div>
         </div>
-        <label class="building-select" *ngIf="buildings.length > 1">
-          <span>Edificio</span>
-          <select [ngModel]="buildingId" (ngModelChange)="selectBuilding($event)">
-            <option *ngFor="let b of buildings" [value]="b.buildingId">{{ b.buildingName }}</option>
-          </select>
-        </label>
-        <strong class="building-name" *ngIf="buildings.length === 1">{{ buildings[0].buildingName }}</strong>
+        <app-finance-building-picker (selected)="onBuilding($event)" (failed)="onPickerError($event)"></app-finance-building-picker>
       </div>
 
       <div class="disclaimer">
@@ -60,7 +54,7 @@ const MONTHS = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 
       </div>
 
       <p class="app-state" *ngIf="loadingBuildings">Cargando...</p>
-      <p-message *ngIf="!loadingBuildings && !buildings.length && !blockedMessage && !pageError" severity="warn"
+      <p-message *ngIf="noBuilding && !blockedMessage && !pageError" severity="warn"
                  text="El módulo Finanzas del edificio no está habilitado en ninguno de tus edificios."></p-message>
       <p-message *ngIf="blockedMessage" severity="warn" [text]="blockedMessage"></p-message>
       <p-message *ngIf="pageError" severity="error" [text]="pageError"></p-message>
@@ -115,7 +109,7 @@ const MONTHS = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 
 
         <section class="panel" *ngIf="section === 'accounts'">
           <h2>Cuentas financieras</h2>
-          <app-finance-accounts-editor [buildingId]="buildingId" [canEdit]="s.canEdit" [startDate]="s.financeStartDate" (changed)="reloadSettings()"></app-finance-accounts-editor>
+          <app-finance-accounts-editor [buildingId]="buildingId" [canEdit]="s.canEdit" [startDate]="s.financeStartDate" [defaultAccountId]="s.defaultAccountId" (changed)="reloadSettings()"></app-finance-accounts-editor>
         </section>
 
         <section class="panel" *ngIf="section === 'chart'">
@@ -155,12 +149,10 @@ const MONTHS = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 
     </p-card>
   `,
   styles: [`
-    .building-select { display: grid; gap: 0.25rem; font-size: 0.82rem; font-weight: 600; color: var(--brand-muted); }
-    .building-select select, .general-form input, .general-form select {
+    .general-form input, .general-form select {
       padding: 0.5rem 0.75rem; border: 1px solid rgba(19,133,182,0.25); border-radius: 10px;
       font: inherit; font-size: 0.95rem; color: var(--brand-ink); background: var(--surface-ground, #f8fafc);
     }
-    .building-name { font-size: 1.05rem; color: var(--brand-ink); }
     .disclaimer {
       display: flex; gap: 0.6rem; align-items: flex-start; margin-bottom: 1rem; padding: 0.7rem 1rem;
       border-radius: 12px; background: var(--brand-gradient-soft); color: var(--brand-ink-soft); font-size: 0.9rem; line-height: 1.45;
@@ -205,10 +197,8 @@ const MONTHS = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 
     .wizard-footer { display: flex; justify-content: space-between; margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--brand-border); }
   `]
 })
-export class FinanceSettingsPageComponent implements OnInit {
+export class FinanceSettingsPageComponent {
   private readonly api = inject(FinanceApiService);
-  private readonly route = inject(ActivatedRoute);
-  private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly msg = inject(MessageService);
@@ -217,9 +207,9 @@ export class FinanceSettingsPageComponent implements OnInit {
   readonly tabs = STEPS.filter(x => x.key !== 'review');
   readonly months = MONTHS;
 
-  buildings: FinanceBuildingAccess[] = [];
   buildingId = '';
   loadingBuildings = true;
+  noBuilding = false;
   loadingSettings = false;
   pageError = '';
   // Mensaje del backend cuando el módulo está apagado o el plan no lo incluye (403 finance_*).
@@ -232,24 +222,23 @@ export class FinanceSettingsPageComponent implements OnInit {
   startDate = '';
   fiscalMonth = 1;
 
-  ngOnInit(): void {
-    const requested = this.route.snapshot.queryParamMap.get('buildingId');
-    this.api.getBuildings().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-      next: buildings => {
-        this.buildings = buildings;
-        this.loadingBuildings = false;
-        const selected = buildings.find(b => b.buildingId === requested) ?? buildings[0];
-        if (selected) {
-          this.buildingId = selected.buildingId;
-          this.loadSettings();
-        }
-        this.cdr.markForCheck();
-      },
-      error: err => {
-        this.loadingBuildings = false;
-        this.handleLoadError(err, 'No se pudieron cargar los edificios.');
-      }
-    });
+  // El edificio lo elige el selector compartido (aparece solo con mas de un edificio) y avisa en onBuilding.
+  onBuilding(building: FinanceBuildingAccess | null): void {
+    this.loadingBuildings = false;
+    if (!building) {
+      this.noBuilding = true;
+      this.cdr.markForCheck();
+      return;
+    }
+
+    this.noBuilding = false;
+    this.buildingId = building.buildingId;
+    this.loadSettings();
+  }
+
+  onPickerError(err: unknown): void {
+    this.loadingBuildings = false;
+    this.handleLoadError(err, 'No se pudieron cargar los edificios.');
   }
 
   // Asistente mientras la configuración no esté completa y el usuario pueda editarla.
@@ -266,13 +255,6 @@ export class FinanceSettingsPageComponent implements OnInit {
       // La revisión es el cierre del asistente: no se marca hecha hasta que se completa la configuración.
       default: return false;
     }
-  }
-
-  selectBuilding(id: string): void {
-    if (id === this.buildingId) return;
-    this.buildingId = id;
-    void this.router.navigate([], { queryParams: { buildingId: id }, replaceUrl: true });
-    this.loadSettings();
   }
 
   goTo(section: Section): void { this.section = section; }
@@ -349,7 +331,6 @@ export class FinanceSettingsPageComponent implements OnInit {
         this.busy = false;
         this.applySettings(settings, true);
         this.section = 'general';
-        this.buildings = this.buildings.map(b => (b.buildingId === this.buildingId ? { ...b, setupCompleted: true } : b));
         this.msg.add({ severity: 'success', summary: 'Configuración completa', detail: 'El módulo quedó configurado. Podés seguir ajustando estos datos desde las pestañas.', life: 6000 });
         this.cdr.markForCheck();
       },

@@ -1656,6 +1656,8 @@ export interface FinanceSettings {
   buildingName: string;
   financeStartDate: string | null;
   fiscalYearStartMonth: number;
+  // Cuenta donde el libro asienta lo que no trae cuenta propia (cobros que no son en efectivo, ingresos y gastos).
+  defaultAccountId: string | null;
   setupCompleted: boolean;
   setupCompletedAtUtc: string | null;
   cashBasis: string;
@@ -1711,6 +1713,152 @@ export interface LedgerCategoryUpsertRequest {
   type: LedgerCategoryType;
   externalCode: string | null;
   isActive: boolean;
+}
+
+// ── Finanzas del edificio: libro (saldos, movimientos, flujo y tablero) ───────
+
+export type LedgerDirection = 'In' | 'Out';
+export type LedgerSourceType = 'OwnerPayment' | 'BuildingExpense' | 'BuildingIncome';
+
+export interface FinanceAccountBalance {
+  id: string;
+  name: string;
+  type: FinancialAccountType;
+  isActive: boolean;
+  openingBalance: number;
+  inflows: number;
+  outflows: number;
+  balance: number;
+}
+
+export interface FinanceBalances {
+  buildingId: string;
+  buildingName: string;
+  financeStartDate: string;
+  asOf: string;
+  accounts: FinanceAccountBalance[];
+  unassignedNet: number;
+  totalBalance: number;
+  cashBalance: number;
+  bankBalance: number;
+  reserveFundBalance: number;
+  defaultAccountId: string | null;
+  warnings: string[];
+}
+
+export interface FinanceMovement {
+  date: string;
+  accountId: string | null;
+  accountName: string;
+  categoryId: string | null;
+  categoryCode: string;
+  categoryName: string;
+  direction: LedgerDirection;
+  amount: number;
+  signedAmount: number;
+  description: string;
+  thirdParty: string;
+  reference: string;
+  sourceType: LedgerSourceType;
+  sourceId: string;
+  runningBalance: number | null;
+}
+
+export interface FinanceMovementsPage {
+  items: FinanceMovement[];
+  totalCount: number;
+  page: number;
+  pageSize: number;
+  from: string;
+  to: string;
+  totalIn: number;
+  totalOut: number;
+  openingBalance: number | null;
+  closingBalance: number | null;
+}
+
+export interface FinanceMovementFilters {
+  from?: string | null;
+  to?: string | null;
+  accountId?: string | null;
+  unassigned?: boolean;
+  categoryId?: string | null;
+  direction?: LedgerDirection | null;
+  newestFirst?: boolean;
+  page?: number;
+  pageSize?: number;
+}
+
+export interface FinanceFlow {
+  in: number;
+  out: number;
+  net: number;
+}
+
+export interface FinanceRubroAmount {
+  categoryId: string | null;
+  code: string;
+  name: string;
+  amount: number;
+}
+
+export interface FinanceMonthPoint {
+  year: number;
+  month: number;
+  in: number;
+  out: number;
+  net: number;
+  endBalance: number;
+}
+
+export interface FinanceMonthRef {
+  year: number;
+  month: number;
+}
+
+export interface FinanceDashboard {
+  buildingId: string;
+  buildingName: string;
+  financeStartDate: string;
+  asOf: string;
+  year: number;
+  month: number;
+  balances: FinanceBalances;
+  monthFlow: FinanceFlow;
+  monthIn: FinanceRubroAmount[];
+  monthOut: FinanceRubroAmount[];
+  fiscalYear: number;
+  fiscalYearStart: string;
+  fiscalYearToDate: FinanceFlow;
+  series: FinanceMonthPoint[];
+}
+
+export interface FinanceCashFlowLine {
+  categoryId: string | null;
+  code: string;
+  name: string;
+  groupCode: string;
+  groupName: string;
+  direction: LedgerDirection;
+  amounts: number[];
+  total: number;
+}
+
+export interface FinanceCashFlow {
+  buildingId: string;
+  financeStartDate: string;
+  fiscalYear: number;
+  fiscalYearStart: string;
+  fiscalYearEnd: string;
+  asOf: string;
+  months: FinanceMonthRef[];
+  inLines: FinanceCashFlowLine[];
+  outLines: FinanceCashFlowLine[];
+  totalIn: number[];
+  totalOut: number[];
+  net: number[];
+  openingBalance: number;
+  closingBalance: number[];
 }
 
 export interface BuildingPlan {

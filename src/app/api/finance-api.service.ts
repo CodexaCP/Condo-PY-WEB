@@ -4,7 +4,12 @@ import { Observable } from 'rxjs';
 import { API_BASE_URL } from '../config/api.config';
 import {
   FinanceAdminBuilding,
+  FinanceBalances,
   FinanceBuildingAccess,
+  FinanceCashFlow,
+  FinanceDashboard,
+  FinanceMovementFilters,
+  FinanceMovementsPage,
   FinanceSettings,
   FinanceSettingsUpdateRequest,
   FinancialAccount,
@@ -67,6 +72,45 @@ export class FinanceApiService {
 
   deleteAccount(id: string): Observable<void> {
     return this.http.delete<void>(`${API_BASE_URL}/finance/accounts/${id}`);
+  }
+
+  setDefaultAccount(buildingId: string, accountId: string | null): Observable<FinanceSettings> {
+    return this.http.put<FinanceSettings>(`${API_BASE_URL}/finance/settings/default-account`, { accountId }, { params: this.params(buildingId) });
+  }
+
+  // ── Libro: saldos, movimientos, flujo y tablero (hasta hoy y desde la fecha de arranque) ──
+
+  getBalances(buildingId: string, asOf?: string): Observable<FinanceBalances> {
+    let params = this.params(buildingId);
+    if (asOf) params = params.set('asOf', asOf);
+    return this.http.get<FinanceBalances>(`${API_BASE_URL}/finance/balances`, { params });
+  }
+
+  getMovements(buildingId: string, filters: FinanceMovementFilters = {}): Observable<FinanceMovementsPage> {
+    let params = this.params(buildingId);
+    if (filters.from) params = params.set('from', filters.from);
+    if (filters.to) params = params.set('to', filters.to);
+    if (filters.accountId) params = params.set('accountId', filters.accountId);
+    if (filters.unassigned) params = params.set('unassigned', true);
+    if (filters.categoryId) params = params.set('categoryId', filters.categoryId);
+    if (filters.direction) params = params.set('direction', filters.direction);
+    if (filters.newestFirst !== undefined) params = params.set('newestFirst', filters.newestFirst);
+    if (filters.page) params = params.set('page', filters.page);
+    if (filters.pageSize) params = params.set('pageSize', filters.pageSize);
+    return this.http.get<FinanceMovementsPage>(`${API_BASE_URL}/finance/movements`, { params });
+  }
+
+  getDashboard(buildingId: string, year?: number, month?: number): Observable<FinanceDashboard> {
+    let params = this.params(buildingId);
+    if (year) params = params.set('year', year);
+    if (month) params = params.set('month', month);
+    return this.http.get<FinanceDashboard>(`${API_BASE_URL}/finance/dashboard`, { params });
+  }
+
+  getCashFlow(buildingId: string, fiscalYear?: number): Observable<FinanceCashFlow> {
+    let params = this.params(buildingId);
+    if (fiscalYear) params = params.set('fiscalYear', fiscalYear);
+    return this.http.get<FinanceCashFlow>(`${API_BASE_URL}/finance/cash-flow`, { params });
   }
 
   getCategories(buildingId: string): Observable<LedgerCategory[]> {

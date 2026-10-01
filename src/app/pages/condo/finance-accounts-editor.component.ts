@@ -39,6 +39,20 @@ const TYPE_LABELS: Record<FinancialAccountType, string> = {
       <p-button *ngFor="let s of suggestions" type="button" [label]="s.label" icon="pi pi-plus" size="small" severity="secondary" [outlined]="true" (onClick)="openCreate(s.type, s.name)"></p-button>
     </div>
 
+    <div class="default-account" *ngIf="operatingAccounts.length > 0">
+      <label>
+        <span>Cuenta por defecto</span>
+        <select [ngModel]="defaultAccountId" (ngModelChange)="changeDefault($event)" [disabled]="!canEdit || savingDefault">
+          <option [ngValue]="null">Automática (el único banco activo)</option>
+          <option *ngFor="let a of operatingAccounts" [ngValue]="a.id">{{ a.name }}</option>
+        </select>
+      </label>
+      <p>
+        Es donde el sistema asienta los cobros que no son en efectivo, los ingresos y los gastos del edificio, ya que no indican de qué cuenta salen.
+        Los cobros en efectivo entran a la caja y todo lo del fondo de reserva, a la cuenta del fondo.
+      </p>
+    </div>
+
     <p-message *ngIf="error" severity="error" [text]="error"></p-message>
     <p class="app-state" *ngIf="loading">Cargando cuentas...</p>
     <p class="app-state" *ngIf="!loading && !error && !items.length">Todavía no hay cuentas cargadas.</p>
@@ -121,6 +135,13 @@ const TYPE_LABELS: Record<FinancialAccountType, string> = {
   styles: [`
     .intro { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; flex-wrap: wrap; margin-bottom: 0.75rem; }
     .intro p { margin: 0; max-width: 62ch; color: var(--brand-ink-soft); line-height: 1.5; }
+    .default-account { margin-bottom: 1rem; padding: 0.8rem 1rem; border-radius: 12px; background: var(--brand-gradient-soft); }
+    .default-account label span { display: block; margin-bottom: 0.25rem; font-size: 0.82rem; font-weight: 600; color: var(--brand-muted); }
+    .default-account select {
+      padding: 0.5rem 0.75rem; border: 1px solid rgba(19,133,182,0.25); border-radius: 10px; min-width: 260px;
+      font: inherit; font-size: 0.95rem; color: var(--brand-ink); background: #fff;
+    }
+    .default-account p { margin: 0.5rem 0 0; font-size: 0.85rem; color: var(--brand-ink-soft); line-height: 1.45; max-width: 70ch; }
     .suggestions { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1rem; color: var(--brand-muted); font-size: 0.9rem; }
     .acc-grid { grid-template-columns: 2fr 1.2fr 1.4fr 1fr 1fr; }
     .num { text-align: right; }
@@ -165,6 +186,7 @@ export class FinanceAccountsEditorComponent implements OnChanges {
   @Input({ required: true }) buildingId!: string;
   @Input() canEdit = false;
   @Input() startDate: string | null = null;
+  @Input() defaultAccountId: string | null = null;
   // Avisa a la pantalla que cambió algo (cantidad de cuentas, qué falta para completar la configuración).
   @Output() changed = new EventEmitter<void>();
 
@@ -179,11 +201,34 @@ export class FinanceAccountsEditorComponent implements OnChanges {
   form = this.emptyForm();
   saving = false;
   deleteTarget: FinancialAccount | null = null;
+  savingDefault = false;
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['buildingId'] && this.buildingId) {
       this.load();
     }
+  }
+
+  // Cajas y bancos activos: pueden ser la cuenta por defecto (el fondo de reserva tiene su propia cuenta).
+  get operatingAccounts(): FinancialAccount[] {
+    return this.items.filter(x => x.isActive && x.type !== 'ReserveFund');
+  }
+
+  changeDefault(accountId: string | null): void {
+    if (this.savingDefault || accountId === this.defaultAccountId) return;
+    this.savingDefault = true;
+    this.api.setDefaultAccount(this.buildingId, accountId).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: () => {
+        this.savingDefault = false;
+        this.msg.add({ severity: 'success', summary: 'Éxito', detail: 'Cuenta por defecto guardada.', life: 3500 });
+        this.changed.emit();
+        this.cdr.markForCheck();
+      },
+      error: err => {
+        this.savingDefault = false;
+        this.toastError(extractApiErrorMessage(err, 'No se pudo guardar la cuenta por defecto.'));
+      }
+    });
   }
 
   get totalOpening(): number {

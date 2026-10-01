@@ -98,6 +98,9 @@ export class AppMenu {
                 ...(hasFinanceModule ? [{
                     label: 'Finanzas del edificio',
                     items: [
+                        { label: 'Tablero', icon: 'pi pi-fw pi-chart-line', routerLink: ['/finance/dashboard'] },
+                        { label: 'Movimientos', icon: 'pi pi-fw pi-list', routerLink: ['/finance/movements'] },
+                        { label: 'Flujo de caja', icon: 'pi pi-fw pi-table', routerLink: ['/finance/cash-flow'] },
                         { label: 'Configuración', icon: 'pi pi-fw pi-cog', routerLink: ['/finance/settings'] }
                     ]
                 }] : []),
