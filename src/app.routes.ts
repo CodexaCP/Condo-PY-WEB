@@ -247,6 +247,11 @@ export const appRoutes: Routes = [
                 path: 'my-plan',
                 loadComponent: () => import('./app/pages/condo/my-plan-page.component').then(m => m.MyPlanPageComponent)
             },
+            // ── Finanzas del edificio ─────────────────────────────────────
+            {
+                path: 'finance/settings',
+                loadComponent: () => import('./app/pages/condo/finance-settings-page.component').then(m => m.FinanceSettingsPageComponent)
+            },
             {
                 path: 'finance-admin',
                 loadComponent: () => import('./app/pages/condo/finance-admin-page.component').then(m => m.FinanceAdminPageComponent)

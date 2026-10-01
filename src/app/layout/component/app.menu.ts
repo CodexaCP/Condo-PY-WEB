@@ -1,9 +1,10 @@
-import { Component, computed, inject } from '@angular/core';
+import { Component, computed, effect, inject, untracked } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { MenuItem } from 'primeng/api';
 import { AppMenuitem } from './app.menuitem';
 import { AuthService } from '@/app/auth/auth.service';
+import { FinanceAccessService } from '@/app/api/finance-access.service';
 
 @Component({
     selector: 'app-menu',
@@ -21,9 +22,20 @@ import { AuthService } from '@/app/auth/auth.service';
 })
 export class AppMenu {
     private readonly auth = inject(AuthService);
+    private readonly finance = inject(FinanceAccessService);
+
+    constructor() {
+        // Al iniciar o cerrar sesión se vuelve a consultar en qué edificios está disponible «Finanzas del edificio».
+        effect(() => {
+            this.auth.currentUser();
+            untracked(() => this.finance.refresh());
+        });
+    }
 
     readonly menuItems = computed<MenuItem[]>(() => {
         const isSuperAdmin = this.auth.hasRole('SuperAdmin');
+        // Con el módulo apagado (o sin plan que lo incluya) el grupo no aparece.
+        const hasFinanceModule = this.finance.available();
         const isCompanyAdmin = this.auth.hasRole('CompanyAdmin');
         const isAdmin = this.auth.hasRole('CompanyAdmin', 'CompanyOperator', 'BuildingManager');
         // Timbrados: el operador de empresa no puede administrarlos (lo bloquea el backend);
@@ -83,6 +95,12 @@ export class AppMenu {
                         { label: 'Pagos Propietarios', icon: 'pi pi-fw pi-wallet', routerLink: ['/owner-payments'] }
                     ]
                 },
+                ...(hasFinanceModule ? [{
+                    label: 'Finanzas del edificio',
+                    items: [
+                        { label: 'Configuración', icon: 'pi pi-fw pi-cog', routerLink: ['/finance/settings'] }
+                    ]
+                }] : []),
                 {
                     label: 'Facturación',
                     items: [
