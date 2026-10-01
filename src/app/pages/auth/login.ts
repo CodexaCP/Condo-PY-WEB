@@ -199,6 +199,10 @@ import { PushService } from '../../core/push.service';
                         Entrar al sistema
                     </button>
 
+                    <a class="lp-apk-link" href="/downloads/condopy.apk" download="CondoPY.apk">
+                        <i class="pi pi-android"></i> Descargar app para Android
+                    </a>
+
                     <div class="lp-form-footer">
                         <i class="pi pi-lock"></i> Acceso seguro · CONDOPY
                     </div>
@@ -210,6 +214,13 @@ import { PushService } from '../../core/push.service';
         .lp-forgot-row { display: flex; justify-content: flex-end; margin: -0.5rem 0 1.25rem; }
         .lp-forgot-row a { font-size: 0.82rem; color: var(--brand-blue, #1385b6); text-decoration: none; }
         .lp-forgot-row a:hover { text-decoration: underline; }
+        .lp-apk-link {
+            display: flex; align-items: center; justify-content: center; gap: 0.5rem;
+            margin-top: 1rem; padding: 0.7rem 1rem; border-radius: 0.75rem;
+            border: 1px solid var(--brand-blue, #1385b6); color: var(--brand-blue, #1385b6);
+            font-size: 0.9rem; font-weight: 600; text-decoration: none;
+        }
+        .lp-apk-link:hover { background: rgba(19, 133, 182, 0.08); }
     `]
 })
 export class Login {
