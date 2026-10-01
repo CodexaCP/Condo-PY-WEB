@@ -271,13 +271,13 @@ const TYPES: { key: string; label: string; color: string; field: keyof Collectio
     /* Filtros */
     .filters { display:flex; gap:0.75rem; align-items:flex-end; flex-wrap:wrap; padding:0.9rem 1rem; margin-bottom:1.25rem;
       background:var(--brand-gradient-soft); border-radius:16px; }
-    .f-field { display:grid; gap:0.3rem; font-size:0.78rem; font-weight:700; color:var(--brand-ink-soft); }
+    .f-field { display:grid; gap:0.3rem; font-size:0.78rem; font-weight:700; color:var(--brand-ink-soft, #214c60); }
     .f-field.f-wide { min-width:220px; flex:1 1 220px; }
     .f-field select { border:1px solid #d7e5e1; border-radius:12px; padding:0.6rem 0.75rem; font:inherit; font-size:0.9rem;
       background:#fff; color:#18353a; min-width:120px; }
     .f-field.inline { display:flex; align-items:center; gap:0.5rem; }
     .f-field.inline select { padding:0.45rem 0.6rem; min-width:0; }
-    .f-clear { border:none; background:none; color:var(--brand-blue); font:inherit; font-weight:700; font-size:0.85rem; cursor:pointer; padding:0.6rem 0.4rem; }
+    .f-clear { border:none; background:none; color:#1385b6; font:inherit; font-weight:700; font-size:0.85rem; cursor:pointer; padding:0.6rem 0.4rem; }
     .f-clear:hover { text-decoration:underline; }
 
     /* Resumen principal */
@@ -311,7 +311,8 @@ const TYPES: { key: string; label: string; color: string; field: keyof Collectio
     .legend { list-style:none; margin:0; padding:0; display:grid; gap:0.4rem; }
     .legend li { display:flex; align-items:center; gap:0.5rem; font-size:0.88rem; }
     .legend i, .chip i { width:10px; height:10px; border-radius:3px; flex-shrink:0; display:inline-block; }
-    .legend span { flex:1; color:var(--brand-ink-soft); }
+    .legend span { flex:1; color:var(--brand-ink-soft, #214c60); }
+    .legend strong { white-space:nowrap; }
     .legend small { color:var(--brand-muted); width:2.6rem; text-align:right; }
 
     /* Encabezado de la lista */
@@ -321,8 +322,8 @@ const TYPES: { key: string; label: string; color: string; field: keyof Collectio
     .seg { display:inline-flex; background:#eef3f6; border-radius:999px; padding:3px; }
     .seg button { border:none; background:none; padding:0.35rem 0.85rem; border-radius:999px; font:inherit; font-size:0.82rem;
       font-weight:700; color:var(--brand-muted); cursor:pointer; }
-    .seg button.on { background:var(--brand-blue); color:#fff; }
-    .check { display:flex; align-items:center; gap:0.4rem; font-size:0.85rem; color:var(--brand-ink-soft); cursor:pointer; }
+    .seg button.on { background:#1385b6; color:#fff; }
+    .check { display:flex; align-items:center; gap:0.4rem; font-size:0.85rem; color:var(--brand-ink-soft, #214c60); cursor:pointer; }
 
     /* Tabla */
     .table { border:1px solid rgba(19,133,182,0.12); border-radius:16px; overflow:hidden; background:#fff; }
@@ -343,7 +344,7 @@ const TYPES: { key: string; label: string; color: string; field: keyof Collectio
     .t-detail { display:grid; grid-template-columns:repeat(3, 1fr) 2fr; gap:1rem; padding:0.9rem 1rem 1.1rem;
       background:#f8fbfd; border-top:1px dashed rgba(19,133,182,0.18); }
     .d-block h4 { margin:0 0 0.3rem; font-size:0.72rem; text-transform:uppercase; letter-spacing:0.05em; color:var(--brand-muted); }
-    .d-block p { margin:0.1rem 0; font-size:0.88rem; color:var(--brand-ink-soft); }
+    .d-block p { margin:0.1rem 0; font-size:0.88rem; color:var(--brand-ink-soft, #214c60); }
     .chips { display:flex; flex-wrap:wrap; gap:0.4rem; }
     .chip { display:inline-flex; align-items:center; gap:0.4rem; background:#fff; border:1px solid rgba(19,133,182,0.15);
       border-radius:999px; padding:0.2rem 0.65rem; font-size:0.8rem; }
