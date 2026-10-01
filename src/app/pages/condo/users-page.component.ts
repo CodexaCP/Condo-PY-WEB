@@ -44,7 +44,7 @@ import { roleLabel } from '../../auth/role-labels';
         </div>
         <div class="app-row" [ngClass]="gridClass" *ngFor="let item of items">
           <span *ngIf="isSuperAdmin" class="company-col">{{ companyName(item.companyId) }}</span>
-          <button class="row-link" (click)="goToEdit(item.id)">
+          <button class="row-link" (click)="goToEdit(item)">
             {{ item.fullName || (item.firstName + ' ' + item.lastName) }}
           </button>
           <span class="username-col">{{ item.username }}</span>
@@ -112,5 +112,9 @@ export class UsersPageComponent implements OnInit {
   }
 
   goToCreate(): void { this.router.navigate(['/users/create']); }
-  goToEdit(id: string): void { this.router.navigate(['/users', id]); }
+  // Los propietarios se editan en su propia pantalla (presidente de consorcio y firma viven ahí).
+  goToEdit(item: ManagedUser): void {
+    const base = item.role === 'Owner' ? '/propietarios' : '/users';
+    this.router.navigate([base, item.id]);
+  }
 }
