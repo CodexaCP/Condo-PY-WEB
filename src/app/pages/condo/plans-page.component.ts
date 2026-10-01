@@ -52,6 +52,7 @@ const BILLING_LABELS: Record<BillingCycle, string> = {
           <div class="name-cell">
             <button class="row-link" (click)="openEdit(item)">{{ item.name }}</button>
             <p-tag *ngIf="item.isDefault" value="Por defecto" severity="info" styleClass="tag-sm"></p-tag>
+            <p-tag *ngIf="item.includesFinanceModule" value="Incluye Finanzas" severity="success" styleClass="tag-sm"></p-tag>
           </div>
           <span>{{ item.price === 0 ? 'Gratis' : formatCurrency(item.price) }}</span>
           <span>{{ billingLabel(item.billingCycle) }}</span>
@@ -103,6 +104,16 @@ const BILLING_LABELS: Record<BillingCycle, string> = {
           <input [(ngModel)]="form.isActive" name="isActive" type="checkbox" />
           <span>Plan activo</span>
         </label>
+        <label class="checkbox">
+          <input [(ngModel)]="form.includesFinanceModule" name="includesFinanceModule" type="checkbox" [disabled]="financeFlagLocked" />
+          <span>Incluye el módulo «Finanzas del edificio»</span>
+        </label>
+        <p class="hint" *ngIf="!financeFlagLocked">
+          Con este indicador el SuperAdmin puede habilitar Finanzas en los edificios que tengan este plan.
+        </p>
+        <p class="hint" *ngIf="financeFlagLocked">
+          El indicador de Finanzas no se cambia en un plan con edificios asignados: usá «Clonar» para crear una copia con el indicador que necesites.
+        </p>
 
         <p class="warn-assigned" *ngIf="selected?.isAssigned && !selected?.isDefault">
           Este plan tiene edificios asignados. Solo se pueden editar nombre, descripción y estado activo.
@@ -197,6 +208,8 @@ const BILLING_LABELS: Record<BillingCycle, string> = {
     .ficha-form .checkbox input { width: auto; }
     .req { color: var(--red-400); }
 
+    .hint { margin: -0.4rem 0 0; font-size: 0.82rem; color: var(--brand-muted); }
+
     .warn-assigned {
       background: rgba(234,179,8,0.1); border: 1px solid rgba(234,179,8,0.35);
       border-radius: 10px; padding: 0.6rem 0.9rem; font-size: 0.85rem; color: #713f12;
@@ -256,8 +269,14 @@ export class PlansPageComponent implements OnInit {
       billingCycle: item.billingCycle,
       gracePeriodDays: item.gracePeriodDays,
       isActive: item.isActive,
+      includesFinanceModule: item.includesFinanceModule,
     };
     this.dialogVisible = true;
+  }
+
+  // Un plan ya asignado a edificios es inmutable (el backend lo rechaza): el indicador se cambia en una copia.
+  get financeFlagLocked(): boolean {
+    return !!this.selected && this.selected.isAssigned && !this.selected.isDefault;
   }
 
   closeDialog(): void {
@@ -275,7 +294,7 @@ export class PlansPageComponent implements OnInit {
 
     this.isSaving = true;
     if (this.selected) {
-      const req: PlanUpdateRequest = { name, description, price: this.form.price, billingCycle: this.form.billingCycle, gracePeriodDays: this.form.gracePeriodDays, isActive: this.form.isActive };
+      const req: PlanUpdateRequest = { name, description, price: this.form.price, billingCycle: this.form.billingCycle, gracePeriodDays: this.form.gracePeriodDays, isActive: this.form.isActive, includesFinanceModule: this.form.includesFinanceModule };
       this.api.update(this.selected.id, req).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
         next: item => {
           this.items = this.sort(this.items.map(x => x.id === item.id ? item : x));
@@ -291,7 +310,7 @@ export class PlansPageComponent implements OnInit {
         }
       });
     } else {
-      const req: PlanCreateRequest = { name, description, price: this.form.price, billingCycle: this.form.billingCycle, gracePeriodDays: this.form.gracePeriodDays };
+      const req: PlanCreateRequest = { name, description, price: this.form.price, billingCycle: this.form.billingCycle, gracePeriodDays: this.form.gracePeriodDays, includesFinanceModule: this.form.includesFinanceModule };
       this.api.create(req).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
         next: item => {
           this.items = this.sort([...this.items, item]);
@@ -364,6 +383,6 @@ export class PlansPageComponent implements OnInit {
   }
 
   private emptyForm() {
-    return { name: '', description: '', price: 0, billingCycle: 'Monthly' as BillingCycle, gracePeriodDays: 5, isActive: true };
+    return { name: '', description: '', price: 0, billingCycle: 'Monthly' as BillingCycle, gracePeriodDays: 5, isActive: true, includesFinanceModule: false };
   }
 }

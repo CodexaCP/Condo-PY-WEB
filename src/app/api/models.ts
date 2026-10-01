@@ -1597,6 +1597,7 @@ export interface Plan {
   billingCycle: BillingCycle;
   gracePeriodDays: number;
   isActive: boolean;
+  includesFinanceModule: boolean;
   isAssigned: boolean;
   assignedBuildingsCount: number;
   createdAtUtc: string;
@@ -1609,6 +1610,7 @@ export interface PlanCreateRequest {
   price: number;
   billingCycle: BillingCycle;
   gracePeriodDays: number;
+  includesFinanceModule: boolean;
 }
 
 export interface PlanUpdateRequest extends PlanCreateRequest {
@@ -1618,6 +1620,97 @@ export interface PlanUpdateRequest extends PlanCreateRequest {
 export interface PlanCloneResult {
   newPlanId: string;
   newPlanName: string;
+}
+
+// ── Finanzas del edificio ─────────────────────────────────────────────────────
+
+export type FinancialAccountType = 'Cash' | 'Bank' | 'ReserveFund';
+export type LedgerCategoryType = 'Income' | 'Expense' | 'Fund';
+
+// Edificio del usuario con el módulo disponible (habilitado y con plan que lo incluye): alimenta el menú y el selector.
+export interface FinanceBuildingAccess {
+  buildingId: string;
+  buildingName: string;
+  setupCompleted: boolean;
+}
+
+// Fila del listado del SuperAdmin.
+export interface FinanceAdminBuilding {
+  buildingId: string;
+  buildingName: string;
+  companyName: string;
+  condominiumName: string;
+  planId: string | null;
+  planName: string;
+  planStatus: string;
+  planIncludesFinanceModule: boolean;
+  moduleEnabled: boolean;
+  moduleAvailable: boolean;
+  setupCompleted: boolean;
+  financeStartDate: string | null;
+  enabledAtUtc: string | null;
+}
+
+export interface FinanceSettings {
+  buildingId: string;
+  buildingName: string;
+  financeStartDate: string | null;
+  fiscalYearStartMonth: number;
+  setupCompleted: boolean;
+  setupCompletedAtUtc: string | null;
+  cashBasis: string;
+  receivablesBasis: string;
+  reserveFundPercentage: number | null;
+  accountCount: number;
+  categoryCount: number;
+  missingForSetup: string[];
+  canEdit: boolean;
+}
+
+export interface FinanceSettingsUpdateRequest {
+  financeStartDate: string | null;
+  fiscalYearStartMonth: number;
+}
+
+export interface FinancialAccount {
+  id: string;
+  buildingId: string;
+  name: string;
+  type: FinancialAccountType;
+  openingBalance: number;
+  isActive: boolean;
+}
+
+export interface FinancialAccountUpsertRequest {
+  buildingId: string;
+  name: string;
+  type: FinancialAccountType;
+  openingBalance: number;
+  isActive: boolean;
+}
+
+export interface LedgerCategory {
+  id: string;
+  buildingId: string;
+  parentId: string | null;
+  code: string;
+  name: string;
+  type: LedgerCategoryType;
+  externalCode: string | null;
+  systemKey: string | null;
+  isActive: boolean;
+  isTemplate: boolean;
+  hasChildren: boolean;
+}
+
+export interface LedgerCategoryUpsertRequest {
+  buildingId: string;
+  parentId: string | null;
+  code: string;
+  name: string;
+  type: LedgerCategoryType;
+  externalCode: string | null;
+  isActive: boolean;
 }
 
 export interface BuildingPlan {

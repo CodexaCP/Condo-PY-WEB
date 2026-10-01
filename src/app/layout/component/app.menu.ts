@@ -48,7 +48,8 @@ export class AppMenu {
                     items: [
                         { label: 'Planes', icon: 'pi pi-fw pi-list-check', routerLink: ['/plans'] },
                         { label: 'Asignaciones', icon: 'pi pi-fw pi-sitemap', routerLink: ['/building-plans'] },
-                        { label: 'Pagos de planes', icon: 'pi pi-fw pi-credit-card', routerLink: ['/building-plan-payments'] }
+                        { label: 'Pagos de planes', icon: 'pi pi-fw pi-credit-card', routerLink: ['/building-plan-payments'] },
+                        { label: 'Finanzas por edificio', icon: 'pi pi-fw pi-calculator', routerLink: ['/finance-admin'] }
                     ]
                 },
                 {
