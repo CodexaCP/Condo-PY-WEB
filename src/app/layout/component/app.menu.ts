@@ -180,6 +180,7 @@ export class AppMenu {
                     items: [
                         { label: 'Amenities y reservas', icon: 'pi pi-fw pi-calendar-plus', routerLink: ['/amenities'] },
                         ...(canReviewMarketplace ? [{ label: 'Pagos del Marketplace', icon: 'pi pi-fw pi-shop', routerLink: ['/marketplace-payments'] }] : []),
+                        ...(canReviewMarketplace ? [{ label: 'Reembolsos y reclamos', icon: 'pi pi-fw pi-replay', routerLink: ['/marketplace-followup'] }] : []),
                         ...(canViewMarketplaceAccount ? [{ label: 'Cuenta del Marketplace', icon: 'pi pi-fw pi-wallet', routerLink: ['/marketplace-account'] }] : [])
                     ]
                 },

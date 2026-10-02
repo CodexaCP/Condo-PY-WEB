@@ -17,14 +17,16 @@ const KIND_LABELS: Record<string, string> = {
   PaymentIn: 'Ingreso por reserva',
   OwnerCredit: 'Acreditado al propietario',
   RefundOut: 'Devolución al comprador',
-  Adjustment: 'Ajuste manual'
+  Adjustment: 'Ajuste manual',
+  CancellationFee: 'Comisión por cancelación del propietario'
 };
 
 const KIND_SEVERITY: Record<string, 'success' | 'info' | 'warn' | 'secondary'> = {
   PaymentIn: 'success',
   OwnerCredit: 'info',
   RefundOut: 'warn',
-  Adjustment: 'secondary'
+  Adjustment: 'secondary',
+  CancellationFee: 'success'
 };
 
 // Cuenta aparte del marketplace de un edificio: extracto por período con exportación a Excel. No es una cuenta bancaria ni toca la
@@ -74,6 +76,14 @@ const KIND_SEVERITY: Record<string, 'success' | 'info' | 'warn' | 'secondary'> =
             <small>Pendiente de acreditar a propietarios</small>
             <strong>{{ gs(statement.summary.pendingToCredit) }}</strong>
           </div>
+          <div *ngIf="statement.summary.pendingRefunds > 0">
+            <small>Reembolsos pendientes de devolver</small>
+            <strong>{{ gs(statement.summary.pendingRefunds) }}</strong>
+          </div>
+          <div *ngIf="statement.summary.ownerDebtsPending > 0">
+            <small>Deudas por gestión por descontar</small>
+            <strong>{{ gs(statement.summary.ownerDebtsPending) }}</strong>
+          </div>
           <div class="gain">
             <small>Ganancia de la gestión (a repartir)</small>
             <strong>{{ gs(statement.summary.managementGain) }}</strong>
@@ -87,6 +97,7 @@ const KIND_SEVERITY: Record<string, 'success' | 'info' | 'warn' | 'secondary'> =
           <div><small>Acreditado a propietarios</small><strong>{{ gs(statement.summary.totalCredited) }}</strong></div>
           <div><small>Devuelto a compradores</small><strong>{{ gs(statement.summary.totalRefunds) }}</strong></div>
           <div><small>Ajustes manuales</small><strong>{{ gs(statement.summary.totalAdjustments) }}</strong></div>
+          <div><small>Comisiones por cancelación</small><strong>{{ gs(statement.summary.totalCancellationFees) }}</strong></div>
           <div><small>Saldo final del período</small><strong>{{ gs(statement.summary.closingBalance) }}</strong></div>
         </div>
 

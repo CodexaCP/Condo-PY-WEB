@@ -300,6 +300,10 @@ export const appRoutes: Routes = [
                 loadComponent: () => import('./app/pages/condo/marketplace-payments-page.component').then(m => m.MarketplacePaymentsPageComponent)
             },
             {
+                path: 'marketplace-followup',
+                loadComponent: () => import('./app/pages/condo/marketplace-followup-page.component').then(m => m.MarketplaceFollowupPageComponent)
+            },
+            {
                 path: 'marketplace-admin',
                 loadComponent: () => import('./app/pages/condo/marketplace-admin-page.component').then(m => m.MarketplaceAdminPageComponent)
             },

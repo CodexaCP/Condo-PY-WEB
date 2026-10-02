@@ -2331,7 +2331,7 @@ export interface MarketplaceReviewItem {
 export interface MarketplaceAccountRow {
   id: string;
   occurredAtUtc: string;
-  kind: 'PaymentIn' | 'OwnerCredit' | 'RefundOut' | 'Adjustment';
+  kind: 'PaymentIn' | 'OwnerCredit' | 'RefundOut' | 'Adjustment' | 'CancellationFee';
   amount: number;
   concept: string;
   reservationId: string | null;
@@ -2348,10 +2348,16 @@ export interface MarketplaceAccountSummary {
   totalCredited: number;
   totalRefunds: number;
   totalAdjustments: number;
+  // Comisiones que los propietarios asumieron al cancelar (se descontaron de su saldo a favor).
+  totalCancellationFees: number;
   closingBalance: number;
   // Al día de hoy (no dependen del período elegido):
   currentBalance: number;
   pendingToCredit: number;
+  // Reembolsos a compradores todavía sin devolver (siguen dentro del saldo, pero no son ganancia).
+  pendingRefunds: number;
+  // Deudas por gestión de propietarios por descontar de sus próximas acreditaciones (informativo).
+  ownerDebtsPending: number;
   managementGain: number;
 }
 
@@ -2377,4 +2383,72 @@ export interface MarketplaceReversal {
   reference: string;
   amount: number;
   ownerBalance: number;
+}
+
+// ── Marketplace: reembolsos, deudas por gestión y reclamos (seguimiento del personal) ─────────────────────────────
+
+// Reembolso pendiente al comprador: el Encargado lo devuelve fuera del sistema y lo marca "devuelto".
+export interface MarketplaceRefund {
+  id: string;
+  reservationId: string;
+  buildingId: string;
+  reference: string;
+  title: string;
+  unitCode: string;
+  buyerName: string;
+  amount: number;
+  origin: 'BuyerCancellation' | 'OwnerCancellation' | 'ClaimResolution';
+  reason: string;
+  status: 'Pending' | 'Returned';
+  createdAtUtc: string;
+  // Plazo máximo para devolver (72 horas desde que se creó).
+  dueAtUtc: string;
+  overdue: boolean;
+  returnedAtUtc: string | null;
+  returnedByName: string | null;
+}
+
+// Comisión que el propietario asumió y su saldo no cubrió: se descuenta de su próxima acreditación del Marketplace.
+export interface MarketplaceOwnerDebt {
+  id: string;
+  reservationId: string;
+  buildingId: string;
+  reference: string;
+  ownerName: string;
+  amount: number;
+  paidAmount: number;
+  remaining: number;
+  reason: string;
+  createdAtUtc: string;
+}
+
+export type MarketplaceClaimOutcome = 'InFavorOfOwner' | 'InFavorOfBuyer';
+
+// "Reportar un problema": con lo necesario para que el Encargado decida.
+export interface MarketplaceClaim {
+  id: string;
+  reservationId: string;
+  buildingId: string;
+  reference: string;
+  title: string;
+  unitCode: string;
+  ownerName: string;
+  buyerName: string;
+  buyerUnits: string;
+  startsAtUtc: string;
+  endsAtUtc: string;
+  baseAmount: number;
+  commissionAmount: number;
+  totalAmount: number;
+  openedBy: 'Buyer' | 'Owner';
+  openedByName: string;
+  reason: string;
+  status: 'Open' | 'Resolved';
+  resolution: MarketplaceClaimOutcome | null;
+  resolutionNote: string | null;
+  createdAtUtc: string;
+  resolvedAtUtc: string | null;
+  // Lo que respondió el comprador al aviso de inicio (nulo = no respondió: se asume que la usó).
+  buyerStartResponse: 'Attending' | 'NotUsing' | null;
+  buyerStartResponseReason: string | null;
 }

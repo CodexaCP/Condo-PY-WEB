@@ -7,6 +7,10 @@ import {
   MarketplaceAdjustmentRequest,
   MarketplaceAdminBuilding,
   MarketplaceAdminUpdateRequest,
+  MarketplaceClaim,
+  MarketplaceClaimOutcome,
+  MarketplaceOwnerDebt,
+  MarketplaceRefund,
   MarketplaceReversal,
   MarketplaceReviewItem,
   MarketplaceStaffBuilding,
@@ -42,6 +46,32 @@ export class MarketplaceApiService {
   // Rechaza el pago (con motivo): cierra la reserva y libera el horario.
   rejectPayment(paymentId: string, reason: string): Observable<MarketplaceReviewItem> {
     return this.http.post<MarketplaceReviewItem>(`${API_BASE_URL}/marketplace/payments/${paymentId}/reject`, { reason });
+  }
+
+  // ── Seguimiento del personal: reembolsos, deudas por gestión y reclamos ───────────────────────────────────────────────
+
+  // Reembolsos pendientes del edificio (y, si se pide, los últimos devueltos).
+  getRefunds(buildingId: string, includeReturned = false): Observable<MarketplaceRefund[]> {
+    return this.http.get<MarketplaceRefund[]>(`${API_BASE_URL}/marketplace/refunds`, { params: { buildingId, includeReturned } });
+  }
+
+  // El dinero se devolvió fuera del sistema: se marca "devuelto" (queda quién y cuándo; la cuenta registra la salida).
+  markRefundReturned(refundId: string): Observable<MarketplaceRefund> {
+    return this.http.post<MarketplaceRefund>(`${API_BASE_URL}/marketplace/refunds/${refundId}/return`, {});
+  }
+
+  // Deudas por gestión pendientes de los propietarios del edificio.
+  getOwnerDebts(buildingId: string): Observable<MarketplaceOwnerDebt[]> {
+    return this.http.get<MarketplaceOwnerDebt[]>(`${API_BASE_URL}/marketplace/owner-debts`, { params: { buildingId } });
+  }
+
+  // Reclamos del edificio: abiertos primero y, si se pide, los últimos resueltos.
+  getClaims(buildingId: string, includeResolved = false): Observable<MarketplaceClaim[]> {
+    return this.http.get<MarketplaceClaim[]>(`${API_BASE_URL}/marketplace/claims`, { params: { buildingId, includeResolved } });
+  }
+
+  resolveClaim(claimId: string, outcome: MarketplaceClaimOutcome, note: string): Observable<MarketplaceClaim> {
+    return this.http.post<MarketplaceClaim>(`${API_BASE_URL}/marketplace/claims/${claimId}/resolve`, { outcome, note });
   }
 
   // ── Cuenta aparte del marketplace (por edificio) ─────────────────────────────────────────────────────────────────────
