@@ -104,8 +104,7 @@ export class AppMenu {
                         { label: 'Ingresos', icon: 'pi pi-fw pi-arrow-circle-up', routerLink: ['/building-incomes'] },
                         { label: 'Periodos', icon: 'pi pi-fw pi-calendar', routerLink: ['/expense-periods'] },
                         { label: 'Cargos', icon: 'pi pi-fw pi-tags', routerLink: ['/expense-charges'] },
-                        { label: 'Pagos', icon: 'pi pi-fw pi-credit-card', routerLink: ['/payments'] },
-                        { label: 'Pagos Propietarios', icon: 'pi pi-fw pi-wallet', routerLink: ['/owner-payments'] }
+                        { label: 'Pagos', icon: 'pi pi-fw pi-wallet', routerLink: ['/owner-payments'] }
                     ]
                 },
                 ...(hasFinanceModule ? [{

@@ -138,8 +138,10 @@ export const appRoutes: Routes = [
                 loadComponent: () => import('./app/pages/condo/expense-charges-page.component').then(m => m.ExpenseChargesPageComponent)
             },
             {
+                // La pantalla de Pagos ahora es una sola (con las secciones propietario / sistema): ver owner-payments.
                 path: 'payments',
-                loadComponent: () => import('./app/pages/condo/payments-page.component').then(m => m.PaymentsPageComponent)
+                redirectTo: 'owner-payments',
+                pathMatch: 'full'
             },
             {
                 path: 'invoice-series',

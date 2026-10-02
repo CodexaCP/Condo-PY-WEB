@@ -1472,6 +1472,8 @@ export interface AnnouncementBroadcastRequest {
 // ── Owner Payments ──────────────────────────────────────────────────────────
 
 export type OwnerPaymentStatus = 'Pending' | 'UnderReview' | 'Approved' | 'Rejected';
+// App: lo declara el propietario. Web: lo registra el personal ya cobrado.
+export type OwnerPaymentChannel = 'App' | 'Web';
 
 export interface OwnerPaymentUnit {
   unitId: string;
@@ -1496,6 +1498,11 @@ export interface OwnerPayment {
   resolvedAt: string | null;
   createdAtUtc: string;
   units: OwnerPaymentUnit[];
+  channel: OwnerPaymentChannel;
+  method: PaymentMethod;
+  externalReference: string;
+  notes: string;
+  reversedAt: string | null;
   // false: el pago incluye unidades de edificios no asignados al usuario -> solo lectura.
   canProcess?: boolean;
 }
@@ -2211,4 +2218,43 @@ export interface FinanceReserveSummary {
   balance: number;
   monthContributions: number;
   monthUses: number;
+}
+
+// ── Pago registrado por el sistema (canal Web) ──────────────────────────────
+
+export interface OwnerPaymentRegisterRequest {
+  ownerId: string;
+  paymentDate: string;
+  amount: number;
+  method: PaymentMethod;
+  externalReference: string;
+  notes: string;
+}
+
+export interface RegisterComprobanteLine {
+  concept: string;
+  pending: number;
+}
+
+export interface RegisterComprobante {
+  unitId: string;
+  unitCode: string;
+  buildingId: string;
+  buildingName: string;
+  expensePeriodId: string;
+  periodYear: number;
+  periodMonth: number;
+  total: number;
+  cumulativeTotal: number;
+  amountToReceive: number;
+  inScope: boolean;
+  lines: RegisterComprobanteLine[];
+}
+
+export interface RegisterPreview {
+  ownerId: string;
+  ownerFullName: string;
+  availableCredit: number;
+  pendingOwnerPayments: { id: string; reference: string; status: string; declaredAmount: number }[];
+  comprobantes: RegisterComprobante[];
 }

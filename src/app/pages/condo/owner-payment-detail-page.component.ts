@@ -74,12 +74,13 @@ const STATUS_SEVERITY: Record<string, 'warn' | 'info' | 'success' | 'danger' | '
         <!-- Estado -->
         <div class="status-row">
           <p-tag
-            [value]="statusLabel(payment.status)"
-            [severity]="statusSeverity(payment.status)"
+            [value]="payment.reversedAt ? 'Revertido' : statusLabel(payment.status)"
+            [severity]="payment.reversedAt ? 'danger' : statusSeverity(payment.status)"
             styleClass="status-tag">
           </p-tag>
+          <p-tag *ngIf="payment.channel === 'Web'" value="Registrado por el sistema" severity="secondary"></p-tag>
           <span *ngIf="payment.resolvedAt" class="resolved-date">
-            {{ payment.status === 'Approved' ? 'Aprobado' : 'Rechazado' }} el
+            {{ payment.reversedAt ? 'Revertido' : (payment.status === 'Approved' ? 'Aprobado' : 'Rechazado') }} el
             {{ payment.resolvedAt | date:'dd/MM/yyyy HH:mm' }}
           </span>
         </div>
@@ -97,25 +98,39 @@ const STATUS_SEVERITY: Record<string, 'warn' | 'info' | 'success' | 'danger' | '
               <span class="monospace">{{ payment.reference }}</span>
             </div>
             <div class="detail-item">
-              <label>Fecha del comprobante</label>
+              <label>{{ payment.channel === 'Web' ? 'Fecha del pago' : 'Fecha del comprobante' }}</label>
               <span>{{ payment.paymentDate | date:'dd/MM/yyyy' }}</span>
             </div>
             <div class="detail-item">
-              <label>Monto declarado</label>
+              <label>{{ payment.channel === 'Web' ? 'Monto recibido' : 'Monto declarado' }}</label>
               <span class="amount">{{ payment.declaredAmount | number:'1.0-2' }}</span>
             </div>
-            <div class="detail-item" *ngIf="payment.reviewedAmount !== null">
+            <div class="detail-item" *ngIf="payment.reviewedAmount !== null && payment.channel !== 'Web'">
               <label>Monto revisado</label>
               <span class="amount highlight">{{ payment.reviewedAmount | number:'1.0-2' }}</span>
             </div>
             <div class="detail-item">
-              <label>Enviado el</label>
+              <label>{{ payment.channel === 'Web' ? 'Registrado el' : 'Enviado el' }}</label>
               <span>{{ payment.createdAtUtc | date:'dd/MM/yyyy HH:mm' }}</span>
             </div>
             <div class="detail-item" *ngIf="payment.reviewedByUserFullName">
-              <label>Revisado por</label>
+              <label>{{ payment.channel === 'Web' ? 'Registrado por' : 'Revisado por' }}</label>
               <span>{{ payment.reviewedByUserFullName }}</span>
             </div>
+            <ng-container *ngIf="payment.channel === 'Web'">
+              <div class="detail-item">
+                <label>Método</label>
+                <span>{{ methodLabel(payment.method) }}</span>
+              </div>
+              <div class="detail-item" *ngIf="payment.externalReference">
+                <label>N° de transferencia / documento</label>
+                <span class="monospace">{{ payment.externalReference }}</span>
+              </div>
+              <div class="detail-item" *ngIf="payment.notes">
+                <label>Notas</label>
+                <span>{{ payment.notes }}</span>
+              </div>
+            </ng-container>
           </div>
         </div>
 
@@ -440,9 +455,49 @@ const STATUS_SEVERITY: Record<string, 'warn' | 'info' | 'success' | 'danger' | '
           </div>
         </div>
 
-        <!-- Motivo de rechazo (solo lectura) -->
+        <!-- Reversa: solo pagos registrados por el sistema -->
+        <div class="form-section action-section"
+             *ngIf="payment.channel === 'Web' && payment.status === 'Approved' && payment.canProcess !== false">
+          <h3>Revertir pago</h3>
+          <p class="action-hint">
+            Libera los cargos que cubrió este pago y descarta sus borradores de factura. Si ya hay una factura emitida,
+            primero hay que anularla. Se avisa al propietario.
+          </p>
+          <div class="action-buttons">
+            <p-button
+              label="Revertir pago"
+              icon="pi pi-undo"
+              severity="danger"
+              [outlined]="!showReverseForm"
+              (onClick)="toggleReverseForm()">
+            </p-button>
+          </div>
+          <div class="reject-form" *ngIf="showReverseForm">
+            <label class="field-label">Motivo de la reversa <span class="required">*</span></label>
+            <textarea
+              [(ngModel)]="reverseReason"
+              rows="3"
+              maxlength="400"
+              placeholder="Describe por qué se revierte (obligatorio, máx. 400 caracteres)..."
+              class="reject-textarea">
+            </textarea>
+            <div class="reject-actions">
+              <span class="char-count">{{ reverseReason.length }}/400</span>
+              <p-button
+                label="Confirmar reversa"
+                icon="pi pi-undo"
+                severity="danger"
+                (onClick)="doReverse()"
+                [loading]="saving"
+                [disabled]="!reverseReason.trim()">
+              </p-button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Motivo de rechazo / reversa (solo lectura) -->
         <div class="form-section" *ngIf="payment.status === 'Rejected' && payment.rejectionReason">
-          <h3>Motivo de rechazo</h3>
+          <h3>{{ payment.reversedAt ? 'Motivo de la reversa' : 'Motivo de rechazo' }}</h3>
           <p class="rejection-text">{{ payment.rejectionReason }}</p>
         </div>
 
@@ -630,6 +685,8 @@ export class OwnerPaymentDetailPageComponent implements OnInit {
   actionError     = '';
   reviewedAmount: number | null = null;
   showRejectForm  = false;
+  showReverseForm = false;
+  reverseReason   = '';
   creatingInvoices = false;
   paymentInvoices: InvoiceLedgerRow[] = [];
   allSeries: InvoiceSeries[] = [];
@@ -758,6 +815,39 @@ export class OwnerPaymentDetailPageComponent implements OnInit {
           this.cdr.markForCheck();
         }
       });
+  }
+
+  doReverse(): void {
+    if (!this.payment || !this.reverseReason.trim()) return;
+    this.saving      = true;
+    this.actionError = '';
+    this.api.reverse(this.payment.id, this.reverseReason.trim())
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: updated => {
+          this.payment         = updated;
+          this.showReverseForm = false;
+          this.reverseReason   = '';
+          this.saving          = false;
+          this.msgSvc.add({ severity: 'warn', summary: 'Pago revertido', detail: 'Los cargos quedaron liberados y el propietario fue notificado.' });
+          this.loadPaymentInvoices();
+          this.cdr.markForCheck();
+        },
+        error: err => {
+          this.actionError = extractApiErrorMessage(err, 'No se pudo revertir el pago.');
+          this.saving = false;
+          this.cdr.markForCheck();
+        }
+      });
+  }
+
+  toggleReverseForm(): void {
+    this.showReverseForm = !this.showReverseForm;
+    if (!this.showReverseForm) this.reverseReason = '';
+  }
+
+  methodLabel(method: string): string {
+    return ({ Cash: 'Efectivo', BankTransfer: 'Transferencia', Card: 'Tarjeta', Check: 'Cheque', Other: 'Otro' } as Record<string, string>)[method] ?? method;
   }
 
   toggleRejectForm(): void {
