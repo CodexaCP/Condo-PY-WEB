@@ -53,6 +53,7 @@ const BILLING_LABELS: Record<BillingCycle, string> = {
             <button class="row-link" (click)="openEdit(item)">{{ item.name }}</button>
             <p-tag *ngIf="item.isDefault" value="Por defecto" severity="info" styleClass="tag-sm"></p-tag>
             <p-tag *ngIf="item.includesFinanceModule" value="Incluye Finanzas" severity="success" styleClass="tag-sm"></p-tag>
+            <p-tag *ngIf="item.includesMarketplace" value="Incluye Marketplace" severity="success" styleClass="tag-sm"></p-tag>
           </div>
           <span>{{ item.price === 0 ? 'Gratis' : formatCurrency(item.price) }}</span>
           <span>{{ billingLabel(item.billingCycle) }}</span>
@@ -113,6 +114,16 @@ const BILLING_LABELS: Record<BillingCycle, string> = {
         </p>
         <p class="hint" *ngIf="financeFlagLocked">
           El indicador de Finanzas no se cambia en un plan con edificios asignados: usá «Clonar» para crear una copia con el indicador que necesites.
+        </p>
+        <label class="checkbox">
+          <input [(ngModel)]="form.includesMarketplace" name="includesMarketplace" type="checkbox" [disabled]="financeFlagLocked" />
+          <span>Incluye el «Marketplace» de espacios</span>
+        </label>
+        <p class="hint" *ngIf="!financeFlagLocked">
+          Con este indicador el SuperAdmin puede habilitar el Marketplace en los edificios que tengan este plan.
+        </p>
+        <p class="hint" *ngIf="financeFlagLocked">
+          El indicador del Marketplace tampoco se cambia en un plan con edificios asignados: usá «Clonar».
         </p>
 
         <p class="warn-assigned" *ngIf="selected?.isAssigned && !selected?.isDefault">
@@ -270,6 +281,7 @@ export class PlansPageComponent implements OnInit {
       gracePeriodDays: item.gracePeriodDays,
       isActive: item.isActive,
       includesFinanceModule: item.includesFinanceModule,
+      includesMarketplace: item.includesMarketplace,
     };
     this.dialogVisible = true;
   }
@@ -294,7 +306,7 @@ export class PlansPageComponent implements OnInit {
 
     this.isSaving = true;
     if (this.selected) {
-      const req: PlanUpdateRequest = { name, description, price: this.form.price, billingCycle: this.form.billingCycle, gracePeriodDays: this.form.gracePeriodDays, isActive: this.form.isActive, includesFinanceModule: this.form.includesFinanceModule };
+      const req: PlanUpdateRequest = { name, description, price: this.form.price, billingCycle: this.form.billingCycle, gracePeriodDays: this.form.gracePeriodDays, isActive: this.form.isActive, includesFinanceModule: this.form.includesFinanceModule, includesMarketplace: this.form.includesMarketplace };
       this.api.update(this.selected.id, req).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
         next: item => {
           this.items = this.sort(this.items.map(x => x.id === item.id ? item : x));
@@ -310,7 +322,7 @@ export class PlansPageComponent implements OnInit {
         }
       });
     } else {
-      const req: PlanCreateRequest = { name, description, price: this.form.price, billingCycle: this.form.billingCycle, gracePeriodDays: this.form.gracePeriodDays, includesFinanceModule: this.form.includesFinanceModule };
+      const req: PlanCreateRequest = { name, description, price: this.form.price, billingCycle: this.form.billingCycle, gracePeriodDays: this.form.gracePeriodDays, includesFinanceModule: this.form.includesFinanceModule, includesMarketplace: this.form.includesMarketplace };
       this.api.create(req).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
         next: item => {
           this.items = this.sort([...this.items, item]);
@@ -383,6 +395,6 @@ export class PlansPageComponent implements OnInit {
   }
 
   private emptyForm() {
-    return { name: '', description: '', price: 0, billingCycle: 'Monthly' as BillingCycle, gracePeriodDays: 5, isActive: true, includesFinanceModule: false };
+    return { name: '', description: '', price: 0, billingCycle: 'Monthly' as BillingCycle, gracePeriodDays: 5, isActive: true, includesFinanceModule: false, includesMarketplace: false };
   }
 }

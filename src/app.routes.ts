@@ -291,6 +291,10 @@ export const appRoutes: Routes = [
                 path: 'finance-admin',
                 loadComponent: () => import('./app/pages/condo/finance-admin-page.component').then(m => m.FinanceAdminPageComponent)
             },
+            {
+                path: 'marketplace-admin',
+                loadComponent: () => import('./app/pages/condo/marketplace-admin-page.component').then(m => m.MarketplaceAdminPageComponent)
+            },
 
             // ── Tutoriales ────────────────────────────────────────────────
             {

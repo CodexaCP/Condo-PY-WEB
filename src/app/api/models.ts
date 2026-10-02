@@ -1602,6 +1602,7 @@ export interface Plan {
   gracePeriodDays: number;
   isActive: boolean;
   includesFinanceModule: boolean;
+  includesMarketplace: boolean;
   isAssigned: boolean;
   assignedBuildingsCount: number;
   createdAtUtc: string;
@@ -1615,6 +1616,7 @@ export interface PlanCreateRequest {
   billingCycle: BillingCycle;
   gracePeriodDays: number;
   includesFinanceModule: boolean;
+  includesMarketplace: boolean;
 }
 
 export interface PlanUpdateRequest extends PlanCreateRequest {
@@ -2259,4 +2261,28 @@ export interface ExpensePeriodReconciliation {
   totalCharged: number;
   collected: number;
   pending: number;
+}
+
+// ── Marketplace de espacios temporales ────────────────────────────────────────
+
+// Fila del listado del SuperAdmin: edificio con su plan, el interruptor y la configuración del marketplace.
+export interface MarketplaceAdminBuilding {
+  buildingId: string;
+  buildingName: string;
+  companyName: string;
+  condominiumName: string;
+  planId: string | null;
+  planName: string;
+  planStatus: string;
+  planIncludesMarketplace: boolean;
+  moduleEnabled: boolean;
+  moduleAvailable: boolean;
+  commissionPercent: number;
+  transferInfo: string;
+}
+
+export interface MarketplaceAdminUpdateRequest {
+  enabled: boolean;
+  commissionPercent: number;
+  transferInfo: string | null;
 }
