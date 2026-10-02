@@ -96,18 +96,28 @@ interface RubroGroup {
         <div class="panel-box inner-form" *ngIf="showRecurringForm">
           <form class="expense-form" (ngSubmit)="submitRecurring()">
             <div class="form-row">
-              <label class="field-block" *ngIf="editingRecurringId">
+              <label class="field-block">
                 <span>Edificio</span>
-                <select [(ngModel)]="recurringForm.buildingId" name="recBuildingId">
-                  <option value="">— Todos los edificios —</option>
+                <select [(ngModel)]="recurringForm.buildingId" name="recBuildingId" (ngModelChange)="onRecurringFormBuildingChange()">
+                  <option value="">— Todos los edificios (plantilla general) —</option>
                   <option *ngFor="let b of buildings" [value]="b.id">{{ b.name }}</option>
+                </select>
+              </label>
+              <label class="field-block" *ngIf="recurringRubroGroups.length">
+                <span>Rubro</span>
+                <select [(ngModel)]="recurringForm.ledgerCategoryId" name="recLedgerCategoryId" (ngModelChange)="onRecurringRubroChange()">
+                  <option value="">— Sin rubro (usar la categoría) —</option>
+                  <optgroup *ngFor="let g of recurringRubroGroups" [label]="g.name">
+                    <option *ngFor="let r of g.items" [value]="r.id">{{ r.code }} · {{ r.name }}{{ r.isActive ? '' : ' (desactivado)' }}</option>
+                  </optgroup>
                 </select>
               </label>
               <label class="field-block">
                 <span>Categoría *</span>
-                <select [(ngModel)]="recurringForm.category" name="recCategory" required>
+                <select [(ngModel)]="recurringForm.category" name="recCategory" required [disabled]="!!recurringForm.ledgerCategoryId">
                   <option *ngFor="let c of categories" [value]="c">{{ categoryLabel(c) }}</option>
                 </select>
+                <small class="field-hint" *ngIf="recurringForm.ledgerCategoryId">La categoría de la liquidación sale del rubro elegido.</small>
               </label>
               <label class="field-block">
                 <span>Distribución *</span>
@@ -124,7 +134,7 @@ interface RubroGroup {
               </label>
             </div>
 
-            <p class="field-hint" *ngIf="!editingRecurringId">Se va a crear una plantilla general, aplicable a todos tus edificios.</p>
+            <p class="field-hint" *ngIf="!recurringForm.buildingId">Es una plantilla general, aplicable a todos tus edificios (las plantillas generales no llevan rubro: el plan de cuentas es de cada edificio).</p>
 
             <div class="form-row">
               <label class="field-block wide2">
@@ -157,7 +167,10 @@ interface RubroGroup {
           <div class="app-row recurring-grid" *ngFor="let item of recurringItems">
             <strong>{{ item.description }}</strong>
             <span>{{ item.supplierName || '—' }}</span>
-            <span>{{ categoryLabel(item.category) }}</span>
+            <span>
+              {{ categoryLabel(item.category) }}
+              <small class="supplier-tag" *ngIf="item.ledgerCategoryName">Rubro: {{ item.ledgerCategoryCode }} · {{ item.ledgerCategoryName }}</small>
+            </span>
             <span>{{ distributionTypeLabel(item.distributionType) }}</span>
             <span>{{ formatCurrency(item.amount) }}</span>
             <p-tag [value]="item.isActive ? 'Activa' : 'Inactiva'" [severity]="item.isActive ? 'success' : 'secondary'"></p-tag>
@@ -552,6 +565,8 @@ export class BuildingExpensesPageComponent implements OnInit {
   // Plan de cuentas por edificio (solo de los edificios con Finanzas disponible), cargado la primera vez que se elige el edificio.
   private readonly planByBuilding = new Map<string, LedgerCategory[]>();
   rubroGroups: RubroGroup[] = [];
+  // Lo mismo para el formulario de plantillas recurrentes (solo si se elige un edificio puntual).
+  recurringRubroGroups: RubroGroup[] = [];
 
   get isOperator(): boolean { return this.auth.hasRole('CompanyOperator'); }
 
@@ -854,7 +869,17 @@ export class BuildingExpensesPageComponent implements OnInit {
   }
 
   private buildRubroGroups(plan: LedgerCategory[]): void {
-    const current = this.form.ledgerCategoryId;
+    const { groups, valid } = this.groupRubros(plan, this.form.ledgerCategoryId);
+    this.rubroGroups = groups;
+    if (!valid) {
+      this.form.ledgerCategoryId = '';
+    }
+    this.cdr.markForCheck();
+  }
+
+  // Subrubros de gastos activos con categoría, agrupados por su rubro principal (más el actual aunque se haya desactivado).
+  // `valid` = el rubro actual sigue siendo una opción (o no había ninguno).
+  private groupRubros(plan: LedgerCategory[], current: string): { groups: RubroGroup[]; valid: boolean } {
     const groupName = new Map(plan.filter((c) => !c.parentId).map((c) => [c.id, `${c.code} · ${c.name}`]));
     const options = plan
       .filter((c) => c.type === 'Expense' && !!c.parentId && !c.hasChildren && !!c.expenseCategory && (c.isActive || c.id === current))
@@ -868,11 +893,7 @@ export class BuildingExpensesPageComponent implements OnInit {
       groups.set(name, group);
     }
 
-    this.rubroGroups = [...groups.values()];
-    if (current && !options.some((c) => c.id === current)) {
-      this.form.ledgerCategoryId = '';
-    }
-    this.cdr.markForCheck();
+    return { groups: [...groups.values()], valid: !current || options.some((c) => c.id === current) };
   }
 
   startRecurringEdit(item: RecurringBuildingExpense): void {
@@ -881,6 +902,7 @@ export class BuildingExpensesPageComponent implements OnInit {
     this.recurringForm = {
       buildingId: item.buildingId ?? '',
       category: item.category,
+      ledgerCategoryId: item.ledgerCategoryId ?? '',
       supplierName: item.supplierName,
       description: item.description,
       amount: item.amount,
@@ -889,11 +911,71 @@ export class BuildingExpensesPageComponent implements OnInit {
       notes: item.notes,
       isActive: item.isActive
     };
+    this.planByBuilding.clear();
+    this.refreshRecurringRubros();
   }
 
   cancelRecurringEdit(): void {
     this.editingRecurringId = null;
     this.recurringForm = this.createInitialRecurringForm();
+    this.refreshRecurringRubros();
+  }
+
+  onRecurringFormBuildingChange(): void {
+    // El rubro es del plan de cuentas de cada edificio: al cambiar de edificio se vuelve a elegir.
+    this.recurringForm.ledgerCategoryId = '';
+    if (!this.recurringForm.buildingId && this.recurringForm.distributionType === 'IndividualUnit') {
+      this.recurringForm.distributionType = 'ByCoefficient';
+    }
+    this.refreshRecurringRubros();
+  }
+
+  // El rubro elegido fija la categoría de la liquidación.
+  onRecurringRubroChange(): void {
+    const rubro = this.planByBuilding.get(this.recurringForm.buildingId)?.find((r) => r.id === this.recurringForm.ledgerCategoryId);
+    if (rubro?.expenseCategory) {
+      this.recurringForm.category = rubro.expenseCategory;
+    }
+  }
+
+  private refreshRecurringRubros(): void {
+    const buildingId = this.recurringForm.buildingId;
+    const available = !!buildingId && this.financeAccess.buildings().some((b) => b.buildingId === buildingId);
+    if (!available) {
+      this.recurringRubroGroups = [];
+      this.cdr.markForCheck();
+      return;
+    }
+
+    const apply = (plan: LedgerCategory[]) => {
+      const { groups, valid } = this.groupRubros(plan, this.recurringForm.ledgerCategoryId);
+      this.recurringRubroGroups = groups;
+      if (!valid) {
+        this.recurringForm.ledgerCategoryId = '';
+      }
+      this.cdr.markForCheck();
+    };
+
+    const cached = this.planByBuilding.get(buildingId);
+    if (cached) {
+      apply(cached);
+      return;
+    }
+
+    this.financeApi.getCategories(buildingId).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: (plan) => {
+        this.planByBuilding.set(buildingId, plan);
+        if (this.recurringForm.buildingId === buildingId) {
+          apply(plan);
+        }
+      },
+      error: () => {
+        if (this.recurringForm.buildingId === buildingId) {
+          this.recurringRubroGroups = [];
+          this.cdr.markForCheck();
+        }
+      }
+    });
   }
 
   onFormBuildingChange(): void {
@@ -1027,7 +1109,8 @@ export class BuildingExpensesPageComponent implements OnInit {
       distributionType: this.recurringForm.distributionType,
       targetUnitId: null,
       notes: this.recurringForm.notes.trim(),
-      isActive: this.recurringForm.isActive
+      isActive: this.recurringForm.isActive,
+      ledgerCategoryId: this.recurringForm.buildingId ? this.recurringForm.ledgerCategoryId || null : null
     };
 
     if (!request.description) {
@@ -1096,6 +1179,9 @@ export class BuildingExpensesPageComponent implements OnInit {
           this.isApplyingRecurring = false;
           this.applyRecurringPeriodId = '';
           this.msg.add({ severity: 'success', summary: 'Éxito', detail: `Se aplicaron ${result.applied} gasto(s) recurrentes al periodo "${result.expensePeriodName}".`, life: 5000 });
+          if (result.withoutRubro) {
+            this.msg.add({ severity: 'warn', summary: 'Sin rubro', detail: `${result.withoutRubro} gasto(s) se crearon sin rubro porque el rubro de su plantilla ya no está disponible (desactivado o Finanzas apagado): quedaron solo con su categoría.`, life: 9000 });
+          }
           this.reloadExpenses();
           this.cdr.markForCheck();
         },
@@ -1320,6 +1406,7 @@ export class BuildingExpensesPageComponent implements OnInit {
     return {
       buildingId: '',
       category: 'Utilities' as BuildingExpenseCategory,
+      ledgerCategoryId: '',
       supplierName: '',
       description: '',
       amount: 0,

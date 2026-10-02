@@ -294,6 +294,10 @@ export interface RecurringBuildingExpense {
   targetUnitCode: string;
   notes: string;
   isActive: boolean;
+  // Rubro del plan de cuentas de Finanzas del edificio (solo plantillas de un edificio puntual).
+  ledgerCategoryId: string | null;
+  ledgerCategoryCode: string | null;
+  ledgerCategoryName: string | null;
 }
 
 export interface RecurringBuildingExpenseUpsertRequest {
@@ -306,6 +310,8 @@ export interface RecurringBuildingExpenseUpsertRequest {
   targetUnitId: string | null;
   notes: string;
   isActive: boolean;
+  // Con rubro, la categoría se toma del rubro.
+  ledgerCategoryId?: string | null;
 }
 
 export interface ApplyRecurringExpensesRequest {
@@ -315,6 +321,8 @@ export interface ApplyRecurringExpensesRequest {
 export interface ApplyRecurringExpensesResult {
   applied: number;
   skipped: number;
+  // Gastos creados sin el rubro de su plantilla porque ya no está disponible (desactivado o módulo apagado).
+  withoutRubro: number;
   expensePeriodName: string;
   appliedDescriptions: string[];
 }
