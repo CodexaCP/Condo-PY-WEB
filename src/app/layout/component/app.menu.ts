@@ -64,6 +64,19 @@ export class AppMenu {
                         { label: 'Finanzas por edificio', icon: 'pi pi-fw pi-calculator', routerLink: ['/finance-admin'] }
                     ]
                 },
+                // Pantallas del módulo de los edificios habilitados (la configuración se abre también desde «Finanzas por edificio»).
+                ...(hasFinanceModule ? [{
+                    label: 'Finanzas del edificio',
+                    items: [
+                        { label: 'Tablero', icon: 'pi pi-fw pi-chart-line', routerLink: ['/finance/dashboard'] },
+                        { label: 'Movimientos', icon: 'pi pi-fw pi-list', routerLink: ['/finance/movements'] },
+                        { label: 'Flujo de caja', icon: 'pi pi-fw pi-table', routerLink: ['/finance/cash-flow'] },
+                        { label: 'Presupuesto', icon: 'pi pi-fw pi-calendar-plus', routerLink: ['/finance/budget'] },
+                        { label: 'Presupuesto vs. real', icon: 'pi pi-fw pi-chart-bar', routerLink: ['/finance/budget-vs-actual'] },
+                        { label: 'Fondo de reserva', icon: 'pi pi-fw pi-shield', routerLink: ['/finance/reserve-fund'] },
+                        { label: 'Configuración', icon: 'pi pi-fw pi-cog', routerLink: ['/finance/settings'] }
+                    ]
+                }] : []),
                 {
                     label: 'Liquidaciones',
                     items: [

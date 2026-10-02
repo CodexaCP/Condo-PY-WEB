@@ -197,7 +197,8 @@ export class FinanceBudgetPageComponent {
     // La pantalla necesita saber si el usuario puede editar y desde cuando existe el modulo (para los ejercicios).
     this.api.getSettings(this.buildingId).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: settings => {
-        this.canEdit = settings.canEdit;
+        // El presupuesto lo cargan el SuperAdmin y el Administrador de empresa (la configuración, solo el SuperAdmin).
+        this.canEdit = settings.canEditBudget;
         const startYear = settings.financeStartDate ? Number(settings.financeStartDate.slice(0, 4)) : new Date().getFullYear();
         const years: number[] = [];
         for (let y = startYear - 1; y <= new Date().getFullYear() + 1; y++) years.push(y);

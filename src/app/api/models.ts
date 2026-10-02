@@ -274,6 +274,10 @@ export interface BuildingExpense {
   paidByReserveFund: boolean;
   hasReceipt: boolean;
   receiptFileName: string | null;
+  // Rubro del plan de cuentas de Finanzas del edificio (opcional).
+  ledgerCategoryId: string | null;
+  ledgerCategoryCode: string | null;
+  ledgerCategoryName: string | null;
 }
 
 export interface RecurringBuildingExpense {
@@ -320,6 +324,8 @@ export type BuildingExpenseImportRowStatus = 'Ok' | 'Warning' | 'Duplicate' | 'E
 export interface BuildingExpenseImportRow {
   rowNumber: number;
   category: string;
+  // Rubro del plan de cuentas (solo edificios con Finanzas): «código nombre» una vez resuelto.
+  rubro: string;
   supplier: string;
   description: string;
   amount: number | null;
@@ -352,6 +358,8 @@ export interface CreateBuildingExpenseRequest {
   targetUnitId: string | null;
   notes: string;
   paidByReserveFund: boolean;
+  // Con rubro, la categoría se toma del rubro.
+  ledgerCategoryId?: string | null;
 }
 
 export type BuildingIncomeCategory =
@@ -375,6 +383,10 @@ export interface BuildingIncome {
   incomeDate: string;
   amount: number;
   notes: string;
+  // Rubro del plan de cuentas de Finanzas del edificio (opcional).
+  ledgerCategoryId: string | null;
+  ledgerCategoryCode: string | null;
+  ledgerCategoryName: string | null;
 }
 
 export interface CreateBuildingIncomeRequest {
@@ -385,6 +397,8 @@ export interface CreateBuildingIncomeRequest {
   incomeDate: string;
   amount: number;
   notes: string;
+  // Con rubro, la categoría se toma del rubro.
+  ledgerCategoryId?: string | null;
 }
 
 export interface RolloverIncomeRequest {
@@ -1666,7 +1680,10 @@ export interface FinanceSettings {
   accountCount: number;
   categoryCount: number;
   missingForSetup: string[];
+  // Configuración (fecha de arranque, cuentas y plan de cuentas): solo la modifica el SuperAdmin; los demás la ven en solo lectura.
   canEdit: boolean;
+  // El presupuesto lo cargan el SuperAdmin y el Administrador de empresa.
+  canEditBudget: boolean;
 }
 
 export interface FinanceSettingsUpdateRequest {
@@ -1703,6 +1720,12 @@ export interface LedgerCategory {
   isActive: boolean;
   isTemplate: boolean;
   hasChildren: boolean;
+  // Subrubro de gastos o ingresos: categoría con la que cuenta en la liquidación lo que se carga en él (nula en los rubros
+  // principales, en los de fondo y en los de cobranza de expensas, que no reciben gastos ni ingresos cargados a mano).
+  expenseCategory: BuildingExpenseCategory | null;
+  incomeCategory: BuildingIncomeCategory | null;
+  // Ya tiene gastos o ingresos cargados: no se elimina ni se le cambia el tipo o la categoría; solo se desactiva.
+  hasMovements: boolean;
 }
 
 export interface LedgerCategoryUpsertRequest {
@@ -1713,6 +1736,20 @@ export interface LedgerCategoryUpsertRequest {
   type: LedgerCategoryType;
   externalCode: string | null;
   isActive: boolean;
+  expenseCategory?: BuildingExpenseCategory | null;
+  incomeCategory?: BuildingIncomeCategory | null;
+}
+
+export interface LedgerCategoryCopyRequest {
+  sourceBuildingId: string;
+  targetBuildingId: string;
+}
+
+export interface LedgerCategoryCopyResult {
+  updated: number;
+  created: number;
+  skipped: number;
+  messages: string[];
 }
 
 // ── Finanzas del edificio: libro (saldos, movimientos, flujo y tablero) ───────

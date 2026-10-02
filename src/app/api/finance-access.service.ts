@@ -13,9 +13,10 @@ export class FinanceAccessService {
   readonly buildings = signal<FinanceBuildingAccess[]>([]);
   readonly available = computed(() => this.buildings().length > 0);
 
-  // El SuperAdmin administra el módulo desde «Finanzas por edificio»; el resto de los roles administrativos lo usan desde el menú.
+  // El SuperAdmin habilita el módulo y lo configura desde «Finanzas por edificio» (servicio de configuración), y además ve las pantallas
+  // del módulo de los edificios habilitados; el resto de los roles administrativos lo usan desde el menú.
   refresh(): void {
-    if (!this.auth.hasRole('CompanyAdmin', 'CompanyOperator', 'BuildingManager')) {
+    if (!this.auth.hasRole('SuperAdmin', 'CompanyAdmin', 'CompanyOperator', 'BuildingManager')) {
       this.buildings.set([]);
       return;
     }

@@ -1,5 +1,6 @@
 import { Pipe, PipeTransform } from '@angular/core';
 import { extractApiErrorMessage } from '../../api/api-error.util';
+import { BuildingExpenseCategory, BuildingIncomeCategory } from '../../api/models';
 
 const GS = new Intl.NumberFormat('es-PY', { style: 'currency', currency: 'PYG', minimumFractionDigits: 0, maximumFractionDigits: 0 });
 const NUM = new Intl.NumberFormat('es-PY', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
@@ -9,6 +10,41 @@ const MONTHS_SHORT = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 's
 
 export const formatGs = (v: number | null | undefined): string => (v === null || v === undefined ? '—' : GS.format(v));
 export const formatNum = (v: number | null | undefined): string => (v === null || v === undefined ? '—' : NUM.format(v));
+
+// Categorías con las que los gastos y los ingresos cuentan en la liquidación (las mismas de las pantallas de gastos e ingresos).
+export const EXPENSE_CATEGORY_LABELS: Record<BuildingExpenseCategory, string> = {
+  Utilities: 'Servicios',
+  Cleaning: 'Limpieza',
+  Security: 'Seguridad',
+  Maintenance: 'Mantenimiento',
+  Elevator: 'Ascensor',
+  Insurance: 'Seguro',
+  Payroll: 'Salarios',
+  Taxes: 'Impuestos',
+  Administration: 'Administración',
+  ReserveFund: 'Fondo de reserva',
+  Extraordinary: 'Extraordinario',
+  Supplies: 'Insumos',
+  Ande: 'ANDE',
+  Essap: 'ESSAP',
+  InternetPhone: 'Internet y telefonía',
+  Other: 'Otro'
+};
+
+export const INCOME_CATEGORY_LABELS: Record<BuildingIncomeCategory, string> = {
+  AccumulatedBalance: 'Saldo acumulado',
+  CommonAreaRental: 'Alquiler de área común',
+  Interest: 'Interés',
+  OperationalFund: 'Fondo operativo',
+  CreditAdjustment: 'Ajuste a favor',
+  ExtraordinaryContribution: 'Aporte extraordinario',
+  Other: 'Otro'
+};
+
+// Las que se pueden elegir para un rubro propio: el aporte al fondo, el saldo acumulado y el fondo operativo tienen un trato
+// especial en el libro (no son gastos o ingresos nuevos), así que no se ofrecen.
+export const EXPENSE_CATEGORY_CHOICES: BuildingExpenseCategory[] = ['Utilities', 'Cleaning', 'Security', 'Maintenance', 'Elevator', 'Insurance', 'Payroll', 'Taxes', 'Administration', 'Extraordinary', 'Supplies', 'Ande', 'Essap', 'InternetPhone', 'Other'];
+export const INCOME_CATEGORY_CHOICES: BuildingIncomeCategory[] = ['CommonAreaRental', 'Interest', 'CreditAdjustment', 'ExtraordinaryContribution', 'Other'];
 
 export const monthName = (month: number): string => MONTHS[month - 1] ?? String(month);
 export const monthLabel = (year: number, month: number): string => `${monthName(month)} ${year}`;

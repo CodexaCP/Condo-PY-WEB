@@ -11,6 +11,8 @@ import { MessageService } from 'primeng/api';
 import { InputNumber } from 'primeng/inputnumber';
 import { extractApiErrorMessage } from '../../api/api-error.util';
 import { BuildingIncomesApiService } from '../../api/building-incomes-api.service';
+import { FinanceAccessService } from '../../api/finance-access.service';
+import { FinanceApiService } from '../../api/finance-api.service';
 import { BuildingsApiService } from '../../api/buildings-api.service';
 import { ExpensePeriodsApiService } from '../../api/expense-periods-api.service';
 import { AuthService } from '../../auth/auth.service';
@@ -20,8 +22,15 @@ import {
   BuildingIncomeCategory,
   CreateBuildingIncomeRequest,
   ExpensePeriod,
+  LedgerCategory,
   RolloverIncomeResult
 } from '../../api/models';
+
+// Rubros que se pueden elegir al cargar un ingreso, agrupados por su rubro principal (Finanzas del edificio).
+interface RubroGroup {
+  name: string;
+  items: LedgerCategory[];
+}
 
 @Component({
   standalone: true,
@@ -164,11 +173,21 @@ import {
                 <option *ngFor="let period of availablePeriods" [value]="period.id">{{ period.name }}</option>
               </select>
             </label>
+            <label class="field-block" *ngIf="rubroGroups.length">
+              <span>Rubro</span>
+              <select [(ngModel)]="form.ledgerCategoryId" name="ledgerCategoryId" (ngModelChange)="onRubroChange()">
+                <option value="">— Sin rubro (usar la categoría) —</option>
+                <optgroup *ngFor="let g of rubroGroups" [label]="g.name">
+                  <option *ngFor="let r of g.items" [value]="r.id">{{ r.code }} · {{ r.name }}{{ r.isActive ? '' : ' (desactivado)' }}</option>
+                </optgroup>
+              </select>
+            </label>
             <label class="field-block">
               <span>Categoría *</span>
-              <select [(ngModel)]="form.category" name="category" required>
+              <select [(ngModel)]="form.category" name="category" required [disabled]="!!form.ledgerCategoryId">
                 <option *ngFor="let category of categories" [value]="category">{{ categoryLabel(category) }}</option>
               </select>
+              <small class="sub-text" *ngIf="form.ledgerCategoryId">La categoría de la liquidación sale del rubro elegido.</small>
             </label>
             <label class="field-block">
               <span>Fecha del ingreso *</span>
@@ -222,6 +241,7 @@ import {
           <strong>{{ item.incomeDate | date:'dd/MM/yyyy' }}</strong>
           <span>
             {{ item.description }}
+            <small class="sub-text" *ngIf="item.ledgerCategoryName">Rubro: {{ item.ledgerCategoryCode }} · {{ item.ledgerCategoryName }}</small>
             <small class="sub-text" *ngIf="item.notes">{{ item.notes }}</small>
           </span>
           <span>{{ item.expensePeriodName }} <small class="sub-text">{{ item.buildingName }}</small></span>
@@ -332,10 +352,16 @@ export class BuildingIncomesPageComponent implements OnInit {
   private readonly incomesApi = inject(BuildingIncomesApiService);
   private readonly buildingsApi = inject(BuildingsApiService);
   private readonly periodsApi = inject(ExpensePeriodsApiService);
+  private readonly financeApi = inject(FinanceApiService);
+  private readonly financeAccess = inject(FinanceAccessService);
   private readonly auth = inject(AuthService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly msg = inject(MessageService);
+
+  // Plan de cuentas por edificio (solo de los edificios con Finanzas disponible), cargado la primera vez que se elige el edificio.
+  private readonly planByBuilding = new Map<string, LedgerCategory[]>();
+  rubroGroups: RubroGroup[] = [];
 
   get isReadOnly(): boolean { return this.auth.hasRole('CompanyAdmin'); }
 
@@ -394,7 +420,11 @@ export class BuildingIncomesPageComponent implements OnInit {
     this.showForm = !this.showForm;
     if (!this.showForm) {
       this.form = this.createInitialForm();
+    } else {
+      // Al abrir el formulario se vuelve a leer el plan de cuentas (pudo cambiar desde la última vez).
+      this.planByBuilding.clear();
     }
+    this.refreshRubros();
   }
 
   toggleRolloverSection(): void {
@@ -418,17 +448,21 @@ export class BuildingIncomesPageComponent implements OnInit {
       buildingId: item.buildingId,
       expensePeriodId: item.expensePeriodId,
       category: item.category,
+      ledgerCategoryId: item.ledgerCategoryId ?? '',
       description: item.description,
       incomeDate: item.incomeDate,
       amount: item.amount,
       notes: item.notes
     };
+    this.planByBuilding.clear();
+    this.refreshRubros();
   }
 
   cancelEdit(): void {
     this.editingId = null;
     this.showForm = false;
     this.form = this.createInitialForm();
+    this.refreshRubros();
   }
 
   onFormBuildingChange(): void {
@@ -436,6 +470,73 @@ export class BuildingIncomesPageComponent implements OnInit {
     if (!periodStillMatches) {
       this.form.expensePeriodId = '';
     }
+    // El rubro es del plan de cuentas de cada edificio: al cambiar de edificio se vuelve a elegir.
+    this.form.ledgerCategoryId = '';
+    this.refreshRubros();
+  }
+
+  // El rubro elegido fija la categoría de la liquidación (para que no haya dos clasificaciones que se contradigan).
+  onRubroChange(): void {
+    const rubro = this.planByBuilding.get(this.form.buildingId)?.find((r) => r.id === this.form.ledgerCategoryId);
+    if (rubro?.incomeCategory) {
+      this.form.category = rubro.incomeCategory;
+    }
+  }
+
+  // Arma la lista de rubros del edificio del formulario: subrubros de ingresos activos con categoría (más el que el ingreso ya tiene,
+  // aunque se haya desactivado). Sin Finanzas en ese edificio no hay rubros y el campo no se muestra.
+  private refreshRubros(): void {
+    const buildingId = this.form.buildingId;
+    const available = !!buildingId && this.financeAccess.buildings().some((b) => b.buildingId === buildingId);
+    if (!available) {
+      this.rubroGroups = [];
+      this.cdr.markForCheck();
+      return;
+    }
+
+    const cached = this.planByBuilding.get(buildingId);
+    if (cached) {
+      this.buildRubroGroups(cached);
+      return;
+    }
+
+    this.financeApi.getCategories(buildingId).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: (plan) => {
+        this.planByBuilding.set(buildingId, plan);
+        if (this.form.buildingId === buildingId) {
+          this.buildRubroGroups(plan);
+        }
+      },
+      error: () => {
+        // Sin acceso al plan (módulo apagado o rol sin permiso): el ingreso se carga solo con su categoría, como siempre.
+        if (this.form.buildingId === buildingId) {
+          this.rubroGroups = [];
+          this.cdr.markForCheck();
+        }
+      }
+    });
+  }
+
+  private buildRubroGroups(plan: LedgerCategory[]): void {
+    const current = this.form.ledgerCategoryId;
+    const groupName = new Map(plan.filter((c) => !c.parentId).map((c) => [c.id, `${c.code} · ${c.name}`]));
+    const options = plan
+      .filter((c) => c.type === 'Income' && !!c.parentId && !c.hasChildren && !!c.incomeCategory && (c.isActive || c.id === current))
+      .sort((a, b) => a.code.localeCompare(b.code, undefined, { numeric: true }));
+
+    const groups = new Map<string, RubroGroup>();
+    for (const rubro of options) {
+      const name = groupName.get(rubro.parentId!) ?? 'Otros';
+      const group = groups.get(name) ?? { name, items: [] };
+      group.items.push(rubro);
+      groups.set(name, group);
+    }
+
+    this.rubroGroups = [...groups.values()];
+    if (current && !options.some((c) => c.id === current)) {
+      this.form.ledgerCategoryId = '';
+    }
+    this.cdr.markForCheck();
   }
 
   onBuildingFilterChange(): void {
@@ -496,7 +597,8 @@ export class BuildingIncomesPageComponent implements OnInit {
       description: this.form.description,
       incomeDate: this.form.incomeDate,
       amount: Number(this.form.amount),
-      notes: this.form.notes
+      notes: this.form.notes,
+      ledgerCategoryId: this.form.ledgerCategoryId || null
     };
 
     const operation = this.editingId
@@ -507,6 +609,7 @@ export class BuildingIncomesPageComponent implements OnInit {
       next: (income) => {
         this.upsertLocalItem(income);
         this.form = this.createInitialForm();
+        this.refreshRubros();
         this.isSaving = false;
         this.showForm = false;
         this.msg.add({ severity: 'success', summary: 'Éxito', detail: this.editingId ? 'Ingreso actualizado correctamente.' : 'Ingreso creado correctamente.', life: 4000 });
@@ -597,6 +700,7 @@ export class BuildingIncomesPageComponent implements OnInit {
       buildingId: '',
       expensePeriodId: '',
       category: 'OperationalFund' as BuildingIncomeCategory,
+      ledgerCategoryId: '',
       description: '',
       incomeDate: new Date().toISOString().slice(0, 10),
       amount: 0,

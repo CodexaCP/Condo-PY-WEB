@@ -7,8 +7,10 @@ import { Message } from 'primeng/message';
 import { Tag } from 'primeng/tag';
 import { MessageService } from 'primeng/api';
 import { extractApiErrorMessage } from '../../api/api-error.util';
+import { FinanceAccessService } from '../../api/finance-access.service';
 import { FinanceApiService } from '../../api/finance-api.service';
-import { LedgerCategory, LedgerCategoryType } from '../../api/models';
+import { BuildingExpenseCategory, BuildingIncomeCategory, LedgerCategory, LedgerCategoryCopyResult, LedgerCategoryType } from '../../api/models';
+import { EXPENSE_CATEGORY_CHOICES, EXPENSE_CATEGORY_LABELS, INCOME_CATEGORY_CHOICES, INCOME_CATEGORY_LABELS } from './finance-format';
 
 const TYPE_LABELS: Record<LedgerCategoryType, string> = {
   Fund: 'Fondos',
@@ -26,7 +28,9 @@ interface ChartSection {
 }
 
 // Plan de cuentas del edificio: dos niveles (rubro y subrubro) con códigos editables, que nace de la plantilla estándar.
-// Los rubros de la plantilla se pueden renombrar, recodificar y desactivar, pero no mover ni eliminar.
+// Los rubros de la plantilla se pueden renombrar, recodificar y desactivar, pero no mover ni eliminar. Los gastos e ingresos
+// eligen uno de estos subrubros al cargarse; en los rubros propios se define con qué categoría cuentan en la liquidación.
+// Un rubro con gastos o ingresos cargados solo se desactiva. Se puede copiar el plan de otro edificio.
 @Component({
   standalone: true,
   selector: 'app-finance-chart-editor',
@@ -35,11 +39,22 @@ interface ChartSection {
   template: `
     <div class="intro">
       <p>
-        Los rubros ordenan los ingresos y gastos del edificio. El <strong>código</strong> es editable y sirve para exportar los datos al contador;
+        Los rubros ordenan los ingresos y gastos del edificio: al cargar un gasto o un ingreso se elige uno de los subrubros activos. El <strong>código</strong> es editable y sirve para exportar los datos al contador;
         el <strong>código del contador</strong> es opcional y permite mapear cada rubro a su plan de cuentas.
+        Desactivá los rubros que el edificio no usa y agregá los propios que necesite.
       </p>
-      <p-button *ngIf="canEdit" type="button" label="Nuevo rubro" icon="pi pi-plus" (onClick)="openCreate()"></p-button>
+      <div class="intro-actions" *ngIf="canEdit">
+        <p-button type="button" label="Copiar de otro edificio" icon="pi pi-copy" severity="secondary" [outlined]="true" (onClick)="openCopy()"></p-button>
+        <p-button type="button" label="Nuevo rubro" icon="pi pi-plus" (onClick)="openCreate()"></p-button>
+      </div>
     </div>
+
+    <p-message *ngIf="copyResult as r" severity="success" styleClass="copy-result">
+      <div>
+        <strong>Plan copiado:</strong> {{ r.created }} rubros creados, {{ r.updated }} actualizados<span *ngIf="r.skipped">, {{ r.skipped }} sin copiar</span>.
+        <ul *ngIf="r.messages.length"><li *ngFor="let m of r.messages">{{ m }}</li></ul>
+      </div>
+    </p-message>
 
     <p-message *ngIf="error" severity="error" [text]="error"></p-message>
     <p class="app-state" *ngIf="loading">Cargando plan de cuentas...</p>
@@ -65,14 +80,21 @@ interface ChartSection {
           </div>
           <div class="app-row cat-grid child-row" *ngFor="let child of entry.children" [class.inactive]="!child.isActive">
             <code>{{ child.code }}</code>
-            <span class="child-name">{{ child.name }} <p-tag *ngIf="child.isTemplate" value="Plantilla" severity="info" styleClass="tag-sm"></p-tag></span>
+            <span class="child-name">
+              <span class="child-text">
+                {{ child.name }}
+                <small class="liq" *ngIf="categoryText(child) as liq">En la liquidación: {{ liq }}</small>
+              </span>
+              <p-tag *ngIf="child.isTemplate" value="Plantilla" severity="info" styleClass="tag-sm"></p-tag>
+              <p-tag *ngIf="child.hasMovements" value="Con movimientos" severity="secondary" styleClass="tag-sm"></p-tag>
+            </span>
             <span class="ext">{{ child.externalCode || '—' }}</span>
             <p-tag [value]="child.isActive ? 'Activo' : 'Inactivo'" [severity]="child.isActive ? 'success' : 'secondary'"></p-tag>
             <div class="app-actions" *ngIf="canEdit">
               <p-button type="button" icon="pi pi-pencil" severity="secondary" [rounded]="true" [text]="true" (onClick)="openEdit(child)" aria-label="Editar"></p-button>
               <p-button type="button" icon="pi pi-trash" severity="danger" [rounded]="true" [text]="true" (onClick)="askDelete(child)"
-                        [disabled]="child.isTemplate" aria-label="Eliminar"
-                        [title]="child.isTemplate ? 'Los rubros de la plantilla no se eliminan: desactivalos' : 'Eliminar'"></p-button>
+                        [disabled]="child.isTemplate || child.hasMovements" aria-label="Eliminar"
+                        [title]="child.isTemplate ? 'Los rubros de la plantilla no se eliminan: desactivalos' : (child.hasMovements ? 'Tiene gastos o ingresos cargados: desactivalo' : 'Eliminar')"></p-button>
             </div>
             <span *ngIf="!canEdit"></span>
           </div>
@@ -103,6 +125,20 @@ interface ChartSection {
             <option *ngFor="let t of typeOrder" [value]="t">{{ typeLabel(t) }}</option>
           </select>
         </label>
+        <p class="note" *ngIf="editing?.hasMovements">
+          Este rubro ya tiene gastos o ingresos cargados: no se puede eliminar ni cambiar de tipo o de categoría. Si ya no se usa, desactivalo.
+        </p>
+        <label *ngIf="showCategory">
+          <span>En la liquidación cuenta como</span>
+          <select *ngIf="form.type === 'Expense'" [(ngModel)]="form.expenseCategory" name="expenseCategory" [disabled]="!!editing?.hasMovements">
+            <option *ngFor="let c of expenseChoices" [value]="c">{{ expenseLabel(c) }}</option>
+          </select>
+          <select *ngIf="form.type === 'Income'" [(ngModel)]="form.incomeCategory" name="incomeCategory" [disabled]="!!editing?.hasMovements">
+            <option *ngFor="let c of incomeChoices" [value]="c">{{ incomeLabel(c) }}</option>
+          </select>
+          <small class="hint">Los gastos o ingresos que se carguen en este rubro se agrupan en la liquidación con esta categoría.</small>
+        </label>
+        <p class="note" *ngIf="editing?.isTemplate && categoryText(editing!) as liq">En la liquidación este rubro cuenta como «{{ liq }}».</p>
         <label>
           <span>Código <span class="req">*</span></span>
           <input [(ngModel)]="form.code" name="code" required maxlength="30" placeholder="Ej.: 5.3.06" />
@@ -126,6 +162,30 @@ interface ChartSection {
       </form>
     </div>
 
+    <div class="ov-backdrop" *ngIf="copyVisible" (click)="closeCopy()"></div>
+    <div class="ov-panel ov-panel-sm" *ngIf="copyVisible" (click)="$event.stopPropagation()">
+      <div class="ov-header">
+        <strong>Copiar plan de cuentas</strong>
+        <button class="ov-close" type="button" (click)="closeCopy()">✕</button>
+      </div>
+      <p class="confirm-text">
+        Se copian los nombres, códigos del contador y rubros activos de otro edificio, y se crean sus rubros propios. No se borra nada de este
+        edificio ni se tocan sus gastos, ingresos o presupuesto.
+      </p>
+      <p class="note" *ngIf="!sourceOptions.length">No hay otro edificio con Finanzas habilitado para copiar.</p>
+      <label class="copy-field" *ngIf="sourceOptions.length">
+        <span>Copiar desde</span>
+        <select [(ngModel)]="copySourceId" name="copySourceId">
+          <option value="">— Elegí un edificio —</option>
+          <option *ngFor="let b of sourceOptions" [value]="b.buildingId">{{ b.buildingName }}</option>
+        </select>
+      </label>
+      <div class="confirm-footer">
+        <p-button label="Cancelar" severity="secondary" [outlined]="true" (onClick)="closeCopy()"></p-button>
+        <p-button label="Copiar" icon="pi pi-copy" [loading]="copying" [disabled]="!copySourceId" (onClick)="confirmCopy()"></p-button>
+      </div>
+    </div>
+
     <div class="ov-backdrop ov-backdrop-top" *ngIf="deleteTarget" (click)="cancelDelete()"></div>
     <div class="ov-panel ov-panel-sm" *ngIf="deleteTarget" (click)="$event.stopPropagation()">
       <div class="ov-header">
@@ -142,6 +202,14 @@ interface ChartSection {
   styles: [`
     .intro { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; flex-wrap: wrap; margin-bottom: 0.75rem; }
     .intro p { margin: 0; max-width: 66ch; color: var(--brand-ink-soft); line-height: 1.5; }
+    .intro-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+    .child-text { display: grid; gap: 0.1rem; }
+    .liq, .hint { color: var(--brand-muted); font-size: 0.78rem; }
+    .hint { display: block; margin-top: 0.3rem; }
+    .copy-field { display: block; }
+    .copy-field > span { font-size: 0.82rem; font-weight: 600; color: var(--brand-muted); display: block; margin-bottom: 0.25rem; }
+    .copy-field select { width: 100%; padding: 0.5rem 0.75rem; border: 1px solid rgba(19,133,182,0.25); border-radius: 10px; font: inherit; }
+    :host ::ng-deep .copy-result ul { margin: 0.4rem 0 0; padding-left: 1.1rem; }
     .chart-section { margin-top: 1.25rem; }
     .chart-section h3 { margin: 0 0 0.6rem; font-size: 1.05rem; color: var(--brand-ink); }
     .app-list { gap: 0.4rem; }
@@ -187,6 +255,7 @@ interface ChartSection {
 })
 export class FinanceChartEditorComponent implements OnChanges {
   private readonly api = inject(FinanceApiService);
+  private readonly access = inject(FinanceAccessService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly msg = inject(MessageService);
@@ -196,6 +265,8 @@ export class FinanceChartEditorComponent implements OnChanges {
   @Output() changed = new EventEmitter<void>();
 
   readonly typeOrder = TYPE_ORDER;
+  readonly expenseChoices = EXPENSE_CATEGORY_CHOICES;
+  readonly incomeChoices = INCOME_CATEGORY_CHOICES;
 
   items: LedgerCategory[] = [];
   sections: ChartSection[] = [];
@@ -207,6 +278,11 @@ export class FinanceChartEditorComponent implements OnChanges {
   form = this.emptyForm();
   saving = false;
   deleteTarget: LedgerCategory | null = null;
+
+  copyVisible = false;
+  copySourceId = '';
+  copying = false;
+  copyResult: LedgerCategoryCopyResult | null = null;
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['buildingId'] && this.buildingId) {
@@ -221,9 +297,29 @@ export class FinanceChartEditorComponent implements OnChanges {
     return this.items.filter(x => !x.parentId && x.id !== this.editing?.id && (x.isActive || x.id === this.editing?.parentId));
   }
 
-  // Un rubro de la plantilla, o uno con subrubros, no cambia de lugar ni de tipo.
+  expenseLabel(c: BuildingExpenseCategory): string { return EXPENSE_CATEGORY_LABELS[c] ?? c; }
+  incomeLabel(c: BuildingIncomeCategory): string { return INCOME_CATEGORY_LABELS[c] ?? c; }
+
+  // Con qué categoría cuenta en la liquidación lo que se carga en el subrubro (vacío en los rubros principales, de fondo y de cobranza).
+  categoryText(item: LedgerCategory): string {
+    if (item.expenseCategory) return this.expenseLabel(item.expenseCategory);
+    if (item.incomeCategory) return this.incomeLabel(item.incomeCategory);
+    return '';
+  }
+
+  // La categoría de la liquidación se define en los subrubros propios de gastos e ingresos (los de la plantilla ya la traen).
+  get showCategory(): boolean {
+    return !!this.form.parentId && (this.form.type === 'Expense' || this.form.type === 'Income') && !this.editing?.isTemplate;
+  }
+
+  // Un rubro de la plantilla, o uno con subrubros, no cambia de lugar ni de tipo. Con movimientos tampoco cambia de tipo.
   get lockedPlacement(): boolean {
     return !!this.editing && (this.editing.isTemplate || this.editing.hasChildren);
+  }
+
+  // Edificios con Finanzas habilitado de los que se puede copiar el plan (todos menos este).
+  get sourceOptions() {
+    return this.access.buildings().filter(b => b.buildingId !== this.buildingId);
   }
 
   load(): void {
@@ -259,7 +355,9 @@ export class FinanceChartEditorComponent implements OnChanges {
       code: item.code,
       name: item.name,
       externalCode: item.externalCode ?? '',
-      isActive: item.isActive
+      isActive: item.isActive,
+      expenseCategory: item.expenseCategory ?? ('Other' as BuildingExpenseCategory),
+      incomeCategory: item.incomeCategory ?? ('Other' as BuildingIncomeCategory)
     };
     this.formVisible = true;
   }
@@ -289,7 +387,10 @@ export class FinanceChartEditorComponent implements OnChanges {
       name,
       type: this.form.type,
       externalCode: this.form.externalCode.trim() || null,
-      isActive: this.form.isActive
+      isActive: this.form.isActive,
+      // Solo los subrubros propios de gastos o ingresos definen su categoría de la liquidación.
+      expenseCategory: this.showCategory && this.form.type === 'Expense' ? this.form.expenseCategory : null,
+      incomeCategory: this.showCategory && this.form.type === 'Income' ? this.form.incomeCategory : null
     };
 
     this.saving = true;
@@ -311,6 +412,32 @@ export class FinanceChartEditorComponent implements OnChanges {
         this.toastError(extractApiErrorMessage(err, 'No se pudo guardar el rubro.'));
       }
     });
+  }
+
+  openCopy(): void {
+    this.copySourceId = '';
+    this.copyVisible = true;
+  }
+
+  closeCopy(): void { if (!this.copying) this.copyVisible = false; }
+
+  confirmCopy(): void {
+    if (!this.copySourceId || this.copying) return;
+    this.copying = true;
+    this.api.copyCategories({ sourceBuildingId: this.copySourceId, targetBuildingId: this.buildingId })
+      .pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+        next: result => {
+          this.copying = false;
+          this.copyVisible = false;
+          this.copyResult = result;
+          this.load();
+          this.changed.emit();
+        },
+        error: err => {
+          this.copying = false;
+          this.toastError(extractApiErrorMessage(err, 'No se pudo copiar el plan de cuentas.'));
+        }
+      });
   }
 
   askDelete(item: LedgerCategory): void { this.deleteTarget = item; }
@@ -353,6 +480,15 @@ export class FinanceChartEditorComponent implements OnChanges {
   }
 
   private emptyForm() {
-    return { parentId: null as string | null, type: 'Expense' as LedgerCategoryType, code: '', name: '', externalCode: '', isActive: true };
+    return {
+      parentId: null as string | null,
+      type: 'Expense' as LedgerCategoryType,
+      code: '',
+      name: '',
+      externalCode: '',
+      isActive: true,
+      expenseCategory: 'Other' as BuildingExpenseCategory,
+      incomeCategory: 'Other' as BuildingIncomeCategory
+    };
   }
 }

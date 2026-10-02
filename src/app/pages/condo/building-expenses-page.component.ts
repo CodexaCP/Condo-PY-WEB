@@ -11,6 +11,8 @@ import { Tooltip } from 'primeng/tooltip';
 import { InputNumber } from 'primeng/inputnumber';
 import { extractApiErrorMessage } from '../../api/api-error.util';
 import { BuildingExpensesApiService } from '../../api/building-expenses-api.service';
+import { FinanceAccessService } from '../../api/finance-access.service';
+import { FinanceApiService } from '../../api/finance-api.service';
 import { RecurringBuildingExpensesApiService } from '../../api/recurring-building-expenses-api.service';
 import { BuildingsApiService } from '../../api/buildings-api.service';
 import { ExpensePeriodsApiService } from '../../api/expense-periods-api.service';
@@ -26,6 +28,7 @@ import {
   BuildingExpenseImportRowStatus,
   CreateBuildingExpenseRequest,
   ExpensePeriod,
+  LedgerCategory,
   RecurringBuildingExpense,
   RecurringBuildingExpenseUpsertRequest,
   Unit
@@ -38,6 +41,12 @@ interface BuildingExpensesGroup {
   buildingName: string;
   total: number;
   items: BuildingExpense[];
+}
+
+// Rubros que se pueden elegir al cargar un gasto, agrupados por su rubro principal (Finanzas del edificio).
+interface RubroGroup {
+  name: string;
+  items: LedgerCategory[];
 }
 
 @Component({
@@ -215,11 +224,14 @@ interface BuildingExpensesGroup {
 
           <div class="app-list">
             <div class="app-row header import-grid">
-              <span>Fila</span><span>Categoría</span><span>Proveedor</span><span>Descripción</span><span>Monto</span><span>Estado</span>
+              <span>Fila</span><span>Categoría / rubro</span><span>Proveedor</span><span>Descripción</span><span>Monto</span><span>Estado</span>
             </div>
             <div class="app-row import-grid" *ngFor="let row of preview.rows">
               <span>{{ row.rowNumber }}</span>
-              <span>{{ row.category }}</span>
+              <div>
+                <span>{{ row.category }}</span>
+                <small class="import-message" *ngIf="row.rubro">Rubro: {{ row.rubro }}</small>
+              </div>
               <span>{{ row.supplier || '—' }}</span>
               <span>{{ row.description }}</span>
               <div>
@@ -298,11 +310,21 @@ interface BuildingExpensesGroup {
                 <option *ngFor="let p of availablePeriods" [value]="p.id">{{ p.name }}</option>
               </select>
             </label>
+            <label class="field-block" *ngIf="rubroGroups.length">
+              <span>Rubro</span>
+              <select [(ngModel)]="form.ledgerCategoryId" name="ledgerCategoryId" (ngModelChange)="onRubroChange()">
+                <option value="">— Sin rubro (usar la categoría) —</option>
+                <optgroup *ngFor="let g of rubroGroups" [label]="g.name">
+                  <option *ngFor="let r of g.items" [value]="r.id">{{ r.code }} · {{ r.name }}{{ r.isActive ? '' : ' (desactivado)' }}</option>
+                </optgroup>
+              </select>
+            </label>
             <label class="field-block">
               <span>Categoría *</span>
-              <select [(ngModel)]="form.category" name="category" required>
+              <select [(ngModel)]="form.category" name="category" required [disabled]="!!form.ledgerCategoryId">
                 <option *ngFor="let c of categories" [value]="c">{{ categoryLabel(c) }}</option>
               </select>
+              <small class="field-hint" *ngIf="form.ledgerCategoryId">La categoría de la liquidación sale del rubro elegido.</small>
             </label>
             <label class="field-block">
               <span>Fecha *</span>
@@ -378,6 +400,7 @@ interface BuildingExpensesGroup {
           <div>
             <strong>{{ item.description }}</strong>
             <small *ngIf="item.supplierName" class="supplier-tag">{{ item.supplierName }}</small>
+            <small *ngIf="item.ledgerCategoryName" class="supplier-tag">Rubro: {{ item.ledgerCategoryCode }} · {{ item.ledgerCategoryName }}</small>
             <p-tag *ngIf="item.paidByReserveFund" value="Pagado por fondo de reserva" severity="info"></p-tag>
           </div>
           <div>
@@ -519,11 +542,16 @@ export class BuildingExpensesPageComponent implements OnInit {
   private readonly buildingsApi = inject(BuildingsApiService);
   private readonly periodsApi = inject(ExpensePeriodsApiService);
   private readonly unitsApi = inject(UnitsApiService);
+  private readonly financeApi = inject(FinanceApiService);
+  private readonly financeAccess = inject(FinanceAccessService);
   private readonly auth = inject(AuthService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly msg = inject(MessageService);
 
+  // Plan de cuentas por edificio (solo de los edificios con Finanzas disponible), cargado la primera vez que se elige el edificio.
+  private readonly planByBuilding = new Map<string, LedgerCategory[]>();
+  rubroGroups: RubroGroup[] = [];
 
   get isOperator(): boolean { return this.auth.hasRole('CompanyOperator'); }
 
@@ -734,7 +762,11 @@ export class BuildingExpensesPageComponent implements OnInit {
     this.showForm = !this.showForm;
     if (!this.showForm) {
       this.form = this.createInitialForm();
+    } else {
+      // Al abrir el formulario se vuelve a leer el plan de cuentas (pudo cambiar desde la última vez).
+      this.planByBuilding.clear();
     }
+    this.refreshRubros();
   }
 
   toggleRecurringSection(): void {
@@ -758,6 +790,7 @@ export class BuildingExpensesPageComponent implements OnInit {
       buildingId: item.buildingId,
       expensePeriodId: item.expensePeriodId,
       category: item.category,
+      ledgerCategoryId: item.ledgerCategoryId ?? '',
       supplierName: item.supplierName,
       description: item.description,
       expenseDate: item.expenseDate,
@@ -767,12 +800,79 @@ export class BuildingExpensesPageComponent implements OnInit {
       notes: item.notes,
       paidByReserveFund: item.paidByReserveFund
     };
+    this.planByBuilding.clear();
+    this.refreshRubros();
   }
 
   cancelEdit(): void {
     this.editingId = null;
     this.showForm = false;
     this.form = this.createInitialForm();
+    this.refreshRubros();
+  }
+
+  // El rubro elegido fija la categoría de la liquidación (para que no haya dos clasificaciones que se contradigan).
+  onRubroChange(): void {
+    const rubro = this.planByBuilding.get(this.form.buildingId)?.find((r) => r.id === this.form.ledgerCategoryId);
+    if (rubro?.expenseCategory) {
+      this.form.category = rubro.expenseCategory;
+    }
+  }
+
+  // Arma la lista de rubros del edificio del formulario: subrubros de gastos activos con categoría (más el que el gasto ya tiene, aunque
+  // se haya desactivado). Sin Finanzas en ese edificio no hay rubros y el campo no se muestra.
+  private refreshRubros(): void {
+    const buildingId = this.form.buildingId;
+    const available = !!buildingId && this.financeAccess.buildings().some((b) => b.buildingId === buildingId);
+    if (!available) {
+      this.rubroGroups = [];
+      this.cdr.markForCheck();
+      return;
+    }
+
+    const cached = this.planByBuilding.get(buildingId);
+    if (cached) {
+      this.buildRubroGroups(cached);
+      return;
+    }
+
+    this.financeApi.getCategories(buildingId).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: (plan) => {
+        this.planByBuilding.set(buildingId, plan);
+        if (this.form.buildingId === buildingId) {
+          this.buildRubroGroups(plan);
+        }
+      },
+      error: () => {
+        // Sin acceso al plan (módulo apagado o rol sin permiso): el gasto se carga solo con su categoría, como siempre.
+        if (this.form.buildingId === buildingId) {
+          this.rubroGroups = [];
+          this.cdr.markForCheck();
+        }
+      }
+    });
+  }
+
+  private buildRubroGroups(plan: LedgerCategory[]): void {
+    const current = this.form.ledgerCategoryId;
+    const groupName = new Map(plan.filter((c) => !c.parentId).map((c) => [c.id, `${c.code} · ${c.name}`]));
+    const options = plan
+      .filter((c) => c.type === 'Expense' && !!c.parentId && !c.hasChildren && !!c.expenseCategory && (c.isActive || c.id === current))
+      .sort((a, b) => a.code.localeCompare(b.code, undefined, { numeric: true }));
+
+    const groups = new Map<string, RubroGroup>();
+    for (const rubro of options) {
+      const name = groupName.get(rubro.parentId!) ?? 'Otros';
+      const group = groups.get(name) ?? { name, items: [] };
+      group.items.push(rubro);
+      groups.set(name, group);
+    }
+
+    this.rubroGroups = [...groups.values()];
+    if (current && !options.some((c) => c.id === current)) {
+      this.form.ledgerCategoryId = '';
+    }
+    this.cdr.markForCheck();
   }
 
   startRecurringEdit(item: RecurringBuildingExpense): void {
@@ -803,6 +903,9 @@ export class BuildingExpensesPageComponent implements OnInit {
     if (!this.availableUnits.some((item) => item.id === this.form.targetUnitId)) {
       this.form.targetUnitId = '';
     }
+    // El rubro es del plan de cuentas de cada edificio: al cambiar de edificio se vuelve a elegir.
+    this.form.ledgerCategoryId = '';
+    this.refreshRubros();
   }
 
   onDistributionTypeChange(): void {
@@ -879,7 +982,8 @@ export class BuildingExpensesPageComponent implements OnInit {
       distributionType: this.form.distributionType,
       targetUnitId: this.requiresTargetUnit ? this.form.targetUnitId || null : null,
       notes: this.form.notes.trim(),
-      paidByReserveFund: this.form.paidByReserveFund
+      paidByReserveFund: this.form.paidByReserveFund,
+      ledgerCategoryId: this.form.ledgerCategoryId || null
     };
 
     const validationError = this.validateForm(request);
@@ -897,6 +1001,7 @@ export class BuildingExpensesPageComponent implements OnInit {
       next: (expense) => {
         this.upsertLocalItem(expense);
         this.form = this.createInitialForm();
+        this.refreshRubros();
         this.isSaving = false;
         this.showForm = false;
         this.msg.add({ severity: 'success', summary: 'Éxito', detail: this.editingId ? 'Gasto actualizado.' : 'Gasto creado.', life: 4000 });
@@ -1199,6 +1304,7 @@ export class BuildingExpensesPageComponent implements OnInit {
       buildingId: '',
       expensePeriodId: '',
       category: 'Utilities' as BuildingExpenseCategory,
+      ledgerCategoryId: '',
       supplierName: '',
       description: '',
       expenseDate: new Date().toISOString().slice(0, 10),

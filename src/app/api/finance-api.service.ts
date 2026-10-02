@@ -19,6 +19,8 @@ import {
   FinancialAccount,
   FinancialAccountUpsertRequest,
   LedgerCategory,
+  LedgerCategoryCopyRequest,
+  LedgerCategoryCopyResult,
   LedgerCategoryUpsertRequest
 } from './models';
 
@@ -168,5 +170,10 @@ export class FinanceApiService {
 
   deleteCategory(id: string): Observable<void> {
     return this.http.delete<void>(`${API_BASE_URL}/finance/categories/${id}`);
+  }
+
+  // Copia el plan de cuentas de otro edificio (nombres, códigos del contador, rubros activos y rubros propios) sin tocar movimientos ni presupuesto.
+  copyCategories(request: LedgerCategoryCopyRequest): Observable<LedgerCategoryCopyResult> {
+    return this.http.post<LedgerCategoryCopyResult>(`${API_BASE_URL}/finance/categories/copy-from`, request);
   }
 }
