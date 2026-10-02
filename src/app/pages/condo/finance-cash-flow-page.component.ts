@@ -6,6 +6,7 @@ import { Card } from 'primeng/card';
 import { FinanceApiService } from '../../api/finance-api.service';
 import { FinanceBuildingAccess, FinanceCashFlow, FinanceCashFlowLine } from '../../api/models';
 import { FinanceBuildingPickerComponent } from './finance-building-picker.component';
+import { FinanceExportButtonComponent, FinanceExportParams } from './finance-export-button.component';
 import { classifyFinanceError, FinanceErrorKind, GsPipe, monthShort, NumPipe } from './finance-format';
 import { FinanceStateComponent } from './finance-state.component';
 
@@ -23,7 +24,7 @@ interface FlowGroup {
   standalone: true,
   selector: 'app-finance-cash-flow-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, FormsModule, Card, GsPipe, NumPipe, FinanceBuildingPickerComponent, FinanceStateComponent],
+  imports: [CommonModule, FormsModule, Card, GsPipe, NumPipe, FinanceBuildingPickerComponent, FinanceExportButtonComponent, FinanceStateComponent],
   template: `
     <p-card styleClass="app-page-card">
       <div class="app-toolbar">
@@ -35,6 +36,8 @@ interface FlowGroup {
         </div>
         <div class="controls">
           <app-finance-building-picker (selected)="onBuilding($event)" (failed)="onError($event)"></app-finance-building-picker>
+          <app-finance-export-button kind="cash-flow" [buildingId]="buildingId" [params]="exportParams" fileLabel="flujo-de-caja"
+                                     [period]="'' + fiscalYear" [disabled]="!data"></app-finance-export-button>
           <label class="field" *ngIf="data">
             <span>Ejercicio</span>
             <select [ngModel]="fiscalYear" (ngModelChange)="onYear($event)">
@@ -158,6 +161,8 @@ export class FinanceCashFlowPageComponent {
   noBuilding = false;
   errorKind: FinanceErrorKind | '' = '';
   errorMessage = '';
+
+  readonly exportParams = (): FinanceExportParams => ({ fiscalYear: this.fiscalYear });
 
   onBuilding(building: FinanceBuildingAccess | null): void {
     if (!building) {

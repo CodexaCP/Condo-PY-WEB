@@ -116,7 +116,7 @@ const MONTHS = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 
 
         <section class="panel" *ngIf="section === 'chart'">
           <h2>Plan de cuentas</h2>
-          <app-finance-chart-editor [buildingId]="buildingId" [canEdit]="s.canEdit" (changed)="reloadSettings()"></app-finance-chart-editor>
+          <app-finance-chart-editor [buildingId]="buildingId" [canEdit]="s.canEdit" [canExport]="s.setupCompleted" (changed)="reloadSettings()"></app-finance-chart-editor>
         </section>
 
         <!-- Revisión (solo en el asistente) -->

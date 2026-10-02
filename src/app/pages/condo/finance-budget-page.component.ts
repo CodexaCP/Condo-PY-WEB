@@ -10,6 +10,7 @@ import { extractApiErrorMessage } from '../../api/api-error.util';
 import { FinanceApiService } from '../../api/finance-api.service';
 import { FinanceBudget, FinanceBudgetCell, FinanceBudgetRow, FinanceBuildingAccess, LedgerCategoryType } from '../../api/models';
 import { FinanceBuildingPickerComponent } from './finance-building-picker.component';
+import { FinanceExportButtonComponent, FinanceExportParams } from './finance-export-button.component';
 import { classifyFinanceError, FinanceErrorKind, GsPipe, monthShort, NumPipe } from './finance-format';
 import { FinanceStateComponent } from './finance-state.component';
 
@@ -26,7 +27,7 @@ interface BudgetGroup {
   standalone: true,
   selector: 'app-finance-budget-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, FormsModule, Button, Card, Message, GsPipe, NumPipe, FinanceBuildingPickerComponent, FinanceStateComponent],
+  imports: [CommonModule, FormsModule, Button, Card, Message, GsPipe, NumPipe, FinanceBuildingPickerComponent, FinanceExportButtonComponent, FinanceStateComponent],
   template: `
     <p-card styleClass="app-page-card">
       <div class="app-toolbar">
@@ -38,6 +39,9 @@ interface BudgetGroup {
         </div>
         <div class="controls">
           <app-finance-building-picker (selected)="onBuilding($event)" (failed)="onError($event)"></app-finance-building-picker>
+          <app-finance-export-button kind="budget" [buildingId]="buildingId" [params]="exportParams" fileLabel="presupuesto"
+                                     [period]="'' + fiscalYear" [disabled]="!budget || dirty"
+                                     disabledHint="Guardá o descartá los cambios del presupuesto antes de exportar."></app-finance-export-button>
           <label class="field" *ngIf="budget">
             <span>Ejercicio</span>
             <select [ngModel]="fiscalYear" (ngModelChange)="onYear($event)" [disabled]="dirty">
@@ -180,6 +184,8 @@ export class FinanceBudgetPageComponent {
   get dirty(): boolean {
     return !!this.budget && this.budget.rows.some(r => r.amounts.some((v, i) => this.value(r, i) !== v));
   }
+
+  readonly exportParams = (): FinanceExportParams => ({ fiscalYear: this.fiscalYear });
 
   onBuilding(building: FinanceBuildingAccess | null): void {
     if (!building) {

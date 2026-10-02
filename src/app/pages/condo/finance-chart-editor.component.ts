@@ -10,6 +10,7 @@ import { extractApiErrorMessage } from '../../api/api-error.util';
 import { FinanceAccessService } from '../../api/finance-access.service';
 import { FinanceApiService } from '../../api/finance-api.service';
 import { BuildingExpenseCategory, BuildingIncomeCategory, LedgerCategory, LedgerCategoryCopyResult, LedgerCategoryType } from '../../api/models';
+import { FinanceExportButtonComponent } from './finance-export-button.component';
 import { EXPENSE_CATEGORY_CHOICES, EXPENSE_CATEGORY_LABELS, INCOME_CATEGORY_CHOICES, INCOME_CATEGORY_LABELS } from './finance-format';
 
 const TYPE_LABELS: Record<LedgerCategoryType, string> = {
@@ -35,7 +36,7 @@ interface ChartSection {
   standalone: true,
   selector: 'app-finance-chart-editor',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, FormsModule, Button, Message, Tag],
+  imports: [CommonModule, FormsModule, Button, Message, Tag, FinanceExportButtonComponent],
   template: `
     <div class="intro">
       <p>
@@ -43,9 +44,11 @@ interface ChartSection {
         el <strong>código del contador</strong> es opcional y permite mapear cada rubro a su plan de cuentas.
         Desactivá los rubros que el edificio no usa y agregá los propios que necesite.
       </p>
-      <div class="intro-actions" *ngIf="canEdit">
-        <p-button type="button" label="Copiar de otro edificio" icon="pi pi-copy" severity="secondary" [outlined]="true" (onClick)="openCopy()"></p-button>
-        <p-button type="button" label="Nuevo rubro" icon="pi pi-plus" (onClick)="openCreate()"></p-button>
+      <div class="intro-actions">
+        <app-finance-export-button kind="chart" [buildingId]="buildingId" fileLabel="plan-de-cuentas" [period]="today" [disabled]="!canExport"
+                                   disabledHint="Completá la configuración inicial para exportar el plan."></app-finance-export-button>
+        <p-button *ngIf="canEdit" type="button" label="Copiar de otro edificio" icon="pi pi-copy" severity="secondary" [outlined]="true" (onClick)="openCopy()"></p-button>
+        <p-button *ngIf="canEdit" type="button" label="Nuevo rubro" icon="pi pi-plus" (onClick)="openCreate()"></p-button>
       </div>
     </div>
 
@@ -262,6 +265,9 @@ export class FinanceChartEditorComponent implements OnChanges {
 
   @Input({ required: true }) buildingId!: string;
   @Input() canEdit = false;
+  // La exportación necesita la configuración inicial completa.
+  @Input() canExport = false;
+  readonly today = new Date().toISOString().slice(0, 10).split('-').join('');
   @Output() changed = new EventEmitter<void>();
 
   readonly typeOrder = TYPE_ORDER;

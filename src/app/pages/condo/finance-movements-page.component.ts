@@ -9,6 +9,7 @@ import { Tag } from 'primeng/tag';
 import { FinanceApiService } from '../../api/finance-api.service';
 import { FinanceBuildingAccess, FinanceMovementsPage, FinancialAccount, LedgerCategory, LedgerDirection } from '../../api/models';
 import { FinanceBuildingPickerComponent } from './finance-building-picker.component';
+import { FinanceExportButtonComponent, FinanceExportParams } from './finance-export-button.component';
 import { classifyFinanceError, FinanceErrorKind, GsPipe } from './finance-format';
 import { FinanceStateComponent } from './finance-state.component';
 
@@ -21,7 +22,7 @@ interface RubroOption { id: string; label: string; }
   standalone: true,
   selector: 'app-finance-movements-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, FormsModule, Button, Card, Tag, GsPipe, FinanceBuildingPickerComponent, FinanceStateComponent],
+  imports: [CommonModule, FormsModule, Button, Card, Tag, GsPipe, FinanceBuildingPickerComponent, FinanceExportButtonComponent, FinanceStateComponent],
   template: `
     <p-card styleClass="app-page-card">
       <div class="app-toolbar">
@@ -32,6 +33,8 @@ interface RubroOption { id: string; label: string; }
           </div>
         </div>
         <app-finance-building-picker (selected)="onBuilding($event)" (failed)="onError($event)"></app-finance-building-picker>
+        <app-finance-export-button kind="movements" [buildingId]="buildingId" [params]="exportParams" fileLabel="movimientos"
+                                   [period]="from.split('-').join('') + '-' + to.split('-').join('')" [disabled]="!ready"></app-finance-export-button>
       </div>
 
       <app-finance-state [loading]="loadingMeta" [noBuilding]="noBuilding" [kind]="errorKind" [message]="errorMessage" [buildingId]="buildingId"></app-finance-state>
@@ -176,6 +179,17 @@ export class FinanceMovementsPageComponent {
   loading = false;
   rangeError = '';
   private readonly pageSize = 50;
+
+  // Lo que se exporta es lo que muestran los filtros (el rango, la cuenta, el rubro y el sentido), sin paginar.
+  readonly exportParams = (): FinanceExportParams => ({
+    from: this.from,
+    to: this.to,
+    accountId: this.accountFilter && this.accountFilter !== '__none' ? this.accountFilter : null,
+    unassigned: this.accountFilter === '__none' ? true : null,
+    categoryId: this.categoryFilter || null,
+    direction: this.directionFilter || null,
+    newestFirst: this.newestFirst
+  });
 
   onBuilding(building: FinanceBuildingAccess | null): void {
     if (!building) {

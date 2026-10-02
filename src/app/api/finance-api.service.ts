@@ -24,6 +24,8 @@ import {
   LedgerCategoryUpsertRequest
 } from './models';
 
+export type FinanceExportKind = 'movements' | 'cash-flow' | 'budget' | 'budget-vs-actual' | 'reserve-fund' | 'chart' | 'accountant-pack';
+
 // Módulo "Finanzas del edificio". Con el módulo apagado (o con un plan que no lo incluye) el backend responde 403 con
 // { error: 'finance_module_disabled' | 'finance_plan_not_included', message }.
 @Injectable({ providedIn: 'root' })
@@ -172,6 +174,15 @@ export class FinanceApiService {
     return this.http.delete<void>(`${API_BASE_URL}/finance/categories/${id}`);
   }
 
+
+  // ── Exportación a Excel (para el contador): el mismo contenido que las pantallas, con el código de cada rubro y el del contador ──
+
+  downloadExport(kind: FinanceExportKind, buildingId: string, params: Record<string, string | number | boolean> = {}): Observable<Blob> {
+    return this.http.get(`${API_BASE_URL}/finance/export/${kind}`, {
+      params: new HttpParams({ fromObject: { buildingId, ...params } }),
+      responseType: 'blob'
+    });
+  }
   // Copia el plan de cuentas de otro edificio (nombres, códigos del contador, rubros activos y rubros propios) sin tocar movimientos ni presupuesto.
   copyCategories(request: LedgerCategoryCopyRequest): Observable<LedgerCategoryCopyResult> {
     return this.http.post<LedgerCategoryCopyResult>(`${API_BASE_URL}/finance/categories/copy-from`, request);

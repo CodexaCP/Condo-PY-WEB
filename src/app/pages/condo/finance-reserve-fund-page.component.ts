@@ -10,6 +10,7 @@ import { Tag } from 'primeng/tag';
 import { FinanceApiService } from '../../api/finance-api.service';
 import { FinanceBuildingAccess, FinanceReserveFund } from '../../api/models';
 import { FinanceBuildingPickerComponent } from './finance-building-picker.component';
+import { FinanceExportButtonComponent, FinanceExportParams } from './finance-export-button.component';
 import { classifyFinanceError, FinanceErrorKind, GsPipe, monthLabel, monthShort } from './finance-format';
 import { FinanceStateComponent } from './finance-state.component';
 
@@ -19,7 +20,7 @@ import { FinanceStateComponent } from './finance-state.component';
   standalone: true,
   selector: 'app-finance-reserve-fund-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, FormsModule, RouterLink, Card, ChartModule, Message, Tag, GsPipe, FinanceBuildingPickerComponent, FinanceStateComponent],
+  imports: [CommonModule, FormsModule, RouterLink, Card, ChartModule, Message, Tag, GsPipe, FinanceBuildingPickerComponent, FinanceExportButtonComponent, FinanceStateComponent],
   template: `
     <p-card styleClass="app-page-card">
       <div class="app-toolbar">
@@ -30,6 +31,8 @@ import { FinanceStateComponent } from './finance-state.component';
           </div>
         </div>
         <app-finance-building-picker (selected)="onBuilding($event)" (failed)="onError($event)"></app-finance-building-picker>
+        <app-finance-export-button kind="reserve-fund" [buildingId]="buildingId" [params]="exportParams" fileLabel="fondo-de-reserva"
+                                   [period]="to.split('-').join('')" [disabled]="!data"></app-finance-export-button>
       </div>
 
       <app-finance-state [loading]="loading" [noBuilding]="noBuilding" [kind]="errorKind" [message]="errorMessage" [buildingId]="buildingId"></app-finance-state>
@@ -153,6 +156,8 @@ export class FinanceReserveFundPageComponent {
   chartOptions: unknown = null;
 
   monthName(year: number, month: number): string { return monthLabel(year, month); }
+
+  readonly exportParams = (): FinanceExportParams => ({ from: this.from, to: this.to });
 
   onBuilding(building: FinanceBuildingAccess | null): void {
     if (!building) {

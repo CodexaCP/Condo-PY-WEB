@@ -7,6 +7,7 @@ import { Card } from 'primeng/card';
 import { FinanceApiService } from '../../api/finance-api.service';
 import { BudgetStatus, FinanceBudgetTotals, FinanceBudgetVsActual, FinanceBudgetVsActualLine, FinanceBuildingAccess } from '../../api/models';
 import { FinanceBuildingPickerComponent } from './finance-building-picker.component';
+import { FinanceExportButtonComponent, FinanceExportParams } from './finance-export-button.component';
 import { classifyFinanceError, FinanceErrorKind, GsPipe, monthLabel, NumPipe } from './finance-format';
 import { FinanceStateComponent } from './finance-state.component';
 
@@ -29,7 +30,7 @@ const STATUS_LABEL: Record<BudgetStatus, string> = {
   standalone: true,
   selector: 'app-finance-budget-vs-actual-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, FormsModule, RouterLink, Card, GsPipe, NumPipe, FinanceBuildingPickerComponent, FinanceStateComponent],
+  imports: [CommonModule, FormsModule, RouterLink, Card, GsPipe, NumPipe, FinanceBuildingPickerComponent, FinanceExportButtonComponent, FinanceStateComponent],
   template: `
     <p-card styleClass="app-page-card">
       <div class="app-toolbar">
@@ -41,6 +42,8 @@ const STATUS_LABEL: Record<BudgetStatus, string> = {
         </div>
         <div class="controls">
           <app-finance-building-picker (selected)="onBuilding($event)" (failed)="onError($event)"></app-finance-building-picker>
+          <app-finance-export-button kind="budget-vs-actual" [buildingId]="buildingId" [params]="exportParams" fileLabel="presupuesto-vs-real"
+                                     [period]="monthValue.split('-').join('')" [disabled]="!data"></app-finance-export-button>
           <label class="field" *ngIf="data">
             <span>Mes</span>
             <input type="month" [ngModel]="monthValue" (ngModelChange)="onMonth($event)" [min]="minMonth" [max]="maxMonth" />
@@ -176,6 +179,11 @@ export class FinanceBudgetVsActualPageComponent {
   maxMonth = '';
 
   get monthText(): string { return this.data ? monthLabel(this.data.year, this.data.month) : ''; }
+
+  readonly exportParams = (): FinanceExportParams => {
+    const [year, month] = this.monthValue ? this.monthValue.split('-').map(Number) : [undefined, undefined];
+    return { year, month };
+  };
 
   onBuilding(building: FinanceBuildingAccess | null): void {
     if (!building) {

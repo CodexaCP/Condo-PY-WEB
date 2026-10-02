@@ -79,3 +79,36 @@ export function classifyFinanceError(err: unknown, fallback: string): { kind: Fi
 
   return { kind: 'other', message: extractApiErrorMessage(err, fallback) };
 }
+
+// Nombre del archivo de una exportación a Excel: finanzas-<tipo>-<edificio>-<período>.xlsx, sin tildes ni símbolos (el mismo criterio que usa el backend).
+export function exportFileName(kind: string, buildingName: string, period: string): string {
+  const slug = buildingName
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .replace(/[^A-Za-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+  return `finanzas-${kind}-${slug || 'edificio'}-${period}.xlsx`;
+}
+
+// Mensaje de un error al pedir un archivo: con responseType 'blob' el cuerpo del error llega como Blob, así que se lee para mostrar el
+// mensaje que mandó el backend (por ejemplo, «Completá la configuración inicial…» o «El rango no puede superar…»).
+export async function exportErrorMessage(err: unknown, fallback: string): Promise<string> {
+  const body = (err as { error?: unknown })?.error;
+  if (body instanceof Blob) {
+    try {
+      const text = await body.text();
+      try {
+        const json = JSON.parse(text) as unknown;
+        if (typeof json === 'string') return json;
+        const message = (json as { message?: string; title?: string })?.message ?? (json as { title?: string })?.title;
+        return message || fallback;
+      } catch {
+        return text || fallback;
+      }
+    } catch {
+      return fallback;
+    }
+  }
+
+  return extractApiErrorMessage(err, fallback);
+}

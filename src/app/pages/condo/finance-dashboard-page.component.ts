@@ -9,6 +9,7 @@ import { Message } from 'primeng/message';
 import { FinanceApiService } from '../../api/finance-api.service';
 import { FinanceBuildingAccess, FinanceDashboard, FinanceRubroAmount } from '../../api/models';
 import { FinanceBuildingPickerComponent } from './finance-building-picker.component';
+import { FinanceExportButtonComponent, FinanceExportParams } from './finance-export-button.component';
 import { classifyFinanceError, FinanceErrorKind, GsPipe, monthLabel, monthShort } from './finance-format';
 import { FinanceStateComponent } from './finance-state.component';
 
@@ -18,7 +19,7 @@ import { FinanceStateComponent } from './finance-state.component';
   standalone: true,
   selector: 'app-finance-dashboard-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, FormsModule, RouterLink, Card, ChartModule, Message, GsPipe, FinanceBuildingPickerComponent, FinanceStateComponent],
+  imports: [CommonModule, FormsModule, RouterLink, Card, ChartModule, Message, GsPipe, FinanceBuildingPickerComponent, FinanceExportButtonComponent, FinanceStateComponent],
   template: `
     <p-card styleClass="app-page-card">
       <div class="app-toolbar">
@@ -30,6 +31,8 @@ import { FinanceStateComponent } from './finance-state.component';
         </div>
         <div class="controls">
           <app-finance-building-picker (selected)="onBuilding($event)" (failed)="onError($event)"></app-finance-building-picker>
+          <app-finance-export-button kind="accountant-pack" [buildingId]="buildingId" [params]="exportParams" fileLabel="paquete-contador"
+                                     label="Paquete para el contador" [period]="data ? '' + data.fiscalYear : ''" [disabled]="!data"></app-finance-export-button>
           <label class="field" *ngIf="data">
             <span>Mes</span>
             <input type="month" [ngModel]="monthValue" (ngModelChange)="onMonth($event)" [min]="minMonth" [max]="maxMonth" />
@@ -258,6 +261,9 @@ export class FinanceDashboardPageComponent {
   chartOptions: unknown = null;
 
   get monthText(): string { return this.data ? monthLabel(this.data.year, this.data.month).toLowerCase() : ''; }
+
+  // Paquete para el contador: resumen, plan de cuentas, saldos, movimientos, flujo, presupuesto, presupuesto vs. real y fondo del ejercicio.
+  readonly exportParams = (): FinanceExportParams => ({ fiscalYear: this.data?.fiscalYear });
 
   onBuilding(building: FinanceBuildingAccess | null): void {
     if (!building) {
