@@ -2286,3 +2286,32 @@ export interface MarketplaceAdminUpdateRequest {
   commissionPercent: number;
   transferInfo: string | null;
 }
+
+// ── Marketplace: revisión de pagos de reservas ────────────────────────────────
+
+// Pago de una reserva esperando revisión (lo ve solo el personal del edificio).
+export interface MarketplaceReviewItem {
+  paymentId: string;
+  reservationId: string;
+  buildingId: string;
+  reference: string;
+  title: string;
+  unitCode: string;
+  ownerName: string;
+  buyerName: string;
+  buyerUnits: string;
+  // Aviso solo para quien revisa: alguna unidad del comprador tiene pagos atrasados.
+  buyerUnitOverdue: boolean;
+  startsAtUtc: string;
+  endsAtUtc: string;
+  hours: number;
+  baseAmount: number;
+  commissionAmount: number;
+  expectedAmount: number;
+  comprobanteUrl: string;
+  submittedAtUtc: string;
+  status: 'Submitted' | 'Approved' | 'Rejected';
+  rejectionReason: string | null;
+  // La reserva ya terminó: ya no se puede confirmar (solo rechazar).
+  reservationEnded: boolean;
+}

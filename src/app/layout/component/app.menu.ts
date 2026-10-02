@@ -168,7 +168,8 @@ export class AppMenu {
                 {
                     label: 'Amenities',
                     items: [
-                        { label: 'Amenities y reservas', icon: 'pi pi-fw pi-calendar-plus', routerLink: ['/amenities'] }
+                        { label: 'Amenities y reservas', icon: 'pi pi-fw pi-calendar-plus', routerLink: ['/amenities'] },
+                        { label: 'Pagos del Marketplace', icon: 'pi pi-fw pi-shop', routerLink: ['/marketplace-payments'] }
                     ]
                 },
                 {
