@@ -8,10 +8,10 @@ import { Card } from 'primeng/card';
 import { MessageService } from 'primeng/api';
 import { Tag } from 'primeng/tag';
 import { Tooltip } from 'primeng/tooltip';
-import { InputNumber } from 'primeng/inputnumber';
 import { extractApiErrorMessage } from '../../api/api-error.util';
 import { BuildingsApiService } from '../../api/buildings-api.service';
 import { ExpensePeriodsApiService } from '../../api/expense-periods-api.service';
+import { Router } from '@angular/router';
 import { AuthService } from '../../auth/auth.service';
 import {
   ApplyLateFeesResult,
@@ -24,14 +24,13 @@ import {
   BuildingExpenseCategory,
   ExpenseSettlementStatus,
   ExpenseSettlementSummary,
-  GenerateExpenseChargesMode,
   VoidSettlementResult
 } from '../../api/models';
 
 @Component({
   standalone: true,
   selector: 'app-expense-periods-page',
-  imports: [CommonModule, FormsModule, Button, Card, Tag, Tooltip, InputNumber],
+  imports: [CommonModule, FormsModule, Button, Card, Tag, Tooltip],
   template: `
     <p-card styleClass="app-page-card">
       <div class="app-toolbar">
@@ -160,41 +159,6 @@ import {
           </div>
           <div class="form-actions">
             <p-button type="submit" [loading]="isBulkCreating" label="Crear periodos" icon="pi pi-check"></p-button>
-          </div>
-        </form>
-      </div>
-
-      <!-- Charge generator -->
-      <div class="panel-box generator-panel" *ngIf="generatorPeriod">
-        <div class="panel-head">
-          <div class="panel-title">
-            <span class="panel-icon gen-icon pi pi-bolt"></span>
-            <div>
-              <strong>Generar cargos masivos</strong>
-              <small>{{ generatorPeriod.name }} · {{ generatorPeriod.buildingName }}</small>
-            </div>
-          </div>
-          <p-button type="button" icon="pi pi-times" severity="secondary" [rounded]="true" [text]="true" (onClick)="cancelGenerator()"></p-button>
-        </div>
-        <form class="period-form" (ngSubmit)="generateCharges()">
-          <div class="form-row">
-            <label class="field-block">
-              <span>Modo</span>
-              <select [(ngModel)]="generatorForm.mode" name="generatorMode" required>
-                <option *ngFor="let mode of generationModes" [value]="mode">{{ generationModeLabel(mode) }}</option>
-              </select>
-            </label>
-            <label class="field-block">
-              <span>{{ generatorForm.mode === 'FixedAmount' ? 'Monto por unidad' : 'Monto total a distribuir' }}</span>
-              <p-inputnumber [(ngModel)]="generatorForm.amount" name="generatorAmount" [useGrouping]="true" prefix="₲ " [min]="1" [minFractionDigits]="0" [maxFractionDigits]="0" [required]="true" styleClass="w-full"></p-inputnumber>
-            </label>
-            <label class="field-block">
-              <span>Concepto *</span>
-              <input [(ngModel)]="generatorForm.concept" name="generatorConcept" type="text" required />
-            </label>
-          </div>
-          <div class="form-actions">
-            <p-button type="submit" severity="success" [loading]="isGenerating" label="Generar cargos" icon="pi pi-bolt"></p-button>
           </div>
         </form>
       </div>
@@ -361,8 +325,8 @@ import {
             </div>
           </div>
           <div class="card-actions">
-            <p-button type="button" icon="pi pi-calculator" severity="info" [rounded]="true" [text]="true" [disabled]="isSaving || isGenerating || isCalculatingSettlement" (onClick)="openSettlement(item)" pTooltip="Liquidación"></p-button>
-            <p-button type="button" icon="pi pi-bolt" severity="success" [rounded]="true" [text]="true" [disabled]="item.status !== 'Draft' || isSaving || isGenerating" (onClick)="openGenerator(item)" pTooltip="Generar cargos"></p-button>
+            <p-button type="button" icon="pi pi-calculator" severity="info" [rounded]="true" [text]="true" [disabled]="isSaving || isCalculatingSettlement" (onClick)="openSettlement(item)" pTooltip="Liquidación"></p-button>
+            <p-button type="button" icon="pi pi-list" severity="success" [rounded]="true" [text]="true" (onClick)="openLedger(item)" pTooltip="Gastos y cargos del periodo"></p-button>
             <p-button type="button" icon="pi pi-copy" severity="secondary" [rounded]="true" [text]="true" [disabled]="isSaving || isCloning" (onClick)="clonePeriod(item)" pTooltip="Clonar al mes siguiente"></p-button>
             <p-button type="button" icon="pi pi-pencil" severity="secondary" [rounded]="true" [text]="true" [disabled]="item.status !== 'Draft'" (onClick)="startEdit(item)" pTooltip="Editar"></p-button>
             <p-button *ngIf="!isOperator" type="button" icon="pi pi-trash" severity="danger" [rounded]="true" [text]="true" [disabled]="isSaving || item.status !== 'Draft'" (onClick)="deletePeriod(item)" pTooltip="Eliminar"></p-button>
@@ -418,7 +382,6 @@ import {
     .alerts-title { flex: 1; display: grid; }
     .alerts-title small { color: #6b878d; font-size: 0.82rem; }
     .alerts-toggle + .app-list { margin-top: 1.25rem; }
-    .generator-panel { border-color: rgba(34,197,94,0.3); background: rgba(240,253,244,0.8); }
     .settlement-panel { border-color: rgba(59,130,246,0.25); background: rgba(239,246,255,0.6); }
 
     .panel-head {
@@ -624,6 +587,7 @@ export class ExpensePeriodsPageComponent implements OnInit {
   private readonly periodsApi = inject(ExpensePeriodsApiService);
   private readonly buildingsApi = inject(BuildingsApiService);
   private readonly auth = inject(AuthService);
+  private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly msg = inject(MessageService);
@@ -640,7 +604,6 @@ export class ExpensePeriodsPageComponent implements OnInit {
   buildings: Building[] = [];
   loading = true;
   isSaving = false;
-  isGenerating = false;
   isCalculatingSettlement = false;
   isApplyingSettlement = false;
   isApprovingSettlement = false;
@@ -656,15 +619,12 @@ export class ExpensePeriodsPageComponent implements OnInit {
   showRejectSettlementForm = false;
   rejectionReason = '';
   editingId: string | null = null;
-  readonly generationModes: GenerateExpenseChargesMode[] = ['FixedAmount', 'ByCoefficient'];
   alerts: ExpensePeriodOperationalAlertItem[] = [];
   showAlerts = false;
-  generatorPeriod: ExpensePeriod | null = null;
   settlementPeriod: ExpensePeriod | null = null;
   settlementSummary: ExpenseSettlementSummary | null = null;
   form = this.createInitialForm();
   bulkForm = this.createInitialBulkForm();
-  generatorForm = this.createInitialGeneratorForm();
   lateFeeForm = this.createInitialLateFeeForm();
 
   ngOnInit(): void {
@@ -681,6 +641,10 @@ export class ExpensePeriodsPageComponent implements OnInit {
     if (!this.showForm) {
       this.form = this.createInitialForm();
     }
+  }
+
+  openLedger(item: ExpensePeriod): void {
+    this.router.navigate(['/period-ledger'], { queryParams: { buildingId: item.buildingId, periodId: item.id } });
   }
 
   startEdit(item: ExpensePeriod): void {
@@ -775,21 +739,6 @@ export class ExpensePeriodsPageComponent implements OnInit {
     this.form = this.createInitialForm();
   }
 
-  openGenerator(item: ExpensePeriod): void {
-    this.generatorPeriod = item;
-    this.generatorForm = {
-      mode: 'FixedAmount',
-      concept: `Expensa ${item.name}`,
-      amount: 0,
-      notes: ''
-    };
-  }
-
-  cancelGenerator(): void {
-    this.generatorPeriod = null;
-    this.generatorForm = this.createInitialGeneratorForm();
-  }
-
   openSettlement(item: ExpensePeriod): void {
     this.settlementPeriod = item;
     this.settlementSummary = null;
@@ -871,35 +820,6 @@ export class ExpensePeriodsPageComponent implements OnInit {
     });
   }
 
-  generateCharges(): void {
-    if (!this.generatorPeriod) {
-      return;
-    }
-
-    this.isGenerating = true;
-
-    this.periodsApi.generateCharges(this.generatorPeriod.id, {
-      mode: this.generatorForm.mode,
-      concept: this.generatorForm.concept,
-      amount: Number(this.generatorForm.amount),
-      notes: this.generatorForm.notes
-    })
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: (result) => {
-          this.isGenerating = false;
-          this.msg.add({ severity: 'success', summary: 'Éxito', detail: `Se generaron ${result.unitsAffected} cargos por ${this.formatCurrency(result.totalGeneratedAmount)} en ${result.expensePeriodName}.`, life: 4000 });
-          this.cancelGenerator();
-          this.cdr.markForCheck();
-        },
-        error: (error) => {
-          this.msg.add({ severity: 'error', summary: 'Error', detail: extractApiErrorMessage(error, 'No se pudieron generar los cargos masivos.'), life: 5000 });
-          this.isGenerating = false;
-          this.cdr.markForCheck();
-        }
-      });
-  }
-
   calculateSettlement(): void {
     if (!this.settlementPeriod) {
       return;
@@ -962,9 +882,6 @@ export class ExpensePeriodsPageComponent implements OnInit {
         this.items = this.items.filter((current) => current.id !== item.id);
         if (this.editingId === item.id) {
           this.cancelEdit();
-        }
-        if (this.generatorPeriod?.id === item.id) {
-          this.cancelGenerator();
         }
         if (this.settlementPeriod?.id === item.id) {
           this.closeSettlement();
@@ -1110,10 +1027,6 @@ export class ExpensePeriodsPageComponent implements OnInit {
 
   statusSeverity(status: ExpensePeriodStatus): 'success' | 'warn' | 'info' {
     return status === 'Published' ? 'success' : status === 'Closed' ? 'info' : 'warn';
-  }
-
-  generationModeLabel(mode: GenerateExpenseChargesMode): string {
-    return mode === 'FixedAmount' ? 'Monto fijo por unidad' : 'Prorrateo por coeficiente';
   }
 
   settlementStatusLabel(status: ExpenseSettlementStatus | null, isCalculated: boolean): string {
@@ -1313,15 +1226,6 @@ export class ExpensePeriodsPageComponent implements OnInit {
       endDate,
       dueDate,
       lateFeeDate: '',
-      notes: ''
-    };
-  }
-
-  private createInitialGeneratorForm() {
-    return {
-      mode: 'FixedAmount' as GenerateExpenseChargesMode,
-      concept: '',
-      amount: 0,
       notes: ''
     };
   }

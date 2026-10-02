@@ -11,10 +11,9 @@ import {
   CreateExpensePeriodRequest,
   ExpensePeriod,
   ExpensePeriodOperationalAlerts,
+  ExpensePeriodReconciliation,
   ExpenseSettlementChargePreview,
   ExpenseSettlementSummary,
-  GenerateExpenseChargesRequest,
-  GenerateExpenseChargesResult,
   RejectSettlementRequest,
   VoidSettlementResult
 } from './models';
@@ -48,16 +47,21 @@ export class ExpensePeriodsApiService {
     return this.http.delete<void>(`${API_BASE_URL}/expense-periods/${id}`).pipe(tap(() => this.invalidateCache()));
   }
 
-  generateCharges(id: string, request: GenerateExpenseChargesRequest): Observable<GenerateExpenseChargesResult> {
-    return this.http.post<GenerateExpenseChargesResult>(`${API_BASE_URL}/expense-periods/${id}/generate-charges`, request);
-  }
-
   getSettlement(id: string): Observable<ExpenseSettlementSummary> {
     return this.http.get<ExpenseSettlementSummary>(`${API_BASE_URL}/expense-periods/${id}/settlement`);
   }
 
   calculateSettlement(id: string): Observable<ExpenseSettlementSummary> {
     return this.http.post<ExpenseSettlementSummary>(`${API_BASE_URL}/expense-periods/${id}/calculate-settlement`, {});
+  }
+
+  // Cargos que saldrian hoy de los gastos, ingresos y aportes del periodo (no exige liquidacion calculada).
+  getChargesPreview(id: string): Observable<ExpenseSettlementChargePreview> {
+    return this.http.get<ExpenseSettlementChargePreview>(`${API_BASE_URL}/expense-periods/${id}/charges-preview`);
+  }
+
+  getReconciliation(id: string): Observable<ExpensePeriodReconciliation> {
+    return this.http.get<ExpensePeriodReconciliation>(`${API_BASE_URL}/expense-periods/${id}/reconciliation`);
   }
 
   getSettlementChargePreview(id: string): Observable<ExpenseSettlementChargePreview> {

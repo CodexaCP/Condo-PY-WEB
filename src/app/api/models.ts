@@ -464,23 +464,6 @@ export interface CloneExpensePeriodResult {
   accumulatedBalance: number;
 }
 
-export type GenerateExpenseChargesMode = 'FixedAmount' | 'ByCoefficient';
-
-export interface GenerateExpenseChargesRequest {
-  mode: GenerateExpenseChargesMode;
-  concept: string;
-  amount: number;
-  notes: string;
-}
-
-export interface GenerateExpenseChargesResult {
-  expensePeriodId: string;
-  expensePeriodName: string;
-  unitsAffected: number;
-  totalGeneratedAmount: number;
-  mode: GenerateExpenseChargesMode;
-}
-
 export interface ExpenseSettlementSummary {
   id: string | null;
   expensePeriodId: string;
@@ -575,6 +558,8 @@ export interface ExpenseCharge {
   sourceSettlementId: string | null;
   sourceSettlementName: string;
   isLateFee: boolean;
+  // Cargo manual anterior (legacy): ya no se crean; solo se pueden limpiar en borrador.
+  isManual: boolean;
   concept: string;
   amount: number;
   notes: string;
@@ -583,16 +568,6 @@ export interface ExpenseCharge {
   isReversed: boolean;
   totalAllocated: number;
   pendingAmount: number;
-}
-
-export interface CreateExpenseChargeRequest {
-  expensePeriodId: string;
-  unitId: string;
-  chargeType?: ExpenseChargeType;
-  isLateFee?: boolean;
-  concept: string;
-  amount: number;
-  notes: string;
 }
 
 export interface ApplyLateFeesRequest {
@@ -2257,4 +2232,31 @@ export interface RegisterPreview {
   availableCredit: number;
   pendingOwnerPayments: { id: string; reference: string; status: string; declaredAmount: number }[];
   comprobantes: RegisterComprobante[];
+}
+
+// ── Conciliacion del periodo (gastos + aportes - ingresos = cargos) ─────────
+export type ReconciliationState = 'Preview' | 'Reconciled' | 'Difference' | 'Error';
+
+export interface ExpensePeriodReconciliation {
+  expensePeriodId: string;
+  expensePeriodName: string;
+  periodStatus: ExpensePeriodStatus;
+  settlementStatus: string | null;
+  totalExpenses: number;
+  nonDistributedExpenses: number;
+  paidByReserveFundExpenses: number;
+  incomesCredited: number;
+  reserveContribution: number;
+  extraordinaryContribution: number;
+  expectedCharges: number;
+  issuedCharges: number;
+  difference: number;
+  state: ReconciliationState;
+  message: string | null;
+  manualChargeCount: number;
+  manualChargeAmount: number;
+  lateFeeAmount: number;
+  totalCharged: number;
+  collected: number;
+  pending: number;
 }

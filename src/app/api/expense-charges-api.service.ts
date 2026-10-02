@@ -2,7 +2,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { API_BASE_URL } from '../config/api.config';
-import { CreateExpenseChargeRequest, ExpenseCharge } from './models';
+import { ExpenseCharge } from './models';
 
 @Injectable({ providedIn: 'root' })
 export class ExpenseChargesApiService {
@@ -15,19 +15,8 @@ export class ExpenseChargesApiService {
     return this.http.get<ExpenseCharge[]>(`${API_BASE_URL}/expense-charges`, { params });
   }
 
-  create(request: CreateExpenseChargeRequest): Observable<ExpenseCharge> {
-    return this.http.post<ExpenseCharge>(`${API_BASE_URL}/expense-charges`, request);
-  }
-
-  update(id: string, request: CreateExpenseChargeRequest): Observable<ExpenseCharge> {
-    return this.http.put<ExpenseCharge>(`${API_BASE_URL}/expense-charges/${id}`, request);
-  }
-
+  // Solo cargos manuales anteriores (legacy) de un periodo en borrador.
   delete(id: string): Observable<void> {
     return this.http.delete<void>(`${API_BASE_URL}/expense-charges/${id}`);
-  }
-
-  reverse(id: string): Observable<ExpenseCharge> {
-    return this.http.post<ExpenseCharge>(`${API_BASE_URL}/expense-charges/${id}/reverse`, {});
   }
 }

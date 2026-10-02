@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectorRef, Component, DestroyRef, inject, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, DestroyRef, inject, Input, OnChanges, OnInit, SimpleChanges } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { forkJoin } from 'rxjs';
@@ -39,7 +39,7 @@ interface RubroGroup {
   template: `
     <p-card styleClass="app-page-card">
       <div class="app-toolbar">
-        <div class="app-page-head">
+        <div class="app-page-head" *ngIf="!embedded">
           <div>
             <h1>Ingresos del edificio</h1>
             <p>Compensaciones e ingresos que reducen o ajustan la liquidación común.</p>
@@ -126,7 +126,7 @@ interface RubroGroup {
       </div>
 
       <!-- FILTROS -->
-      <div class="filters-bar">
+      <div class="filters-bar" *ngIf="!embedded">
         <div class="field-block">
           <span>Edificio</span>
           <select [(ngModel)]="filters.buildingId" name="filterBuildingId" (ngModelChange)="onBuildingFilterChange()">
@@ -348,7 +348,12 @@ interface RubroGroup {
     }
   `]
 })
-export class BuildingIncomesPageComponent implements OnInit {
+export class BuildingIncomesPageComponent implements OnInit, OnChanges {
+  // Embebido en "Gastos y cargos": el edificio y el periodo los fija la pantalla que lo contiene.
+  @Input() embedded = false;
+  @Input() scopeBuildingId = '';
+  @Input() scopePeriodId = '';
+
   private readonly incomesApi = inject(BuildingIncomesApiService);
   private readonly buildingsApi = inject(BuildingsApiService);
   private readonly periodsApi = inject(ExpensePeriodsApiService);
@@ -412,6 +417,17 @@ export class BuildingIncomesPageComponent implements OnInit {
     this.loadData();
   }
 
+  ngOnChanges(changes: SimpleChanges): void {
+    if (!this.embedded || !(changes['scopeBuildingId'] || changes['scopePeriodId'])) return;
+    this.filters = { buildingId: this.scopeBuildingId, expensePeriodId: this.scopePeriodId };
+    // Un formulario ya abierto con otro periodo se descarta al cambiar de periodo.
+    if (this.showForm && !this.editingId) {
+      this.form = this.createInitialForm();
+      this.showForm = false;
+    }
+    if (!this.loading) this.applyFilters();
+  }
+
   toggleForm(): void {
     if (this.showForm && this.editingId) {
       this.cancelEdit();
@@ -423,6 +439,10 @@ export class BuildingIncomesPageComponent implements OnInit {
     } else {
       // Al abrir el formulario se vuelve a leer el plan de cuentas (pudo cambiar desde la última vez).
       this.planByBuilding.clear();
+      if (this.embedded && !this.editingId) {
+        this.form.buildingId = this.form.buildingId || this.scopeBuildingId;
+        this.form.expensePeriodId = this.form.expensePeriodId || this.scopePeriodId;
+      }
     }
     this.refreshRubros();
   }

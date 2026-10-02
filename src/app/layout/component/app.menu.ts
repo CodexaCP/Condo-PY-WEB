@@ -100,10 +100,8 @@ export class AppMenu {
                 {
                     label: 'Finanzas',
                     items: [
-                        { label: 'Gastos', icon: 'pi pi-fw pi-arrow-circle-down', routerLink: ['/building-expenses'] },
-                        { label: 'Ingresos', icon: 'pi pi-fw pi-arrow-circle-up', routerLink: ['/building-incomes'] },
+                        { label: 'Gastos y cargos', icon: 'pi pi-fw pi-list', routerLink: ['/period-ledger'] },
                         { label: 'Periodos', icon: 'pi pi-fw pi-calendar', routerLink: ['/expense-periods'] },
-                        { label: 'Cargos', icon: 'pi pi-fw pi-tags', routerLink: ['/expense-charges'] },
                         { label: 'Pagos', icon: 'pi pi-fw pi-wallet', routerLink: ['/owner-payments'] }
                     ]
                 },

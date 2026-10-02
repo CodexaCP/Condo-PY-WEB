@@ -1,4 +1,5 @@
-import { Routes } from '@angular/router';
+import { inject } from '@angular/core';
+import { Router, Routes } from '@angular/router';
 import { AppLayout } from './app/layout/component/app.layout';
 import { authGuard, guestGuard, homeRedirectGuard, passwordChangeGuard } from './app/auth/auth.guard';
 
@@ -122,12 +123,19 @@ export const appRoutes: Routes = [
 
             // ── Condo: Finanzas ───────────────────────────────────────────
             {
+                // Gastos, ingresos y cargos viven ahora en una sola pantalla por periodo.
+                path: 'period-ledger',
+                loadComponent: () => import('./app/pages/condo/period-ledger-page.component').then(m => m.PeriodLedgerPageComponent)
+            },
+            {
                 path: 'building-expenses',
-                loadComponent: () => import('./app/pages/condo/building-expenses-page.component').then(m => m.BuildingExpensesPageComponent)
+                redirectTo: () => inject(Router).parseUrl('/period-ledger?tab=expenses'),
+                pathMatch: 'full'
             },
             {
                 path: 'building-incomes',
-                loadComponent: () => import('./app/pages/condo/building-incomes-page.component').then(m => m.BuildingIncomesPageComponent)
+                redirectTo: () => inject(Router).parseUrl('/period-ledger?tab=incomes'),
+                pathMatch: 'full'
             },
             {
                 path: 'expense-periods',
@@ -135,7 +143,8 @@ export const appRoutes: Routes = [
             },
             {
                 path: 'expense-charges',
-                loadComponent: () => import('./app/pages/condo/expense-charges-page.component').then(m => m.ExpenseChargesPageComponent)
+                redirectTo: () => inject(Router).parseUrl('/period-ledger?tab=charges'),
+                pathMatch: 'full'
             },
             {
                 // La pantalla de Pagos ahora es una sola (con las secciones propietario / sistema): ver owner-payments.
