@@ -2315,3 +2315,57 @@ export interface MarketplaceReviewItem {
   // La reserva ya terminó: ya no se puede confirmar (solo rechazar).
   reservationEnded: boolean;
 }
+
+// ── Marketplace: cuenta aparte por edificio ───────────────────────────────────
+
+// Renglón del extracto. El importe lleva signo: los ingresos suman; las acreditaciones y devoluciones restan.
+export interface MarketplaceAccountRow {
+  id: string;
+  occurredAtUtc: string;
+  kind: 'PaymentIn' | 'OwnerCredit' | 'RefundOut' | 'Adjustment';
+  amount: number;
+  concept: string;
+  reservationId: string | null;
+  reference: string | null;
+  // Nulo = movimiento automático del sistema.
+  createdByName: string | null;
+  // Solo el SuperAdmin: la acreditación se puede revertir (el saldo del propietario sigue intacto).
+  canReverse: boolean;
+}
+
+export interface MarketplaceAccountSummary {
+  openingBalance: number;
+  totalIn: number;
+  totalCredited: number;
+  totalRefunds: number;
+  totalAdjustments: number;
+  closingBalance: number;
+  // Al día de hoy (no dependen del período elegido):
+  currentBalance: number;
+  pendingToCredit: number;
+  managementGain: number;
+}
+
+export interface MarketplaceStatement {
+  buildingId: string;
+  buildingName: string;
+  fromDate: string;
+  toDate: string;
+  summary: MarketplaceAccountSummary;
+  rows: MarketplaceAccountRow[];
+  // Solo el SuperAdmin puede cargar ajustes y revertir acreditaciones.
+  canEdit: boolean;
+}
+
+export interface MarketplaceAdjustmentRequest {
+  buildingId: string;
+  amount: number;
+  concept: string;
+}
+
+export interface MarketplaceReversal {
+  reservationId: string;
+  reference: string;
+  amount: number;
+  ownerBalance: number;
+}

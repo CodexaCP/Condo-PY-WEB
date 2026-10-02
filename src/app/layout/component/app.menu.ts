@@ -62,7 +62,8 @@ export class AppMenu {
                         { label: 'Asignaciones', icon: 'pi pi-fw pi-sitemap', routerLink: ['/building-plans'] },
                         { label: 'Pagos de planes', icon: 'pi pi-fw pi-credit-card', routerLink: ['/building-plan-payments'] },
                         { label: 'Finanzas por edificio', icon: 'pi pi-fw pi-calculator', routerLink: ['/finance-admin'] },
-                        { label: 'Marketplace por edificio', icon: 'pi pi-fw pi-shop', routerLink: ['/marketplace-admin'] }
+                        { label: 'Marketplace por edificio', icon: 'pi pi-fw pi-shop', routerLink: ['/marketplace-admin'] },
+                        { label: 'Cuenta del Marketplace', icon: 'pi pi-fw pi-wallet', routerLink: ['/marketplace-account'] }
                     ]
                 },
                 // Pantallas del módulo de los edificios habilitados (la configuración se abre también desde «Finanzas por edificio»).
@@ -169,7 +170,9 @@ export class AppMenu {
                     label: 'Amenities',
                     items: [
                         { label: 'Amenities y reservas', icon: 'pi pi-fw pi-calendar-plus', routerLink: ['/amenities'] },
-                        { label: 'Pagos del Marketplace', icon: 'pi pi-fw pi-shop', routerLink: ['/marketplace-payments'] }
+                        { label: 'Pagos del Marketplace', icon: 'pi pi-fw pi-shop', routerLink: ['/marketplace-payments'] },
+                        // La cuenta aparte la ven el Administrador de empresa y el Encargado (el Operador no).
+                        ...(canManageInvoicing ? [{ label: 'Cuenta del Marketplace', icon: 'pi pi-fw pi-wallet', routerLink: ['/marketplace-account'] }] : [])
                     ]
                 },
                 {
