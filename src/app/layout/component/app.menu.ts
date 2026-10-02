@@ -5,6 +5,7 @@ import { MenuItem } from 'primeng/api';
 import { AppMenuitem } from './app.menuitem';
 import { AuthService } from '@/app/auth/auth.service';
 import { FinanceAccessService } from '@/app/api/finance-access.service';
+import { MarketplaceAccessService } from '@/app/api/marketplace-access.service';
 
 @Component({
     selector: 'app-menu',
@@ -23,12 +24,16 @@ import { FinanceAccessService } from '@/app/api/finance-access.service';
 export class AppMenu {
     private readonly auth = inject(AuthService);
     private readonly finance = inject(FinanceAccessService);
+    private readonly marketplace = inject(MarketplaceAccessService);
 
     constructor() {
-        // Al iniciar o cerrar sesión se vuelve a consultar en qué edificios está disponible «Finanzas del edificio».
+        // Al iniciar o cerrar sesión se vuelve a consultar en qué edificios están disponibles «Finanzas del edificio» y el Marketplace.
         effect(() => {
             this.auth.currentUser();
-            untracked(() => this.finance.refresh());
+            untracked(() => {
+                this.finance.refresh();
+                this.marketplace.refresh();
+            });
         });
     }
 
@@ -36,6 +41,10 @@ export class AppMenu {
         const isSuperAdmin = this.auth.hasRole('SuperAdmin');
         // Con el módulo apagado (o sin plan que lo incluya) el grupo no aparece.
         const hasFinanceModule = this.finance.available();
+        // Marketplace: la revisión de pagos y la cuenta aparte aparecen solo si hay un edificio con el módulo disponible
+        // donde el rol de este usuario puede usarlas (la cuenta no la ve el Operador).
+        const canReviewMarketplace = this.marketplace.canReviewPayments();
+        const canViewMarketplaceAccount = this.marketplace.canViewAccount();
         const isCompanyAdmin = this.auth.hasRole('CompanyAdmin');
         const isAdmin = this.auth.hasRole('CompanyAdmin', 'CompanyOperator', 'BuildingManager');
         // Timbrados: el operador de empresa no puede administrarlos (lo bloquea el backend);
@@ -63,7 +72,7 @@ export class AppMenu {
                         { label: 'Pagos de planes', icon: 'pi pi-fw pi-credit-card', routerLink: ['/building-plan-payments'] },
                         { label: 'Finanzas por edificio', icon: 'pi pi-fw pi-calculator', routerLink: ['/finance-admin'] },
                         { label: 'Marketplace por edificio', icon: 'pi pi-fw pi-shop', routerLink: ['/marketplace-admin'] },
-                        { label: 'Cuenta del Marketplace', icon: 'pi pi-fw pi-wallet', routerLink: ['/marketplace-account'] }
+                        ...(canViewMarketplaceAccount ? [{ label: 'Cuenta del Marketplace', icon: 'pi pi-fw pi-wallet', routerLink: ['/marketplace-account'] }] : [])
                     ]
                 },
                 // Pantallas del módulo de los edificios habilitados (la configuración se abre también desde «Finanzas por edificio»).
@@ -170,9 +179,8 @@ export class AppMenu {
                     label: 'Amenities',
                     items: [
                         { label: 'Amenities y reservas', icon: 'pi pi-fw pi-calendar-plus', routerLink: ['/amenities'] },
-                        { label: 'Pagos del Marketplace', icon: 'pi pi-fw pi-shop', routerLink: ['/marketplace-payments'] },
-                        // La cuenta aparte la ven el Administrador de empresa y el Encargado (el Operador no).
-                        ...(canManageInvoicing ? [{ label: 'Cuenta del Marketplace', icon: 'pi pi-fw pi-wallet', routerLink: ['/marketplace-account'] }] : [])
+                        ...(canReviewMarketplace ? [{ label: 'Pagos del Marketplace', icon: 'pi pi-fw pi-shop', routerLink: ['/marketplace-payments'] }] : []),
+                        ...(canViewMarketplaceAccount ? [{ label: 'Cuenta del Marketplace', icon: 'pi pi-fw pi-wallet', routerLink: ['/marketplace-account'] }] : [])
                     ]
                 },
                 {

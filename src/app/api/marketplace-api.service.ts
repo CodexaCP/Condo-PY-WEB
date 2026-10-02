@@ -9,6 +9,7 @@ import {
   MarketplaceAdminUpdateRequest,
   MarketplaceReversal,
   MarketplaceReviewItem,
+  MarketplaceStaffBuilding,
   MarketplaceStatement
 } from './models';
 
@@ -17,6 +18,11 @@ import {
 @Injectable({ providedIn: 'root' })
 export class MarketplaceApiService {
   private readonly http = inject(HttpClient);
+
+  // Edificios del alcance del usuario con el módulo disponible y lo que su rol puede hacer en cada uno (menú y selectores).
+  getStaffBuildings(): Observable<MarketplaceStaffBuilding[]> {
+    return this.http.get<MarketplaceStaffBuilding[]>(`${API_BASE_URL}/marketplace/staff-buildings`);
+  }
 
   // SuperAdmin: todos los edificios con su plan, el interruptor y la configuración.
   getAdminBuildings(): Observable<MarketplaceAdminBuilding[]> {

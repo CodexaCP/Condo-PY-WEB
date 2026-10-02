@@ -8,9 +8,8 @@ import { Message } from 'primeng/message';
 import { Tag } from 'primeng/tag';
 import { MessageService } from 'primeng/api';
 import { extractApiErrorMessage } from '../../api/api-error.util';
-import { BuildingsApiService } from '../../api/buildings-api.service';
 import { MarketplaceApiService } from '../../api/marketplace-api.service';
-import { Building, MarketplaceAccountRow, MarketplaceStatement } from '../../api/models';
+import { MarketplaceAccountRow, MarketplaceStaffBuilding, MarketplaceStatement } from '../../api/models';
 
 type Dialog = 'adjust' | 'reverse' | null;
 
@@ -49,7 +48,7 @@ const KIND_SEVERITY: Record<string, 'success' | 'info' | 'warn' | 'secondary'> =
 
       <div class="filters">
         <select *ngIf="buildings.length" [ngModel]="buildingId" (ngModelChange)="onBuildingChange($event)">
-          <option *ngFor="let b of buildings" [value]="b.id">{{ b.name }}</option>
+          <option *ngFor="let b of buildings" [value]="b.buildingId">{{ b.buildingName }}</option>
         </select>
         <label class="date-field">Desde <input type="date" [(ngModel)]="from" (change)="load()" /></label>
         <label class="date-field">Hasta <input type="date" [(ngModel)]="to" (change)="load()" /></label>
@@ -62,6 +61,7 @@ const KIND_SEVERITY: Record<string, 'success' | 'info' | 'warn' | 'secondary'> =
 
       <p-message *ngIf="pageError" severity="error" [text]="pageError"></p-message>
       <p class="app-state" *ngIf="loading">Cargando extracto...</p>
+      <p class="app-state" *ngIf="!loading && !pageError && !buildings.length">El Marketplace no está disponible en ningún edificio de tu alcance.</p>
 
       <ng-container *ngIf="statement && !loading">
         <!-- Lo que queda para la gestión (hoy) -->
@@ -201,12 +201,11 @@ const KIND_SEVERITY: Record<string, 'success' | 'info' | 'warn' | 'secondary'> =
 })
 export class MarketplaceAccountPageComponent implements OnInit {
   private readonly api = inject(MarketplaceApiService);
-  private readonly buildingsApi = inject(BuildingsApiService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly msg = inject(MessageService);
   readonly cdr = inject(ChangeDetectorRef);
 
-  buildings: Building[] = [];
+  buildings: MarketplaceStaffBuilding[] = [];
   buildingId = '';
   from = '';
   to = '';
@@ -231,10 +230,11 @@ export class MarketplaceAccountPageComponent implements OnInit {
     this.to = `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`;
     this.from = `${today.getFullYear()}-${pad(today.getMonth() + 1)}-01`;
 
-    this.buildingsApi.getAll().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+    // Solo los edificios con el Marketplace disponible donde el rol ve la cuenta: no se ofrece uno que respondería 403.
+    this.api.getStaffBuildings().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: list => {
-        this.buildings = list.filter(b => b.isActive).sort((a, b) => a.name.localeCompare(b.name));
-        this.buildingId = this.buildings[0]?.id ?? '';
+        this.buildings = list.filter(b => b.canViewAccount);
+        this.buildingId = this.buildings[0]?.buildingId ?? '';
         if (this.buildingId) {
           this.load();
         } else {

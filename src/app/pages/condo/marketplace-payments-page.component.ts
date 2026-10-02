@@ -8,10 +8,9 @@ import { Message } from 'primeng/message';
 import { Tag } from 'primeng/tag';
 import { MessageService } from 'primeng/api';
 import { extractApiErrorMessage } from '../../api/api-error.util';
-import { BuildingsApiService } from '../../api/buildings-api.service';
 import { isPdfUrl, resolveUploadUrl } from '../../api/file-url.util';
 import { MarketplaceApiService } from '../../api/marketplace-api.service';
-import { Building, MarketplaceReviewItem } from '../../api/models';
+import { MarketplaceReviewItem, MarketplaceStaffBuilding } from '../../api/models';
 
 type Dialog = 'approve' | 'reject' | null;
 
@@ -35,13 +34,14 @@ type Dialog = 'approve' | 'reject' | null;
 
       <div class="filters" *ngIf="buildings.length > 1">
         <select [ngModel]="buildingId" (ngModelChange)="onBuildingChange($event)">
-          <option *ngFor="let b of buildings" [value]="b.id">{{ b.name }}</option>
+          <option *ngFor="let b of buildings" [value]="b.buildingId">{{ b.buildingName }}</option>
         </select>
       </div>
 
       <p-message *ngIf="pageError" severity="error" [text]="pageError"></p-message>
       <p class="app-state" *ngIf="loading">Cargando pagos...</p>
-      <p class="app-state" *ngIf="!loading && !pageError && !items.length">No hay pagos esperando revisión.</p>
+      <p class="app-state" *ngIf="!loading && !pageError && !buildings.length">El Marketplace no está disponible en ningún edificio de tu alcance.</p>
+      <p class="app-state" *ngIf="!loading && !pageError && buildings.length && !items.length">No hay pagos esperando revisión.</p>
 
       <div class="app-list" *ngIf="items.length">
         <div class="app-row header mk-grid">
@@ -167,12 +167,11 @@ type Dialog = 'approve' | 'reject' | null;
 })
 export class MarketplacePaymentsPageComponent implements OnInit {
   private readonly api = inject(MarketplaceApiService);
-  private readonly buildingsApi = inject(BuildingsApiService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly msg = inject(MessageService);
   readonly cdr = inject(ChangeDetectorRef);
 
-  buildings: Building[] = [];
+  buildings: MarketplaceStaffBuilding[] = [];
   buildingId = '';
   items: MarketplaceReviewItem[] = [];
   loading = true;
@@ -184,10 +183,11 @@ export class MarketplacePaymentsPageComponent implements OnInit {
   busy = false;
 
   ngOnInit(): void {
-    this.buildingsApi.getAll().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+    // Solo los edificios con el Marketplace disponible donde el rol revisa pagos: no se ofrece uno que respondería 403.
+    this.api.getStaffBuildings().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: list => {
-        this.buildings = list.filter(b => b.isActive).sort((a, b) => a.name.localeCompare(b.name));
-        this.buildingId = this.buildings[0]?.id ?? '';
+        this.buildings = list.filter(b => b.canReviewPayments);
+        this.buildingId = this.buildings[0]?.buildingId ?? '';
         if (this.buildingId) {
           this.load();
         } else {

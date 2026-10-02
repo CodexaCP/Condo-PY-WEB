@@ -2281,6 +2281,15 @@ export interface MarketplaceAdminBuilding {
   transferInfo: string;
 }
 
+// Edificio del personal con el marketplace disponible y lo que su rol puede hacer ahí.
+export interface MarketplaceStaffBuilding {
+  buildingId: string;
+  buildingName: string;
+  canReviewPayments: boolean;
+  canViewAccount: boolean;
+  canEditAccount: boolean;
+}
+
 export interface MarketplaceAdminUpdateRequest {
   enabled: boolean;
   commissionPercent: number;
