@@ -268,16 +268,24 @@ export class FinanceMovementsPageComponent {
   }
 
   private buildOptions(categories: LedgerCategory[]): RubroOption[] {
-    const groups = categories.filter(c => !c.parentId);
-    const options: RubroOption[] = [];
-    for (const group of groups) {
-      const children = categories.filter(c => c.parentId === group.id);
-      options.push({ id: group.id, label: children.length ? `${group.code} · ${group.name} (todo)` : `${group.code} · ${group.name}` });
-      for (const child of children) {
-        options.push({ id: child.id, label: `   ${child.code} · ${child.name}` });
-      }
+    // Todo el árbol (clase → grupo → cuenta, a cualquier nivel), con sangría. Un grupo o una clase incluye todo lo que cuelga de él.
+    const byParent = new Map<string | null, LedgerCategory[]>();
+    for (const c of categories) {
+      const key = c.parentId ?? null;
+      byParent.set(key, [...(byParent.get(key) ?? []), c]);
     }
 
+    const options: RubroOption[] = [];
+    const walk = (parent: string | null, depth: number) => {
+      const level = [...(byParent.get(parent) ?? [])].sort((a, b) => a.code.localeCompare(b.code, undefined, { numeric: true }));
+      for (const c of level) {
+        const hasChildren = byParent.has(c.id);
+        options.push({ id: c.id, label: `${'   '.repeat(depth)}${c.code} · ${c.name}${hasChildren ? ' (todo)' : ''}` });
+        walk(c.id, depth + 1);
+      }
+    };
+
+    walk(null, 0);
     return options;
   }
 

@@ -900,7 +900,8 @@ export class BuildingExpensesPageComponent implements OnInit, OnChanges {
   // Subrubros de gastos activos con categoría, agrupados por su rubro principal (más el actual aunque se haya desactivado).
   // `valid` = el rubro actual sigue siendo una opción (o no había ninguno).
   private groupRubros(plan: LedgerCategory[], current: string): { groups: RubroGroup[]; valid: boolean } {
-    const groupName = new Map(plan.filter((c) => !c.parentId).map((c) => [c.id, `${c.code} · ${c.name}`]));
+    // El grupo de una cuenta es su padre directo (el plan puede tener varios niveles).
+    const groupName = new Map(plan.map((c) => [c.id, `${c.code} · ${c.name}`]));
     const options = plan
       .filter((c) => c.type === 'Expense' && !!c.parentId && !c.hasChildren && !!c.expenseCategory && (c.isActive || c.id === current))
       .sort((a, b) => a.code.localeCompare(b.code, undefined, { numeric: true }));

@@ -539,7 +539,8 @@ export class BuildingIncomesPageComponent implements OnInit, OnChanges {
 
   private buildRubroGroups(plan: LedgerCategory[]): void {
     const current = this.form.ledgerCategoryId;
-    const groupName = new Map(plan.filter((c) => !c.parentId).map((c) => [c.id, `${c.code} · ${c.name}`]));
+    // El grupo de una cuenta es su padre directo (el plan puede tener varios niveles).
+    const groupName = new Map(plan.map((c) => [c.id, `${c.code} · ${c.name}`]));
     const options = plan
       .filter((c) => c.type === 'Income' && !!c.parentId && !c.hasChildren && !!c.incomeCategory && (c.isActive || c.id === current))
       .sort((a, b) => a.code.localeCompare(b.code, undefined, { numeric: true }));
