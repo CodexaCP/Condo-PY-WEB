@@ -1,6 +1,6 @@
 import { Pipe, PipeTransform } from '@angular/core';
 import { extractApiErrorMessage } from '../../api/api-error.util';
-import { BuildingExpenseCategory, BuildingIncomeCategory } from '../../api/models';
+import { BuildingExpenseCategory, BuildingIncomeCategory, LedgerCategoryType } from '../../api/models';
 
 const GS = new Intl.NumberFormat('es-PY', { style: 'currency', currency: 'PYG', minimumFractionDigits: 0, maximumFractionDigits: 0 });
 const NUM = new Intl.NumberFormat('es-PY', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
@@ -45,6 +45,48 @@ export const INCOME_CATEGORY_LABELS: Record<BuildingIncomeCategory, string> = {
 // especial en el libro (no son gastos o ingresos nuevos), así que no se ofrecen.
 export const EXPENSE_CATEGORY_CHOICES: BuildingExpenseCategory[] = ['Utilities', 'Cleaning', 'Security', 'Maintenance', 'Elevator', 'Insurance', 'Payroll', 'Taxes', 'Administration', 'Extraordinary', 'Supplies', 'Ande', 'Essap', 'InternetPhone', 'Other'];
 export const INCOME_CATEGORY_CHOICES: BuildingIncomeCategory[] = ['CommonAreaRental', 'Interest', 'CreditAdjustment', 'ExtraordinaryContribution', 'Other'];
+
+// Clases del plan de cuentas (tal como se muestran).
+export const LEDGER_TYPE_LABELS: Record<LedgerCategoryType, string> = {
+  Asset: 'Activo',
+  Liability: 'Pasivo',
+  Fund: 'Patrimonio / Fondos',
+  Income: 'Ingresos',
+  Expense: 'Egresos'
+};
+
+// Orden de las clases (1 a 5) y las que reciben gastos o ingresos cargados.
+export const LEDGER_TYPE_ORDER: LedgerCategoryType[] = ['Asset', 'Liability', 'Fund', 'Income', 'Expense'];
+export const MOVEMENT_TYPES: LedgerCategoryType[] = ['Income', 'Expense'];
+
+// Función especial que puede tener una cuenta (la misma lista del backend): cobranza de expensas o cuenta por defecto de una categoría.
+// Una función de categoría fija la categoría de la liquidación de la cuenta; las de cobranza no la tienen.
+export interface LedgerRoleChoice {
+  key: string;
+  label: string;
+  type: LedgerCategoryType;
+  collection: boolean;
+  expenseCategory: BuildingExpenseCategory | null;
+  incomeCategory: BuildingIncomeCategory | null;
+}
+
+export const LEDGER_ROLES: LedgerRoleChoice[] = [
+  { key: 'Collection.Ordinary', label: 'Cobranza de expensas ordinarias', type: 'Income', collection: true, expenseCategory: null, incomeCategory: null },
+  { key: 'Collection.Extraordinary', label: 'Cobranza de aportes extraordinarios', type: 'Income', collection: true, expenseCategory: null, incomeCategory: null },
+  { key: 'Collection.IndividualAdjustment', label: 'Cobranza de cargos individuales y ajustes', type: 'Income', collection: true, expenseCategory: null, incomeCategory: null },
+  { key: 'Collection.LateFee', label: 'Cobranza de intereses por mora', type: 'Income', collection: true, expenseCategory: null, incomeCategory: null },
+  { key: 'Collection.ReserveFund', label: 'Cobranza de aportes al fondo de reserva', type: 'Income', collection: true, expenseCategory: null, incomeCategory: null },
+  ...EXPENSE_CATEGORY_CHOICES.map(c => ({
+    key: `Expense.${c}`, label: `Cuenta por defecto de gastos: ${EXPENSE_CATEGORY_LABELS[c]}`, type: 'Expense' as LedgerCategoryType,
+    collection: false, expenseCategory: c as BuildingExpenseCategory | null, incomeCategory: null as BuildingIncomeCategory | null
+  })),
+  ...INCOME_CATEGORY_CHOICES.map(c => ({
+    key: `Income.${c}`, label: `Cuenta por defecto de ingresos: ${INCOME_CATEGORY_LABELS[c]}`, type: 'Income' as LedgerCategoryType,
+    collection: false, expenseCategory: null as BuildingExpenseCategory | null, incomeCategory: c as BuildingIncomeCategory | null
+  }))
+];
+
+export const roleLabel = (key: string | null | undefined): string => LEDGER_ROLES.find(r => r.key === key)?.label ?? '';
 
 export const monthName = (month: number): string => MONTHS[month - 1] ?? String(month);
 export const monthLabel = (year: number, month: number): string => `${monthName(month)} ${year}`;

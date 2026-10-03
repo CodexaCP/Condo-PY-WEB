@@ -21,7 +21,12 @@ import {
   LedgerCategory,
   LedgerCategoryCopyRequest,
   LedgerCategoryCopyResult,
-  LedgerCategoryUpsertRequest
+  LedgerCategoryUpsertRequest,
+  LedgerPlanApplyRequest,
+  LedgerPlanApplyResult,
+  LedgerPlanImpact,
+  LedgerPlanImportCommitRequest,
+  LedgerPlanImportPreview
 } from './models';
 
 export type FinanceExportKind = 'movements' | 'cash-flow' | 'budget' | 'budget-vs-actual' | 'reserve-fund' | 'chart' | 'accountant-pack';
@@ -183,8 +188,41 @@ export class FinanceApiService {
       responseType: 'blob'
     });
   }
-  // Copia el plan de cuentas de otro edificio (nombres, códigos del contador, rubros activos y rubros propios) sin tocar movimientos ni presupuesto.
+  // Copia el plan de cuentas de otro edificio (nombres, códigos del contador, cuentas activas y funciones) sin tocar movimientos ni presupuesto.
   copyCategories(request: LedgerCategoryCopyRequest): Observable<LedgerCategoryCopyResult> {
     return this.http.post<LedgerCategoryCopyResult>(`${API_BASE_URL}/finance/categories/copy-from`, request);
+  }
+
+  // Activa o desactiva varias cuentas a la vez (un grupo con todo lo que contiene).
+  bulkActiveCategories(buildingId: string, ids: string[], isActive: boolean): Observable<{ changed: number }> {
+    return this.http.post<{ changed: number }>(`${API_BASE_URL}/finance/categories/bulk-active`, { buildingId, ids, isActive });
+  }
+
+  // Lo que se perdería al reemplazar el plan del edificio.
+  getReplaceImpact(buildingId: string): Observable<LedgerPlanImpact> {
+    return this.http.get<LedgerPlanImpact>(`${API_BASE_URL}/finance/categories/replace-impact`, { params: this.params(buildingId) });
+  }
+
+  // Aplica el plan genérico de CondoPY (reemplazar o agregar lo que falta).
+  applyTemplate(request: LedgerPlanApplyRequest): Observable<LedgerPlanApplyResult> {
+    return this.http.post<LedgerPlanApplyResult>(`${API_BASE_URL}/finance/categories/apply-template`, request);
+  }
+
+  // Excel de ejemplo para armar el plan del cliente.
+  downloadPlanImportTemplate(buildingId: string): Observable<Blob> {
+    return this.http.get(`${API_BASE_URL}/finance/categories/import-template`, { params: this.params(buildingId), responseType: 'blob' });
+  }
+
+  // Lee el Excel del cliente y devuelve el árbol resuelto (no guarda nada).
+  previewPlanImport(buildingId: string, file: File): Observable<LedgerPlanImportPreview> {
+    const form = new FormData();
+    form.append('buildingId', buildingId);
+    form.append('file', file, file.name);
+    return this.http.post<LedgerPlanImportPreview>(`${API_BASE_URL}/finance/categories/import/preview`, form);
+  }
+
+  // Confirma la importación con las filas de la vista previa (corregidas por el usuario).
+  commitPlanImport(request: LedgerPlanImportCommitRequest): Observable<LedgerPlanApplyResult> {
+    return this.http.post<LedgerPlanApplyResult>(`${API_BASE_URL}/finance/categories/import/commit`, request);
   }
 }

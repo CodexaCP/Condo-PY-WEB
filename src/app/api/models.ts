@@ -1631,7 +1631,9 @@ export interface PlanCloneResult {
 // ── Finanzas del edificio ─────────────────────────────────────────────────────
 
 export type FinancialAccountType = 'Cash' | 'Bank' | 'ReserveFund';
-export type LedgerCategoryType = 'Income' | 'Expense' | 'Fund';
+// Clase de la cuenta en el plan: 1 Activo, 2 Pasivo, 3 Patrimonio / Fondos, 4 Ingresos, 5 Egresos. Solo Income y Expense reciben
+// gastos e ingresos cargados; el resto es de referencia (y se exporta al contador).
+export type LedgerCategoryType = 'Income' | 'Expense' | 'Fund' | 'Asset' | 'Liability';
 
 // Edificio del usuario con el módulo disponible (habilitado y con plan que lo incluye): alimenta el menú y el selector.
 export interface FinanceBuildingAccess {
@@ -1712,8 +1714,8 @@ export interface LedgerCategory {
   isActive: boolean;
   isTemplate: boolean;
   hasChildren: boolean;
-  // Subrubro de gastos o ingresos: categoría con la que cuenta en la liquidación lo que se carga en él (nula en los rubros
-  // principales, en los de fondo y en los de cobranza de expensas, que no reciben gastos ni ingresos cargados a mano).
+  // Cuenta final de gastos o ingresos: categoría con la que cuenta en la liquidación lo que se carga en ella (nula en los grupos,
+  // en las clases de balance y en las cuentas de cobranza de expensas, que no reciben gastos ni ingresos cargados a mano).
   expenseCategory: BuildingExpenseCategory | null;
   incomeCategory: BuildingIncomeCategory | null;
   // Ya tiene gastos o ingresos cargados: no se elimina ni se le cambia el tipo o la categoría; solo se desactiva.
@@ -1730,6 +1732,76 @@ export interface LedgerCategoryUpsertRequest {
   isActive: boolean;
   expenseCategory?: BuildingExpenseCategory | null;
   incomeCategory?: BuildingIncomeCategory | null;
+  // Función especial de la cuenta: sin dato (null/undefined) se conserva la que tenía; '' la quita; con valor la asigna
+  // (si otra cuenta la tenía, se la quita: cada función va en una sola cuenta).
+  systemKey?: string | null;
+}
+
+// Cómo se aplica un plan a un edificio: Replace sustituye el plan entero (desvincula el rubro de gastos e ingresos y borra el
+// presupuesto), AddMissing solo agrega las cuentas que faltan y Update además actualiza las que ya existen.
+export type LedgerPlanApplyMode = 'Replace' | 'AddMissing' | 'Update';
+
+// Lo que se desvincula o se borra al reemplazar el plan del edificio.
+export interface LedgerPlanImpact {
+  categories: number;
+  expenses: number;
+  incomes: number;
+  recurringExpenses: number;
+  budgetLines: number;
+  hasImpact: boolean;
+}
+
+export interface LedgerPlanApplyRequest {
+  buildingId: string;
+  mode: LedgerPlanApplyMode;
+  confirmReplace: boolean;
+}
+
+export interface LedgerPlanApplyResult {
+  created: number;
+  updated: number;
+  skipped: number;
+  removedCategories: number;
+  unlinkedExpenses: number;
+  unlinkedIncomes: number;
+  unlinkedRecurringExpenses: number;
+  deletedBudgetLines: number;
+  messages: string[];
+}
+
+// Fila del plan importado: salida de la vista previa y entrada de la confirmación (el usuario corrige el tipo de las raíces y la
+// categoría de la liquidación de las cuentas finales).
+export interface LedgerPlanImportRow {
+  rowNumber: number;
+  code: string;
+  name: string;
+  parentCode: string | null;
+  type: LedgerCategoryType;
+  level: number;
+  isLeaf: boolean;
+  externalCode: string | null;
+  isActive: boolean;
+  systemKey: string | null;
+  expenseCategory: BuildingExpenseCategory | null;
+  incomeCategory: BuildingIncomeCategory | null;
+  categorySuggested: boolean;
+  errors: string[];
+  warnings: string[];
+}
+
+export interface LedgerPlanImportPreview {
+  rows: LedgerPlanImportRow[];
+  errorCount: number;
+  warningCount: number;
+  hasErrors: boolean;
+  impact: LedgerPlanImpact;
+}
+
+export interface LedgerPlanImportCommitRequest {
+  buildingId: string;
+  mode: LedgerPlanApplyMode;
+  confirmReplace: boolean;
+  rows: LedgerPlanImportRow[];
 }
 
 export interface LedgerCategoryCopyRequest {
