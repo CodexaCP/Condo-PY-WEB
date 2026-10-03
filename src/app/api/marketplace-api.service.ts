@@ -9,6 +9,8 @@ import {
   MarketplaceAdminUpdateRequest,
   MarketplaceClaim,
   MarketplaceClaimOutcome,
+  MarketplaceHandoverNote,
+  MarketplaceOperationHistory,
   MarketplaceOwnerDebt,
   MarketplaceRefund,
   MarketplaceReversal,
@@ -72,6 +74,32 @@ export class MarketplaceApiService {
 
   resolveClaim(claimId: string, outcome: MarketplaceClaimOutcome, note: string): Observable<MarketplaceClaim> {
     return this.http.post<MarketplaceClaim>(`${API_BASE_URL}/marketplace/claims/${claimId}/resolve`, { outcome, note });
+  }
+
+  // ── Documentos y trazabilidad ─────────────────────────────────────────────────────────────────────────────────────────
+
+  // Historial económico de una operación (solo personal del edificio).
+  getHistory(reservationId: string): Observable<MarketplaceOperationHistory> {
+    return this.http.get<MarketplaceOperationHistory>(`${API_BASE_URL}/marketplace/reservations/${reservationId}/history`);
+  }
+
+  // Comprobante interno de la reserva en PDF (no fiscal): se abre en el navegador con el token en la URL, como los demás PDF.
+  receiptPdfUrl(reservationId: string, token: string): string {
+    return `${API_BASE_URL}/marketplace/reservations/${reservationId}/receipt-pdf?access_token=${token}`;
+  }
+
+  // Notas de cambio de propietario principal (las no leídas primero).
+  getHandoverNotes(buildingId: string, includeRead = false): Observable<MarketplaceHandoverNote[]> {
+    return this.http.get<MarketplaceHandoverNote[]>(`${API_BASE_URL}/marketplace/handover-notes`, { params: { buildingId, includeRead } });
+  }
+
+  // Abre la nota con la situación actual de cada operación (la primera vez queda marcada como leída).
+  getHandoverNote(id: string): Observable<MarketplaceHandoverNote> {
+    return this.http.get<MarketplaceHandoverNote>(`${API_BASE_URL}/marketplace/handover-notes/${id}`);
+  }
+
+  handoverPdfUrl(id: string, token: string): string {
+    return `${API_BASE_URL}/marketplace/handover-notes/${id}/pdf?access_token=${token}`;
   }
 
   // ── Cuenta aparte del marketplace (por edificio) ─────────────────────────────────────────────────────────────────────

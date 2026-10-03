@@ -9,15 +9,18 @@ import { Tag } from 'primeng/tag';
 import { MessageService } from 'primeng/api';
 import { extractApiErrorMessage } from '../../api/api-error.util';
 import { MarketplaceApiService } from '../../api/marketplace-api.service';
+import { AuthService } from '../../auth/auth.service';
+import { MarketplaceHistoryDialogComponent } from './marketplace-history-dialog.component';
 import {
   MarketplaceClaim,
   MarketplaceClaimOutcome,
+  MarketplaceHandoverNote,
   MarketplaceOwnerDebt,
   MarketplaceRefund,
   MarketplaceStaffBuilding
 } from '../../api/models';
 
-type Tab = 'refunds' | 'claims' | 'debts';
+type Tab = 'refunds' | 'claims' | 'debts' | 'notes';
 
 const ORIGIN_LABELS: Record<string, string> = {
   BuyerCancellation: 'Canceló el comprador (se devuelve el precio; la comisión no)',
@@ -31,7 +34,7 @@ const ORIGIN_LABELS: Record<string, string> = {
   standalone: true,
   selector: 'app-marketplace-followup-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, FormsModule, Button, Card, Message, Tag],
+  imports: [CommonModule, FormsModule, Button, Card, Message, Tag, MarketplaceHistoryDialogComponent],
   template: `
     <p-card styleClass="app-page-card">
       <div class="app-toolbar">
@@ -57,10 +60,13 @@ const ORIGIN_LABELS: Record<string, string> = {
           <button type="button" [class.on]="tab === 'debts'" (click)="setTab('debts')">
             Deudas por gestión <span class="count" *ngIf="debts.length">{{ debts.length }}</span>
           </button>
+          <button type="button" [class.on]="tab === 'notes'" (click)="setTab('notes')">
+            Cambios de propietario <span class="count" *ngIf="unreadNotes">{{ unreadNotes }}</span>
+          </button>
         </div>
         <label class="history" *ngIf="buildings.length && tab !== 'debts'">
           <input type="checkbox" [(ngModel)]="history" (ngModelChange)="load()" />
-          {{ tab === 'refunds' ? 'Ver también los devueltos' : 'Ver también los resueltos' }}
+          {{ tab === 'refunds' ? 'Ver también los devueltos' : tab === 'claims' ? 'Ver también los resueltos' : 'Ver también las leídas' }}
         </label>
       </div>
 
@@ -87,6 +93,8 @@ const ORIGIN_LABELS: Record<string, string> = {
               <small *ngIf="r.status === 'Returned'">{{ dateTime(r.returnedAtUtc!) }}<ng-container *ngIf="r.returnedByName"> · {{ r.returnedByName }}</ng-container></small>
             </div>
             <div class="app-actions">
+              <p-button type="button" label="Historial" icon="pi pi-history" size="small" severity="secondary" [outlined]="true"
+                        (onClick)="showHistory(r.reservationId)"></p-button>
               <p-button *ngIf="r.status === 'Pending'" type="button" label="Marcar devuelto" icon="pi pi-check" size="small"
                         (onClick)="askReturn(r)"></p-button>
             </div>
@@ -107,9 +115,35 @@ const ORIGIN_LABELS: Record<string, string> = {
             <span>{{ c.reason }}</span>
             <strong>{{ gs(c.totalAmount) }}</strong>
             <div class="app-actions">
+              <p-button type="button" label="Historial" icon="pi pi-history" size="small" severity="secondary" [outlined]="true"
+                        (onClick)="showHistory(c.reservationId)"></p-button>
               <p-button *ngIf="c.status === 'Open'" type="button" label="Resolver" icon="pi pi-pencil" size="small" (onClick)="openClaim(c)"></p-button>
               <p-tag *ngIf="c.status === 'Resolved'" [value]="c.resolution === 'InFavorOfBuyer' ? 'A favor del comprador' : 'A favor del propietario'"
                      severity="secondary" styleClass="tag-sm"></p-tag>
+            </div>
+          </div>
+        </div>
+      </ng-container>
+
+      <!-- ── Cambios de propietario principal ── -->
+      <ng-container *ngIf="!loading && buildings.length && tab === 'notes'">
+        <p class="note">Cuando una unidad deja de tener a su propietario principal y le quedan reservas abiertas, se genera una nota con lo que pasó y qué hay que resolver. Las publicaciones sin reservar se suspenden solas; las reservas ya hechas siguen a nombre del propietario anterior.</p>
+        <p class="app-state" *ngIf="!notes.length">No hay notas {{ history ? '' : 'sin leer' }}.</p>
+        <div class="app-list" *ngIf="notes.length">
+          <div class="app-row header nt-grid">
+            <span>Unidad</span><span>Propietario anterior</span><span>Nuevo principal</span><span>Operaciones</span><span></span>
+          </div>
+          <div class="app-row nt-grid" *ngFor="let n of notes; trackBy: trackById">
+            <div class="name-cell"><strong>Unidad {{ n.unitCode }}</strong><small>{{ dateTime(n.createdAtUtc) }}</small></div>
+            <span>{{ n.previousOwnerName }}</span>
+            <span>{{ n.newOwnerName ?? 'Todavía no hay' }}</span>
+            <div class="name-cell">
+              <span>{{ n.reservationCount }} {{ n.reservationCount === 1 ? 'abierta' : 'abiertas' }}</span>
+              <p-tag *ngIf="!n.readAtUtc" value="Sin leer" severity="warn" styleClass="tag-sm"></p-tag>
+              <small *ngIf="n.readAtUtc">Leída {{ dateTime(n.readAtUtc) }}<ng-container *ngIf="n.readByName"> · {{ n.readByName }}</ng-container></small>
+            </div>
+            <div class="app-actions">
+              <p-button type="button" label="Abrir" icon="pi pi-file" size="small" (onClick)="openNote(n)"></p-button>
             </div>
           </div>
         </div>
@@ -132,6 +166,32 @@ const ORIGIN_LABELS: Record<string, string> = {
         </div>
       </ng-container>
     </p-card>
+
+    <!-- Historial de la operación -->
+    <app-marketplace-history-dialog [reservationId]="historyId" (closed)="historyId = null; cdr.markForCheck()"></app-marketplace-history-dialog>
+
+    <!-- Nota de cambio de propietario principal -->
+    <div class="ov-backdrop" *ngIf="openedNote" (click)="closeNote()"></div>
+    <div class="ov-panel" *ngIf="openedNote" (click)="$event.stopPropagation()">
+      <div class="ov-header">
+        <strong>Unidad {{ openedNote.unitCode }} · cambio de propietario principal</strong>
+        <button class="ov-close" (click)="closeNote()">✕</button>
+      </div>
+      <div class="kv"><span>Edificio</span><strong>{{ openedNote.buildingName }}</strong></div>
+      <div class="kv"><span>Propietario anterior</span><strong>{{ openedNote.previousOwnerName }}</strong></div>
+      <div class="kv"><span>Nuevo principal</span><strong>{{ openedNote.newOwnerName ?? 'Todavía no hay' }}</strong></div>
+      <p class="label">Qué pasó</p>
+      <p class="quote pre">{{ openedNote.content }}</p>
+      <p class="label">Situación actual ({{ openedNote.operations.length }})</p>
+      <div class="kv op" *ngFor="let op of openedNote.operations">
+        <span>{{ op.reference }} · {{ op.title }}<br /><small>{{ range(op) }}</small><br /><a class="link" (click)="showHistory(op.reservationId)">Ver historial</a></span>
+        <strong>{{ opStatus(op.status, op.creditStatus, op.hasOpenClaim, op.refundStatus) }}<br /><small>Gana {{ gs(op.ownerNetAmount) }}</small></strong>
+      </div>
+      <div class="confirm-footer">
+        <p-button label="Descargar PDF" icon="pi pi-file-pdf" severity="secondary" [outlined]="true" (onClick)="noteToPdf()"></p-button>
+        <p-button label="Cerrar" (onClick)="closeNote()"></p-button>
+      </div>
+    </div>
 
     <!-- Confirmar devolución -->
     <div class="ov-backdrop" *ngIf="returning" (click)="closeReturn()"></div>
@@ -202,12 +262,17 @@ const ORIGIN_LABELS: Record<string, string> = {
     .note { color: var(--brand-muted); line-height: 1.5; margin: 0 0 1rem; }
     .mk-grid { grid-template-columns: 1.5fr 1.1fr 2fr 1fr 1.3fr 1.1fr; }
     .cl-grid { grid-template-columns: 1.6fr 1.3fr 2.4fr 1fr 1.2fr; }
+    .nt-grid { grid-template-columns: 1fr 1.4fr 1.4fr 1.6fr 1fr; }
+    .quote.pre { white-space: pre-wrap; }
+    .kv.op { align-items: flex-start; }
+    .kv.op small { color: var(--brand-muted); font-weight: 400; }
+    .link { color: #1385b6; cursor: pointer; font-size: 0.8rem; }
     .db-grid { grid-template-columns: 1.4fr 1fr 2.4fr 1fr; }
     .name-cell { display: flex; flex-direction: column; gap: 0.2rem; align-items: flex-start; }
     .name-cell small { color: var(--brand-muted); }
     :host ::ng-deep .tag-sm .p-tag { font-size: 0.7rem; padding: 0.1rem 0.4rem; }
     @media (max-width: 900px) {
-      .mk-grid, .cl-grid, .db-grid { grid-template-columns: 1fr; } .app-row.header { display: none; } .app-actions { justify-content: flex-start; }
+      .mk-grid, .cl-grid, .db-grid, .nt-grid { grid-template-columns: 1fr; } .app-row.header { display: none; } .app-actions { justify-content: flex-start; }
     }
 
     .ov-backdrop { position: fixed; inset: 0; background: rgba(15,35,50,0.45); z-index: 1000; backdrop-filter: blur(2px); }
@@ -250,7 +315,8 @@ export class MarketplaceFollowupPageComponent implements OnInit {
   private readonly api = inject(MarketplaceApiService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly msg = inject(MessageService);
-  private readonly cdr = inject(ChangeDetectorRef);
+  readonly cdr = inject(ChangeDetectorRef);
+  private readonly auth = inject(AuthService);
 
   buildings: MarketplaceStaffBuilding[] = [];
   buildingId = '';
@@ -265,6 +331,11 @@ export class MarketplaceFollowupPageComponent implements OnInit {
   debts: MarketplaceOwnerDebt[] = [];
   pendingRefunds = 0;
   openClaims = 0;
+  unreadNotes = 0;
+  notes: MarketplaceHandoverNote[] = [];
+  openedNote: MarketplaceHandoverNote | null = null;
+  // Operación cuyo historial está abierto.
+  historyId: string | null = null;
 
   returning: MarketplaceRefund | null = null;
   resolving: MarketplaceClaim | null = null;
@@ -327,6 +398,14 @@ export class MarketplaceFollowupPageComponent implements OnInit {
       next: list => { this.debts = list; if (this.tab === 'debts') this.done(); this.cdr.markForCheck(); },
       error: err => { if (this.tab === 'debts') this.fail(err, 'No se pudieron cargar las deudas por gestión.'); }
     });
+    this.api.getHandoverNotes(id, false).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: list => {
+        this.unreadNotes = list.length;
+        if (this.tab === 'notes' && !this.history) { this.notes = list; this.done(); }
+        this.cdr.markForCheck();
+      },
+      error: err => { if (this.tab === 'notes' && !this.history) this.fail(err, 'No se pudieron cargar las notas de cambio de propietario.'); }
+    });
 
     if (this.history && this.tab === 'refunds') {
       this.api.getRefunds(id, true).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
@@ -337,6 +416,11 @@ export class MarketplaceFollowupPageComponent implements OnInit {
       this.api.getClaims(id, true).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
         next: list => { this.claims = list; this.done(); },
         error: err => this.fail(err, 'No se pudieron cargar los reclamos.')
+      });
+    } else if (this.history && this.tab === 'notes') {
+      this.api.getHandoverNotes(id, true).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+        next: list => { this.notes = list; this.done(); },
+        error: err => this.fail(err, 'No se pudieron cargar las notas de cambio de propietario.')
       });
     }
   }
@@ -400,6 +484,35 @@ export class MarketplaceFollowupPageComponent implements OnInit {
   }
 
   // ── Formato ──────────────────────────────────────────────────────────────
+
+  // ── Historial y notas ────────────────────────────────────────────────────
+
+  showHistory(reservationId: string): void { this.historyId = reservationId; this.cdr.markForCheck(); }
+
+  // Abrir la nota la marca como leída (la primera vez) y trae la situación actual de cada operación.
+  openNote(note: MarketplaceHandoverNote): void {
+    this.api.getHandoverNote(note.id).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: opened => { this.openedNote = opened; this.cdr.markForCheck(); },
+      error: err => this.msg.add({ severity: 'error', summary: 'Error', detail: extractApiErrorMessage(err, 'No se pudo abrir la nota.'), life: 6000 })
+    });
+  }
+
+  closeNote(): void {
+    this.openedNote = null;
+    this.load();
+  }
+
+  noteToPdf(): void {
+    if (!this.openedNote) return;
+    window.open(this.api.handoverPdfUrl(this.openedNote.id, this.auth.getToken() ?? ''), '_blank', 'noopener');
+  }
+
+  opStatus(status: string, credit: string, claim: boolean, refund: string | null): string {
+    const base: Record<string, string> = { InReview: 'Pago en revisión', Confirmed: 'Confirmada', Completed: 'Finalizada', Cancelled: 'Cancelada' };
+    const creditLabel: Record<string, string> = { Pending: 'acreditación pendiente', Held: 'acreditación retenida', Credited: 'acreditada', Reversed: 'acreditación revertida' };
+    const extra = [creditLabel[credit], claim ? 'reclamo abierto' : '', refund === 'Pending' ? 'reembolso pendiente' : refund === 'Returned' ? 'reembolso devuelto' : ''].filter(Boolean);
+    return (base[status] ?? status) + (extra.length ? ' (' + extra.join(', ') + ')' : '');
+  }
 
   trackById(_: number, item: { id: string }): string { return item.id; }
   originLabel(origin: string): string { return ORIGIN_LABELS[origin] ?? origin; }

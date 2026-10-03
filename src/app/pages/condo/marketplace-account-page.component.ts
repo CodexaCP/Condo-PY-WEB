@@ -8,6 +8,7 @@ import { Message } from 'primeng/message';
 import { Tag } from 'primeng/tag';
 import { MessageService } from 'primeng/api';
 import { extractApiErrorMessage } from '../../api/api-error.util';
+import { MarketplaceHistoryDialogComponent } from './marketplace-history-dialog.component';
 import { MarketplaceApiService } from '../../api/marketplace-api.service';
 import { MarketplaceAccountRow, MarketplaceStaffBuilding, MarketplaceStatement } from '../../api/models';
 
@@ -36,7 +37,7 @@ const KIND_SEVERITY: Record<string, 'success' | 'info' | 'warn' | 'secondary'> =
   standalone: true,
   selector: 'app-marketplace-account-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, FormsModule, Button, Card, Message, Tag],
+  imports: [CommonModule, FormsModule, Button, Card, Message, Tag, MarketplaceHistoryDialogComponent],
   template: `
     <p-card styleClass="app-page-card">
       <div class="app-toolbar">
@@ -122,6 +123,8 @@ const KIND_SEVERITY: Record<string, 'success' | 'info' | 'warn' | 'secondary'> =
             <span>{{ row.reference ?? '—' }}</span>
             <strong class="num" [class.neg]="row.amount < 0">{{ gs(row.amount) }}</strong>
             <div class="app-actions">
+              <p-button *ngIf="row.reservationId" type="button" label="Historial" icon="pi pi-history" size="small" severity="secondary"
+                        [outlined]="true" (onClick)="historyId = row.reservationId; cdr.markForCheck()"></p-button>
               <p-button *ngIf="row.canReverse" type="button" label="Revertir" icon="pi pi-undo" size="small" severity="danger"
                         [outlined]="true" (onClick)="openReverse(row)"></p-button>
             </div>
@@ -129,6 +132,8 @@ const KIND_SEVERITY: Record<string, 'success' | 'info' | 'warn' | 'secondary'> =
         </div>
       </ng-container>
     </p-card>
+
+    <app-marketplace-history-dialog [reservationId]="historyId" (closed)="historyId = null; cdr.markForCheck()"></app-marketplace-history-dialog>
 
     <div class="ov-backdrop" *ngIf="dialog" (click)="closeDialog()"></div>
 
@@ -222,6 +227,8 @@ export class MarketplaceAccountPageComponent implements OnInit {
   to = '';
 
   statement: MarketplaceStatement | null = null;
+  // Operación cuyo historial está abierto.
+  historyId: string | null = null;
   loading = true;
   pageError = '';
   exporting = false;

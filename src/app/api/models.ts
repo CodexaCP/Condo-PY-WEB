@@ -2452,3 +2452,76 @@ export interface MarketplaceClaim {
   buyerStartResponse: 'Attending' | 'NotUsing' | null;
   buyerStartResponseReason: string | null;
 }
+
+// ── Marketplace: documentos y trazabilidad ────────────────────────────────────
+
+// Una línea del historial económico de una operación (sale de la auditoría del Marketplace).
+export interface MarketplaceHistoryItem {
+  timestampUtc: string;
+  action: string;
+  title: string;
+  detail: string | null;
+  // Nulo = lo hizo el sistema.
+  actorName: string | null;
+  amount: number | null;
+  fromStatus: string | null;
+  toStatus: string | null;
+}
+
+// La operación de punta a punta: publicación → reserva → importes → pago → acreditación.
+export interface MarketplaceOperationHistory {
+  reservationId: string;
+  buildingId: string;
+  reference: string;
+  title: string;
+  unitCode: string;
+  ownerName: string;
+  buyerName: string;
+  status: string;
+  creditStatus: string;
+  startsAtUtc: string;
+  endsAtUtc: string;
+  hours: number;
+  // Importes congelados al crear la reserva.
+  hourlyPrice: number;
+  baseAmount: number;
+  commissionPercent: number;
+  commissionAmount: number;
+  totalAmount: number;
+  ownerNetAmount: number;
+  items: MarketplaceHistoryItem[];
+}
+
+// Estado ACTUAL de una reserva afectada por un cambio de propietario principal.
+export interface MarketplaceHandoverOperation {
+  reservationId: string;
+  reference: string;
+  title: string;
+  status: string;
+  creditStatus: string;
+  startsAtUtc: string;
+  endsAtUtc: string;
+  ownerNetAmount: number;
+  hasOpenClaim: boolean;
+  refundStatus: 'Pending' | 'Returned' | null;
+}
+
+// Nota interna que se genera cuando cambia el propietario principal de una unidad con operaciones abiertas.
+export interface MarketplaceHandoverNote {
+  id: string;
+  buildingId: string;
+  buildingName: string;
+  unitId: string;
+  unitCode: string;
+  previousOwnerName: string;
+  newOwnerName: string | null;
+  trigger: 'PrimaryRemoved' | 'PrimaryReplaced';
+  // Lo que pasó y la situación al momento del cambio (texto fijo).
+  content: string;
+  reservationCount: number;
+  createdAtUtc: string;
+  readAtUtc: string | null;
+  readByName: string | null;
+  // Solo al abrir la nota: situación actual de cada operación.
+  operations: MarketplaceHandoverOperation[];
+}
