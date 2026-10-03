@@ -63,5 +63,8 @@ export class PushService {
     if (this.lastToken) {
       this.notifSvc.unregisterDeviceToken(this.lastToken).subscribe();
     }
+    // Tras cerrar sesión el próximo login (sin recargar la página) debe volver a registrar el token.
+    this.lastToken = null;
+    this.initStarted = false;
   }
 }
