@@ -294,6 +294,8 @@ export interface BuildingExpense {
   // Lo facturado por el proveedor antes de las notas de crédito (igual a amount si no tiene).
   originalAmount: number;
   creditedAmount: number;
+  // Notas de crédito registradas con el período ya publicado (el monto repartido no cambia).
+  creditedAfterPublishAmount: number;
   distributionType: BuildingExpenseDistributionType;
   targetUnitId: string | null;
   targetUnitCode: string;

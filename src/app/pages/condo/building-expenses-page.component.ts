@@ -427,9 +427,13 @@ interface RubroGroup {
             <small class="credited" *ngIf="item.creditedAmount > 0" pTooltip="Monto facturado por el proveedor menos sus notas de crédito">
               {{ formatCurrency(item.originalAmount) }} − NC {{ formatCurrency(item.creditedAmount) }}
             </small>
+            <small class="credited-after" *ngIf="item.creditedAfterPublishAmount > 0"
+              pTooltip="Nota de crédito del proveedor registrada con el período publicado: se acreditó a las unidades (o al fondo). El monto repartido no cambia.">
+              NC {{ formatCurrency(item.creditedAfterPublishAmount) }} acreditada
+            </small>
           </div>
           <div class="app-actions">
-            <p-button type="button" icon="pi pi-minus-circle" [severity]="item.creditedAmount > 0 ? 'warn' : 'secondary'" [rounded]="true" [text]="true"
+            <p-button type="button" icon="pi pi-minus-circle" [severity]="item.creditedAmount > 0 || item.creditedAfterPublishAmount > 0 ? 'warn' : 'secondary'" [rounded]="true" [text]="true"
               pTooltip="Notas de crédito del proveedor" (onClick)="openCreditNotes(item)"></p-button>
             <a *ngIf="item.hasReceipt" [href]="getReceiptUrl(item.id)" target="_blank" class="receipt-link">
               <p-button type="button" icon="pi pi-file-pdf" severity="info" [rounded]="true" [text]="true" [pTooltip]="item.receiptFileName ?? 'Ver comprobante'"></p-button>
@@ -554,6 +558,7 @@ interface RubroGroup {
     .receipt-link { display: contents; }
     .amount-cell { display: grid; gap: 0.1rem; }
     .amount-cell .credited { color: #b45309; font-size: 0.75rem; line-height: 1.2; }
+    .amount-cell .credited-after { color: #15803d; font-size: 0.75rem; line-height: 1.2; font-weight: 600; }
 
     @media (max-width: 860px) {
       .filters-bar { flex-direction: column; align-items: stretch; }
@@ -1349,6 +1354,7 @@ export class BuildingExpensesPageComponent implements OnInit, OnChanges {
 
   // Una nota nueva o anulada cambió el monto del gasto: se actualiza la fila y el total del grupo.
   onCreditNotesChanged(updated: BuildingExpense): void {
+    // La ventana trae el gasto ya con sus totales de notas (descontadas y acreditadas).
     this.allItems = this.allItems.map((item) => item.id === updated.id ? updated : item);
     this.applyFilters();
     this.cdr.markForCheck();
