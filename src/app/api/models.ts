@@ -126,6 +126,29 @@ export interface UnitOwnerAssignment {
   ownerName: string;
   isPrimary: boolean;
   startDate: string;
+  // Al asignar el nuevo propietario principal: saldo a favor de la unidad que se le traspasó.
+  transferredCredit?: number;
+}
+
+// Resultado de quitar a un propietario: saldo a favor de la unidad retenido (a la espera del nuevo propietario principal) o pasado
+// directo a otro propietario principal que sigue en la unidad.
+export interface UnitOwnerRemoval {
+  heldCredit: number;
+  transferredCredit: number;
+}
+
+// Lo que pasaría al quitar a un propietario, sin hacerlo.
+export interface UnitOwnerRemovalPreview {
+  unitCode: string;
+  ownerName: string;
+  isPrimary: boolean;
+  isLastPrimary: boolean;
+  canRemove: boolean;
+  pendingDebt: number;
+  debtPeriods: string[];
+  creditToHold: number;
+  creditToTransfer: number;
+  message: string | null;
 }
 
 export interface CreateUnitOwnerRequest {

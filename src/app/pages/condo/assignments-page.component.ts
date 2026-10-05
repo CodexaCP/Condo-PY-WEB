@@ -602,7 +602,13 @@ export class AssignmentsPageComponent implements OnInit {
         this.assignments = [...this.assignments, created];
         this.addForm = this.emptyAddForm();
         this.isSaving = false;
-        this.msg.add({ severity: 'success', summary: 'Guardado', detail: 'Propietario asignado correctamente.', life: 4000 });
+        const transferred = created.transferredCredit ?? 0;
+        this.msg.add({
+          severity: 'success', summary: 'Guardado', life: transferred > 0 ? 8000 : 4000,
+          detail: transferred > 0
+            ? `Propietario asignado. Se le traspasaron ${this.gs(transferred)} de saldo a favor que tenía la unidad.`
+            : 'Propietario asignado correctamente.'
+        });
         this.cdr.markForCheck();
       },
       error: (error) => {
@@ -613,17 +619,61 @@ export class AssignmentsPageComponent implements OnInit {
     });
   }
 
+  gs(value: number): string {
+    return '₲ ' + new Intl.NumberFormat('es-PY', { maximumFractionDigits: 0 }).format(value ?? 0);
+  }
+
+  // Cambio de propietario: antes de quitar al propietario principal se ve si la unidad tiene deuda (en ese caso no se puede) y qué pasa
+  // con el saldo a favor de la unidad, que queda retenido hasta asignar al nuevo propietario principal y pasa a él.
   removeOwner(item: UnitOwnerAssignment): void {
     this.isSaving = true;
+    this.unitOwnersApi.removalPreview(item.id).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: (preview) => {
+        if (!preview.canRemove) {
+          this.msg.add({ severity: 'error', summary: 'No se puede quitar', detail: preview.message ?? 'La unidad tiene deuda pendiente.', life: 12000 });
+          this.isSaving = false;
+          this.cdr.markForCheck();
+          return;
+        }
+
+        let question = '';
+        if (preview.creditToHold > 0) {
+          question = `La unidad ${preview.unitCode} tiene ${this.gs(preview.creditToHold)} de saldo a favor. Quedará retenido hasta que asignes al nuevo propietario principal, que lo recibirá.\n\n¿Quitar a ${preview.ownerName}?`;
+        } else if (preview.creditToTransfer > 0) {
+          question = `La unidad ${preview.unitCode} tiene ${this.gs(preview.creditToTransfer)} de saldo a favor. Pasará al otro propietario principal que sigue en la unidad.\n\n¿Quitar a ${preview.ownerName}?`;
+        }
+        if (question && !confirm(question)) {
+          this.isSaving = false;
+          this.cdr.markForCheck();
+          return;
+        }
+
+        this.doRemoveOwner(item);
+      },
+      error: (error) => {
+        this.msg.add({ severity: 'error', summary: 'Error', detail: extractApiErrorMessage(error, 'No se pudo revisar la baja del propietario.'), life: 6000 });
+        this.isSaving = false;
+        this.cdr.markForCheck();
+      }
+    });
+  }
+
+  private doRemoveOwner(item: UnitOwnerAssignment): void {
     this.unitOwnersApi.delete(item.id).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-      next: () => {
+      next: (result) => {
         this.assignments = this.assignments.filter(a => a.id !== item.id);
         this.isSaving = false;
-        this.msg.add({ severity: 'success', summary: 'Quitado', detail: 'Propietario quitado de la unidad.', life: 4000 });
+        let detail = 'Propietario quitado de la unidad.';
+        if (result?.heldCredit > 0) {
+          detail += ` El saldo a favor de la unidad (${this.gs(result.heldCredit)}) quedó retenido hasta asignar al nuevo propietario principal.`;
+        } else if (result?.transferredCredit > 0) {
+          detail += ` El saldo a favor de la unidad (${this.gs(result.transferredCredit)}) pasó al otro propietario principal.`;
+        }
+        this.msg.add({ severity: 'success', summary: 'Quitado', detail, life: result?.heldCredit > 0 || result?.transferredCredit > 0 ? 9000 : 4000 });
         this.cdr.markForCheck();
       },
       error: (error) => {
-        this.msg.add({ severity: 'error', summary: 'Error', detail: extractApiErrorMessage(error, 'No se pudo quitar el propietario.'), life: 5000 });
+        this.msg.add({ severity: 'error', summary: 'Error', detail: extractApiErrorMessage(error, 'No se pudo quitar el propietario.'), life: 12000 });
         this.isSaving = false;
         this.cdr.markForCheck();
       }
