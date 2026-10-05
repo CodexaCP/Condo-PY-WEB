@@ -6,15 +6,31 @@ import { RouterLink } from '@angular/router';
 import { Card } from 'primeng/card';
 import { ChartModule } from 'primeng/chart';
 import { Message } from 'primeng/message';
+import { catchError, forkJoin, of, Subscription } from 'rxjs';
+import { CollectionsApiService } from '../../api/collections-api.service';
 import { FinanceApiService } from '../../api/finance-api.service';
-import { FinanceBuildingAccess, FinanceDashboard, FinanceRubroAmount } from '../../api/models';
+import { MorosityApiService } from '../../api/morosity-api.service';
+import { CollectionReport, FinanceBuildingAccess, FinanceDashboard, FinanceMovement, FinanceRubroAmount, MorosityReport } from '../../api/models';
 import { FinanceBuildingPickerComponent } from './finance-building-picker.component';
 import { FinanceExportButtonComponent, FinanceExportParams } from './finance-export-button.component';
 import { classifyFinanceError, FinanceErrorKind, GsPipe, monthLabel, monthShort } from './finance-format';
 import { FinanceStateComponent } from './finance-state.component';
 
-// Tablero del modulo «Finanzas del edificio»: cuanto hay en cada cuenta, cuanto entro y salio en el mes y en el ejercicio, y
-// la evolucion de los ultimos meses. Caja y saldos por lo percibido (cobrado y pagado), hasta hoy y desde la fecha de arranque.
+// Cuanto cambio un monto contra el mes anterior. `good` dice si el cambio es favorable (mas ingresos es bueno, mas egresos no).
+interface Delta { pct: number; good: boolean }
+
+interface DonutSlice { label: string; amount: number; share: number; color: string }
+interface Donut { data: unknown; slices: DonutSlice[]; total: number }
+
+interface DashAlert { level: 'bad' | 'warn' | 'info' | 'ok'; title: string; detail: string; link?: string[] }
+
+// Colores de los rubros: la paleta de marca primero y luego tonos de apoyo; el ultimo (gris) es siempre «Otros».
+const SLICE_COLORS = ['#1385B6', '#1AB7AF', '#8B5CF6', '#F59E0B', '#6AC64A'];
+const OTHERS_COLOR = '#94a3b8';
+
+// Tablero del modulo «Finanzas del edificio»: ingresos y egresos del mes contra el mes anterior, cobranza y mora del edificio,
+// saldos, evolucion, rubros, ultimos movimientos y alertas. Caja y saldos por lo percibido (cobrado y pagado), hasta hoy y desde
+// la fecha de arranque.
 @Component({
   standalone: true,
   selector: 'app-finance-dashboard-page',
@@ -23,20 +39,21 @@ import { FinanceStateComponent } from './finance-state.component';
   template: `
     <p-card styleClass="app-page-card">
       <div class="app-toolbar">
-        <div class="app-page-head">
+        <div class="hero">
+          <div class="hero-ico"><i class="pi pi-chart-bar"></i></div>
           <div>
-            <h1>Tablero financiero</h1>
-            <p>Saldos, flujo del mes y evolución del edificio.</p>
+            <h1>Resumen financiero</h1>
+            <p>Vista general de la situación económica del edificio.</p>
           </div>
         </div>
         <div class="controls">
           <app-finance-building-picker (selected)="onBuilding($event)" (failed)="onError($event)"></app-finance-building-picker>
-          <app-finance-export-button kind="accountant-pack" [buildingId]="buildingId" [params]="exportParams" fileLabel="paquete-contador"
-                                     label="Paquete para el contador" [period]="data ? '' + data.fiscalYear : ''" [disabled]="!data"></app-finance-export-button>
           <label class="field" *ngIf="data">
             <span>Mes</span>
             <input type="month" [ngModel]="monthValue" (ngModelChange)="onMonth($event)" [min]="minMonth" [max]="maxMonth" />
           </label>
+          <app-finance-export-button kind="accountant-pack" [buildingId]="buildingId" [params]="exportParams" fileLabel="paquete-contador"
+                                     label="Paquete para el contador" [period]="data ? '' + data.fiscalYear : ''" [disabled]="!data"></app-finance-export-button>
         </div>
       </div>
 
@@ -53,22 +70,65 @@ import { FinanceStateComponent } from './finance-state.component';
       <ng-container *ngIf="data as d">
         <p class="asof">Datos al {{ d.asOf | date: 'dd/MM/yyyy' }} · en el mes de {{ monthText }}</p>
 
-        <div class="kpis">
-          <div class="kpi main">
-            <span>Saldo total</span>
-            <strong>{{ d.balances.totalBalance | gs }}</strong>
+        <div class="k3">
+          <div class="card kpi">
+            <div class="ki ki-in"><i class="pi pi-arrow-down"></i></div>
+            <div class="kb">
+              <span class="kl">Ingresos del mes</span>
+              <strong class="kv">{{ d.monthFlow.in | gs }}</strong>
+              <span class="kd" *ngIf="deltaIn as x" [class.good]="x.good" [class.bad]="!x.good">{{ pct(x.pct) }} <em>vs. mes anterior</em></span>
+            </div>
           </div>
-          <div class="kpi">
-            <span>Caja</span>
-            <strong>{{ d.balances.cashBalance | gs }}</strong>
+          <div class="card kpi">
+            <div class="ki ki-out"><i class="pi pi-arrow-up"></i></div>
+            <div class="kb">
+              <span class="kl">Egresos del mes</span>
+              <strong class="kv">{{ d.monthFlow.out | gs }}</strong>
+              <span class="kd" *ngIf="deltaOut as x" [class.good]="x.good" [class.bad]="!x.good">{{ pct(x.pct) }} <em>vs. mes anterior</em></span>
+            </div>
           </div>
-          <div class="kpi">
-            <span>Bancos</span>
-            <strong>{{ d.balances.bankBalance | gs }}</strong>
+          <div class="card kpi main">
+            <div class="ki ki-net"><i class="pi pi-chart-line"></i></div>
+            <div class="kb">
+              <span class="kl">Resultado del mes</span>
+              <strong class="kv" [class.pos]="d.monthFlow.net >= 0" [class.neg]="d.monthFlow.net < 0">{{ d.monthFlow.net | gs }}</strong>
+              <span class="kd" *ngIf="deltaNet as x" [class.good]="x.good" [class.bad]="!x.good">{{ pct(x.pct) }} <em>vs. mes anterior</em></span>
+            </div>
           </div>
-          <div class="kpi">
-            <span>Fondo de reserva</span>
-            <strong>{{ d.balances.reserveFundBalance | gs }}</strong>
+        </div>
+
+        <div class="k4">
+          <a class="card kpi link-card" *ngIf="porCobrar as p" routerLink="/collections">
+            <div class="ki ki-due"><i class="pi pi-users"></i></div>
+            <div class="kb">
+              <span class="kl">Por cobrar</span>
+              <strong class="kv sm">{{ p.amount | gs }}</strong>
+              <span class="kd muted">Cobranza {{ p.rate | number: '1.0-1' }} %</span>
+            </div>
+          </a>
+          <a class="card kpi link-card" *ngIf="mora as m" routerLink="/morosity">
+            <div class="ki ki-late"><i class="pi pi-clock"></i></div>
+            <div class="kb">
+              <span class="kl">Mora vencida</span>
+              <strong class="kv sm" [class.neg]="m.amount > 0">{{ m.amount | gs }}</strong>
+              <span class="kd muted">{{ m.units }} {{ m.units === 1 ? 'unidad' : 'unidades' }}</span>
+            </div>
+          </a>
+          <div class="card kpi">
+            <div class="ki ki-cash"><i class="pi pi-wallet"></i></div>
+            <div class="kb">
+              <span class="kl">Saldo en caja</span>
+              <strong class="kv sm">{{ d.balances.cashBalance | gs }}</strong>
+              <span class="kd muted">Efectivo</span>
+            </div>
+          </div>
+          <div class="card kpi">
+            <div class="ki ki-bank"><i class="pi pi-building"></i></div>
+            <div class="kb">
+              <span class="kl">Saldo bancario</span>
+              <strong class="kv sm">{{ d.balances.bankBalance | gs }}</strong>
+              <span class="kd muted">Bancos</span>
+            </div>
           </div>
         </div>
 
@@ -77,7 +137,90 @@ import { FinanceStateComponent } from './finance-state.component';
           <p class="link"><a [routerLink]="['/finance/settings']" [queryParams]="{ buildingId: d.buildingId }">Ir a Configuración</a></p>
         </ng-container>
 
-        <h2>Cuentas</h2>
+        <div class="row3">
+          <div class="card">
+            <div class="ch">
+              <h3>Ingresos vs. egresos</h3>
+              <div class="tabs">
+                <button type="button" [class.on]="range === 6" (click)="setRange(6)">6 meses</button>
+                <button type="button" [class.on]="range === 12" (click)="setRange(12)">12 meses</button>
+              </div>
+            </div>
+            <div class="chart-box" *ngIf="chartData">
+              <p-chart type="bar" [data]="chartData" [options]="chartOptions" height="260px"></p-chart>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>Egresos por rubro</h3>
+            <p class="muted small" *ngIf="!donutOut.slices.length">Sin egresos en el mes.</p>
+            <div class="donut" *ngIf="donutOut.slices.length">
+              <div class="ring">
+                <p-chart type="doughnut" [data]="donutOut.data" [options]="donutOptions" width="130px" height="130px"></p-chart>
+                <div class="ring-c"><strong>{{ compact(donutOut.total) }}</strong><span>egresos</span></div>
+              </div>
+              <div class="lg">
+                <div *ngFor="let s of donutOut.slices"><i class="dot" [style.background]="s.color"></i><span class="ln">{{ s.label }}</span><em>{{ s.share | number: '1.0-0' }} %</em></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>Ingresos por rubro</h3>
+            <p class="muted small" *ngIf="!donutIn.slices.length">Sin ingresos en el mes.</p>
+            <div class="donut" *ngIf="donutIn.slices.length">
+              <div class="ring">
+                <p-chart type="doughnut" [data]="donutIn.data" [options]="donutOptions" width="130px" height="130px"></p-chart>
+                <div class="ring-c"><strong>{{ compact(donutIn.total) }}</strong><span>ingresos</span></div>
+              </div>
+              <div class="lg">
+                <div *ngFor="let s of donutIn.slices"><i class="dot" [style.background]="s.color"></i><span class="ln">{{ s.label }}</span><em>{{ s.share | number: '1.0-0' }} %</em></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="row2">
+          <div class="card">
+            <div class="ch">
+              <h3>Últimos movimientos</h3>
+              <a class="more" [routerLink]="['/finance/movements']" [queryParams]="{ buildingId: d.buildingId }">Ver todos →</a>
+            </div>
+            <p class="muted small" *ngIf="!movements.length">Sin movimientos para mostrar.</p>
+            <div class="tbl-wrap" *ngIf="movements.length">
+              <table class="mv">
+                <thead><tr><th>Fecha</th><th>Concepto</th><th>Rubro</th><th>Tipo</th><th class="num">Monto</th></tr></thead>
+                <tbody>
+                  <tr *ngFor="let m of movements">
+                    <td>{{ m.date | date: 'dd/MM/yyyy' }}</td>
+                    <td class="cc">{{ m.description || m.thirdParty || m.reference || '—' }}</td>
+                    <td>{{ m.categoryName || 'Sin rubro' }}</td>
+                    <td><span class="tag" [class.in]="m.direction === 'In'" [class.out]="m.direction === 'Out'">{{ m.direction === 'In' ? 'Ingreso' : 'Egreso' }}</span></td>
+                    <td class="num">{{ m.amount | gs }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>Alertas del edificio</h3>
+            <ng-container *ngFor="let a of alerts">
+              <a class="al" *ngIf="a.link; else plainAlert" [routerLink]="a.link" [queryParams]="{ buildingId: d.buildingId }">
+                <span class="ad" [ngClass]="a.level"><i class="pi" [ngClass]="a.level === 'ok' ? 'pi-check' : 'pi-exclamation-circle'"></i></span>
+                <span><strong>{{ a.title }}</strong><small>{{ a.detail }}</small></span>
+              </a>
+              <ng-template #plainAlert>
+                <div class="al">
+                  <span class="ad" [ngClass]="a.level"><i class="pi" [ngClass]="a.level === 'ok' ? 'pi-check' : 'pi-exclamation-circle'"></i></span>
+                  <span><strong>{{ a.title }}</strong><small>{{ a.detail }}</small></span>
+                </div>
+              </ng-template>
+            </ng-container>
+          </div>
+        </div>
+
+        <h2>Cuentas <small class="muted">Saldo total {{ d.balances.totalBalance | gs }}</small></h2>
         <div class="app-list">
           <div class="app-row header acc-grid">
             <span>Cuenta</span>
@@ -100,55 +243,24 @@ import { FinanceStateComponent } from './finance-state.component';
           </div>
         </div>
         <p class="muted small">Saldo = saldo inicial a la fecha de arranque ({{ d.financeStartDate | date: 'dd/MM/yyyy' }}) + entradas − salidas.</p>
-
-        <h2>Flujo de {{ monthText }}</h2>
-        <div class="kpis three">
-          <div class="kpi"><span>Entradas</span><strong class="pos">{{ d.monthFlow.in | gs }}</strong></div>
-          <div class="kpi"><span>Salidas</span><strong class="neg">{{ d.monthFlow.out | gs }}</strong></div>
-          <div class="kpi"><span>Neto del mes</span><strong [class.pos]="d.monthFlow.net >= 0" [class.neg]="d.monthFlow.net < 0">{{ d.monthFlow.net | gs }}</strong></div>
-        </div>
         <p class="muted small">
           Ejercicio {{ d.fiscalYear }} (desde {{ d.fiscalYearStart | date: 'dd/MM/yyyy' }}): entradas {{ d.fiscalYearToDate.in | gs }}, salidas {{ d.fiscalYearToDate.out | gs }}, neto {{ d.fiscalYearToDate.net | gs }}.
         </p>
 
-        <div class="two-cols">
-          <div>
-            <h3>Entradas por rubro</h3>
-            <p class="muted small" *ngIf="!d.monthIn.length">Sin entradas en el mes.</p>
-            <div class="bar-row" *ngFor="let r of topRubros(d.monthIn)">
-              <div class="bar-label"><span>{{ r.code }} · {{ r.name }}</span><strong>{{ r.amount | gs }}</strong></div>
-              <div class="bar"><div class="fill in" [style.width.%]="share(r, d.monthIn)"></div></div>
-            </div>
-          </div>
-          <div>
-            <h3>Salidas por rubro</h3>
-            <p class="muted small" *ngIf="!d.monthOut.length">Sin salidas en el mes.</p>
-            <div class="bar-row" *ngFor="let r of topRubros(d.monthOut)">
-              <div class="bar-label"><span>{{ r.code }} · {{ r.name }}</span><strong>{{ r.amount | gs }}</strong></div>
-              <div class="bar"><div class="fill out" [style.width.%]="share(r, d.monthOut)"></div></div>
-            </div>
-          </div>
-        </div>
-
-        <h2>Evolución (últimos meses)</h2>
-        <div class="chart-box" *ngIf="chartData">
-          <p-chart type="bar" [data]="chartData" [options]="chartOptions" height="320px"></p-chart>
-        </div>
-
         <h2>Presupuesto de {{ monthText }}</h2>
         <ng-container *ngIf="d.budget.hasBudget; else noBudget">
           <div class="kpis three">
-            <div class="kpi">
+            <div class="kpi-plain">
               <span>Gastos del mes</span>
               <strong>{{ d.budget.monthExpenseActual | gs }}</strong>
               <small class="muted">presupuestado {{ d.budget.monthExpenseBudget | gs }}</small>
             </div>
-            <div class="kpi">
+            <div class="kpi-plain">
               <span>Ingresos cobrados del mes</span>
               <strong>{{ d.budget.monthIncomeActual | gs }}</strong>
               <small class="muted">presupuestado {{ d.budget.monthIncomeBudget | gs }}</small>
             </div>
-            <div class="kpi">
+            <div class="kpi-plain">
               <span>Rubros con desvío</span>
               <strong><i class="dot red"></i> {{ d.budget.redCount }} <i class="dot amber"></i> {{ d.budget.amberCount }}</strong>
               <small class="muted">rojo: más de 10 % · amarillo: hasta 10 %</small>
@@ -173,9 +285,9 @@ import { FinanceStateComponent } from './finance-state.component';
         <h2>Fondo de reserva</h2>
         <ng-container *ngIf="d.reserveFund.hasFundAccount; else noFund">
           <div class="kpis three">
-            <div class="kpi"><span>Saldo del fondo</span><strong>{{ d.reserveFund.balance | gs }}</strong></div>
-            <div class="kpi"><span>Aportes de {{ monthText }}</span><strong class="pos">{{ d.reserveFund.monthContributions | gs }}</strong></div>
-            <div class="kpi"><span>Usos de {{ monthText }}</span><strong class="neg">{{ d.reserveFund.monthUses | gs }}</strong></div>
+            <div class="kpi-plain"><span>Saldo del fondo</span><strong>{{ d.reserveFund.balance | gs }}</strong></div>
+            <div class="kpi-plain"><span>Aportes de {{ monthText }}</span><strong class="pos">{{ d.reserveFund.monthContributions | gs }}</strong></div>
+            <div class="kpi-plain"><span>Usos de {{ monthText }}</span><strong class="neg">{{ d.reserveFund.monthUses | gs }}</strong></div>
           </div>
           <p class="link"><a [routerLink]="['/finance/reserve-fund']" [queryParams]="{ buildingId: d.buildingId }">Ver el libro del fondo</a></p>
         </ng-container>
@@ -186,6 +298,13 @@ import { FinanceStateComponent } from './finance-state.component';
     </p-card>
   `,
   styles: [`
+    .hero { display: flex; align-items: center; gap: 0.9rem; }
+    .hero h1 { margin: 0; font-size: 1.6rem; color: var(--brand-ink); }
+    .hero p { margin: 0.15rem 0 0; color: var(--brand-muted); font-size: 0.9rem; }
+    .hero-ico {
+      width: 48px; height: 48px; border-radius: 14px; display: grid; place-items: center; flex: none;
+      background: var(--brand-gradient); color: var(--brand-on-gradient); font-size: 1.4rem;
+    }
     .controls { display: flex; gap: 1rem; align-items: end; flex-wrap: wrap; }
     .field { display: grid; gap: 0.25rem; font-size: 0.82rem; font-weight: 600; color: var(--brand-muted); }
     .field input {
@@ -199,49 +318,133 @@ import { FinanceStateComponent } from './finance-state.component';
     .disclaimer i { margin-top: 0.15rem; color: var(--brand-c2); }
     .asof { margin: 0 0 1rem; color: var(--brand-muted); font-size: 0.9rem; }
     h2 { margin: 1.6rem 0 0.7rem; font-size: 1.2rem; color: var(--brand-ink); }
+    h2 small { font-size: 0.85rem; font-weight: 600; margin-left: 0.5rem; }
     h3 { margin: 0 0 0.6rem; font-size: 1rem; color: var(--brand-ink); }
-    .kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.9rem; }
-    .kpis.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-    .kpi {
-      display: grid; gap: 0.3rem; padding: 1rem 1.1rem; border-radius: 14px;
+
+    .card {
       background: var(--p-content-background, #fff); border: 1px solid var(--brand-border);
+      border-radius: 14px; padding: 1rem 1.1rem; min-width: 0; margin: 0;
     }
-    .kpi span { font-size: 0.82rem; font-weight: 600; color: var(--brand-muted); }
-    .kpi strong { font-size: 1.35rem; color: var(--brand-ink); }
+    .k3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.9rem; margin-bottom: 0.9rem; }
+    .k4 { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.9rem; margin-bottom: 0.9rem; }
+    .row3 { display: grid; grid-template-columns: 1.7fr 1fr 1fr; gap: 0.9rem; margin-bottom: 0.9rem; }
+    .row2 { display: grid; grid-template-columns: 1.7fr 1fr; gap: 0.9rem; }
+
+    .kpi { display: flex; gap: 0.85rem; align-items: center; }
     .kpi.main { background: var(--brand-gradient-soft); border-color: transparent; }
-    .kpi.main strong { font-size: 1.6rem; }
+    .link-card { text-decoration: none; color: inherit; transition: box-shadow .15s ease, transform .15s ease; }
+    .link-card:hover { box-shadow: 0 6px 18px rgba(19,133,182,0.14); transform: translateY(-1px); }
+    .ki { width: 44px; height: 44px; border-radius: 12px; display: grid; place-items: center; flex: none; font-size: 1.15rem; }
+    .ki-in { background: rgba(106,198,74,0.18); color: #2f8f46; }
+    .ki-out { background: rgba(217,79,61,0.13); color: #c9473b; }
+    .ki-net { background: var(--brand-gradient); color: var(--brand-on-gradient); }
+    .ki-due { background: rgba(245,158,11,0.16); color: #c98a0a; }
+    .ki-late { background: rgba(217,79,61,0.13); color: #c9473b; }
+    .ki-cash { background: rgba(26,183,175,0.16); color: #139089; }
+    .ki-bank { background: rgba(19,133,182,0.14); color: #1385B6; }
+    .kb { display: grid; gap: 0.15rem; min-width: 0; }
+    .kl { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--brand-muted); }
+    .kv { font-size: 1.5rem; color: var(--brand-ink); line-height: 1.15; }
+    .kv.sm { font-size: 1.2rem; }
+    .kd { font-size: 0.8rem; font-weight: 700; }
+    .kd em { font-style: normal; font-weight: 400; color: var(--brand-muted); }
+    .kd.good { color: #2f8f46; }
+    .kd.bad { color: #c9473b; }
+    .kd.muted { font-weight: 400; }
+
     .pos { color: #2f8f46 !important; }
     .neg { color: #c9473b !important; }
     .muted { color: var(--brand-muted); }
     small.muted { margin-left: 0.4rem; font-weight: 400; }
     .small { font-size: 0.85rem; }
     .link { margin: 0.4rem 0 0.8rem; font-weight: 600; }
+
+    .ch { display: flex; align-items: center; justify-content: space-between; gap: 0.6rem; margin-bottom: 0.4rem; }
+    .ch h3 { margin: 0; }
+    .tabs { display: inline-flex; gap: 2px; padding: 2px; border-radius: 9px; background: var(--brand-gradient-soft); }
+    .tabs button {
+      border: 0; background: transparent; color: var(--brand-muted); font: inherit; font-size: 0.78rem; font-weight: 600;
+      padding: 0.25rem 0.65rem; border-radius: 7px; cursor: pointer;
+    }
+    .tabs button.on { background: var(--brand-gradient); color: var(--brand-on-gradient); }
+    .more { font-size: 0.85rem; font-weight: 600; color: var(--brand-c2); text-decoration: none; }
+    .more:hover { text-decoration: underline; }
+    .chart-box { padding: 0.25rem 0; }
+
+    .donut { display: flex; align-items: center; gap: 0.9rem; }
+    .ring { position: relative; width: 130px; height: 130px; flex: none; }
+    .ring-c { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; pointer-events: none; }
+    .ring-c strong { font-size: 0.95rem; color: var(--brand-ink); }
+    .ring-c span { font-size: 0.7rem; color: var(--brand-muted); }
+    .lg { display: grid; gap: 0.3rem; flex: 1; min-width: 0; font-size: 0.82rem; }
+    .lg > div { display: flex; align-items: center; gap: 0.4rem; color: var(--brand-ink-soft); }
+    .lg .ln { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .lg em { margin-left: auto; font-style: normal; font-weight: 700; color: var(--brand-ink); }
+    .dot { display: inline-block; width: 0.7rem; height: 0.7rem; border-radius: 50%; flex: none; vertical-align: middle; }
+    .dot.red { background: #d6483b; width: 0.8rem; height: 0.8rem; }
+    .dot.amber { background: #e0a526; width: 0.8rem; height: 0.8rem; margin-left: 0.6rem; }
+
+    .tbl-wrap { overflow-x: auto; }
+    .mv { width: 100%; border-collapse: collapse; font-size: 0.86rem; }
+    .mv th {
+      text-align: left; padding: 0.45rem 0.6rem; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.04em;
+      text-transform: uppercase; color: var(--brand-muted); background: var(--brand-gradient-soft);
+    }
+    .mv td { padding: 0.55rem 0.6rem; border-bottom: 1px solid var(--brand-border); color: var(--brand-ink-soft); }
+    .mv .cc { max-width: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--brand-ink); }
+    .mv .num, .num { text-align: right; }
+    .mv th.num { text-align: right; }
+    .tag { display: inline-block; padding: 0.1rem 0.6rem; border-radius: 999px; font-size: 0.74rem; font-weight: 700; }
+    .tag.in { background: rgba(106,198,74,0.18); color: #2f8f46; }
+    .tag.out { background: rgba(217,79,61,0.13); color: #c9473b; }
+
+    .al {
+      display: flex; gap: 0.6rem; align-items: center; padding: 0.55rem 0.7rem; margin-bottom: 0.5rem;
+      border: 1px solid var(--brand-border); border-radius: 12px; text-decoration: none; color: inherit;
+    }
+    a.al:hover { background: var(--brand-gradient-soft); }
+    .al strong { display: block; font-size: 0.88rem; color: var(--brand-ink); }
+    .al small { display: block; font-size: 0.78rem; color: var(--brand-muted); }
+    .ad { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; flex: none; font-size: 0.9rem; }
+    .ad.bad { background: rgba(217,79,61,0.13); color: #c9473b; }
+    .ad.warn { background: rgba(245,158,11,0.16); color: #c98a0a; }
+    .ad.info { background: rgba(19,133,182,0.14); color: #1385B6; }
+    .ad.ok { background: rgba(106,198,74,0.2); color: #2f8f46; }
+
+    .kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.9rem; }
+    .kpis.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .kpi-plain {
+      display: grid; gap: 0.3rem; padding: 1rem 1.1rem; border-radius: 14px;
+      background: var(--p-content-background, #fff); border: 1px solid var(--brand-border);
+    }
+    .kpi-plain span { font-size: 0.82rem; font-weight: 600; color: var(--brand-muted); }
+    .kpi-plain strong { font-size: 1.35rem; color: var(--brand-ink); }
     .acc-grid { grid-template-columns: 2fr 1fr 1fr 1fr 1.2fr; padding: 0.7rem 1rem; }
-    .num { text-align: right; }
     .inactive { opacity: 0.6; }
-    .two-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-top: 1.2rem; }
     .bar-row { margin-bottom: 0.7rem; }
     .bar-label { display: flex; justify-content: space-between; gap: 1rem; font-size: 0.88rem; color: var(--brand-ink-soft); }
-    .bar { height: 7px; border-radius: 999px; background: var(--brand-border); margin-top: 0.25rem; overflow: hidden; }
-    .fill { height: 100%; border-radius: 999px; }
-    .fill.in { background: var(--brand-c3); }
-    .fill.out { background: #e5675d; }
-    .chart-box { padding: 0.5rem 0; }
     .mt { margin-top: 1.1rem; }
-    .dot { display: inline-block; width: 0.8rem; height: 0.8rem; border-radius: 50%; vertical-align: middle; }
-    .dot.red { background: #d6483b; }
-    .dot.amber { background: #e0a526; margin-left: 0.6rem; }
+
+    @media (max-width: 1200px) {
+      .row3, .row2 { grid-template-columns: 1fr; }
+    }
     @media (max-width: 900px) {
-      .kpis, .kpis.three, .two-cols { grid-template-columns: 1fr 1fr; }
-      .two-cols { grid-template-columns: 1fr; }
+      .k3 { grid-template-columns: 1fr; }
+      .k4 { grid-template-columns: 1fr 1fr; }
+      .kpis, .kpis.three { grid-template-columns: 1fr 1fr; }
       .acc-grid { grid-template-columns: 1fr 1fr; }
       .app-row.header { display: none; }
       .num { text-align: left; }
+    }
+    @media (max-width: 520px) {
+      .k4, .kpis, .kpis.three { grid-template-columns: 1fr; }
     }
   `]
 })
 export class FinanceDashboardPageComponent {
   private readonly api = inject(FinanceApiService);
+  private readonly morosityApi = inject(MorosityApiService);
+  private readonly collectionsApi = inject(CollectionsApiService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly cdr = inject(ChangeDetectorRef);
 
@@ -257,8 +460,26 @@ export class FinanceDashboardPageComponent {
   minMonth = '';
   maxMonth = '';
 
+  // Meses que muestra el grafico de evolucion (el servidor entrega hasta 12).
+  range: 6 | 12 = 6;
+
   chartData: unknown = null;
   chartOptions: unknown = null;
+  donutOptions: unknown = null;
+  donutOut: Donut = { data: null, slices: [], total: 0 };
+  donutIn: Donut = { data: null, slices: [], total: 0 };
+
+  deltaIn: Delta | null = null;
+  deltaOut: Delta | null = null;
+  deltaNet: Delta | null = null;
+
+  // Datos de cobranza y movimientos: son de otras pantallas y si el usuario no puede verlos (o fallan) simplemente no se muestran.
+  porCobrar: { amount: number; rate: number } | null = null;
+  mora: { amount: number; units: number } | null = null;
+  movements: FinanceMovement[] = [];
+  alerts: DashAlert[] = [];
+
+  private extrasSub: Subscription | null = null;
 
   get monthText(): string { return this.data ? monthLabel(this.data.year, this.data.month).toLowerCase() : ''; }
 
@@ -275,6 +496,7 @@ export class FinanceDashboardPageComponent {
     this.noBuilding = false;
     this.buildingId = building.buildingId;
     this.monthValue = '';
+    this.resetExtras();
     this.load();
   }
 
@@ -288,15 +510,35 @@ export class FinanceDashboardPageComponent {
     this.load();
   }
 
-  topRubros(list: FinanceRubroAmount[]): FinanceRubroAmount[] { return list.filter(r => r.amount > 0).slice(0, 6); }
+  setRange(months: 6 | 12): void {
+    if (this.range === months) return;
+    this.range = months;
+    if (this.data) this.buildChart(this.data);
+    this.cdr.markForCheck();
+  }
 
-  share(r: FinanceRubroAmount, all: FinanceRubroAmount[]): number {
-    const max = Math.max(...all.map(x => x.amount), 1);
-    return Math.max(2, Math.round((r.amount / max) * 100));
+  pct(value: number): string {
+    const sign = value > 0 ? '▲ +' : value < 0 ? '▼ ' : '';
+    return `${sign}${value.toLocaleString('es-PY', { maximumFractionDigits: 1 })} %`;
+  }
+
+  // Monto abreviado para el centro de las donas: «₲ 12,8 M».
+  compact(value: number): string {
+    const abs = Math.abs(value);
+    if (abs >= 1_000_000) return `₲ ${(value / 1_000_000).toLocaleString('es-PY', { maximumFractionDigits: 1 })} M`;
+    if (abs >= 1_000) return `₲ ${(value / 1_000).toLocaleString('es-PY', { maximumFractionDigits: 0 })} mil`;
+    return `₲ ${value.toLocaleString('es-PY', { maximumFractionDigits: 0 })}`;
   }
 
   typeLabel(type: string): string {
     return type === 'Cash' ? 'Caja' : type === 'Bank' ? 'Banco' : 'Fondo de reserva';
+  }
+
+  private resetExtras(): void {
+    this.extrasSub?.unsubscribe();
+    this.porCobrar = null;
+    this.mora = null;
+    this.movements = [];
   }
 
   private load(): void {
@@ -313,10 +555,27 @@ export class FinanceDashboardPageComponent {
         this.minMonth = data.financeStartDate.slice(0, 7);
         const now = new Date();
         this.maxMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-        this.buildChart(data);
+        this.buildView(data);
+        this.loadExtras(data);
         this.cdr.markForCheck();
       },
       error: err => this.setError(err, 'No se pudo cargar el tablero.')
+    });
+  }
+
+  // Cobranza, mora y ultimos movimientos del edificio. Cada pedido falla por separado sin romper el tablero.
+  private loadExtras(d: FinanceDashboard): void {
+    this.extrasSub?.unsubscribe();
+    this.extrasSub = forkJoin({
+      morosity: this.morosityApi.getReport({ buildingId: d.buildingId, page: 1, pageSize: 1 }).pipe(catchError(() => of(null as MorosityReport | null))),
+      collections: this.collectionsApi.getReport({ buildingId: d.buildingId }).pipe(catchError(() => of(null as CollectionReport | null))),
+      movements: this.api.getMovements(d.buildingId, { to: d.asOf, newestFirst: true, page: 1, pageSize: 5 }).pipe(catchError(() => of(null)))
+    }).pipe(takeUntilDestroyed(this.destroyRef)).subscribe(r => {
+      this.mora = r.morosity ? { amount: r.morosity.summary.totalOverdueAmount, units: r.morosity.summary.totalUnitsInArrears } : null;
+      this.porCobrar = r.collections ? { amount: r.collections.summary.totalPendingAmount, rate: r.collections.summary.collectionRatePercentage } : null;
+      this.movements = r.movements?.items ?? [];
+      this.alerts = this.buildAlerts(d);
+      this.cdr.markForCheck();
     });
   }
 
@@ -329,14 +588,86 @@ export class FinanceDashboardPageComponent {
     this.cdr.markForCheck();
   }
 
+  private buildView(d: FinanceDashboard): void {
+    this.buildChart(d);
+
+    // Mes anterior: el punto de la serie justo antes del elegido (no existe si el edificio arranco ese mes).
+    const prevDate = new Date(d.year, d.month - 2, 1);
+    const prev = d.series.find(p => p.year === prevDate.getFullYear() && p.month === prevDate.getMonth() + 1) ?? null;
+    this.deltaIn = this.delta(d.monthFlow.in, prev?.in, true);
+    this.deltaOut = this.delta(d.monthFlow.out, prev?.out, false);
+    this.deltaNet = this.delta(d.monthFlow.net, prev?.net, true);
+
+    this.donutOut = this.buildDonut(d.monthOut);
+    this.donutIn = this.buildDonut(d.monthIn);
+    this.alerts = this.buildAlerts(d);
+  }
+
+  private delta(current: number, previous: number | undefined, upIsGood: boolean): Delta | null {
+    if (previous === undefined || previous === 0) return null;
+    const pct = ((current - previous) / Math.abs(previous)) * 100;
+    return { pct, good: upIsGood ? pct >= 0 : pct <= 0 };
+  }
+
+  // Los 5 rubros mas grandes y el resto agrupado en «Otros».
+  private buildDonut(list: FinanceRubroAmount[]): Donut {
+    const rows = list.filter(r => r.amount > 0).sort((a, b) => b.amount - a.amount);
+    const total = rows.reduce((s, r) => s + r.amount, 0);
+    if (!total) return { data: null, slices: [], total: 0 };
+
+    const top = rows.slice(0, SLICE_COLORS.length);
+    const slices: DonutSlice[] = top.map((r, i) => ({ label: r.name, amount: r.amount, share: (r.amount / total) * 100, color: SLICE_COLORS[i] }));
+    const rest = rows.slice(SLICE_COLORS.length).reduce((s, r) => s + r.amount, 0);
+    if (rest > 0) slices.push({ label: 'Otros', amount: rest, share: (rest / total) * 100, color: OTHERS_COLOR });
+
+    return {
+      total,
+      slices,
+      data: {
+        labels: slices.map(s => s.label),
+        datasets: [{ data: slices.map(s => s.amount), backgroundColor: slices.map(s => s.color), borderWidth: 2, borderColor: '#ffffff' }]
+      }
+    };
+  }
+
+  private buildAlerts(d: FinanceDashboard): DashAlert[] {
+    const list: DashAlert[] = [];
+    const gs = (v: number) => `₲ ${v.toLocaleString('es-PY', { maximumFractionDigits: 0 })}`;
+
+    if (this.mora && this.mora.amount > 0) {
+      list.push({ level: 'bad', title: 'Mora vencida', detail: `${gs(this.mora.amount)} en ${this.mora.units} ${this.mora.units === 1 ? 'unidad' : 'unidades'}`, link: ['/morosity'] });
+    }
+    for (const w of d.balances.warnings) {
+      list.push({ level: 'warn', title: 'Revisar la configuración', detail: w, link: ['/finance/settings'] });
+    }
+    if (d.balances.unassignedNet !== 0) {
+      list.push({ level: 'warn', title: 'Movimientos sin cuenta', detail: `${gs(d.balances.unassignedNet)} sin cuenta asignada`, link: ['/finance/movements'] });
+    }
+    if (!d.budget.hasBudget) {
+      list.push({ level: 'info', title: 'Sin presupuesto cargado', detail: `Ejercicio ${d.fiscalYear}`, link: ['/finance/budget'] });
+    } else if (d.budget.redCount > 0) {
+      list.push({ level: 'bad', title: 'Gastos fuera de presupuesto', detail: `${d.budget.redCount} rubro(s) con desvío de más del 10 %`, link: ['/finance/budget-vs-actual'] });
+    } else if (d.budget.amberCount > 0) {
+      list.push({ level: 'warn', title: 'Gastos cerca del límite', detail: `${d.budget.amberCount} rubro(s) con desvío de hasta el 10 %`, link: ['/finance/budget-vs-actual'] });
+    }
+    if (!d.reserveFund.hasFundAccount) {
+      list.push({ level: 'info', title: 'Sin cuenta de fondo de reserva', detail: 'Se crea en Configuración → Cuentas', link: ['/finance/settings'] });
+    }
+    if (!list.length) {
+      list.push({ level: 'ok', title: 'Todo en orden', detail: 'No hay alertas para este edificio.' });
+    }
+    return list;
+  }
+
   private buildChart(d: FinanceDashboard): void {
-    const labels = d.series.map(p => monthShort(p.year, p.month));
+    const points = d.series.slice(-this.range);
+    const labels = points.map(p => monthShort(p.year, p.month));
     this.chartData = {
       labels,
       datasets: [
-        { type: 'line', label: 'Saldo total', data: d.series.map(p => p.endBalance), borderColor: '#1385B6', backgroundColor: '#1385B6', yAxisID: 'y1', tension: 0.25 },
-        { type: 'bar', label: 'Entradas', data: d.series.map(p => p.in), backgroundColor: '#6AC64A', yAxisID: 'y' },
-        { type: 'bar', label: 'Salidas', data: d.series.map(p => p.out), backgroundColor: '#e5675d', yAxisID: 'y' }
+        { type: 'line', label: 'Saldo total', data: points.map(p => p.endBalance), borderColor: '#1385B6', backgroundColor: '#1385B6', yAxisID: 'y1', tension: 0.25 },
+        { type: 'bar', label: 'Ingresos', data: points.map(p => p.in), backgroundColor: '#6AC64A', borderRadius: 4, yAxisID: 'y' },
+        { type: 'bar', label: 'Egresos', data: points.map(p => p.out), backgroundColor: '#e5675d', borderRadius: 4, yAxisID: 'y' }
       ]
     };
 
@@ -347,11 +678,24 @@ export class FinanceDashboardPageComponent {
 
     this.chartOptions = {
       maintainAspectRatio: false,
-      plugins: { legend: { labels: { color: textColor } } },
+      plugins: { legend: { labels: { color: textColor, usePointStyle: true, boxWidth: 8 } } },
       scales: {
         x: { ticks: { color: textColor }, grid: { color: gridColor } },
         y: { position: 'left', ticks: { color: textColor, callback: compact }, grid: { color: gridColor } },
         y1: { position: 'right', ticks: { color: textColor, callback: compact }, grid: { drawOnChartArea: false } }
+      }
+    };
+
+    this.donutOptions = {
+      maintainAspectRatio: false,
+      cutout: '68%',
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: (ctx: { label: string; parsed: number }) => ` ${ctx.label}: ₲ ${Number(ctx.parsed).toLocaleString('es-PY', { maximumFractionDigits: 0 })}`
+          }
+        }
       }
     };
   }
