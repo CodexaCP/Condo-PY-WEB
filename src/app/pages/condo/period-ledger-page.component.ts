@@ -11,6 +11,7 @@ import { BuildingsApiService } from '../../api/buildings-api.service';
 import { ExpensePeriodsApiService } from '../../api/expense-periods-api.service';
 import { Building, ExpensePeriod, ExpensePeriodReconciliation } from '../../api/models';
 import { BuildingExpensesPageComponent } from './building-expenses-page.component';
+import { PeriodCreditNotesSectionComponent } from './period-credit-notes-section.component';
 import { BuildingIncomesPageComponent } from './building-incomes-page.component';
 import { PeriodChargesSectionComponent } from './period-charges-section.component';
 
@@ -24,7 +25,7 @@ const STATUS_LABELS: Record<string, string> = { Draft: 'Borrador', Closed: 'Cerr
 @Component({
   standalone: true,
   selector: 'app-period-ledger-page',
-  imports: [CommonModule, FormsModule, Button, Card, Tag, BuildingExpensesPageComponent, BuildingIncomesPageComponent, PeriodChargesSectionComponent],
+  imports: [CommonModule, FormsModule, Button, Card, Tag, BuildingExpensesPageComponent, BuildingIncomesPageComponent, PeriodChargesSectionComponent, PeriodCreditNotesSectionComponent],
   template: `
     <p-card styleClass="app-page-card">
       <div class="app-toolbar">
@@ -108,6 +109,7 @@ const STATUS_LABELS: Record<string, string> = { Draft: 'Borrador', Closed: 'Cerr
     </p-card>
 
     <app-building-expenses-page *ngIf="period && tab === 'expenses'" [embedded]="true" [scopeBuildingId]="buildingId" [scopePeriodId]="periodId"></app-building-expenses-page>
+    <app-period-credit-notes-section *ngIf="period && tab === 'expenses' && buildingId" [buildingId]="buildingId" [periodId]="periodId"></app-period-credit-notes-section>
     <app-building-incomes-page *ngIf="period && tab === 'incomes'" [embedded]="true" [scopeBuildingId]="buildingId" [scopePeriodId]="periodId"></app-building-incomes-page>
     <p-card styleClass="app-page-card" *ngIf="period && tab === 'charges'">
       <app-period-charges-section [periodId]="periodId" [periodStatus]="period.status" (changed)="loadRecon()"></app-period-charges-section>

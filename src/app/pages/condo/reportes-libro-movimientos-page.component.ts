@@ -237,11 +237,11 @@ export class ReportesLibroMovimientosPageComponent implements OnInit {
   }
 
   typeLabel(type: LibroMovimientoType): string {
-    return type === 'Cobro' ? 'Cobro' : type === 'IngresoEdificio' ? 'Ingreso' : 'Gasto';
+    return type === 'Cobro' ? 'Cobro' : type === 'IngresoEdificio' ? 'Ingreso' : type === 'NotaCreditoProveedor' ? 'NC proveedor' : 'Gasto';
   }
 
   typeClass(type: LibroMovimientoType): string {
-    return type === 'Cobro' ? 'type-cobro' : type === 'IngresoEdificio' ? 'type-ingreso' : 'type-gasto';
+    return type === 'Cobro' ? 'type-cobro' : type === 'IngresoEdificio' || type === 'NotaCreditoProveedor' ? 'type-ingreso' : 'type-gasto';
   }
 
   formatCurrency(value: number): string {

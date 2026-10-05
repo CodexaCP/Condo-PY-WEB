@@ -107,6 +107,7 @@ interface RubroOption { id: string; label: string; }
                     <p-tag *ngIf="m.sourceType === 'OwnerPayment'" value="Cobro" severity="success" styleClass="tag-sm"></p-tag>
                     <p-tag *ngIf="m.sourceType === 'BuildingExpense'" value="Gasto" severity="danger" styleClass="tag-sm"></p-tag>
                     <p-tag *ngIf="m.sourceType === 'BuildingIncome'" value="Ingreso" severity="info" styleClass="tag-sm"></p-tag>
+                    <p-tag *ngIf="m.sourceType === 'SupplierCreditNote'" value="NC proveedor" severity="warn" styleClass="tag-sm"></p-tag>
                   </td>
                   <td class="num pos">{{ m.direction === 'In' ? (m.amount | gs) : '' }}</td>
                   <td class="num neg">{{ m.direction === 'Out' ? (m.amount | gs) : '' }}</td>

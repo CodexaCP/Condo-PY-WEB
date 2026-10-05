@@ -8,6 +8,7 @@ import {
   BuildingExpenseCreditNotePreview,
   BuildingExpenseCreditNoteResult,
   BuildingExpenseImportResult,
+  PeriodSupplierCreditNote,
   CreateBuildingExpenseCreditNoteRequest,
   CreateBuildingExpenseRequest
 } from './models';
@@ -84,6 +85,19 @@ export class BuildingExpensesApiService {
 
   createCreditNote(expenseId: string, request: CreateBuildingExpenseCreditNoteRequest): Observable<BuildingExpenseCreditNoteResult> {
     return this.http.post<BuildingExpenseCreditNoteResult>(`${API_BASE_URL}/building-expenses/${expenseId}/credit-notes`, request);
+  }
+
+  // Anexo: notas de crédito de proveedor del edificio (y del período, si se indica).
+  getCreditNotesByPeriod(buildingId: string, expensePeriodId?: string): Observable<PeriodSupplierCreditNote[]> {
+    let params = new HttpParams().set('buildingId', buildingId);
+    if (expensePeriodId) params = params.set('expensePeriodId', expensePeriodId);
+    return this.http.get<PeriodSupplierCreditNote[]>(`${API_BASE_URL}/building-expenses/credit-notes`, { params });
+  }
+
+  getCreditNotesExcelUrl(buildingId: string, expensePeriodId: string | undefined, token: string): string {
+    let query = `access_token=${encodeURIComponent(token)}&buildingId=${encodeURIComponent(buildingId)}`;
+    if (expensePeriodId) query += `&expensePeriodId=${encodeURIComponent(expensePeriodId)}`;
+    return `${API_BASE_URL}/building-expenses/credit-notes/export?${query}`;
   }
 
   previewCreditNote(expenseId: string, amount: number): Observable<BuildingExpenseCreditNotePreview> {

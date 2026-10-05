@@ -360,6 +360,33 @@ export interface BuildingExpenseCreditNotePreview {
   message: string | null;
 }
 
+// Una fila del anexo de notas de crédito de proveedor de un edificio y período (para la liquidación y el contador).
+export interface PeriodSupplierCreditNote {
+  id: string;
+  buildingId: string;
+  buildingName: string;
+  expensePeriodId: string;
+  expensePeriodName: string;
+  buildingExpenseId: string;
+  expenseDescription: string;
+  supplierName: string;
+  category: string;
+  rubro: string | null;
+  numero: string;
+  timbrado: string | null;
+  issueDate: string;
+  amount: number;
+  mode: 'Netted' | 'Credited';
+  status: 'Applied' | 'Voided';
+  // Qué se hizo con la nota: descontada del gasto, acreditada a las unidades, devuelta al fondo de reserva...
+  treatment: string;
+  reason: string;
+  documentUrl: string | null;
+  voidReason: string;
+  allocationsCount: number;
+  allocatedAmount: number;
+}
+
 export interface CreateBuildingExpenseCreditNoteRequest {
   numero: string;
   timbrado: string | null;
@@ -1269,7 +1296,7 @@ export interface CollectionReport {
   items: CollectionItem[];
 }
 
-export type LibroMovimientoType = 'Cobro' | 'IngresoEdificio' | 'GastoEdificio';
+export type LibroMovimientoType = 'Cobro' | 'IngresoEdificio' | 'GastoEdificio' | 'NotaCreditoProveedor';
 
 export interface LibroMovimientoItem {
   date: string;
@@ -1917,7 +1944,7 @@ export interface LedgerCategoryCopyResult {
 // ── Finanzas del edificio: libro (saldos, movimientos, flujo y tablero) ───────
 
 export type LedgerDirection = 'In' | 'Out';
-export type LedgerSourceType = 'OwnerPayment' | 'BuildingExpense' | 'BuildingIncome';
+export type LedgerSourceType = 'OwnerPayment' | 'BuildingExpense' | 'BuildingIncome' | 'SupplierCreditNote';
 
 export interface FinanceAccountBalance {
   id: string;
