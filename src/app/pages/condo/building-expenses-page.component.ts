@@ -439,7 +439,10 @@ interface RubroGroup {
               <p-button type="button" icon="pi pi-file-pdf" severity="info" [rounded]="true" [text]="true" [pTooltip]="item.receiptFileName ?? 'Ver comprobante'"></p-button>
             </a>
             <p-button *ngIf="!item.hasReceipt" type="button" icon="pi pi-paperclip" severity="secondary" [rounded]="true" [text]="true" pTooltip="Adjuntar comprobante" (onClick)="triggerReceiptUpload(item)"></p-button>
-            <p-button *ngIf="item.hasReceipt" type="button" icon="pi pi-times-circle" severity="warn" [rounded]="true" [text]="true" pTooltip="Quitar comprobante" (onClick)="removeReceipt(item)"></p-button>
+            <p-button *ngIf="item.hasReceipt" type="button" icon="pi pi-times-circle" severity="warn" [rounded]="true" [text]="true"
+              [disabled]="!isDraftPeriod(item.expensePeriodId)"
+              [pTooltip]="isDraftPeriod(item.expensePeriodId) ? 'Quitar comprobante' : 'El período ya no está en borrador: el comprobante respalda lo liquidado y no se puede quitar'"
+              (onClick)="removeReceipt(item)"></p-button>
             <p-button type="button" icon="pi pi-pencil" severity="secondary" [rounded]="true" [text]="true" [disabled]="!isDraftPeriod(item.expensePeriodId)" (onClick)="startEdit(item)" pTooltip="Editar"></p-button>
             <p-button *ngIf="!isOperator" type="button" icon="pi pi-trash" severity="danger" [rounded]="true" [text]="true" [disabled]="isSaving || !isDraftPeriod(item.expensePeriodId)" (onClick)="deleteExpense(item)" pTooltip="Eliminar"></p-button>
           </div>
