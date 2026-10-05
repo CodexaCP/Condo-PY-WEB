@@ -266,7 +266,11 @@ export interface BuildingExpense {
   supplierName: string;
   description: string;
   expenseDate: string;
+  // Monto que se reparte (neto de las notas de crédito del proveedor).
   amount: number;
+  // Lo facturado por el proveedor antes de las notas de crédito (igual a amount si no tiene).
+  originalAmount: number;
+  creditedAmount: number;
   distributionType: BuildingExpenseDistributionType;
   targetUnitId: string | null;
   targetUnitCode: string;
@@ -278,6 +282,43 @@ export interface BuildingExpense {
   ledgerCategoryId: string | null;
   ledgerCategoryCode: string | null;
   ledgerCategoryName: string | null;
+}
+
+// Nota de crédito que emite el PROVEEDOR sobre un gasto del edificio (no confundir con la nota de crédito al propietario).
+export interface BuildingExpenseCreditNote {
+  id: string;
+  buildingId: string;
+  buildingExpenseId: string;
+  expensePeriodId: string;
+  supplierName: string;
+  numero: string;
+  timbrado: string | null;
+  issueDate: string;
+  amount: number;
+  reason: string;
+  documentUrl: string | null;
+  mode: 'Netted' | 'Credited';
+  status: 'Applied' | 'Voided';
+  createdByUserId: string;
+  createdAtUtc: string;
+  voidReason: string;
+  voidedAtUtc: string | null;
+}
+
+export interface CreateBuildingExpenseCreditNoteRequest {
+  numero: string;
+  timbrado: string | null;
+  issueDate: string;
+  amount: number;
+  reason: string;
+  documentUrl: string;
+}
+
+export interface BuildingExpenseCreditNoteResult {
+  creditNote: BuildingExpenseCreditNote;
+  expense: BuildingExpense;
+  // La liquidación del período ya estaba calculada: hay que volver a calcularla.
+  settlementNeedsRecalculation: boolean;
 }
 
 export interface RecurringBuildingExpense {

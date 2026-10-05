@@ -2,7 +2,14 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { API_BASE_URL } from '../config/api.config';
-import { BuildingExpense, BuildingExpenseImportResult, CreateBuildingExpenseRequest } from './models';
+import {
+  BuildingExpense,
+  BuildingExpenseCreditNote,
+  BuildingExpenseCreditNoteResult,
+  BuildingExpenseImportResult,
+  CreateBuildingExpenseCreditNoteRequest,
+  CreateBuildingExpenseRequest
+} from './models';
 
 @Injectable({ providedIn: 'root' })
 export class BuildingExpensesApiService {
@@ -67,5 +74,18 @@ export class BuildingExpensesApiService {
 
   deleteReceipt(id: string): Observable<void> {
     return this.http.delete<void>(`${API_BASE_URL}/building-expenses/${id}/receipt`);
+  }
+
+  // ── Notas de crédito del proveedor ───────────────────────────────────────
+  getCreditNotes(expenseId: string): Observable<BuildingExpenseCreditNote[]> {
+    return this.http.get<BuildingExpenseCreditNote[]>(`${API_BASE_URL}/building-expenses/${expenseId}/credit-notes`);
+  }
+
+  createCreditNote(expenseId: string, request: CreateBuildingExpenseCreditNoteRequest): Observable<BuildingExpenseCreditNoteResult> {
+    return this.http.post<BuildingExpenseCreditNoteResult>(`${API_BASE_URL}/building-expenses/${expenseId}/credit-notes`, request);
+  }
+
+  voidCreditNote(id: string, reason: string): Observable<BuildingExpenseCreditNoteResult> {
+    return this.http.post<BuildingExpenseCreditNoteResult>(`${API_BASE_URL}/building-expenses/credit-notes/${id}/void`, { reason });
   }
 }

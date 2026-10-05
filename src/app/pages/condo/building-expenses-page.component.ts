@@ -34,6 +34,7 @@ import {
   Unit
 } from '../../api/models';
 import { API_BASE_URL } from '../../config/api.config';
+import { BuildingExpenseCreditNotesDialogComponent } from './building-expense-credit-notes-dialog.component';
 
 interface BuildingExpensesGroup {
   periodId: string;
@@ -52,7 +53,7 @@ interface RubroGroup {
 @Component({
   standalone: true,
   selector: 'app-building-expenses-page',
-  imports: [CommonModule, FormsModule, Button, Card, Tag, Tooltip, InputNumber],
+  imports: [CommonModule, FormsModule, Button, Card, Tag, Tooltip, InputNumber, BuildingExpenseCreditNotesDialogComponent],
   template: `
     <p-card styleClass="app-page-card">
       <div class="app-toolbar">
@@ -421,8 +422,15 @@ interface RubroGroup {
             <small class="building-tag">{{ item.buildingName }}</small>
           </div>
           <span>{{ distributionSummary(item) }}</span>
-          <strong class="amount">{{ formatCurrency(item.amount) }}</strong>
+          <div class="amount-cell">
+            <strong class="amount">{{ formatCurrency(item.amount) }}</strong>
+            <small class="credited" *ngIf="item.creditedAmount > 0" pTooltip="Monto facturado por el proveedor menos sus notas de crédito">
+              {{ formatCurrency(item.originalAmount) }} − NC {{ formatCurrency(item.creditedAmount) }}
+            </small>
+          </div>
           <div class="app-actions">
+            <p-button type="button" icon="pi pi-minus-circle" [severity]="item.creditedAmount > 0 ? 'warn' : 'secondary'" [rounded]="true" [text]="true"
+              pTooltip="Notas de crédito del proveedor" (onClick)="openCreditNotes(item)"></p-button>
             <a *ngIf="item.hasReceipt" [href]="getReceiptUrl(item.id)" target="_blank" class="receipt-link">
               <p-button type="button" icon="pi pi-file-pdf" severity="info" [rounded]="true" [text]="true" [pTooltip]="item.receiptFileName ?? 'Ver comprobante'"></p-button>
             </a>
@@ -434,6 +442,9 @@ interface RubroGroup {
         </div>
       </div>
       </div>
+
+      <app-expense-credit-notes-dialog *ngIf="creditNotesExpense as ce" [expense]="ce" [periodStatus]="periodStatusOf(ce.expensePeriodId)"
+        (closed)="creditNotesExpense = null" (expenseChanged)="onCreditNotesChanged($event)"></app-expense-credit-notes-dialog>
 
       <input #receiptInput type="file" accept=".pdf,.jpg,.jpeg,.png" style="display:none" (change)="onReceiptFileSelected($event)" />
       <input #importInput type="file" accept=".xlsx" style="display:none" (change)="onImportFileSelected($event)" />
@@ -541,6 +552,8 @@ interface RubroGroup {
     .building-tag { display: block; font-size: 0.78rem; color: #6b878d; margin-top: 0.15rem; }
     .amount { color: #14363d; }
     .receipt-link { display: contents; }
+    .amount-cell { display: grid; gap: 0.1rem; }
+    .amount-cell .credited { color: #b45309; font-size: 0.75rem; line-height: 1.2; }
 
     @media (max-width: 860px) {
       .filters-bar { flex-direction: column; align-items: stretch; }
@@ -603,6 +616,8 @@ export class BuildingExpensesPageComponent implements OnInit, OnChanges {
   importReplace = false;
   isImporting = false;
   pendingReceiptExpense: BuildingExpense | null = null;
+  // Gasto cuyas notas de crédito del proveedor se están viendo (ventana abierta).
+  creditNotesExpense: BuildingExpense | null = null;
 
   readonly categories: BuildingExpenseCategory[] = ['Utilities', 'Cleaning', 'Security', 'Maintenance', 'Elevator', 'Insurance', 'Payroll', 'Taxes', 'Administration', 'ReserveFund', 'Extraordinary', 'Supplies', 'Ande', 'Essap', 'InternetPhone', 'Other'];
   readonly distributionTypes: BuildingExpenseDistributionType[] = ['ByCoefficient', 'FixedPerUnit', 'IndividualUnit', 'NonDistributed'];
@@ -1326,6 +1341,21 @@ export class BuildingExpensesPageComponent implements OnInit, OnChanges {
   distributionSummary(item: BuildingExpense): string {
     const base = this.distributionTypeLabel(item.distributionType);
     return item.targetUnitCode ? `${base} – ${item.targetUnitCode}` : base;
+  }
+
+  openCreditNotes(item: BuildingExpense): void {
+    this.creditNotesExpense = item;
+  }
+
+  // Una nota nueva o anulada cambió el monto del gasto: se actualiza la fila y el total del grupo.
+  onCreditNotesChanged(updated: BuildingExpense): void {
+    this.allItems = this.allItems.map((item) => item.id === updated.id ? updated : item);
+    this.applyFilters();
+    this.cdr.markForCheck();
+  }
+
+  periodStatusOf(expensePeriodId: string): string {
+    return this.periods.find((item) => item.id === expensePeriodId)?.status ?? 'Published';
   }
 
   isDraftPeriod(expensePeriodId: string): boolean {
