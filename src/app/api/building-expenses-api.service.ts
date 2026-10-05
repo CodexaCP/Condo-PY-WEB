@@ -5,6 +5,7 @@ import { API_BASE_URL } from '../config/api.config';
 import {
   BuildingExpense,
   BuildingExpenseCreditNote,
+  BuildingExpenseCreditNotePreview,
   BuildingExpenseCreditNoteResult,
   BuildingExpenseImportResult,
   CreateBuildingExpenseCreditNoteRequest,
@@ -83,6 +84,10 @@ export class BuildingExpensesApiService {
 
   createCreditNote(expenseId: string, request: CreateBuildingExpenseCreditNoteRequest): Observable<BuildingExpenseCreditNoteResult> {
     return this.http.post<BuildingExpenseCreditNoteResult>(`${API_BASE_URL}/building-expenses/${expenseId}/credit-notes`, request);
+  }
+
+  previewCreditNote(expenseId: string, amount: number): Observable<BuildingExpenseCreditNotePreview> {
+    return this.http.post<BuildingExpenseCreditNotePreview>(`${API_BASE_URL}/building-expenses/${expenseId}/credit-notes/preview`, { amount });
   }
 
   voidCreditNote(id: string, reason: string): Observable<BuildingExpenseCreditNoteResult> {

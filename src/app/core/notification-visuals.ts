@@ -49,6 +49,8 @@ const VISUALS: Record<string, NotificationVisual> = {
   PlanExpiringSoon:         { icon: 'pi-clock',            color: TONE.warn },
   PlanExpired:              { icon: 'pi-exclamation-circle', color: TONE.plan },
   PlanSuspended:            { icon: 'pi-lock',             color: TONE.bad },
+  // Ajuste de un gasto por nota de crédito del proveedor
+  SupplierCreditApplied:    { icon: 'pi-wallet',          color: TONE.ok },
   // Marketplace
   MarketplaceReservationExpired:   { icon: 'pi-clock',          color: TONE.plan },
   MarketplacePaymentPending:       { icon: 'pi-money-bill',     color: TONE.warn },

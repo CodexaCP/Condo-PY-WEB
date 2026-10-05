@@ -8,7 +8,7 @@ import { Tag } from 'primeng/tag';
 import { extractApiErrorMessage } from '../../api/api-error.util';
 import { BuildingExpensesApiService } from '../../api/building-expenses-api.service';
 import { isPdfUrl, resolveUploadUrl } from '../../api/file-url.util';
-import { BuildingExpense, BuildingExpenseCreditNote } from '../../api/models';
+import { BuildingExpense, BuildingExpenseCreditNote, BuildingExpenseCreditNotePreview } from '../../api/models';
 import { UploadsApiService } from '../../api/uploads-api.service';
 
 const ALLOWED_EXTENSIONS = ['.pdf', '.jpg', '.jpeg', '.png', '.webp', '.xml'];
@@ -36,6 +36,7 @@ const MAX_FILE_BYTES = 10 * 1024 * 1024;
           <div><span>Facturado por el proveedor</span><strong>{{ gs(expense.originalAmount) }}</strong></div>
           <div class="minus"><span>(−) Notas de crédito aplicadas</span><strong>{{ gs(expense.creditedAmount) }}</strong></div>
           <div class="total"><span>Monto que se reparte</span><strong>{{ gs(expense.amount) }}</strong></div>
+          <div class="credited" *ngIf="creditedSoFar > 0"><span>Acreditado como saldo a favor de las unidades</span><strong>{{ gs(creditedSoFar) }}</strong></div>
         </div>
 
         <div class="notice warn" *ngIf="recalculate">
@@ -53,6 +54,7 @@ const MAX_FILE_BYTES = 10 * 1024 * 1024;
             <div class="note-head">
               <strong>NC {{ n.numero }}</strong>
               <p-tag *ngIf="n.status === 'Voided'" value="Anulada" severity="secondary"></p-tag>
+              <p-tag *ngIf="n.mode === 'Credited' && n.status === 'Applied'" value="Saldo a favor" severity="success"></p-tag>
               <span class="note-amount">− {{ gs(n.amount) }}</span>
             </div>
             <small>
@@ -64,8 +66,12 @@ const MAX_FILE_BYTES = 10 * 1024 * 1024;
             <a *ngIf="n.documentUrl" [href]="fileUrl(n.documentUrl)" target="_blank" rel="noopener" class="doc-link">
               <i class="pi" [ngClass]="isPdf(n.documentUrl) ? 'pi-file-pdf' : 'pi-paperclip'"></i> Ver documento del proveedor
             </a>
+            <div class="alloc" *ngIf="n.allocations?.length">
+              <span class="alloc-title">Acreditado como saldo a favor:</span>
+              <span class="alloc-row" *ngFor="let a of n.allocations"><span>Unidad {{ a.unitCode }} · {{ a.ownerName }}</span><strong>{{ gs(a.amount) }}</strong></span>
+            </div>
           </div>
-          <div class="note-actions" *ngIf="n.status === 'Applied' && isDraft">
+          <div class="note-actions" *ngIf="n.status === 'Applied' && (isDraft || n.mode === 'Credited')">
             <p-button *ngIf="voidingId !== n.id" type="button" label="Anular" icon="pi pi-undo" size="small" severity="danger" [outlined]="true"
               (onClick)="startVoid(n)"></p-button>
           </div>
@@ -83,13 +89,13 @@ const MAX_FILE_BYTES = 10 * 1024 * 1024;
           <i class="pi pi-lock"></i>
           <span>El período está <strong>cerrado</strong>. Para registrar una nota de crédito, anulá primero la liquidación (Liquidación › Anular) y volvé a esta pantalla con el período en borrador.</span>
         </div>
-        <div class="notice" *ngIf="periodStatus === 'Published'">
-          <i class="pi pi-lock"></i>
-          <span>El período ya está <strong>publicado</strong>: el ajuste de una nota de crédito sobre un período publicado todavía no está disponible.</span>
+        <div class="notice" *ngIf="isPublished">
+          <i class="pi pi-info-circle"></i>
+          <span>El período ya está <strong>publicado</strong>: no se tocan los comprobantes emitidos. La nota se reparte entre las unidades según lo que se les cobró de este gasto y cada parte se acredita como <strong>saldo a favor</strong> del propietario principal, que se aplica en su próximo pago.</span>
         </div>
 
         <!-- Formulario -->
-        <ng-container *ngIf="isDraft">
+        <ng-container *ngIf="isDraft || isPublished">
           <p class="section-title">Registrar una nota de crédito</p>
           <form class="form" (ngSubmit)="submit()" #ncForm="ngForm">
             <div class="row">
@@ -109,8 +115,9 @@ const MAX_FILE_BYTES = 10 * 1024 * 1024;
               </label>
               <label class="field">
                 <span>Monto de la nota (₲) *</span>
-                <input type="number" name="amount" required min="1" [max]="maxAmount" step="1" [(ngModel)]="form.amount" />
-                <small class="hint">Máximo {{ gs(maxAmount) }} (el gasto debe quedar con monto).</small>
+                <input type="number" name="amount" required min="1" [max]="maxAmount" step="1" [(ngModel)]="form.amount" (ngModelChange)="onAmountChange()" />
+                <small class="hint" *ngIf="isDraft">Máximo {{ gs(maxAmount) }} (el gasto debe quedar con monto).</small>
+                <small class="hint" *ngIf="isPublished">Máximo {{ gs(maxAmount) }} (lo que todavía se puede acreditar de este gasto).</small>
               </label>
             </div>
             <label class="field">
@@ -134,11 +141,31 @@ const MAX_FILE_BYTES = 10 * 1024 * 1024;
               </div>
             </div>
 
+            <!-- Período publicado: reparto por unidad antes de confirmar -->
+            <div class="preview" *ngIf="isPublished && preview">
+              <p class="section-title">Reparto entre las unidades</p>
+              <table class="preview-table" *ngIf="preview.rows.length">
+                <thead><tr><th>Unidad</th><th>Propietario</th><th class="num">Cobrado</th><th class="num">Saldo a favor</th></tr></thead>
+                <tbody>
+                  <tr *ngFor="let r of preview.rows" [class.missing]="!r.ownerId">
+                    <td>{{ r.unitCode }}</td>
+                    <td>{{ r.ownerName || 'Sin propietario principal' }}</td>
+                    <td class="num">{{ gs(r.chargeAmount) }}</td>
+                    <td class="num"><strong>{{ gs(r.creditAmount) }}</strong></td>
+                  </tr>
+                </tbody>
+                <tfoot><tr><td colspan="3">Total acreditado</td><td class="num"><strong>{{ gs(preview.amount) }}</strong></td></tr></tfoot>
+              </table>
+              <div class="notice warn" *ngIf="preview.message"><i class="pi pi-exclamation-triangle"></i><span>{{ preview.message }}</span></div>
+            </div>
+
             <div class="notice error" *ngIf="error"><i class="pi pi-times-circle"></i><span>{{ error }}</span></div>
 
             <div class="actions">
               <p-button type="button" label="Cerrar" severity="secondary" [outlined]="true" (onClick)="close()"></p-button>
-              <p-button type="submit" label="Registrar nota de crédito" icon="pi pi-check" [loading]="saving" [disabled]="!canSubmit()"></p-button>
+              <p-button *ngIf="isPublished && !preview" type="button" label="Ver reparto por unidad" icon="pi pi-list" [loading]="previewing" [disabled]="!canSubmit()" (onClick)="loadPreview()"></p-button>
+              <p-button *ngIf="isPublished && preview" type="button" label="Cambiar datos" severity="secondary" [outlined]="true" (onClick)="preview = null"></p-button>
+              <p-button *ngIf="isDraft || preview" type="submit" [label]="isPublished ? 'Confirmar y acreditar saldo a favor' : 'Registrar nota de crédito'" icon="pi pi-check" [loading]="saving" [disabled]="!canSubmit()"></p-button>
             </div>
           </form>
         </ng-container>
@@ -156,6 +183,15 @@ const MAX_FILE_BYTES = 10 * 1024 * 1024;
     .summary > div { display: flex; justify-content: space-between; gap: 1rem; font-size: 0.9rem; }
     .summary .minus strong { color: #b45309; }
     .summary .total { border-top: 1px dashed var(--p-surface-300, #cbd5e1); padding-top: 0.4rem; font-size: 0.98rem; }
+    .summary .credited strong { color: #15803d; }
+    .alloc { display: grid; gap: 0.15rem; margin-top: 0.3rem; padding: 0.5rem 0.65rem; background: #f0fdf4; border-radius: 8px; font-size: 0.82rem; }
+    .alloc-title { color: #166534; font-weight: 700; }
+    .alloc-row { display: flex; justify-content: space-between; gap: 1rem; color: #14532d; }
+    .preview-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+    .preview-table th, .preview-table td { padding: 0.4rem 0.5rem; border-bottom: 1px solid var(--p-surface-200, #e2e8f0); text-align: left; }
+    .preview-table .num { text-align: right; white-space: nowrap; }
+    .preview-table tfoot td { border-bottom: none; font-weight: 700; padding-top: 0.6rem; }
+    .preview-table tr.missing td { background: #fef2f2; color: #991b1b; }
 
     .section-title { margin: 1.1rem 0 0.5rem; font-weight: 700; font-size: 0.9rem; color: #29484f; }
     .muted { color: var(--brand-muted, #64748b); font-size: 0.88rem; margin: 0.2rem 0; }
@@ -229,10 +265,23 @@ export class BuildingExpenseCreditNotesDialogComponent implements OnInit {
   voidReason = '';
   form = this.emptyForm();
 
-  get isDraft(): boolean { return this.periodStatus === 'Draft'; }
+  previewing = false;
+  preview: BuildingExpenseCreditNotePreview | null = null;
 
-  // Lo que se puede descontar: el gasto tiene que seguir con monto positivo.
-  get maxAmount(): number { return Math.max(0, Math.floor(this.expense.amount) - 1); }
+  get isDraft(): boolean { return this.periodStatus === 'Draft'; }
+  get isPublished(): boolean { return this.periodStatus === 'Published'; }
+
+  // Lo ya acreditado como saldo a favor de las unidades por notas de este gasto (período publicado).
+  get creditedSoFar(): number {
+    return this.notes.filter(n => n.status === 'Applied' && n.mode === 'Credited').reduce((sum, n) => sum + n.amount, 0);
+  }
+
+  // Borrador: el gasto tiene que seguir con monto positivo. Publicado: lo que todavía se puede acreditar del gasto.
+  get maxAmount(): number {
+    return this.isPublished
+      ? Math.max(0, Math.floor(this.expense.amount - this.creditedSoFar))
+      : Math.max(0, Math.floor(this.expense.amount) - 1);
+  }
 
   ngOnInit(): void {
     this.api.getCreditNotes(this.expense.id).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
@@ -247,10 +296,33 @@ export class BuildingExpenseCreditNotesDialogComponent implements OnInit {
     return '₲ ' + new Intl.NumberFormat('es-PY', { maximumFractionDigits: 0 }).format(value ?? 0);
   }
 
+  // Datos completos. En un período publicado, además, si ya se vio el reparto, todas las unidades deben tener propietario.
   canSubmit(): boolean {
     const f = this.form;
-    return !this.saving && !this.uploading && !!f.numero.trim() && !!f.issueDate && !!f.reason.trim() && !!this.documentUrl
-      && !!f.amount && f.amount > 0 && f.amount <= this.maxAmount;
+    const complete = !this.saving && !this.previewing && !this.uploading && !!f.numero.trim() && !!f.issueDate && !!f.reason.trim()
+      && !!this.documentUrl && !!f.amount && f.amount > 0 && f.amount <= this.maxAmount;
+    if (!complete) return false;
+    return this.isPublished && this.preview ? this.preview.unitsWithoutOwner.length === 0 : true;
+  }
+
+  // El reparto mostrado corresponde a un monto: si cambia, hay que volver a verlo.
+  onAmountChange(): void {
+    this.preview = null;
+    this.error = '';
+  }
+
+  loadPreview(): void {
+    if (!this.canSubmit()) return;
+    this.error = '';
+    this.previewing = true;
+    this.api.previewCreditNote(this.expense.id, Number(this.form.amount)).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: preview => { this.preview = preview; this.previewing = false; this.cdr.markForCheck(); },
+      error: err => {
+        this.previewing = false;
+        this.error = extractApiErrorMessage(err, 'No se pudo calcular el reparto.');
+        this.cdr.markForCheck();
+      }
+    });
   }
 
   onFile(event: Event): void {
@@ -293,6 +365,8 @@ export class BuildingExpenseCreditNotesDialogComponent implements OnInit {
 
   submit(): void {
     if (!this.canSubmit()) return;
+    // Período publicado: primero se ve el reparto; recién con el reparto a la vista se confirma.
+    if (this.isPublished && !this.preview) { this.loadPreview(); return; }
     this.error = '';
     this.saving = true;
 
@@ -310,8 +384,14 @@ export class BuildingExpenseCreditNotesDialogComponent implements OnInit {
         this.applyExpense(result.expense);
         this.recalculate = result.settlementNeedsRecalculation;
         this.form = this.emptyForm();
+        this.preview = null;
         this.removeFile();
-        this.msg.add({ severity: 'success', summary: 'Nota de crédito registrada', detail: `El gasto quedó en ${this.gs(result.expense.amount)}.`, life: 5000 });
+        const detail = this.isPublished
+          ? (result.creditedToOwners > 0
+              ? `Se acreditaron ${this.gs(result.creditedToOwners)} como saldo a favor de las unidades.`
+              : 'Registrada sin saldo a favor: el gasto no se cobró a las unidades.')
+          : `El gasto quedó en ${this.gs(result.expense.amount)}.`;
+        this.msg.add({ severity: 'success', summary: 'Nota de crédito registrada', detail, life: 6000 });
         this.cdr.markForCheck();
       },
       error: err => {
@@ -338,7 +418,10 @@ export class BuildingExpenseCreditNotesDialogComponent implements OnInit {
         this.notes = this.notes.map(n => (n.id === note.id ? result.creditNote : n));
         this.applyExpense(result.expense);
         this.recalculate = result.settlementNeedsRecalculation;
-        this.msg.add({ severity: 'success', summary: 'Nota de crédito anulada', detail: `El gasto volvió a ${this.gs(result.expense.amount)}.`, life: 5000 });
+        this.msg.add({
+          severity: 'success', summary: 'Nota de crédito anulada', life: 5000,
+          detail: result.creditNote.mode === 'Credited' ? 'Se devolvió el saldo a favor de las unidades.' : `El gasto volvió a ${this.gs(result.expense.amount)}.`
+        });
         this.cdr.markForCheck();
       },
       error: err => {

@@ -303,6 +303,38 @@ export interface BuildingExpenseCreditNote {
   createdAtUtc: string;
   voidReason: string;
   voidedAtUtc: string | null;
+  // Solo en notas de período publicado (Credited): lo acreditado como saldo a favor de cada unidad.
+  allocations: BuildingExpenseCreditNoteAllocation[];
+}
+
+export interface BuildingExpenseCreditNoteAllocation {
+  unitId: string;
+  unitCode: string;
+  ownerId: string;
+  ownerName: string;
+  amount: number;
+}
+
+export interface BuildingExpenseCreditNotePreviewRow {
+  unitId: string;
+  unitCode: string;
+  ownerId: string | null;
+  ownerName: string;
+  chargeAmount: number;
+  creditAmount: number;
+}
+
+// Simulación (no guarda nada) de lo que pasaría al registrar la nota con ese monto.
+export interface BuildingExpenseCreditNotePreview {
+  mode: 'Netted' | 'Credited';
+  amount: number;
+  newExpenseAmount: number;
+  creditedSoFar: number;
+  maxAmount: number;
+  chargedTotal: number;
+  rows: BuildingExpenseCreditNotePreviewRow[];
+  unitsWithoutOwner: string[];
+  message: string | null;
 }
 
 export interface CreateBuildingExpenseCreditNoteRequest {
@@ -319,6 +351,8 @@ export interface BuildingExpenseCreditNoteResult {
   expense: BuildingExpense;
   // La liquidación del período ya estaba calculada: hay que volver a calcularla.
   settlementNeedsRecalculation: boolean;
+  // Período publicado: total acreditado como saldo a favor de las unidades.
+  creditedToOwners: number;
 }
 
 export interface RecurringBuildingExpense {
