@@ -49,7 +49,7 @@ import { resolveUploadUrl } from '../../api/file-url.util';
           <span>Estado</span>
         </div>
         <div class="app-row amenity-grid" *ngFor="let item of filteredAmenities">
-          <button class="row-link" (click)="openEdit(item)">{{ item.name }}</button>
+          <button class="row-link" (click)="openEdit(item)" title="Editar"><i class="pi pi-pencil" style="font-size:0.75rem;margin-right:0.35rem"></i>{{ item.name }}</button>
           <span *ngIf="buildings.length > 1">{{ item.buildingName }}</span>
           <span>{{ formatCurrency(item.reservationPrice) }}</span>
           <p-tag [value]="item.isActive ? 'Activo' : 'Inactivo'" [severity]="item.isActive ? 'success' : 'secondary'"></p-tag>
@@ -324,6 +324,29 @@ import { resolveUploadUrl } from '../../api/file-url.util';
     .reservations-section { margin-top:2rem; }
     .reservations-section h2 { margin:0; font-size:1.1rem; }
     .actions { display:flex; align-items:center; gap:0.25rem; }
+
+    /* ── Ventana emergente (base) ──────────────────────────────── */
+    .ov-backdrop {
+      position:fixed; inset:0; background:rgba(10,25,45,0.5);
+      z-index:1000; backdrop-filter:blur(3px);
+    }
+    .ov-panel {
+      position:fixed; top:50%; left:50%; transform:translate(-50%,-50%);
+      width:min(600px, calc(100vw - 2rem)); max-height:90vh; overflow-y:auto;
+      background:var(--surface-card, #fff); border-radius:16px; z-index:1001;
+      box-shadow:0 40px 100px rgba(10,30,60,0.3), 0 0 0 1px rgba(19,133,182,0.08);
+      display:flex; flex-direction:column;
+    }
+    .ov-header {
+      display:flex; justify-content:space-between; align-items:center; gap:0.75rem;
+      padding:1rem 1.25rem; border-bottom:1px solid var(--surface-border);
+    }
+    .ov-header strong { font-size:1.05rem; }
+    .ov-close {
+      background:none; border:none; cursor:pointer; color:var(--text-color-secondary);
+      width:32px; height:32px; border-radius:50%; display:grid; place-items:center; font-size:0.9rem; flex-shrink:0;
+    }
+    .ov-close:hover { background:rgba(19,133,182,0.09); color:var(--text-color); }
 
     /* ── Panel overlay ─────────────────────────────────────────── */
     .am-panel { width:480px; max-width:96vw; }
