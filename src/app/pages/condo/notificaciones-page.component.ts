@@ -6,22 +6,11 @@ import { Button } from 'primeng/button';
 import { Card } from 'primeng/card';
 import { Message } from 'primeng/message';
 import { Tag } from 'primeng/tag';
+import { AuthService } from '../../auth/auth.service';
+import { NotificationAlertService } from '../../core/notification-alert.service';
+import { notificationVisual } from '../../core/notification-visuals';
 import { NotificationsApiService, resolveNotificationRoute } from '../../api/notifications-api.service';
 import { AppNotification } from '../../api/models';
-
-const TYPE_ICON: Record<string, string> = {
-  OwnerPaymentSubmitted: 'pi-inbox',
-  PaymentUnderReview:    'pi-search',
-  PaymentApproved:       'pi-check-circle',
-  PaymentRejected:       'pi-times-circle'
-};
-
-const TYPE_COLOR: Record<string, string> = {
-  OwnerPaymentSubmitted: '#f59e0b',
-  PaymentUnderReview:    '#3b82f6',
-  PaymentApproved:       '#22c55e',
-  PaymentRejected:       '#ef4444'
-};
 
 @Component({
   standalone: true,
@@ -114,6 +103,8 @@ export class NotificacionesPageComponent implements OnInit {
   private readonly router     = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
   private readonly cdr        = inject(ChangeDetectorRef);
+  private readonly auth       = inject(AuthService);
+  private readonly alerts     = inject(NotificationAlertService);
 
   items:      AppNotification[] = [];
   loading     = true;
@@ -142,10 +133,10 @@ export class NotificacionesPageComponent implements OnInit {
   handleClick(n: AppNotification): void {
     if (!n.isRead) {
       n.isRead = true;
-      this.api.markRead(n.id).subscribe();
+      this.api.markRead(n.id).subscribe(() => void this.alerts.refresh());
       this.cdr.markForCheck();
     }
-    const route = resolveNotificationRoute(n);
+    const route = resolveNotificationRoute(n, this.auth.currentUser()?.role);
     if (route) {
       void this.router.navigate(route.path);
     }
@@ -159,6 +150,7 @@ export class NotificacionesPageComponent implements OnInit {
         next: () => {
           this.items.forEach(n => n.isRead = true);
           this.markingAll = false;
+          void this.alerts.refresh();
           this.cdr.markForCheck();
         },
         error: () => {
@@ -168,6 +160,6 @@ export class NotificacionesPageComponent implements OnInit {
       });
   }
 
-  typeIcon(type: string): string  { return TYPE_ICON[type]  ?? 'pi-bell'; }
-  typeColor(type: string): string { return TYPE_COLOR[type] ?? '#64748b'; }
+  typeIcon(type: string): string  { return notificationVisual(type).icon; }
+  typeColor(type: string): string { return notificationVisual(type).color; }
 }

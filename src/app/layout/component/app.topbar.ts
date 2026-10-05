@@ -1,11 +1,9 @@
-import { Component, DestroyRef, inject, OnInit, signal } from '@angular/core';
+import { Component, DestroyRef, inject, OnInit } from '@angular/core';
 import { Router, RouterModule } from '@angular/router';
 import { CommonModule } from '@angular/common';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { interval, merge, startWith, switchMap } from 'rxjs';
 import { LayoutService } from '@/app/layout/service/layout.service';
 import { AuthService } from '@/app/auth/auth.service';
-import { NotificationsApiService } from '@/app/api/notifications-api.service';
+import { NotificationAlertService } from '@/app/core/notification-alert.service';
 import { PushService } from '@/app/core/push.service';
 
 @Component({
@@ -88,21 +86,17 @@ export class AppTopbar implements OnInit {
     layoutService = inject(LayoutService);
     private readonly auth       = inject(AuthService);
     private readonly router     = inject(Router);
-    private readonly notifSvc   = inject(NotificationsApiService);
+    private readonly alerts     = inject(NotificationAlertService);
     private readonly pushSvc    = inject(PushService);
     private readonly destroyRef = inject(DestroyRef);
 
     readonly currentUser = this.auth.currentUser;
-    readonly unreadCount = signal(0);
+    readonly unreadCount = this.alerts.unreadCount;
 
+    // El panel entero (con la campana y los avisos en pantalla) vive mientras haya sesión: al salir del layout se detiene.
     ngOnInit(): void {
-        merge(interval(30_000).pipe(startWith(0)), this.notifSvc.refreshRequested$).pipe(
-            switchMap(() => this.notifSvc.getUnreadCount()),
-            takeUntilDestroyed(this.destroyRef)
-        ).subscribe({
-            next: dto  => this.unreadCount.set(dto.count),
-            error: ()  => { /* silencioso — el badge queda en 0 si el endpoint falla */ }
-        });
+        this.alerts.start();
+        this.destroyRef.onDestroy(() => this.alerts.stop());
     }
 
     goToNotificaciones(): void {
