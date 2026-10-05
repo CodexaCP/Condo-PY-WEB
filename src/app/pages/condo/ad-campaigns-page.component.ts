@@ -149,7 +149,7 @@ interface CampaignForm {
         </label>
         <label class="field">
           <span>Enlace del botón <em>(opcional)</em></span>
-          <input type="text" [(ngModel)]="form.ctaUrl" name="ctaUrl" maxlength="500" placeholder="https://… o WhatsApp" />
+          <input type="text" [(ngModel)]="form.ctaUrl" name="ctaUrl" maxlength="500" placeholder="https://… o número de WhatsApp" />
         </label>
       </div>
 
