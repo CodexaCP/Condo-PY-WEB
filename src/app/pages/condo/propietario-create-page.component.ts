@@ -11,7 +11,8 @@ import { MessageService } from 'primeng/api';
 import { Select } from 'primeng/select';
 import { Tooltip } from 'primeng/tooltip';
 import { extractApiErrorMessage } from '../../api/api-error.util';
-import { OwnerEligibleBuilding, OwnerPresidentBuilding } from '../../api/models';
+import { OwnerCreditBreakdown, OwnerCreditLot, OwnerCreditUse, OwnerEligibleBuilding, OwnerPresidentBuilding } from '../../api/models';
+import { OwnerPaymentsApiService } from '../../api/owner-payments-api.service';
 import { OwnersApiService } from '../../api/owners-api.service';
 import { UploadsApiService } from '../../api/uploads-api.service';
 import { resolveUploadUrl } from '../../api/file-url.util';
@@ -168,6 +169,22 @@ const PHONE_PREFIXES: PhonePrefix[] = [
           </div>
         </section>
 
+        <!-- ══ SALDO A FAVOR ═════════════════════════════════════════ -->
+        <section class="form-section" *ngIf="isEditing && credit">
+          <h2 class="section-title">Saldo a favor</h2>
+          <div class="credit-line">
+            <button type="button" class="credit-link" *ngIf="credit.amount > 0 || credit.heldAmount > 0 || credit.uses.length"
+                    (click)="creditVisible = true" pTooltip="Ver de dónde viene cada parte" tooltipPosition="top">
+              {{ credit.amount | number:'1.0-0' }} Gs. <i class="pi pi-external-link"></i>
+            </button>
+            <span class="credit-none" *ngIf="!(credit.amount > 0 || credit.heldAmount > 0 || credit.uses.length)">Sin saldo a favor.</span>
+            <small class="field-hint" *ngIf="credit.amount > 0">Toque el monto para ver el origen de cada parte.</small>
+            <small class="field-hint" *ngIf="credit.heldAmount > 0">
+              Además hay {{ credit.heldAmount | number:'1.0-0' }} Gs. retenidos (no cuentan en el saldo).
+            </small>
+          </div>
+        </section>
+
         <!-- ══ PRESIDENTE DE CONSORCIO ═══════════════════════════════ -->
         <section class="form-section" *ngIf="isEditing">
           <h2 class="section-title">Presidente de consorcio</h2>
@@ -254,6 +271,96 @@ const PHONE_PREFIXES: PhonePrefix[] = [
 
       </form>
     </p-card>
+
+    <!-- DESGLOSE DEL SALDO A FAVOR -->
+    <div class="ov-backdrop" *ngIf="creditVisible" (click)="creditVisible = false"></div>
+    <div class="ov-panel-lg" *ngIf="creditVisible && credit" (click)="$event.stopPropagation()">
+      <div class="ov-header">
+        <strong>Saldo a favor de {{ editingFullName }}</strong>
+        <button class="ov-close" (click)="creditVisible = false">✕</button>
+      </div>
+
+      <div class="credit-total">
+        <span>Saldo actual</span>
+        <strong>{{ credit.amount | number:'1.0-0' }} Gs.</strong>
+      </div>
+
+      <h3 class="credit-sub">De dónde viene</h3>
+      <div class="credit-table-wrap">
+        <table class="credit-table" *ngIf="activeLots.length || credit.untracedAmount > 0; else noLots">
+          <thead>
+            <tr><th>Fecha</th><th>Origen</th><th>Detalle</th><th class="num">Original</th><th class="num">Disponible</th></tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let lot of activeLots">
+              <td>{{ lot.createdAtUtc | date:'dd/MM/yyyy' }}</td>
+              <td>
+                <a *ngIf="lot.origin === 'OwnerPayment' && lot.ownerPaymentId" class="credit-origin-link"
+                   (click)="openOwnerPayment(lot.ownerPaymentId)">{{ originLabel(lot) }}</a>
+                <span *ngIf="!(lot.origin === 'OwnerPayment' && lot.ownerPaymentId)">{{ originLabel(lot) }}</span>
+                <small class="credit-ref" *ngIf="lot.reference">{{ lot.reference }}</small>
+              </td>
+              <td>
+                {{ lot.description }}
+                <small class="credit-ref" *ngIf="lot.buildingName">{{ lot.buildingName }}<ng-container *ngIf="lot.unitCode"> — unidad {{ lot.unitCode }}</ng-container></small>
+              </td>
+              <td class="num">{{ lot.originalAmount | number:'1.0-0' }}</td>
+              <td class="num"><strong>{{ lot.remainingAmount | number:'1.0-0' }}</strong></td>
+            </tr>
+            <tr *ngIf="credit.untracedAmount > 0">
+              <td>—</td>
+              <td>Saldo a favor anterior</td>
+              <td>Saldo anterior al registro del historial: no se conoce el comprobante de origen.</td>
+              <td class="num">{{ credit.untracedAmount | number:'1.0-0' }}</td>
+              <td class="num"><strong>{{ credit.untracedAmount | number:'1.0-0' }}</strong></td>
+            </tr>
+          </tbody>
+        </table>
+        <ng-template #noLots><p class="credit-empty">No hay saldo disponible.</p></ng-template>
+      </div>
+
+      <ng-container *ngIf="heldLots.length">
+        <h3 class="credit-sub">Retenido (no cuenta en el saldo)</h3>
+        <div class="credit-table-wrap">
+          <table class="credit-table">
+            <tbody>
+              <tr *ngFor="let lot of heldLots">
+                <td>{{ lot.createdAtUtc | date:'dd/MM/yyyy' }}</td>
+                <td>{{ originLabel(lot) }}<small class="credit-ref" *ngIf="lot.reference">{{ lot.reference }}</small></td>
+                <td>{{ lot.description }}</td>
+                <td class="num"><strong>{{ lot.remainingAmount | number:'1.0-0' }}</strong></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </ng-container>
+
+      <ng-container *ngIf="credit.uses.length">
+        <h3 class="credit-sub">Cómo se fue usando</h3>
+        <div class="credit-table-wrap">
+          <table class="credit-table">
+            <thead>
+              <tr><th>Fecha</th><th>Forma</th><th>Detalle</th><th class="num">Monto</th></tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let use of credit.uses">
+                <td>{{ use.createdAtUtc | date:'dd/MM/yyyy' }}</td>
+                <td>{{ applyModeLabel(use.applyMode) }}</td>
+                <td>
+                  {{ use.description }}
+                  <small class="credit-ref" *ngIf="use.sourceReference">Del saldo de {{ use.sourceReference }}</small>
+                </td>
+                <td class="num">{{ use.amount | number:'1.0-0' }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </ng-container>
+
+      <div class="confirm-footer">
+        <p-button label="Cerrar" severity="secondary" [outlined]="true" (onClick)="creditVisible = false"></p-button>
+      </div>
+    </div>
 
     <!-- CONFIRM ELIMINAR -->
     <div class="ov-backdrop" *ngIf="confirmVisible" (click)="cancelDelete()"></div>
@@ -365,6 +472,35 @@ const PHONE_PREFIXES: PhonePrefix[] = [
       z-index:1001; box-shadow:0 32px 80px rgba(15,40,60,0.28);
       padding:1.6rem; animation:slideUp 0.2s cubic-bezier(.4,0,.2,1);
     }
+    .credit-line { display:flex; align-items:center; flex-wrap:wrap; gap:0.5rem 1rem; }
+    .credit-link {
+      background:none; border:none; padding:0; cursor:pointer; font:inherit; font-size:1.25rem; font-weight:700;
+      color:var(--brand-blue); text-decoration:underline; display:inline-flex; align-items:center; gap:0.4rem;
+    }
+    .credit-link i { font-size:0.85rem; }
+    .credit-none { color:var(--brand-muted); font-size:0.95rem; }
+
+    .ov-panel-lg {
+      position:fixed; top:50%; left:50%; transform:translate(-50%,-50%);
+      width:min(900px, calc(100vw - 2rem)); max-height:calc(100vh - 3rem); overflow-y:auto; background:#fff;
+      border-radius:24px; z-index:1001; box-shadow:0 32px 80px rgba(15,40,60,0.28);
+      padding:1.6rem; animation:slideUp 0.2s cubic-bezier(.4,0,.2,1);
+    }
+    .credit-total {
+      display:flex; justify-content:space-between; align-items:center; padding:0.9rem 1.1rem;
+      border-radius:14px; background:#f0f8ff; border:1px solid rgba(19,133,182,0.2); margin-bottom:1rem;
+    }
+    .credit-total strong { font-size:1.3rem; color:var(--brand-blue); }
+    .credit-sub { font-size:0.85rem; font-weight:700; text-transform:uppercase; letter-spacing:0.06em; color:var(--brand-muted); margin:1.2rem 0 0.5rem; }
+    .credit-table-wrap { overflow-x:auto; }
+    .credit-table { width:100%; border-collapse:collapse; font-size:0.88rem; }
+    .credit-table th { text-align:left; font-weight:600; color:var(--brand-muted); padding:0.4rem 0.6rem; border-bottom:1px solid rgba(19,133,182,0.15); }
+    .credit-table td { padding:0.5rem 0.6rem; border-bottom:1px solid rgba(19,133,182,0.08); vertical-align:top; }
+    .credit-table .num { text-align:right; white-space:nowrap; }
+    .credit-ref { display:block; color:var(--brand-muted); font-size:0.78rem; }
+    .credit-origin-link { color:var(--brand-blue); cursor:pointer; text-decoration:underline; }
+    .credit-empty { margin:0; color:var(--brand-muted); }
+
     @keyframes fadeIn  { from { opacity:0; } to { opacity:1; } }
     @keyframes slideUp {
       from { opacity:0; transform:translate(-50%, calc(-50% + 16px)); }
@@ -391,6 +527,7 @@ export class PropietarioCreatePageComponent implements OnInit {
   readonly fileUrl = resolveUploadUrl;
   private readonly api        = inject(OwnersApiService);
   private readonly uploadsApi = inject(UploadsApiService);
+  private readonly paymentsApi = inject(OwnerPaymentsApiService);
   private readonly route      = inject(ActivatedRoute);
   private readonly router     = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
@@ -415,7 +552,37 @@ export class PropietarioCreatePageComponent implements OnInit {
   presidentBuildingId: string | null = null;
   savingPresident = false;
 
+  credit: OwnerCreditBreakdown | null = null;
+  creditVisible = false;
+
   form = this.emptyForm();
+
+  get activeLots(): OwnerCreditLot[] { return (this.credit?.lots ?? []).filter(l => !l.onHold && l.remainingAmount > 0); }
+  get heldLots(): OwnerCreditLot[]   { return (this.credit?.lots ?? []).filter(l => l.onHold && l.remainingAmount > 0); }
+
+  originLabel(lot: OwnerCreditLot): string {
+    switch (lot.origin) {
+      case 'OwnerPayment':       return 'Comprobante de pago';
+      case 'Marketplace':        return 'Reserva del Marketplace';
+      case 'CreditNote':         return 'Nota de crédito';
+      case 'SupplierCreditNote': return 'Nota de crédito del proveedor';
+      default:                   return 'Saldo a favor anterior';
+    }
+  }
+
+  applyModeLabel(mode: OwnerCreditUse['applyMode']): string {
+    switch (mode) {
+      case 'Automatic':         return 'Automático al publicar el período';
+      case 'ManualApp':         return 'Aplicado por el propietario';
+      case 'ManualManager':     return 'Aplicado por el administrador';
+      case 'OnPaymentApproval': return 'Con un pago aprobado';
+      default:                  return '—';
+    }
+  }
+
+  openOwnerPayment(id: string): void {
+    this.router.navigate(['/owner-payments', id]);
+  }
 
   ngOnInit(): void {
     const id = this.route.snapshot.paramMap.get('id');
@@ -455,6 +622,14 @@ export class PropietarioCreatePageComponent implements OnInit {
 
           this.loading = false;
           this.cdr.markForCheck();
+
+          // Si el usuario no tiene alcance sobre el propietario el servidor responde 404: la seccion simplemente no aparece.
+          this.paymentsApi.getOwnerCreditBreakdown(id)
+            .pipe(takeUntilDestroyed(this.destroyRef))
+            .subscribe({
+              next: credit => { this.credit = credit; this.cdr.markForCheck(); },
+              error: () => { this.credit = null; this.cdr.markForCheck(); }
+            });
 
           this.api.getEligiblePresidentBuildings(id)
             .pipe(takeUntilDestroyed(this.destroyRef))

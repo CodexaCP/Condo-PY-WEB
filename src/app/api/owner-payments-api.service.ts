@@ -3,6 +3,7 @@ import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { API_BASE_URL } from '../config/api.config';
 import {
+  OwnerCreditBreakdown,
   OwnerPayment,
   OwnerPaymentRegisterRequest,
   OwnerPaymentRejectRequest,
@@ -51,6 +52,10 @@ export class OwnerPaymentsApiService {
 
   getOwnerCredit(ownerId: string): Observable<{ amount: number }> {
     return this.http.get<{ amount: number }>(`${API_BASE_URL}/owner-payments/credit/${ownerId}`);
+  }
+
+  getOwnerCreditBreakdown(ownerId: string): Observable<OwnerCreditBreakdown> {
+    return this.http.get<OwnerCreditBreakdown>(`${API_BASE_URL}/owner-payments/credit-breakdown/${ownerId}`);
   }
 
   applyCredit(ownerId: string): Observable<{ settledAmount: number; remainingCredit: number; chargesSettled: number }> {

@@ -1375,6 +1375,42 @@ export interface Owner {
   presidentOfBuildings: OwnerPresidentBuilding[];
 }
 
+export type OwnerCreditLotOrigin = 'OwnerPayment' | 'Marketplace' | 'CreditNote' | 'SupplierCreditNote' | 'Previous';
+
+export interface OwnerCreditLot {
+  id: string;
+  createdAtUtc: string;
+  origin: OwnerCreditLotOrigin;
+  reference: string | null;
+  description: string;
+  buildingName: string | null;
+  unitCode: string | null;
+  originalAmount: number;
+  remainingAmount: number;
+  onHold: boolean;
+  ownerPaymentId: string | null;
+  marketplaceReservationId: string | null;
+}
+
+export interface OwnerCreditUse {
+  id: string;
+  createdAtUtc: string;
+  kind: string;
+  applyMode: 'Automatic' | 'ManualApp' | 'ManualManager' | 'OnPaymentApproval' | null;
+  amount: number;
+  sourceReference: string | null;
+  paymentId: string | null;
+  description: string;
+}
+
+export interface OwnerCreditBreakdown {
+  amount: number;
+  untracedAmount: number;
+  heldAmount: number;
+  lots: OwnerCreditLot[];
+  uses: OwnerCreditUse[];
+}
+
 export interface OwnerPresidentBuilding {
   buildingId: string;
   buildingName: string;
