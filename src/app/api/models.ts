@@ -2760,3 +2760,15 @@ export interface MarketplaceHandoverNote {
   // Solo al abrir la nota: situación actual de cada operación.
   operations: MarketplaceHandoverOperation[];
 }
+
+// ── Publicidad: interruptor por edificio ─────────────────────────────────────
+// Fila del listado del SuperAdmin: edificio con su interruptor de publicidad.
+export interface AdBuilding {
+  buildingId: string;
+  buildingName: string;
+  companyId: string | null;
+  companyName: string;
+  condominiumName: string;
+  adsEnabled: boolean;
+  campaignCount: number;
+}

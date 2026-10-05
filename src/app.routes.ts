@@ -308,6 +308,16 @@ export const appRoutes: Routes = [
                 loadComponent: () => import('./app/pages/condo/marketplace-admin-page.component').then(m => m.MarketplaceAdminPageComponent)
             },
 
+            // ── Publicidad (SuperAdmin) ───────────────────────────────────
+            {
+                path: 'ad-buildings',
+                loadComponent: () => import('./app/pages/condo/ad-buildings-page.component').then(m => m.AdBuildingsPageComponent)
+            },
+            {
+                path: 'ad-campaigns',
+                loadComponent: () => import('./app/pages/condo/ad-campaigns-page.component').then(m => m.AdCampaignsPageComponent)
+            },
+
             // ── Tutoriales ────────────────────────────────────────────────
             {
                 path: 'tutorials',

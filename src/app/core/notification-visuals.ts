@@ -66,7 +66,10 @@ const VISUALS: Record<string, NotificationVisual> = {
   MarketplaceClaimOpened:          { icon: 'pi-flag',           color: TONE.plan },
   MarketplaceClaimResolved:        { icon: 'pi-flag',           color: TONE.ok },
   MarketplaceStartNotice:          { icon: 'pi-stopwatch',      color: TONE.info },
-  MarketplaceHandoverNote:         { icon: 'pi-arrow-right-arrow-left', color: TONE.violet }
+  MarketplaceHandoverNote:         { icon: 'pi-arrow-right-arrow-left', color: TONE.violet },
+  // Publicidad (campañas de banners)
+  AdCampaignExpiringSoon:          { icon: 'pi-megaphone',      color: TONE.warn },
+  AdCampaignPaused:                { icon: 'pi-pause',          color: TONE.plan }
 };
 
 export function notificationVisual(type: string | null | undefined): NotificationVisual {

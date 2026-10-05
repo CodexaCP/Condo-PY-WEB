@@ -72,6 +72,8 @@ export class AppMenu {
                         { label: 'Pagos de planes', icon: 'pi pi-fw pi-credit-card', routerLink: ['/building-plan-payments'] },
                         { label: 'Finanzas por edificio', icon: 'pi pi-fw pi-calculator', routerLink: ['/finance-admin'] },
                         { label: 'Marketplace por edificio', icon: 'pi pi-fw pi-shop', routerLink: ['/marketplace-admin'] },
+                        { label: 'Publicidad por edificio', icon: 'pi pi-fw pi-megaphone', routerLink: ['/ad-buildings'] },
+                        { label: 'Campañas de publicidad', icon: 'pi pi-fw pi-images', routerLink: ['/ad-campaigns'] },
                         ...(canViewMarketplaceAccount ? [{ label: 'Cuenta del Marketplace', icon: 'pi pi-fw pi-wallet', routerLink: ['/marketplace-account'] }] : [])
                     ]
                 },
