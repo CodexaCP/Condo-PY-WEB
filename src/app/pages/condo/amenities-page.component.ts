@@ -11,6 +11,7 @@ import { extractApiErrorMessage } from '../../api/api-error.util';
 import { AmenitiesApiService } from '../../api/amenities-api.service';
 import { BuildingsApiService } from '../../api/buildings-api.service';
 import { Amenity, AmenityReservation, AmenityReservationStatus, Building } from '../../api/models';
+import { resolveUploadUrl } from '../../api/file-url.util';
 
 @Component({
   standalone: true,
@@ -89,7 +90,7 @@ import { Amenity, AmenityReservation, AmenityReservationStatus, Building } from 
             <span>{{ formatCurrency(r.price) }}</span>
             <p-tag [value]="statusLabel(r.status)" [severity]="statusSeverity(r.status)"></p-tag>
             <span class="actions">
-              <a *ngIf="r.comprobanteUrl" [href]="r.comprobanteUrl" target="_blank" class="row-link comp-link">
+              <a *ngIf="r.comprobanteUrl" [href]="fileUrl(r.comprobanteUrl)" target="_blank" class="row-link comp-link">
                 <i class="pi pi-image"></i> Ver
               </a>
               <p-button *ngIf="r.status === 'PendingPayment' && !r.comprobanteUrl"
@@ -495,6 +496,8 @@ import { Amenity, AmenityReservation, AmenityReservationStatus, Building } from 
   `]
 })
 export class AmenitiesPageComponent implements OnInit {
+  // El backend guarda los archivos subidos como ruta relativa (/uploads/x.jpg): hay que anteponer el origen de la API.
+  readonly fileUrl = resolveUploadUrl;
   private readonly api = inject(AmenitiesApiService);
   private readonly buildingsApi = inject(BuildingsApiService);
   private readonly msg = inject(MessageService);

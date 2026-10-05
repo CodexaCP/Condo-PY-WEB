@@ -10,6 +10,7 @@ import { MessageService } from 'primeng/api';
 import { extractApiErrorMessage } from '../../api/api-error.util';
 import { BuildingPlanPaymentsApiService } from '../../api/building-plan-payments-api.service';
 import { BuildingPlanPayment, BuildingPlanPaymentStatus } from '../../api/models';
+import { resolveUploadUrl } from '../../api/file-url.util';
 
 const STATUS_LABEL: Record<BuildingPlanPaymentStatus, string> = {
   Pending: 'Pendiente', Approved: 'Aprobado', Rejected: 'Rechazado',
@@ -97,7 +98,7 @@ const STATUS_SEV: Record<BuildingPlanPaymentStatus, 'warn' | 'success' | 'danger
         </div>
         <div class="detail-row" *ngIf="detail.comprobanteUrl">
           <span class="dl">Comprobante</span>
-          <span class="dv"><a [href]="detail.comprobanteUrl" target="_blank" class="link">Ver archivo</a></span>
+          <span class="dv"><a [href]="fileUrl(detail.comprobanteUrl)" target="_blank" class="link">Ver archivo</a></span>
         </div>
         <div class="detail-row"><span class="dl">Enviado por</span><span class="dv">{{ detail.submittedByFullName }}</span></div>
         <div class="detail-row"><span class="dl">Enviado el</span><span class="dv">{{ fmtDate(detail.createdAtUtc) }}</span></div>
@@ -215,6 +216,8 @@ const STATUS_SEV: Record<BuildingPlanPaymentStatus, 'warn' | 'success' | 'danger
   `]
 })
 export class BuildingPlanPaymentsPageComponent implements OnInit {
+  // El backend guarda los archivos subidos como ruta relativa (/uploads/x.jpg): hay que anteponer el origen de la API.
+  readonly fileUrl = resolveUploadUrl;
   private readonly api = inject(BuildingPlanPaymentsApiService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly cdr = inject(ChangeDetectorRef);

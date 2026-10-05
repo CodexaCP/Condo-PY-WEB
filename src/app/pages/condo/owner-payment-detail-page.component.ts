@@ -26,6 +26,7 @@ import {
   OwnerPayment,
   RegisterCreditNoteFiscalDataRequest
 } from '../../api/models';
+import { isPdfUrl, resolveUploadUrl } from '../../api/file-url.util';
 
 const CREDIT_NOTE_STATUS_LABELS: Record<string, string> = {
   Draft: 'Borrador',
@@ -299,7 +300,7 @@ const STATUS_SEVERITY: Record<string, 'warn' | 'info' | 'success' | 'danger' | '
 
                         <div class="cn-attachments">
                           <div class="cn-attachment" *ngFor="let att of cn.attachments">
-                            <a [href]="att.url" target="_blank" rel="noopener"><i class="pi pi-paperclip"></i> {{ att.fileName }}</a>
+                            <a [href]="fileUrl(att.url)" target="_blank" rel="noopener"><i class="pi pi-paperclip"></i> {{ att.fileName }}</a>
                             <button type="button" (click)="deleteAttachment(cn, att)"><i class="pi pi-trash"></i></button>
                           </div>
                           <label class="cn-attach-input">
@@ -347,8 +348,12 @@ const STATUS_SEVERITY: Record<string, 'warn' | 'info' | 'success' | 'danger' | '
         <!-- Comprobante -->
         <div class="form-section">
           <h3>Comprobante</h3>
-          <a *ngIf="payment.comprobanteUrl" [href]="payment.comprobanteUrl" target="_blank" rel="noopener" class="comprobante-link">
-            <i class="pi pi-external-link"></i>&nbsp; Ver comprobante
+          <!-- Imagen a la vista para validar el pago sin salir de la pantalla; un PDF se abre en otra pestaña. -->
+          <a *ngIf="payment.comprobanteUrl && !isPdf(payment.comprobanteUrl)" [href]="fileUrl(payment.comprobanteUrl)" target="_blank" rel="noopener" class="comprobante-preview">
+            <img [src]="fileUrl(payment.comprobanteUrl)" alt="Comprobante de pago" />
+          </a>
+          <a *ngIf="payment.comprobanteUrl" [href]="fileUrl(payment.comprobanteUrl)" target="_blank" rel="noopener" class="comprobante-link">
+            <i class="pi pi-external-link"></i>&nbsp; {{ isPdf(payment.comprobanteUrl) ? 'Abrir comprobante (PDF)' : 'Abrir en otra pestaña' }}
           </a>
           <span *ngIf="!payment.comprobanteUrl" class="no-comprobante">Sin comprobante adjunto.</span>
         </div>
@@ -525,6 +530,8 @@ const STATUS_SEVERITY: Record<string, 'warn' | 'info' | 'success' | 'danger' | '
       text-decoration: none; padding: 0.5rem 1rem; border: 1.5px solid var(--p-primary-color);
       border-radius: 6px; transition: all 0.15s;
     }
+    .comprobante-preview { display: block; margin-bottom: 0.75rem; }
+    .comprobante-preview img { display: block; max-width: 100%; max-height: 32rem; border: 1px solid var(--p-surface-200); border-radius: 8px; background: #fff; }
     .comprobante-link:hover { background: color-mix(in srgb, var(--p-primary-color) 8%, transparent); }
 
     .grid-units      { grid-template-columns: 0.8fr 1.5fr 1fr; }
@@ -665,6 +672,9 @@ const STATUS_SEVERITY: Record<string, 'warn' | 'info' | 'success' | 'danger' | '
   `]
 })
 export class OwnerPaymentDetailPageComponent implements OnInit {
+  // El backend guarda los archivos subidos como ruta relativa (/uploads/x.jpg): hay que anteponer el origen de la API.
+  readonly fileUrl = resolveUploadUrl;
+  readonly isPdf = isPdfUrl;
   private readonly api        = inject(OwnerPaymentsApiService);
   private readonly route      = inject(ActivatedRoute);
   private readonly router     = inject(Router);

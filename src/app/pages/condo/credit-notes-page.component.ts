@@ -15,6 +15,7 @@ import { AuthService } from '../../auth/auth.service';
 import { BuildingsApiService } from '../../api/buildings-api.service';
 import { CreditNotesApiService } from '../../api/credit-notes-api.service';
 import { Building, CreditNote, CreditNoteStatus } from '../../api/models';
+import { resolveUploadUrl } from '../../api/file-url.util';
 
 const STATUS_LABEL: Record<CreditNoteStatus, string> = {
   Draft: 'Borrador', Approved: 'Aprobada', Rejected: 'Rechazada', Voided: 'Anulada'
@@ -247,7 +248,7 @@ const STATUS_SEV: Record<CreditNoteStatus, 'warn' | 'success' | 'danger' | 'seco
         <ng-container *ngIf="detail.attachments.length">
           <h4 class="drawer-title">Adjuntos</h4>
           <div class="drawer-attachments">
-            <a *ngFor="let att of detail.attachments" [href]="att.url" target="_blank" rel="noopener" class="drawer-attachment">
+            <a *ngFor="let att of detail.attachments" [href]="fileUrl(att.url)" target="_blank" rel="noopener" class="drawer-attachment">
               <i class="pi pi-paperclip"></i> {{ att.fileName }}
             </a>
           </div>
@@ -362,6 +363,8 @@ const STATUS_SEV: Record<CreditNoteStatus, 'warn' | 'success' | 'danger' | 'seco
   `]
 })
 export class CreditNotesPageComponent implements OnInit {
+  // El backend guarda los archivos subidos como ruta relativa (/uploads/x.jpg): hay que anteponer el origen de la API.
+  readonly fileUrl = resolveUploadUrl;
   private readonly creditNotesApi = inject(CreditNotesApiService);
   private readonly buildingsApi = inject(BuildingsApiService);
   private readonly destroyRef = inject(DestroyRef);

@@ -5,7 +5,7 @@ import { API_BASE_URL } from '../config/api.config';
 // cambio se respetan tal cual.
 export function resolveUploadUrl(url: string | null | undefined): string {
   if (!url) return '';
-  if (/^https?:\/\//i.test(url)) return url;
+  if (/^(https?:\/\/|data:|blob:)/i.test(url)) return url;
   const origin = API_BASE_URL.replace(/\/api\/?$/, '');
   return `${origin}${url.startsWith('/') ? '' : '/'}${url}`;
 }

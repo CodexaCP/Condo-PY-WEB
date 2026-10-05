@@ -19,6 +19,7 @@ import { Company, Condominium, IncomeTreatment, InvoicingMode, LateFeeFrequency 
 import { isPdfFile, pdfFirstPageToPngFile } from '../../api/pdf-to-image.util';
 import { UploadsApiService } from '../../api/uploads-api.service';
 import { AuthService } from '../../auth/auth.service';
+import { resolveUploadUrl } from '../../api/file-url.util';
 
 type TemplateKind = 'invoice' | 'creditNote' | 'settlement';
 interface TemplateFile { url: string; fileName: string; }
@@ -253,7 +254,7 @@ function templateFile(url?: string | null, fileName?: string | null): TemplateFi
             <div class="template-row" *ngFor="let t of templateKinds">
               <span class="template-label">{{ t.label }} <span class="required">*</span></span>
               <ng-container *ngIf="form.templates[t.kind] as file; else noFile">
-                <a class="template-file" [href]="file.url" target="_blank" rel="noopener">
+                <a class="template-file" [href]="fileUrl(file.url)" target="_blank" rel="noopener">
                   <i class="pi pi-file"></i> {{ file.fileName }}
                 </a>
                 <button type="button" class="template-remove" (click)="removeTemplate(t.kind)" pTooltip="Quitar modelo" tooltipPosition="top">
@@ -333,6 +334,8 @@ function templateFile(url?: string | null, fileName?: string | null): TemplateFi
   `]
 })
 export class BuildingCreatePageComponent implements OnInit {
+  // El backend guarda los archivos subidos como ruta relativa (/uploads/x.jpg): hay que anteponer el origen de la API.
+  readonly fileUrl = resolveUploadUrl;
   private readonly api             = inject(BuildingsApiService);
   private readonly companiesApi    = inject(CompaniesApiService);
   private readonly condominiumsApi = inject(CondominiumsApiService);

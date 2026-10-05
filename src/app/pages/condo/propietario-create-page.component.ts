@@ -14,6 +14,7 @@ import { extractApiErrorMessage } from '../../api/api-error.util';
 import { OwnerEligibleBuilding, OwnerPresidentBuilding } from '../../api/models';
 import { OwnersApiService } from '../../api/owners-api.service';
 import { UploadsApiService } from '../../api/uploads-api.service';
+import { resolveUploadUrl } from '../../api/file-url.util';
 
 interface PhonePrefix { label: string; value: string; flag: string; }
 const PHONE_PREFIXES: PhonePrefix[] = [
@@ -213,7 +214,7 @@ const PHONE_PREFIXES: PhonePrefix[] = [
             <label>Firma <span class="optional">(opcional)</span></label>
             <div class="signature-upload-row">
               <div class="signature-preview" *ngIf="form.signatureUrl">
-                <img [src]="form.signatureUrl" alt="Firma" />
+                <img [src]="fileUrl(form.signatureUrl)" alt="Firma" />
               </div>
               <div class="signature-upload-area" (click)="signatureFileInput.click()">
                 <i class="pi pi-pencil"></i>
@@ -386,6 +387,8 @@ const PHONE_PREFIXES: PhonePrefix[] = [
   `]
 })
 export class PropietarioCreatePageComponent implements OnInit {
+  // El backend guarda los archivos subidos como ruta relativa (/uploads/x.jpg): hay que anteponer el origen de la API.
+  readonly fileUrl = resolveUploadUrl;
   private readonly api        = inject(OwnersApiService);
   private readonly uploadsApi = inject(UploadsApiService);
   private readonly route      = inject(ActivatedRoute);
