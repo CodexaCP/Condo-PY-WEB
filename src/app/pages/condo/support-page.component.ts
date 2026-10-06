@@ -1,42 +1,23 @@
 import { CommonModule } from '@angular/common';
 import { Component } from '@angular/core';
-import { RouterLink } from '@angular/router';
 import { Card } from 'primeng/card';
 import { SUPPORT_CONTACT } from '../../config/support.config';
 
-// Soporte para los clientes (administradores de empresa, operadores y encargados): ayuda, estado del plan y canales de contacto.
+// Soporte para los clientes (administradores de empresa, operadores y encargados): canales de contacto.
 @Component({
   standalone: true,
   selector: 'app-support-page',
-  imports: [CommonModule, RouterLink, Card],
+  imports: [CommonModule, Card],
   template: `
     <p-card styleClass="app-page-card">
       <div class="app-page-head">
         <div>
           <h1>Soporte</h1>
-          <p>¿Necesitás ayuda con CONDOPY? Acá encontrás las guías y cómo comunicarte con nosotros.</p>
+          <p>¿Necesitás ayuda con CONDOPY? Estos son nuestros canales de contacto.</p>
         </div>
       </div>
 
       <div class="support-grid">
-        <a routerLink="/tutorials" class="support-card">
-          <div class="support-icon"><i class="pi pi-play-circle"></i></div>
-          <div>
-            <strong>Tutoriales</strong>
-            <span>Guías paso a paso para usar cada sección del sistema.</span>
-          </div>
-          <i class="pi pi-angle-right support-go"></i>
-        </a>
-
-        <a routerLink="/my-plan" class="support-card">
-          <div class="support-icon"><i class="pi pi-bookmark"></i></div>
-          <div>
-            <strong>Mi plan</strong>
-            <span>Revisá el estado, el vencimiento y los pagos de tu plan.</span>
-          </div>
-          <i class="pi pi-angle-right support-go"></i>
-        </a>
-
         <a *ngIf="contact.email" class="support-card" [href]="'mailto:' + contact.email">
           <div class="support-icon"><i class="pi pi-envelope"></i></div>
           <div>
