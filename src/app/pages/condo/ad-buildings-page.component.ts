@@ -59,6 +59,9 @@ type ModuleFilter = 'all' | 'on' | 'off';
             <small>{{ item.companyName }}<ng-container *ngIf="item.condominiumName"> · {{ item.condominiumName }}</ng-container></small>
           </div>
           <p-tag [value]="item.adsEnabled ? 'Activada' : 'Apagada'" [severity]="item.adsEnabled ? 'success' : 'secondary'"></p-tag>
+          <input type="number" class="rot-input" min="3" max="60" step="1" title="Segundos que se muestra cada banner en la app (3 a 60)"
+                 [value]="item.adsRotationSeconds" [disabled]="!!savingId"
+                 (change)="setRotation(item, $any($event.target))" />
           <span>{{ item.campaignCount }}</span>
           <div class="app-actions">
             <p-button type="button" size="small" [outlined]="true"
@@ -79,7 +82,8 @@ type ModuleFilter = 'all' | 'on' | 'off';
       font: inherit; font-size: 0.95rem; color: var(--brand-ink); background: var(--surface-ground, #f8fafc);
     }
     .filters .search { flex: 1 1 260px; min-width: 200px; }
-    .ad-grid { grid-template-columns: 2.5fr 1.2fr 1.2fr 1.2fr; }
+    .ad-grid { grid-template-columns: 2.5fr 1.1fr 1.1fr 1.1fr 1.2fr;
+    .rot-input { width: 5rem; padding: 0.4rem 0.5rem; border: 1px solid rgba(19,133,182,0.25); border-radius: 10px; font: inherit; color: var(--brand-ink); background: var(--surface-ground, #f8fafc); } }
     .name-cell { display: flex; flex-direction: column; gap: 0.2rem; align-items: flex-start; }
     .name-cell small { color: var(--brand-muted); }
     @media (max-width: 900px) { .ad-grid { grid-template-columns: 1fr; } .app-row.header { display: none; } .app-actions { justify-content: flex-start; } }
@@ -124,6 +128,31 @@ export class AdBuildingsPageComponent implements OnInit {
   }
 
   trackById(_: number, item: AdBuilding): string { return item.buildingId; }
+
+  setRotation(item: AdBuilding, input: HTMLInputElement): void {
+    const seconds = Math.round(Number(input.value));
+    if (!Number.isFinite(seconds) || seconds < 3 || seconds > 60) {
+      input.value = String(item.adsRotationSeconds);
+      this.msg.add({ severity: 'warn', summary: 'Valor no válido', detail: 'Los segundos por banner deben estar entre 3 y 60.', life: 5000 });
+      return;
+    }
+    if (seconds === item.adsRotationSeconds || this.savingId) return;
+    this.savingId = item.buildingId;
+    this.api.setBuildingRotation(item.buildingId, item.adsEnabled, seconds).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: updated => {
+        this.items = this.items.map(x => (x.buildingId === updated.buildingId ? updated : x));
+        this.savingId = '';
+        this.msg.add({ severity: 'success', summary: 'Guardado', life: 5000, detail: `Cada banner dura ${updated.adsRotationSeconds} s en ${updated.buildingName}.` });
+        this.cdr.markForCheck();
+      },
+      error: err => {
+        input.value = String(item.adsRotationSeconds);
+        this.savingId = '';
+        this.msg.add({ severity: 'error', summary: 'Error', detail: extractApiErrorMessage(err, 'No se pudo guardar.'), life: 6000 });
+        this.cdr.markForCheck();
+      }
+    });
+  }
 
   toggle(item: AdBuilding): void {
     if (this.savingId) return;

@@ -2869,6 +2869,7 @@ export interface AdBuilding {
   companyName: string;
   condominiumName: string;
   adsEnabled: boolean;
+  adsRotationSeconds: number;
   campaignCount: number;
 }
 

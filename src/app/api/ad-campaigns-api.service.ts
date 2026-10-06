@@ -18,6 +18,10 @@ export class AdCampaignsApiService {
     return this.http.put<AdBuilding>(`${this.url}/buildings/${buildingId}`, { enabled });
   }
 
+  setBuildingRotation(buildingId: string, enabled: boolean, rotationSeconds: number): Observable<AdBuilding> {
+    return this.http.put<AdBuilding>(`${this.url}/buildings/${buildingId}`, { enabled, rotationSeconds });
+  }
+
   getAll(): Observable<AdCampaign[]> {
     return this.http.get<AdCampaign[]>(this.url);
   }
