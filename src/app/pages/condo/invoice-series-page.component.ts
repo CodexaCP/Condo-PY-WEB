@@ -80,7 +80,7 @@ import { Building, InvoiceSeries, InvoiceSeriesDocumentType } from '../../api/mo
           </div>
           <div class="field-block">
             <span>RUC <em>*</em></span>
-            <input [(ngModel)]="form.ruc" name="ruc" type="text" maxlength="20" placeholder="Ej: 80012345-6" required />
+            <input [(ngModel)]="form.ruc" name="ruc" type="text" maxlength="20" placeholder="Ej: 80012345-0" required />
           </div>
           <div class="field-block wide2">
             <span>Razón social <em>*</em></span>

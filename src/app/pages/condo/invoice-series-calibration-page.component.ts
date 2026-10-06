@@ -49,7 +49,7 @@ const FIELDS: CalibField[] = [
   { key: 'headerTimbradoNumero', section: 'Encabezado', group: 'Timbrado', label: 'N° de timbrado', sample: 'TIMBRADO N°12345678', x: BOX_X, y: 795, width: BOX_W, defaultFontSize: 9.5, align: 'C' },
   { key: 'vigenciaDesde', section: 'Encabezado', group: 'Timbrado', label: 'Vigencia desde', sample: 'Fecha Inicio Vigencia:01/01/2026', x: BOX_X, y: 783, width: BOX_W, defaultFontSize: 7.5, align: 'C' },
   { key: 'vigenciaHasta', section: 'Encabezado', group: 'Timbrado', label: 'Vigencia hasta', sample: 'Fecha Fin Vigencia:01/01/2027', x: BOX_X, y: 773, width: BOX_W, defaultFontSize: 7.5, align: 'C' },
-  { key: 'seriesRuc', section: 'Encabezado', group: 'Timbrado', label: 'RUC emisor', sample: 'RUC:80012345-6', x: BOX_X, y: 760, width: BOX_W, defaultFontSize: 10.5, align: 'C' },
+  { key: 'seriesRuc', section: 'Encabezado', group: 'Timbrado', label: 'RUC emisor', sample: 'RUC:80012345-0', x: BOX_X, y: 760, width: BOX_W, defaultFontSize: 10.5, align: 'C' },
   { key: 'docTitulo', section: 'Encabezado', group: 'Factura', label: 'Título "FACTURA"', sample: 'FACTURA', x: BOX_X, y: 738, width: BOX_W, defaultFontSize: 19, align: 'C' },
   { key: 'numeroCondicion', section: 'Encabezado', group: 'Factura', label: 'Número y condición (línea tenue)', sample: '001-001-0000123   CONTADO', x: BOX_X, y: 718, width: BOX_W, defaultFontSize: 7, align: 'C', isLabel: true },
   { key: 'headerNumero', section: 'Encabezado', group: 'Factura', label: 'N° de factura', sample: 'Nº 001-001-0000123', x: BOX_X, y: 712, width: BOX_W, defaultFontSize: 14, align: 'C', anchor: 'top' },

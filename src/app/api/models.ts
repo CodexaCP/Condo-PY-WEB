@@ -181,6 +181,36 @@ export interface Unit {
   isActive: boolean;
 }
 
+export type PersonType = 'Natural' | 'Legal';
+export type ResidentRelationship = 'Tenant' | 'Family' | 'Employee' | 'Other';
+
+// Ficha ampliada del propietario (todo opcional): persona física o jurídica, datos para facturarle y contacto adicional.
+export interface OwnerProfileData {
+  personType?: PersonType | null;
+  legalName?: string | null;
+  invoiceName?: string | null;
+  invoiceDocumentType?: string | null;
+  invoiceDocument?: string | null;
+  invoiceAddress?: string | null;
+  invoiceEmail?: string | null;
+  secondaryPhone?: string | null;
+  whatsAppPhone?: string | null;
+  nationality?: string | null;
+  birthDate?: string | null;
+}
+
+// Ficha ampliada del residente (todo opcional).
+export interface ResidentProfileData {
+  relationship?: ResidentRelationship | null;
+  emergencyContactName?: string | null;
+  emergencyContactPhone?: string | null;
+  nationality?: string | null;
+  birthDate?: string | null;
+  leaseUrl?: string | null;
+  leaseFileName?: string | null;
+  leaseEndDate?: string | null;
+}
+
 export interface UnitOwnerAssignment {
   id: string;
   unitId: string;
@@ -191,6 +221,7 @@ export interface UnitOwnerAssignment {
   ownerName: string;
   isPrimary: boolean;
   startDate: string;
+  ownershipPercentage?: number | null;
   // Al asignar el nuevo propietario principal: saldo a favor de la unidad que se le traspasó.
   transferredCredit?: number;
 }
@@ -221,6 +252,7 @@ export interface CreateUnitOwnerRequest {
   ownerId: string;
   isPrimary: boolean;
   startDate: string;
+  ownershipPercentage?: number | null;
 }
 
 export interface CreateUnitRequest {
@@ -231,7 +263,7 @@ export interface CreateUnitRequest {
   isActive: boolean;
 }
 
-export interface Resident {
+export interface Resident extends ResidentProfileData {
   id: string;
   fullName: string;
   documentType?: string | null;
@@ -243,7 +275,7 @@ export interface Resident {
   hasLinkedAccount: boolean;
 }
 
-export interface CreateResidentRequest {
+export interface CreateResidentRequest extends ResidentProfileData {
   companyId?: string | null;
   fullName: string;
   documentType?: string | null;
@@ -1421,7 +1453,7 @@ export interface BuildingComparisonReport {
   items: BuildingComparisonItem[];
 }
 
-export interface Owner {
+export interface Owner extends OwnerProfileData {
   id: string;
   companyId: string | null;
   firstName: string;
@@ -1488,7 +1520,7 @@ export interface OwnerEligibleBuilding {
   otherPresidentName?: string | null;
 }
 
-export interface OwnerUpsertRequest {
+export interface OwnerUpsertRequest extends OwnerProfileData {
   firstName: string;
   lastName: string;
   fullName?: string;

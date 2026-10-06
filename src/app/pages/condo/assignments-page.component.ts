@@ -77,6 +77,9 @@ type UnitOption = Unit & { display: string };
               <small>Propietario principal</small>
               <strong>{{ currentPrimary.ownerName }}</strong>
               <small class="since">Desde {{ currentPrimary.startDate }}</small>
+              <small class="since" *ngIf="currentPrimary.ownershipPercentage">Titularidad {{ currentPrimary.ownershipPercentage }}%
+                <button type="button" class="pct-edit" (click)="editOwnership(currentPrimary)" title="Cambiar porcentaje"><span class="pi pi-pencil"></span></button></small>
+              <button type="button" class="pct-add" *ngIf="!currentPrimary.ownershipPercentage" (click)="editOwnership(currentPrimary)">Informar titularidad %</button>
             </div>
             <button  type="button" class="remove-btn" title="Quitar" (click)="removeOwner(currentPrimary)">
               <span class="pi pi-times"></span>
@@ -88,6 +91,9 @@ type UnitOption = Unit & { display: string };
               <small>Propietario 2</small>
               <strong>{{ currentSecondary.ownerName }}</strong>
               <small class="since">Desde {{ currentSecondary.startDate }}</small>
+              <small class="since" *ngIf="currentSecondary.ownershipPercentage">Titularidad {{ currentSecondary.ownershipPercentage }}%
+                <button type="button" class="pct-edit" (click)="editOwnership(currentSecondary)" title="Cambiar porcentaje"><span class="pi pi-pencil"></span></button></small>
+              <button type="button" class="pct-add" *ngIf="!currentSecondary.ownershipPercentage" (click)="editOwnership(currentSecondary)">Informar titularidad %</button>
             </div>
             <button  type="button" class="remove-btn" title="Quitar" (click)="removeOwner(currentSecondary)">
               <span class="pi pi-times"></span>
@@ -109,6 +115,10 @@ type UnitOption = Unit & { display: string };
             <label class="field-block">
               <span>Vigente desde</span>
               <input type="date" [(ngModel)]="addForm.startDate" name="startDate" required />
+            </label>
+            <label class="field-block">
+              <span>Titularidad % <small>(opcional)</small></span>
+              <input type="number" [(ngModel)]="addForm.ownershipPercentage" name="ownershipPercentage" min="0" max="100" step="0.01" placeholder="Ej. 50" />
             </label>
           </div>
           <div class="add-form-actions">
@@ -202,7 +212,7 @@ type UnitOption = Unit & { display: string };
             <span>{{ item.buildingName }}</span>
             <span>{{ item.ownerName }}</span>
             <p-tag
-              [value]="item.isPrimary ? 'Principal' : 'Secundario'"
+              [value]="(item.isPrimary ? 'Principal' : 'Secundario') + (item.ownershipPercentage ? ' · ' + item.ownershipPercentage + '%' : '')"
               [severity]="item.isPrimary ? 'info' : 'secondary'">
             </p-tag>
             <span [class.no-resident]="!residentNameForUnit(item.unitId)">
@@ -374,6 +384,9 @@ type UnitOption = Unit & { display: string };
     .owner-chip small { color: var(--brand-muted, #6b878d); font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; }
     .owner-chip strong { color: var(--brand-ink, #18353a); font-size: 0.95rem; }
     .since { font-weight: 400 !important; font-size: 0.78rem !important; text-transform: none !important; letter-spacing: 0 !important; }
+    .pct-edit, .pct-add { background:none; border:none; padding:0 0.25rem; cursor:pointer; color:var(--brand-blue); font:inherit; font-size:0.78rem; }
+    .pct-add { display:block; padding:0; margin-top:0.15rem; text-decoration:underline; }
+    .pct-edit .pi { font-size:0.72rem; }
     .remove-btn {
       background: none;
       border: none;
@@ -596,7 +609,8 @@ export class AssignmentsPageComponent implements OnInit {
       unitId: this.selectedUnit.id,
       ownerId: this.addForm.ownerId,
       isPrimary,
-      startDate: this.addForm.startDate
+      startDate: this.addForm.startDate,
+      ownershipPercentage: this.addForm.ownershipPercentage ? Number(this.addForm.ownershipPercentage) : null
     }).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (created) => {
         this.assignments = [...this.assignments, created];
@@ -613,6 +627,33 @@ export class AssignmentsPageComponent implements OnInit {
       },
       error: (error) => {
         this.msg.add({ severity: 'error', summary: 'Error', detail: extractApiErrorMessage(error, 'No se pudo asignar el propietario.'), life: 5000 });
+        this.isSaving = false;
+        this.cdr.markForCheck();
+      }
+    });
+  }
+
+  // Cambia el porcentaje de titularidad de un propietario de la unidad (vacío = sin informar).
+  editOwnership(item: UnitOwnerAssignment): void {
+    const answer = window.prompt(`Porcentaje de titularidad de ${item.ownerName} en la unidad ${item.unitCode} (0 a 100; vacío para no informar):`, item.ownershipPercentage ? String(item.ownershipPercentage) : '');
+    if (answer === null) return;
+
+    const value = answer.trim() === '' ? null : Number(answer.replace(',', '.'));
+    if (value !== null && (!Number.isFinite(value) || value < 0 || value > 100)) {
+      this.msg.add({ severity: 'error', summary: 'Error', detail: 'El porcentaje debe estar entre 0 y 100.', life: 5000 });
+      return;
+    }
+
+    this.isSaving = true;
+    this.unitOwnersApi.updateOwnership(item.id, value).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: (updated) => {
+        this.assignments = this.assignments.map(a => a.id === updated.id ? { ...a, ownershipPercentage: updated.ownershipPercentage } : a);
+        this.isSaving = false;
+        this.msg.add({ severity: 'success', summary: 'Guardado', detail: 'Titularidad actualizada.', life: 3000 });
+        this.cdr.markForCheck();
+      },
+      error: (error) => {
+        this.msg.add({ severity: 'error', summary: 'Error', detail: extractApiErrorMessage(error, 'No se pudo guardar la titularidad.'), life: 6000 });
         this.isSaving = false;
         this.cdr.markForCheck();
       }
@@ -648,7 +689,15 @@ export class AssignmentsPageComponent implements OnInit {
           return;
         }
 
-        this.doRemoveOwner(item);
+        // El motivo del cambio queda en el historial de titularidad de la unidad (opcional; cancelar no quita al propietario).
+        const reason = window.prompt('Motivo del cambio de propietario (opcional):', '');
+        if (reason === null) {
+          this.isSaving = false;
+          this.cdr.markForCheck();
+          return;
+        }
+
+        this.doRemoveOwner(item, reason);
       },
       error: (error) => {
         this.msg.add({ severity: 'error', summary: 'Error', detail: extractApiErrorMessage(error, 'No se pudo revisar la baja del propietario.'), life: 6000 });
@@ -658,8 +707,8 @@ export class AssignmentsPageComponent implements OnInit {
     });
   }
 
-  private doRemoveOwner(item: UnitOwnerAssignment): void {
-    this.unitOwnersApi.delete(item.id).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+  private doRemoveOwner(item: UnitOwnerAssignment, reason: string): void {
+    this.unitOwnersApi.delete(item.id, reason).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (result) => {
         this.assignments = this.assignments.filter(a => a.id !== item.id);
         this.isSaving = false;
@@ -724,7 +773,7 @@ export class AssignmentsPageComponent implements OnInit {
   }
 
   private emptyAddForm() {
-    return { ownerId: '', startDate: new Date().toISOString().slice(0, 10) };
+    return { ownerId: '', startDate: new Date().toISOString().slice(0, 10), ownershipPercentage: null as number | null };
   }
 
   private emptyResidentAddForm() {

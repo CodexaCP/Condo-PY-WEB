@@ -76,7 +76,7 @@ function phoneProblem(p: PhoneInput, label: string): string {
   return prefix && !prefix.pattern.test(number) ? `${label}: formato inválido para ${prefix.label} (${prefix.hint}).` : '';
 }
 
-// Dígito verificador del RUC (SET): módulo 11, pesos 2 a 11 de derecha a izquierda. Formato 80012345-6.
+// Dígito verificador del RUC (SET): módulo 11, pesos 2 a 11 de derecha a izquierda. Formato 80012345-0.
 function isValidRuc(ruc: string): boolean {
   const m = /^(\d{5,9})-(\d)$/.exec(ruc.trim());
   if (!m) return false;
@@ -461,7 +461,7 @@ interface BankAccountForm {
             <div class="field-row">
               <div class="field">
                 <label for="ruc">RUC</label>
-                <input id="ruc" type="text" [(ngModel)]="form.ruc" name="ruc" placeholder="Ej: 80012345-6" maxlength="20"
+                <input id="ruc" type="text" [(ngModel)]="form.ruc" name="ruc" placeholder="Ej: 80012345-0" maxlength="20"
                        autocomplete="off" [disabled]="isBuildingManager" (input)="rucError = ''" />
                 <small class="field-error" *ngIf="rucError">{{ rucError }}</small>
                 <small class="field-hint" *ngIf="!rucError">Con guion y dígito verificador. Se valida al guardar.</small>
@@ -1220,7 +1220,7 @@ export class BuildingCreatePageComponent implements OnInit {
     const ruc = this.form.ruc.trim();
     if (!this.isBuildingManager) {
       if (ruc && ruc !== this.originalRuc.trim() && !isValidRuc(ruc)) {
-        this.rucError = 'RUC no válido: usá el formato 80012345-6 con su dígito verificador correcto.';
+        this.rucError = 'RUC no válido: usá el formato 80012345-0 con su dígito verificador correcto.';
         this.fail('billing', '');
         return;
       }

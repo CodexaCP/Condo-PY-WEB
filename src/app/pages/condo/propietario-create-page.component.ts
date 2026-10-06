@@ -11,7 +11,7 @@ import { MessageService } from 'primeng/api';
 import { Select } from 'primeng/select';
 import { Tooltip } from 'primeng/tooltip';
 import { extractApiErrorMessage } from '../../api/api-error.util';
-import { OwnerCreditBreakdown, OwnerCreditLot, OwnerCreditUse, OwnerEligibleBuilding, OwnerPresidentBuilding } from '../../api/models';
+import { OwnerCreditBreakdown, OwnerCreditLot, OwnerCreditUse, OwnerEligibleBuilding, OwnerPresidentBuilding, PersonType } from '../../api/models';
 import { OwnerPaymentsApiService } from '../../api/owner-payments-api.service';
 import { OwnersApiService } from '../../api/owners-api.service';
 import { UploadsApiService } from '../../api/uploads-api.service';
@@ -68,10 +68,28 @@ const PHONE_PREFIXES: PhonePrefix[] = [
 
           <div class="field-row">
             <div class="field">
+              <label for="personType">Tipo de persona</label>
+              <select id="personType" [(ngModel)]="form.personType" name="personType">
+                <option value="">— Sin especificar —</option>
+                <option value="Natural">Persona física</option>
+                <option value="Legal">Persona jurídica (empresa)</option>
+              </select>
+            </div>
+            <div class="field" *ngIf="form.personType === 'Legal'">
+              <label for="legalName">Razón social <span class="required">*</span></label>
+              <input id="legalName" type="text" [(ngModel)]="form.legalName" name="legalName"
+                     placeholder="Nombre legal de la empresa" maxlength="200" autocomplete="off" />
+              <small class="field-hint">Con persona jurídica la factura sale a nombre de la razón social.</small>
+            </div>
+          </div>
+
+          <div class="field-row">
+            <div class="field">
               <label for="documentType">Tipo de documento</label>
               <select id="documentType" [(ngModel)]="form.documentType" name="documentType">
                 <option value="">— Sin especificar —</option>
                 <option value="CedulaParaguaya">Cédula paraguaya</option>
+                <option value="RUC">RUC</option>
                 <option value="Pasaporte">Pasaporte</option>
                 <option value="DocumentoExtranjero">Documento extranjero</option>
               </select>
@@ -80,7 +98,19 @@ const PHONE_PREFIXES: PhonePrefix[] = [
               <label for="documentNumber">Número de documento</label>
               <input id="documentNumber" type="text" [(ngModel)]="form.documentNumber" name="documentNumber"
                      placeholder="Ej. 1234567 o AB-123456" maxlength="40" autocomplete="off" />
-              <small class="field-hint">Letras, números o guiones.</small>
+              <small class="field-hint">Cédula: solo números. RUC: formato 80012345-0. Otros: letras, números o guiones.</small>
+            </div>
+          </div>
+
+          <div class="field-row">
+            <div class="field">
+              <label for="nationality">Nacionalidad <span class="optional">(opcional)</span></label>
+              <input id="nationality" type="text" [(ngModel)]="form.nationality" name="nationality"
+                     placeholder="Ej. Paraguaya" maxlength="60" autocomplete="off" />
+            </div>
+            <div class="field">
+              <label for="birthDate">Fecha de nacimiento <span class="optional">(opcional)</span></label>
+              <input id="birthDate" type="date" [(ngModel)]="form.birthDate" name="birthDate" />
             </div>
           </div>
 
@@ -166,6 +196,73 @@ const PHONE_PREFIXES: PhonePrefix[] = [
               <input id="address" type="text" [(ngModel)]="form.address" name="address"
                      placeholder="Calle, número, ciudad" maxlength="200" autocomplete="off" />
             </div>
+          </div>
+
+          <div class="field-row">
+            <div class="field">
+              <label for="secondaryPhone">Teléfono secundario <span class="optional">(opcional)</span></label>
+              <input id="secondaryPhone" type="tel" [(ngModel)]="form.secondaryPhone" name="secondaryPhone"
+                     placeholder="+595981123456" maxlength="20" autocomplete="off" (input)="onFullPhoneInput('secondaryPhone')" />
+              <small class="field-hint">Con el prefijo del país.</small>
+            </div>
+            <div class="field">
+              <label for="whatsAppPhone">WhatsApp <span class="optional">(opcional)</span></label>
+              <input id="whatsAppPhone" type="tel" [(ngModel)]="form.whatsAppPhone" name="whatsAppPhone"
+                     placeholder="+595981123456" maxlength="20" autocomplete="off" (input)="onFullPhoneInput('whatsAppPhone')" />
+              <small class="field-hint">Con el prefijo del país. Para cobranza y avisos.</small>
+            </div>
+          </div>
+        </section>
+
+        <!-- ══ DATOS DE FACTURACIÓN ══════════════════════════════════ -->
+        <section class="form-section">
+          <h2 class="section-title">Datos de facturación</h2>
+          <p class="section-desc">
+            La factura se emite a quien figura como cliente. Normalmente son los datos personales (o la razón social si es una empresa).
+            Si quiere que salga a nombre de otra persona o empresa, cárguelos acá: nombre y documento van juntos.
+          </p>
+
+          <div class="billing-preview">
+            <i class="pi pi-receipt"></i>
+            <span>La factura saldrá a nombre de: <strong>{{ billingPreviewName || '— (cargue los datos personales) —' }}</strong>
+              <ng-container *ngIf="billingPreviewDoc"> · {{ billingPreviewDoc }}</ng-container></span>
+          </div>
+
+          <div class="field-row">
+            <div class="field">
+              <label for="invoiceName">Nombre o razón social para la factura <span class="optional">(opcional)</span></label>
+              <input id="invoiceName" type="text" [(ngModel)]="form.invoiceName" name="invoiceName"
+                     placeholder="Solo si difiere de los datos personales" maxlength="200" autocomplete="off" />
+            </div>
+            <div class="field">
+              <label for="invoiceEmail">Email para recibir la factura <span class="optional">(opcional)</span></label>
+              <input id="invoiceEmail" type="email" [(ngModel)]="form.invoiceEmail" name="invoiceEmail"
+                     placeholder="facturas@ejemplo.com" maxlength="160" autocomplete="off" />
+            </div>
+          </div>
+
+          <div class="field-row">
+            <div class="field">
+              <label for="invoiceDocumentType">Tipo de documento</label>
+              <select id="invoiceDocumentType" [(ngModel)]="form.invoiceDocumentType" name="invoiceDocumentType">
+                <option value="">— Sin especificar —</option>
+                <option value="RUC">RUC</option>
+                <option value="CedulaParaguaya">Cédula paraguaya</option>
+                <option value="Pasaporte">Pasaporte</option>
+                <option value="DocumentoExtranjero">Documento extranjero</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="invoiceDocument">Documento para la factura</label>
+              <input id="invoiceDocument" type="text" [(ngModel)]="form.invoiceDocument" name="invoiceDocument"
+                     placeholder="Ej. 80012345-0" maxlength="40" autocomplete="off" />
+            </div>
+          </div>
+
+          <div class="field">
+            <label for="invoiceAddress">Dirección para la factura <span class="optional">(opcional)</span></label>
+            <input id="invoiceAddress" type="text" [(ngModel)]="form.invoiceAddress" name="invoiceAddress"
+                   placeholder="Si se deja vacía, se usa la dirección del propietario" maxlength="300" autocomplete="off" />
           </div>
         </section>
 
@@ -414,6 +511,8 @@ const PHONE_PREFIXES: PhonePrefix[] = [
     .field-hint  { color:var(--brand-muted); font-size:0.8rem; line-height:1.4; }
     .required  { color:#e74c3c; font-weight:600; }
     .optional  { font-weight:400; font-size:0.82rem; color:var(--brand-muted); }
+    .billing-preview { display:flex; align-items:center; gap:0.6rem; padding:0.65rem 0.9rem; border-radius:10px; background:rgba(19,133,182,0.06); border:1px solid rgba(19,133,182,0.15); font-size:0.9rem; color:var(--brand-ink); }
+    .billing-preview i { color:var(--brand-blue); }
     .checkbox-label { display:flex; align-items:center; gap:0.5rem; cursor:pointer; font-weight:500; }
     .checkbox-label input[type=checkbox] { width:16px; height:16px; cursor:pointer; accent-color:var(--brand-blue); }
     .section-desc { margin:0; color:var(--brand-muted); font-size:0.88rem; }
@@ -613,7 +712,18 @@ export class PropietarioCreatePageComponent implements OnInit {
             address:        owner.address            || '',
             isResident:     owner.isResident         ?? false,
             isActive:       owner.isActive           ?? true,
-            signatureUrl:   owner.signatureUrl        || ''
+            signatureUrl:   owner.signatureUrl        || '',
+            personType:     owner.personType          ?? '',
+            legalName:      owner.legalName           || '',
+            invoiceName:    owner.invoiceName         || '',
+            invoiceDocumentType: owner.invoiceDocumentType || '',
+            invoiceDocument: owner.invoiceDocument    || '',
+            invoiceAddress: owner.invoiceAddress      || '',
+            invoiceEmail:   owner.invoiceEmail        || '',
+            secondaryPhone: owner.secondaryPhone      || '',
+            whatsAppPhone:  owner.whatsAppPhone       || '',
+            nationality:    owner.nationality         || '',
+            birthDate:      owner.birthDate           || ''
           };
 
           this.presidentOfBuildings = owner.presidentOfBuildings || [];
@@ -658,6 +768,24 @@ export class PropietarioCreatePageComponent implements OnInit {
     this.form.phone = this.form.phone.replace(/[^\d\s\-]/g, '');
   }
 
+  // Teléfonos completos con prefijo (+595981123456): solo el + inicial, dígitos y separadores.
+  onFullPhoneInput(field: 'secondaryPhone' | 'whatsAppPhone'): void {
+    this.form[field] = this.form[field].replace(/[^\d+\s\-]/g, '');
+  }
+
+  // A quién saldría la factura con lo cargado (los datos de facturación propios; si no, la razón social o el nombre).
+  get billingPreviewName(): string {
+    const f = this.form;
+    if (f.invoiceName.trim() && f.invoiceDocument.trim()) return f.invoiceName.trim();
+    if (f.personType === 'Legal' && f.legalName.trim()) return f.legalName.trim();
+    return `${f.firstName} ${f.lastName}`.trim();
+  }
+
+  get billingPreviewDoc(): string {
+    const f = this.form;
+    return (f.invoiceName.trim() && f.invoiceDocument.trim()) ? f.invoiceDocument.trim() : f.documentNumber.trim();
+  }
+
   save(): void {
     const firstName = this.form.firstName.trim();
     const lastName  = this.form.lastName.trim();
@@ -673,6 +801,12 @@ export class PropietarioCreatePageComponent implements OnInit {
     if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       this.msg.add({ severity: 'error', summary: 'Error', detail: 'Correo electrónico inválido.', life: 5000 }); return;
     }
+    if (this.form.personType === 'Legal' && !this.form.legalName.trim()) {
+      this.msg.add({ severity: 'error', summary: 'Error', detail: 'La razón social es obligatoria para una persona jurídica.', life: 5000 }); return;
+    }
+    if (!!this.form.invoiceName.trim() !== !!this.form.invoiceDocument.trim()) {
+      this.msg.add({ severity: 'error', summary: 'Error', detail: 'Para facturar a otro nombre completá el nombre y el documento de facturación (o dejá los dos vacíos).', life: 5000 }); return;
+    }
 
     const req = {
       firstName, lastName,
@@ -686,6 +820,17 @@ export class PropietarioCreatePageComponent implements OnInit {
       isResident:     this.form.isResident,
       isActive:       this.form.isActive,
       signatureUrl:   this.presidentOfBuildings.length ? (this.form.signatureUrl || null) : null,
+      personType:     this.form.personType || null,
+      legalName:      this.form.legalName.trim() || null,
+      invoiceName:    this.form.invoiceName.trim() || null,
+      invoiceDocumentType: this.form.invoiceDocumentType || null,
+      invoiceDocument: this.form.invoiceDocument.trim() || null,
+      invoiceAddress: this.form.invoiceAddress.trim() || null,
+      invoiceEmail:   this.form.invoiceEmail.trim() || null,
+      secondaryPhone: this.form.secondaryPhone.trim() || null,
+      whatsAppPhone:  this.form.whatsAppPhone.trim() || null,
+      nationality:    this.form.nationality.trim() || null,
+      birthDate:      this.form.birthDate || null,
       password:       this.isEditing ? undefined : '123456'
     };
 
@@ -751,7 +896,18 @@ export class PropietarioCreatePageComponent implements OnInit {
       address:        '',
       isResident:     false,
       isActive:       true,
-      signatureUrl:   ''
+      signatureUrl:   '',
+      personType:     '' as '' | PersonType,
+      legalName:      '',
+      invoiceName:    '',
+      invoiceDocumentType: '',
+      invoiceDocument: '',
+      invoiceAddress: '',
+      invoiceEmail:   '',
+      secondaryPhone: '',
+      whatsAppPhone:  '',
+      nationality:    '',
+      birthDate:      ''
     };
   }
 

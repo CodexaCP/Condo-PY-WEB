@@ -9,7 +9,9 @@ import { Card } from 'primeng/card';
 import { Tooltip } from 'primeng/tooltip';
 import { CompaniesApiService } from '../../api/companies-api.service';
 import { extractApiErrorMessage } from '../../api/api-error.util';
-import { Company, Resident } from '../../api/models';
+import { Company, Resident, ResidentRelationship } from '../../api/models';
+import { UploadsApiService } from '../../api/uploads-api.service';
+import { resolveUploadUrl } from '../../api/file-url.util';
 import { ResidentsApiService } from '../../api/residents-api.service';
 import { AuthService } from '../../auth/auth.service';
 
@@ -69,6 +71,7 @@ import { AuthService } from '../../auth/auth.service';
               <select id="documentType" [(ngModel)]="form.documentType" name="documentType">
                 <option value="">— Sin especificar —</option>
                 <option value="CedulaParaguaya">Cédula paraguaya</option>
+                <option value="RUC">RUC</option>
                 <option value="Pasaporte">Pasaporte</option>
                 <option value="DocumentoExtranjero">Documento extranjero</option>
               </select>
@@ -77,7 +80,7 @@ import { AuthService } from '../../auth/auth.service';
               <label for="documentNumber">Número de documento <span class="required">*</span></label>
               <input id="documentNumber" [(ngModel)]="form.documentNumber" name="documentNumber"
                      type="text" placeholder="Ej. 1234567 o AB-123456" maxlength="40" />
-              <small class="field-hint">Letras, números o guiones.</small>
+              <small class="field-hint">Cédula: solo números. RUC: formato 80012345-0. Otros: letras, números o guiones.</small>
             </div>
           </div>
         </section>
@@ -96,6 +99,74 @@ import { AuthService } from '../../auth/auth.service';
               <input id="phoneNumber" [(ngModel)]="form.phoneNumber" name="phoneNumber"
                      type="text" placeholder="0981 123 456" maxlength="20" />
               <small class="field-hint">Números, +, ( ) o guiones.</small>
+            </div>
+          </div>
+        </section>
+
+        <!-- Vínculo con la unidad -->
+        <section class="form-section">
+          <h2 class="section-title">Vínculo con la unidad</h2>
+          <div class="field-row">
+            <div class="field">
+              <label for="relationship">Relación <span class="optional">(opcional)</span></label>
+              <select id="relationship" [(ngModel)]="form.relationship" name="relationship">
+                <option value="">— Sin especificar —</option>
+                <option value="Tenant">Inquilino</option>
+                <option value="Family">Familiar del propietario</option>
+                <option value="Employee">Empleado</option>
+                <option value="Other">Otro</option>
+              </select>
+              <small class="field-hint">Las fechas de ingreso y salida se cargan al asignarlo a la unidad, en Asignaciones.</small>
+            </div>
+          </div>
+          <div class="field-row" *ngIf="form.relationship === 'Tenant'">
+            <div class="field">
+              <label>Contrato de alquiler <span class="optional">(opcional)</span></label>
+              <div class="lease-row">
+                <ng-container *ngIf="form.leaseUrl; else noLease">
+                  <a class="lease-file" [href]="fileUrl(form.leaseUrl)" target="_blank" rel="noopener"><i class="pi pi-file"></i> {{ form.leaseFileName || 'contrato' }}</a>
+                  <button type="button" class="lease-remove" (click)="removeLease()" pTooltip="Quitar contrato" tooltipPosition="top"><i class="pi pi-times"></i></button>
+                </ng-container>
+                <ng-template #noLease>
+                  <label class="lease-upload" [class.disabled]="uploadingLease">
+                    <i class="pi" [class.pi-upload]="!uploadingLease" [class.pi-spin]="uploadingLease" [class.pi-spinner]="uploadingLease"></i>
+                    {{ uploadingLease ? 'Subiendo...' : 'Adjuntar contrato' }}
+                    <input type="file" accept=".pdf,.png,.jpg,.jpeg,.webp" hidden [disabled]="uploadingLease" (change)="onLeaseSelected($event)" />
+                  </label>
+                </ng-template>
+              </div>
+              <small class="field-hint">PDF o imagen, hasta 10 MB.</small>
+            </div>
+            <div class="field">
+              <label for="leaseEndDate">Vencimiento del contrato</label>
+              <input id="leaseEndDate" [(ngModel)]="form.leaseEndDate" name="leaseEndDate" type="date" />
+            </div>
+          </div>
+        </section>
+
+        <!-- Datos adicionales y emergencia -->
+        <section class="form-section">
+          <h2 class="section-title">Datos adicionales y emergencia</h2>
+          <div class="field-row">
+            <div class="field">
+              <label for="nationality">Nacionalidad <span class="optional">(opcional)</span></label>
+              <input id="nationality" [(ngModel)]="form.nationality" name="nationality" type="text" maxlength="60" placeholder="Ej. Paraguaya" />
+            </div>
+            <div class="field">
+              <label for="birthDate">Fecha de nacimiento <span class="optional">(opcional)</span></label>
+              <input id="birthDate" [(ngModel)]="form.birthDate" name="birthDate" type="date" />
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field">
+              <label for="emergencyContactName">Contacto de emergencia <span class="optional">(opcional)</span></label>
+              <input id="emergencyContactName" [(ngModel)]="form.emergencyContactName" name="emergencyContactName" type="text" maxlength="200" />
+            </div>
+            <div class="field">
+              <label for="emergencyContactPhone">Teléfono de emergencia <span class="optional">(opcional)</span></label>
+              <input id="emergencyContactPhone" [(ngModel)]="form.emergencyContactPhone" name="emergencyContactPhone" type="tel"
+                     maxlength="20" placeholder="+595981123456" (input)="onEmergencyPhoneInput()" />
+              <small class="field-hint">Con el prefijo del país.</small>
             </div>
           </div>
         </section>
@@ -142,7 +213,8 @@ import { AuthService } from '../../auth/auth.service';
           <div>
             <strong>{{ item.fullName }}</strong>
             <span>{{ item.email }}</span>
-            <small>{{ item.isOwner ? 'Propietario' : 'Inquilino' }} · {{ item.phoneNumber }}</small>
+            <small>{{ relationshipLabel(item) }} · {{ item.phoneNumber }}</small>
+            <small *ngIf="item.relationship === 'Tenant' && item.leaseEndDate">Contrato vence el {{ item.leaseEndDate | date:'dd/MM/yyyy' }}</small>
             <small class="linked-badge" *ngIf="item.hasLinkedAccount" pTooltip="Este residente tiene una cuenta de acceso vinculada (puede ser un propietario u otro usuario del sistema)">
               <i class="pi pi-link"></i> Vinculado a cuenta de acceso
             </small>
@@ -170,6 +242,12 @@ import { AuthService } from '../../auth/auth.service';
       margin:0 0 0.1rem; padding-bottom:0.5rem;
       border-bottom:1px solid rgba(19,133,182,0.1);
     }
+    .lease-row { display:flex; align-items:center; gap:0.75rem; flex-wrap:wrap; padding:0.55rem 0.85rem; border:1px solid rgba(19,133,182,0.15); border-radius:10px; }
+    .lease-file { display:inline-flex; align-items:center; gap:0.4rem; color:var(--brand-blue); text-decoration:none; word-break:break-all; }
+    .lease-remove { background:none; border:none; cursor:pointer; color:var(--brand-muted); }
+    .lease-remove:hover { color:#e74c3c; }
+    .lease-upload { display:inline-flex; align-items:center; gap:0.4rem; cursor:pointer; color:var(--brand-blue); font-weight:500; }
+    .lease-upload.disabled { cursor:progress; opacity:0.7; }
     .field { display:flex; flex-direction:column; gap:0.4rem; }
     .field label { font-weight:500; font-size:0.92rem; color:var(--brand-ink); }
     .field-row { display:grid; grid-template-columns:1fr 1fr; gap:1rem; }
@@ -231,6 +309,9 @@ export class ResidentsPageComponent implements OnInit {
   private readonly destroyRef = inject(DestroyRef);
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly msg = inject(MessageService);
+  private readonly uploadsApi = inject(UploadsApiService);
+  readonly fileUrl = resolveUploadUrl;
+  uploadingLease = false;
 
   items: Resident[] = [];
   companies: Company[] = [];
@@ -275,8 +356,62 @@ export class ResidentsPageComponent implements OnInit {
       email: item.email,
       phoneNumber: item.phoneNumber,
       isOwner: item.isOwner,
-      isActive: item.isActive
+      isActive: item.isActive,
+      relationship: (item.relationship ?? '') as '' | ResidentRelationship,
+      leaseUrl: item.leaseUrl ?? '',
+      leaseFileName: item.leaseFileName ?? '',
+      leaseEndDate: item.leaseEndDate ?? '',
+      nationality: item.nationality ?? '',
+      birthDate: item.birthDate ?? '',
+      emergencyContactName: item.emergencyContactName ?? '',
+      emergencyContactPhone: item.emergencyContactPhone ?? ''
     };
+  }
+
+  onEmergencyPhoneInput(): void {
+    this.form.emergencyContactPhone = this.form.emergencyContactPhone.replace(/[^\d+\s\-]/g, '');
+  }
+
+  relationshipLabel(item: Resident): string {
+    switch (item.relationship) {
+      case 'Tenant':   return 'Inquilino';
+      case 'Family':   return 'Familiar';
+      case 'Employee': return 'Empleado';
+      case 'Other':    return 'Otro';
+      default:         return item.isOwner ? 'Propietario' : 'Inquilino';
+    }
+  }
+
+  onLeaseSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    input.value = '';
+    if (!file) return;
+
+    if (file.size > 10 * 1024 * 1024) {
+      this.msg.add({ severity: 'error', summary: 'Error', detail: 'El archivo supera el límite de 10 MB.', life: 5000 });
+      return;
+    }
+
+    this.uploadingLease = true;
+    this.uploadsApi.upload(file).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: ({ url }) => {
+        this.form.leaseUrl = url;
+        this.form.leaseFileName = file.name;
+        this.uploadingLease = false;
+        this.cdr.markForCheck();
+      },
+      error: (error) => {
+        this.msg.add({ severity: 'error', summary: 'Error', detail: extractApiErrorMessage(error, 'No se pudo subir el contrato.'), life: 5000 });
+        this.uploadingLease = false;
+        this.cdr.markForCheck();
+      }
+    });
+  }
+
+  removeLease(): void {
+    this.form.leaseUrl = '';
+    this.form.leaseFileName = '';
   }
 
   cancelEdit(): void {
@@ -294,7 +429,15 @@ export class ResidentsPageComponent implements OnInit {
       email: this.form.email.trim().toLowerCase(),
       phoneNumber: this.form.phoneNumber.trim(),
       isOwner: this.form.isOwner,
-      isActive: this.form.isActive
+      isActive: this.form.isActive,
+      relationship: this.form.relationship || null,
+      leaseUrl: this.form.relationship === 'Tenant' ? (this.form.leaseUrl || null) : null,
+      leaseFileName: this.form.relationship === 'Tenant' ? (this.form.leaseFileName || null) : null,
+      leaseEndDate: this.form.relationship === 'Tenant' ? (this.form.leaseEndDate || null) : null,
+      nationality: this.form.nationality.trim() || null,
+      birthDate: this.form.birthDate || null,
+      emergencyContactName: this.form.emergencyContactName.trim() || null,
+      emergencyContactPhone: this.form.emergencyContactPhone.replace(/s|-/g, '') || null
     };
 
     const validationError = this.validateForm(request);
@@ -406,7 +549,15 @@ export class ResidentsPageComponent implements OnInit {
       email: '',
       phoneNumber: '',
       isOwner: true,
-      isActive: true
+      isActive: true,
+      relationship: '' as '' | ResidentRelationship,
+      leaseUrl: '',
+      leaseFileName: '',
+      leaseEndDate: '',
+      nationality: '',
+      birthDate: '',
+      emergencyContactName: '',
+      emergencyContactPhone: ''
     };
   }
 

@@ -22,7 +22,14 @@ export class UnitOwnersApiService {
     return this.http.get<UnitOwnerRemovalPreview>(`${API_BASE_URL}/unit-owners/${id}/removal-preview`);
   }
 
-  delete(id: string): Observable<UnitOwnerRemoval> {
-    return this.http.delete<UnitOwnerRemoval>(`${API_BASE_URL}/unit-owners/${id}`);
+  // El motivo (opcional) queda en el historial de titularidad de la unidad.
+  delete(id: string, reason?: string): Observable<UnitOwnerRemoval> {
+    const params = reason?.trim() ? new HttpParams().set('reason', reason.trim()) : undefined;
+    return this.http.delete<UnitOwnerRemoval>(`${API_BASE_URL}/unit-owners/${id}`, { params });
+  }
+
+  // Porcentaje de titularidad de un propietario de la unidad (null = sin informar).
+  updateOwnership(id: string, ownershipPercentage: number | null): Observable<UnitOwnerAssignment> {
+    return this.http.put<UnitOwnerAssignment>(`${API_BASE_URL}/unit-owners/${id}/ownership`, { ownershipPercentage });
   }
 }
