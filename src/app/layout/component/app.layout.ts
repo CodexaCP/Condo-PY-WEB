@@ -8,6 +8,7 @@ import { AppTopbar } from './app.topbar';
 import { AppSidebar } from './app.sidebar';
 import { AppFooter } from './app.footer';
 import { LayoutService } from '@/app/layout/service/layout.service';
+import { AuthService } from '@/app/auth/auth.service';
 
 @Component({
     selector: 'app-layout',
@@ -50,6 +51,7 @@ import { LayoutService } from '@/app/layout/service/layout.service';
 })
 export class AppLayout {
     layoutService = inject(LayoutService);
+    private readonly auth = inject(AuthService);
 
     alertData(message: { data?: NotificationToastData }): NotificationToastData {
         return message.data ?? { icon: 'pi-bell', color: '#3b82f6', onTap: () => {} };
@@ -78,7 +80,9 @@ export class AppLayout {
             'layout-static': config.menuMode === 'static',
             'layout-static-inactive': state.staticMenuDesktopInactive && config.menuMode === 'static',
             'layout-overlay-active': state.overlayMenuActive,
-            'layout-mobile-active': state.mobileMenuActive
+            'layout-mobile-active': state.mobileMenuActive,
+            // Panel del SuperAdmin: menu a toda la altura y barra superior clara (assets/layout/_shell-sa.scss).
+            'layout-sa': this.auth.hasRole('SuperAdmin')
         };
     })
 }

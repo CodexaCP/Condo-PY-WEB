@@ -1,0 +1,279 @@
+// Estructura del panel del SuperAdmin: menu lateral a toda la altura con la marca arriba y abajo, y barra superior clara
+// con la campana y el usuario. Usa los colores de la marca (variables --brand-*); solo aplica con .layout-sa en el contenedor.
+$sa-sidebar-width: 16.5rem;
+
+// Marca del menu lateral: solo se muestra en el panel del SuperAdmin.
+.sa-only {
+    display: none;
+}
+
+.layout-wrapper.layout-sa {
+    // ── Menu lateral ────────────────────────────────────────────────────
+    .layout-sidebar {
+        width: $sa-sidebar-width;
+        height: 100vh;
+        top: 0;
+        left: 0;
+        padding: 0;
+        border-radius: 0;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        background: var(--brand-gradient-v);
+        box-shadow: 4px 0 24px rgba(19, 133, 182, 0.28);
+        z-index: 998;
+    }
+
+    .sa-brand,
+    .sa-foot {
+        display: flex;
+        align-items: center;
+        gap: 0.7rem;
+        flex-shrink: 0;
+        color: #ffffff;
+        text-decoration: none;
+    }
+
+    .sa-brand {
+        padding: 1.25rem 1.35rem 1rem;
+
+        svg {
+            width: 2.6rem;
+            height: 2.5rem;
+            flex-shrink: 0;
+        }
+
+        .sa-brand-name {
+            display: block;
+            font-size: 1.55rem;
+            font-weight: 700;
+            line-height: 1.05;
+            letter-spacing: -0.01em;
+        }
+
+        .sa-brand-sub {
+            display: block;
+            margin-top: 0.15rem;
+            font-size: 0.72rem;
+            opacity: 0.82;
+        }
+    }
+
+    .sa-foot {
+        padding: 1rem 1.35rem;
+        border-top: 1px solid rgba(255, 255, 255, 0.2);
+
+        svg {
+            width: 2rem;
+            height: 1.9rem;
+            flex-shrink: 0;
+        }
+
+        .sa-brand-name {
+            display: block;
+            font-size: 1rem;
+            font-weight: 700;
+            line-height: 1.1;
+        }
+
+        .sa-brand-sub {
+            display: block;
+            font-size: 0.68rem;
+            opacity: 0.8;
+        }
+    }
+
+    app-menu {
+        display: block;
+        flex: 1 1 auto;
+        min-height: 0;
+        overflow-y: auto;
+        padding: 0.35rem 0.85rem 0.75rem;
+    }
+
+    // Sin titulos de seccion: la lista va corrida, con los grupos plegables.
+    .layout-menu .layout-root-menuitem > .layout-menuitem-root-text {
+        display: none;
+    }
+
+    .layout-menu ul a {
+        padding: 0.72rem 0.95rem;
+        margin-bottom: 0.2rem;
+        border-radius: 12px;
+        font-size: 0.95rem;
+        font-weight: 500;
+
+        .layout-menuitem-icon {
+            font-size: 1.15rem;
+            margin-right: 0.75rem;
+        }
+
+        &.active-route {
+            background-color: rgba(255, 255, 255, 0.26);
+            box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.35), 0 4px 14px rgba(8, 60, 90, 0.18);
+        }
+    }
+
+    // Hijos de un grupo plegable: mas chicos y sangrados.
+    .layout-menu ul ul li a {
+        font-size: 0.88rem;
+        padding: 0.55rem 0.9rem;
+        margin-left: 1.6rem;
+    }
+
+    // ── Barra superior ──────────────────────────────────────────────────
+    .layout-topbar {
+        left: $sa-sidebar-width;
+        width: calc(100% - #{$sa-sidebar-width});
+        padding: 0 1.75rem;
+        background: rgba(255, 255, 255, 0.86);
+        backdrop-filter: blur(10px);
+        box-shadow: 0 1px 0 rgba(19, 133, 182, 0.12);
+
+        .layout-topbar-logo-container {
+            width: auto;
+        }
+
+        .layout-topbar-logo {
+            display: none;
+        }
+
+        .layout-topbar-action {
+            color: var(--brand-ink);
+
+            &:hover {
+                background-color: rgba(19, 133, 182, 0.1);
+            }
+        }
+
+        .layout-topbar-actions {
+            align-items: center;
+            gap: 0.6rem;
+        }
+    }
+
+    .sa-user {
+        position: relative;
+    }
+
+    .sa-user-btn {
+        display: flex;
+        align-items: center;
+        gap: 0.7rem;
+        padding: 0.3rem 0.6rem 0.3rem 0.4rem;
+        border: 0;
+        border-radius: 999px;
+        background: transparent;
+        color: var(--brand-ink);
+        cursor: pointer;
+        font: inherit;
+        transition: background-color 0.15s;
+
+        &:hover {
+            background: rgba(19, 133, 182, 0.08);
+        }
+
+        .sa-avatar {
+            width: 2.4rem;
+            height: 2.4rem;
+            border-radius: 50%;
+            display: grid;
+            place-items: center;
+            font-size: 0.82rem;
+            font-weight: 700;
+            color: #ffffff;
+            background: var(--brand-gradient);
+        }
+
+        .sa-user-text {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            line-height: 1.15;
+
+            strong {
+                font-size: 0.92rem;
+                font-weight: 700;
+            }
+
+            small {
+                font-size: 0.74rem;
+                color: var(--brand-muted);
+            }
+        }
+
+        .pi {
+            font-size: 0.8rem;
+            color: var(--brand-muted);
+        }
+    }
+
+    .sa-user-menu {
+        position: absolute;
+        right: 0;
+        top: calc(100% + 0.45rem);
+        min-width: 13rem;
+        padding: 0.4rem;
+        border-radius: 14px;
+        background: #ffffff;
+        border: 1px solid rgba(19, 133, 182, 0.15);
+        box-shadow: 0 14px 34px rgba(8, 60, 90, 0.18);
+        z-index: 1000;
+
+        button {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            width: 100%;
+            padding: 0.6rem 0.8rem;
+            border: 0;
+            border-radius: 10px;
+            background: transparent;
+            color: var(--brand-ink);
+            font: inherit;
+            font-size: 0.9rem;
+            cursor: pointer;
+            text-align: left;
+
+            &:hover {
+                background: rgba(19, 133, 182, 0.08);
+            }
+        }
+    }
+}
+
+// Escritorio: el contenido deja lugar al menu (o toda la pantalla si se oculta con el boton de las tres rayas).
+@media (min-width: 992px) {
+    .layout-wrapper.layout-sa.layout-static {
+        .layout-main-container {
+            margin-left: $sa-sidebar-width;
+            padding-top: 5.5rem;
+        }
+
+        &.layout-static-inactive {
+            .layout-topbar {
+                left: 0;
+                width: 100%;
+            }
+
+            .layout-main-container {
+                margin-left: 0;
+            }
+        }
+    }
+}
+
+// Celular y tableta: el menu se abre encima, como en el resto de los paneles; la barra ocupa todo el ancho.
+@media (max-width: 991px) {
+    .layout-wrapper.layout-sa {
+        .layout-topbar {
+            left: 0;
+            width: 100%;
+            padding: 0 1rem;
+        }
+
+        .sa-user-text {
+            display: none;
+        }
+    }
+}

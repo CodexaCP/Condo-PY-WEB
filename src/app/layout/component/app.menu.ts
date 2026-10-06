@@ -109,37 +109,43 @@ export class AppMenu {
         ]);
 
         if (isSuperAdmin) {
+            // Menu del panel del SuperAdmin (sin titulos de seccion; el estilo lo da .layout-sa). Lo que no tiene lugar propio todavia
+            // (condominios, unidades y los modulos por edificio) vive en Configuracion hasta que se arme cada opcion interna.
             return [
                 {
-                    label: 'Principal',
+                    label: 'Menú',
                     items: [
-                        { label: 'Panel', icon: 'pi pi-fw pi-shield', routerLink: ['/superadmin'] },
-                        { label: 'Liquidaciones', icon: 'pi pi-fw pi-history', routerLink: ['/superadmin-settlements'] }
-                    ]
-                },
-                {
-                    label: 'Gestión',
-                    items: [
-                        group('Administración', 'pi pi-fw pi-cog', 'administracion', [
-                            { label: 'Empresas', icon: 'pi pi-fw pi-building', routerLink: ['/companies'] },
+                        { label: 'Inicio', icon: 'pi pi-fw pi-home', routerLink: ['/superadmin'] },
+                        { label: 'Empresas', icon: 'pi pi-fw pi-building', routerLink: ['/companies'] },
+                        { label: 'Edificios', icon: 'pi pi-fw pi-building-columns', routerLink: ['/buildings'] },
+                        {
+                            label: 'Administradores', icon: 'pi pi-fw pi-user', routerLink: ['/users'], queryParams: { role: 'CompanyAdmin' },
+                            routerLinkActiveOptions: { paths: 'exact', queryParams: 'subset', matrixParams: 'ignored', fragment: 'ignored' }
+                        },
+                        {
+                            label: 'Usuarios', icon: 'pi pi-fw pi-users', routerLink: ['/users'],
+                            routerLinkActiveOptions: { paths: 'exact', queryParams: 'exact', matrixParams: 'ignored', fragment: 'ignored' }
+                        },
+                        group('Configuración', 'pi pi-fw pi-cog', 'configuracion', [
                             { label: 'Condominios', icon: 'pi pi-fw pi-map', routerLink: ['/condominiums'] },
-                            { label: 'Usuarios', icon: 'pi pi-fw pi-users', routerLink: ['/users'] },
-                            { label: 'Edificios', icon: 'pi pi-fw pi-home', routerLink: ['/buildings'] },
-                            { label: 'Unidades', icon: 'pi pi-fw pi-th-large', routerLink: ['/units'] }
-                        ]),
-                        group('Planes', 'pi pi-fw pi-list-check', 'planes', [
-                            { label: 'Planes', icon: 'pi pi-fw pi-list-check', routerLink: ['/plans'] },
-                            { label: 'Asignaciones de planes', icon: 'pi pi-fw pi-sitemap', routerLink: ['/building-plans'] },
-                            { label: 'Pagos de planes', icon: 'pi pi-fw pi-credit-card', routerLink: ['/building-plan-payments'] }
-                        ]),
-                        group('Módulos por edificio', 'pi pi-fw pi-box', 'modulos', [
+                            { label: 'Unidades', icon: 'pi pi-fw pi-th-large', routerLink: ['/units'] },
                             { label: 'Finanzas por edificio', icon: 'pi pi-fw pi-calculator', routerLink: ['/finance-admin'] },
                             { label: 'Marketplace por edificio', icon: 'pi pi-fw pi-shop', routerLink: ['/marketplace-admin'] },
                             { label: 'Publicidad por edificio', icon: 'pi pi-fw pi-megaphone', routerLink: ['/ad-buildings'] },
                             { label: 'Campañas de publicidad', icon: 'pi pi-fw pi-images', routerLink: ['/ad-campaigns'] },
                             ...(canViewMarketplaceAccount ? [{ label: 'Cuenta del Marketplace', icon: 'pi pi-fw pi-wallet', routerLink: ['/marketplace-account'] }] : [])
                         ]),
-                        ...(hasFinanceModule ? [financeModuleGroup] : [])
+                        group('Planes y Suscripciones', 'pi pi-fw pi-credit-card', 'planes', [
+                            { label: 'Planes', icon: 'pi pi-fw pi-list-check', routerLink: ['/plans'] },
+                            { label: 'Asignaciones de planes', icon: 'pi pi-fw pi-sitemap', routerLink: ['/building-plans'] },
+                            { label: 'Pagos de planes', icon: 'pi pi-fw pi-credit-card', routerLink: ['/building-plan-payments'] }
+                        ]),
+                        ...(hasFinanceModule ? [financeModuleGroup] : []),
+                        group('Reportes', 'pi pi-fw pi-chart-bar', 'reportes', [
+                            { label: 'Liquidaciones (todas las empresas)', icon: 'pi pi-fw pi-history', routerLink: ['/superadmin-settlements'] }
+                        ]),
+                        { label: 'Auditoría', icon: 'pi pi-fw pi-shield', routerLink: ['/auditoria'] },
+                        { label: 'Soporte', icon: 'pi pi-fw pi-headphones', routerLink: ['/soporte'] }
                     ]
                 }
             ];

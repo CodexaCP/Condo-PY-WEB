@@ -1,4 +1,4 @@
-import { Component, DestroyRef, inject, OnInit } from '@angular/core';
+import { Component, DestroyRef, HostListener, inject, OnInit, signal } from '@angular/core';
 import { Router, RouterModule } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { LayoutService } from '@/app/layout/service/layout.service';
@@ -50,7 +50,29 @@ import { PushService } from '@/app/core/push.service';
         </div>
 
         <div class="layout-topbar-actions">
-            @if (currentUser()) {
+            @if (currentUser() && isSuperAdmin) {
+                <button type="button" class="layout-topbar-action notif-btn" (click)="goToNotificaciones()" title="Notificaciones">
+                    <i class="pi pi-bell"></i>
+                    @if (unreadCount() > 0) {
+                        <span class="notif-badge">{{ unreadCount() > 9 ? '9+' : unreadCount() }}</span>
+                    }
+                </button>
+                <div class="sa-user">
+                    <button type="button" class="sa-user-btn" (click)="toggleUserMenu($event)" aria-haspopup="menu" [attr.aria-expanded]="userMenuOpen()">
+                        <span class="sa-avatar">{{ currentUser()!.avatar }}</span>
+                        <span class="sa-user-text">
+                            <strong>{{ currentUser()!.fullName }}</strong>
+                            <small>Administrador del sistema</small>
+                        </span>
+                        <i class="pi pi-angle-down"></i>
+                    </button>
+                    @if (userMenuOpen()) {
+                        <div class="sa-user-menu" role="menu">
+                            <button type="button" role="menuitem" (click)="logout()"><i class="pi pi-sign-out"></i> Cerrar sesión</button>
+                        </div>
+                    }
+                </div>
+            } @else if (currentUser()) {
                 <span style="color:#ffffff; font-size:0.9rem; font-weight:500; opacity:0.9">
                     Hola, {{ currentUser()!.fullName.split(' ')[0] }}
                 </span>
@@ -92,6 +114,17 @@ export class AppTopbar implements OnInit {
 
     readonly currentUser = this.auth.currentUser;
     readonly unreadCount = this.alerts.unreadCount;
+    readonly userMenuOpen = signal(false);
+
+    get isSuperAdmin(): boolean { return this.auth.hasRole('SuperAdmin'); }
+
+    toggleUserMenu(event: Event): void {
+        event.stopPropagation();
+        this.userMenuOpen.update(open => !open);
+    }
+
+    @HostListener('document:click')
+    closeUserMenu(): void { this.userMenuOpen.set(false); }
 
     // El panel entero (con la campana y los avisos en pantalla) vive mientras haya sesión: al salir del layout se detiene.
     ngOnInit(): void {

@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { ChangeDetectorRef, Component, DestroyRef, inject, OnInit } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { forkJoin, of } from 'rxjs';
 import { Button } from 'primeng/button';
 import { Card } from 'primeng/card';
@@ -16,14 +16,15 @@ import { roleLabel } from '../../auth/role-labels';
 @Component({
   standalone: true,
   selector: 'app-users-page',
-  imports: [CommonModule, Button, Card, Message, Tag],
+  imports: [CommonModule, RouterLink, Button, Card, Message, Tag],
   template: `
     <p-card styleClass="app-page-card">
       <div class="app-toolbar">
         <div class="app-page-head">
           <div>
-            <h1>Usuarios</h1>
-            <p>Alta y edición de usuarios con acceso por alcance.</p>
+            <h1>{{ onlyAdmins ? 'Administradores' : 'Usuarios' }}</h1>
+            <p *ngIf="!onlyAdmins">Alta y edición de usuarios con acceso por alcance.</p>
+            <p *ngIf="onlyAdmins">Administradores generales de las empresas. <a routerLink="/users">Ver todos los usuarios</a></p>
           </div>
         </div>
         <p-button label="Nuevo usuario" icon="pi pi-user-plus" (onClick)="goToCreate()"></p-button>
@@ -31,9 +32,9 @@ import { roleLabel } from '../../auth/role-labels';
 
       <p-message *ngIf="pageError" severity="error" [text]="pageError"></p-message>
       <p class="app-state" *ngIf="loading">Cargando usuarios...</p>
-      <p class="app-state" *ngIf="!loading && !items.length">No hay usuarios registrados.</p>
+      <p class="app-state" *ngIf="!loading && !visibleItems.length">{{ onlyAdmins ? 'No hay administradores registrados.' : 'No hay usuarios registrados.' }}</p>
 
-      <div class="app-list" *ngIf="items.length">
+      <div class="app-list" *ngIf="visibleItems.length">
         <div class="app-row header" [ngClass]="gridClass">
           <span *ngIf="isSuperAdmin">Empresa</span>
           <span>Nombre</span>
@@ -42,7 +43,7 @@ import { roleLabel } from '../../auth/role-labels';
           <span>Rol</span>
           <span>Estado</span>
         </div>
-        <div class="app-row" [ngClass]="gridClass" *ngFor="let item of items">
+        <div class="app-row" [ngClass]="gridClass" *ngFor="let item of visibleItems">
           <span *ngIf="isSuperAdmin" class="company-col">{{ companyName(item.companyId) }}</span>
           <button class="row-link" (click)="goToEdit(item)">
             {{ item.fullName || (item.firstName + ' ' + item.lastName) }}
@@ -74,6 +75,7 @@ export class UsersPageComponent implements OnInit {
   private readonly companiesApi = inject(CompaniesApiService);
   private readonly auth         = inject(AuthService);
   private readonly router       = inject(Router);
+  private readonly route        = inject(ActivatedRoute);
   private readonly destroyRef   = inject(DestroyRef);
   private readonly cdr          = inject(ChangeDetectorRef);
 
@@ -82,6 +84,13 @@ export class UsersPageComponent implements OnInit {
   loading   = true;
   pageError = '';
   readonly roleLabel = roleLabel;
+
+  // ?role=CompanyAdmin (desde el menu "Administradores" del SuperAdmin): solo los administradores de empresa.
+  onlyAdmins = false;
+
+  get visibleItems(): ManagedUser[] {
+    return this.onlyAdmins ? this.items.filter(u => u.role === 'CompanyAdmin') : this.items;
+  }
 
   get isSuperAdmin(): boolean { return this.auth.hasRole('SuperAdmin'); }
   get gridClass(): string     { return this.isSuperAdmin ? 'grid-sa' : 'grid-nm'; }
@@ -92,6 +101,11 @@ export class UsersPageComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    this.route.queryParamMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(params => {
+      this.onlyAdmins = params.get('role') === 'CompanyAdmin';
+      this.cdr.markForCheck();
+    });
+
     forkJoin({
       users:     this.api.getAll(),
       companies: this.isSuperAdmin ? this.companiesApi.getAll() : of([] as Company[])

@@ -40,6 +40,14 @@ export const appRoutes: Routes = [
                 loadComponent: () => import('./app/pages/condo/superadmin-dashboard-page.component').then(m => m.SuperadminDashboardPageComponent)
             },
             {
+                path: 'auditoria',
+                loadComponent: () => import('./app/pages/condo/audit-page.component').then(m => m.AuditPageComponent)
+            },
+            {
+                path: 'soporte',
+                loadComponent: () => import('./app/pages/condo/support-page.component').then(m => m.SupportPageComponent)
+            },
+            {
                 path: 'companies',
                 loadComponent: () => import('./app/pages/condo/companies-page.component').then(m => m.CompaniesPageComponent)
             },

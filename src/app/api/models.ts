@@ -2881,3 +2881,9 @@ export interface InvoiceClient {
   clienteEmail: string | null;
   clienteReconstruido: boolean;
 }
+
+// Movimientos de la plataforma (panel del SuperAdmin): altas y cambios de empresas, administradores, condominios y edificios.
+export interface PlatformActivityDay { date: string; count: number; }
+export type PlatformActivityKind = 'CompanyCreated' | 'CompanyUpdated' | 'AdminCreated' | 'CondominiumCreated' | 'BuildingCreated';
+export interface PlatformActivityItem { atUtc: string; kind: PlatformActivityKind; title: string; detail: string; }
+export interface PlatformActivity { days: PlatformActivityDay[]; items: PlatformActivityItem[]; }
