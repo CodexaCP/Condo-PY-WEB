@@ -263,6 +263,12 @@ interface TimelineStep {
           <p>{{ detail.clienteNombre || '—' }}</p>
           <small *ngIf="detail.clienteDocumento">CI/RUC {{ detail.clienteDocumento }}</small>
           <small>{{ detail.buildingName }} · Unidad {{ detail.unitCode }}</small>
+          <div class="client-note" *ngIf="detail.clienteReconstruido && detail.status === 'Issued'">
+            <small>Cliente completado al migrar con los datos del propietario de ese momento; puede no ser el de la emisión.</small>
+            <button type="button" class="client-refresh" *ngIf="canRefreshClient" [disabled]="refreshingClient" (click)="refreshClient()">
+              <i class="pi" [ngClass]="refreshingClient ? 'pi-spin pi-spinner' : 'pi-refresh'"></i> Actualizar cliente
+            </button>
+          </div>
         </div>
         <div class="info-card">
           <h5>Emisor y timbrado</h5>
@@ -375,6 +381,9 @@ interface TimelineStep {
     .tl-body span { color: var(--brand-muted); font-size: 0.82rem; }
 
     .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.7rem; }
+    .client-note { display:flex; flex-direction:column; align-items:flex-start; gap:0.3rem; margin-top:0.35rem; padding:0.45rem 0.6rem; border-radius:8px; background:#fef3c7; border:1px solid #fcd34d; color:#92400e; }
+    .client-refresh { background:none; border:none; padding:0; cursor:pointer; font:inherit; font-size:0.82rem; font-weight:600; color:var(--brand-blue); display:inline-flex; align-items:center; gap:0.35rem; }
+    .client-refresh:disabled { opacity:0.6; cursor:progress; }
     .info-card { border: 1px solid rgba(20,54,61,0.1); border-radius: 12px; padding: 0.7rem 0.85rem; display: flex; flex-direction: column; gap: 0.1rem; min-width: 0; }
     .info-card h5 { margin: 0 0 0.25rem; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--brand-muted); }
     .info-card p { margin: 0; font-weight: 600; color: var(--brand-ink); word-break: break-word; }
@@ -416,6 +425,7 @@ export class InvoicesPageComponent implements OnInit {
   detail: InvoiceLedgerRow | null = null;
   detailFull: Invoice | null = null;
   loadingDetail = false;
+  refreshingClient = false;
 
   private readonly search$ = new Subject<string>();
 
@@ -526,6 +536,39 @@ export class InvoicesPageComponent implements OnInit {
     this.invoicesApi.getById(row.id).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: full => { this.detailFull = full; this.loadingDetail = false; this.cdr.markForCheck(); },
       error: () => { this.loadingDetail = false; this.cdr.markForCheck(); }
+    });
+  }
+
+  // Solo quien administra facturas (el backend lo exige igual).
+  get canRefreshClient(): boolean {
+    return this.auth.hasRole('SuperAdmin', 'CompanyAdmin', 'BuildingManager');
+  }
+
+  // Vuelve a tomar los datos actuales del propietario en una factura emitida cuyo cliente se completó al migrar.
+  refreshClient(): void {
+    const row = this.detail;
+    if (!row || this.refreshingClient) return;
+
+    const question = `Se va a reemplazar el cliente de la factura ${row.numeroFormateado ?? ''} (${row.clienteNombre ?? 'sin cliente'}) por los datos actuales del propietario de la unidad, incluidos sus datos de facturación.
+
+Queda registrado en la auditoría y no se puede repetir. ¿Continuar?`;
+    if (!confirm(question)) return;
+
+    this.refreshingClient = true;
+    this.invoicesApi.refreshClient(row.id).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: client => {
+        row.clienteNombre = client.clienteNombre;
+        row.clienteDocumento = client.clienteDocumento;
+        row.clienteReconstruido = client.clienteReconstruido;
+        this.refreshingClient = false;
+        this.msg.add({ severity: 'success', summary: 'Actualizado', detail: 'El cliente de la factura se actualizó con los datos actuales del propietario.', life: 5000 });
+        this.cdr.markForCheck();
+      },
+      error: err => {
+        this.refreshingClient = false;
+        this.msg.add({ severity: 'error', summary: 'Error', detail: extractApiErrorMessage(err, 'No se pudo actualizar el cliente.'), life: 7000 });
+        this.cdr.markForCheck();
+      }
     });
   }
 

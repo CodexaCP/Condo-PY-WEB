@@ -1128,6 +1128,8 @@ export interface InvoiceLedgerRow {
   unitCode: string;
   clienteNombre: string | null;
   clienteDocumento: string | null;
+  // true = el cliente se completó al migrar con el propietario vigente (no es necesariamente el de la emisión).
+  clienteReconstruido?: boolean;
 
   expensePeriodId: string;
   periodYear: number;
@@ -2868,4 +2870,14 @@ export interface AdBuilding {
   condominiumName: string;
   adsEnabled: boolean;
   campaignCount: number;
+}
+
+// Cliente de una factura después de actualizarlo con los datos actuales del propietario.
+export interface InvoiceClient {
+  clienteNombre: string | null;
+  clienteDocumento: string | null;
+  clienteTipoDocumento: string | null;
+  clienteDireccion: string | null;
+  clienteEmail: string | null;
+  clienteReconstruido: boolean;
 }

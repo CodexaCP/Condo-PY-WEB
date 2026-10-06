@@ -2,7 +2,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { API_BASE_URL } from '../config/api.config';
-import { Invoice, InvoiceFunnel, InvoiceLedger, InvoiceLedgerQuery, InvoiceStatus } from './models';
+import { Invoice, InvoiceClient, InvoiceFunnel, InvoiceLedger, InvoiceLedgerQuery, InvoiceStatus } from './models';
 
 @Injectable({ providedIn: 'root' })
 export class InvoicesApiService {
@@ -45,6 +45,11 @@ export class InvoicesApiService {
 
   void(id: string, motivo: string): Observable<Invoice> {
     return this.http.post<Invoice>(`${API_BASE_URL}/invoices/${id}/void`, { motivo });
+  }
+
+  // Vuelve a tomar los datos actuales del propietario en una factura emitida cuyo cliente se completó al migrar.
+  refreshClient(id: string): Observable<InvoiceClient> {
+    return this.http.post<InvoiceClient>(`${API_BASE_URL}/invoices/${id}/refresh-client`, {});
   }
 
   getPdfUrl(id: string, token: string): string {
