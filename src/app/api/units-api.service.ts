@@ -2,7 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { API_BASE_URL } from '../config/api.config';
-import { CreateUnitRequest, Unit } from './models';
+import { CreateUnitRequest, Unit, UnitImportResult } from './models';
 
 @Injectable({ providedIn: 'root' })
 export class UnitsApiService {
@@ -26,5 +26,18 @@ export class UnitsApiService {
 
   delete(id: string): Observable<void> {
     return this.http.delete<void>(`${API_BASE_URL}/units/${id}`);
+  }
+
+  // Carga masiva desde Excel (solo SuperAdmin): plantilla con una columna por dato de la unidad.
+  downloadImportTemplate(): Observable<Blob> {
+    return this.http.get(`${API_BASE_URL}/units/import-template`, { responseType: 'blob' });
+  }
+
+  // Sin confirm solo valida y devuelve la vista previa; con confirm guarda todo (solo si no hay errores).
+  importUnits(file: File, confirm: boolean): Observable<UnitImportResult> {
+    const body = new FormData();
+    body.append('file', file);
+    body.append('confirm', String(confirm));
+    return this.http.post<UnitImportResult>(`${API_BASE_URL}/units/import`, body);
   }
 }

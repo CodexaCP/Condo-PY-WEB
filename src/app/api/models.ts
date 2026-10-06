@@ -2887,3 +2887,33 @@ export interface PlatformActivityDay { date: string; count: number; }
 export type PlatformActivityKind = 'CompanyCreated' | 'CompanyUpdated' | 'AdminCreated' | 'CondominiumCreated' | 'BuildingCreated';
 export interface PlatformActivityItem { atUtc: string; kind: PlatformActivityKind; title: string; detail: string; }
 export interface PlatformActivity { days: PlatformActivityDay[]; items: PlatformActivityItem[]; }
+
+// Carga masiva de unidades desde Excel (SuperAdmin).
+export interface UnitImportRow {
+  rowNumber: number;
+  building: string;
+  code: string;
+  floor: string;
+  coefficient: number;
+  isActive: boolean;
+  error: string | null;
+}
+
+export interface UnitImportBuildingSummary {
+  building: string;
+  newUnits: number;
+  existingUnits: number;
+  coefficientTotal: number;
+  warning: string | null;
+}
+
+export interface UnitImportResult {
+  confirmed: boolean;
+  totalRows: number;
+  validRows: number;
+  errorRows: number;
+  created: number;
+  message: string | null;
+  rows: UnitImportRow[];
+  buildings: UnitImportBuildingSummary[];
+}
