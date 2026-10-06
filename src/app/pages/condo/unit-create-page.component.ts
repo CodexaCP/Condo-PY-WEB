@@ -139,6 +139,19 @@ import { AuthService } from '../../auth/auth.service';
           </div>
         </section>
 
+        <!-- ══ ELIMINAR DEFINITIVAMENTE (solo SuperAdmin, al editar) ══ -->
+        <section class="form-section" *ngIf="isEditing && isSuperAdmin">
+          <h2 class="section-title">Eliminar definitivamente</h2>
+          <p class="section-desc">
+            Para una unidad creada por error: se borra de la base de datos junto con sus vínculos con propietarios y residentes,
+            y su código queda libre para volver a usarlo en el edificio. No se puede si la unidad ya tiene cargos, pagos, facturas u otro historial.
+          </p>
+          <div>
+            <p-button type="button" label="Eliminar definitivamente" icon="pi pi-trash" severity="danger" [outlined]="true"
+                      [loading]="isDeleting" (onClick)="deletePermanently()"></p-button>
+          </div>
+        </section>
+
         <!-- ══ ACCIONES ══════════════════════════════════════════════ -->
         <section class="form-actions">
           <div class="form-actions-left"></div>
@@ -276,8 +289,11 @@ export class UnitCreatePageComponent implements OnInit {
   loading     = true;
   loadError   = '';
   isSaving    = false;
+  isDeleting  = false;
 
   form = this.emptyForm();
+
+  get isSuperAdmin(): boolean { return this.auth.hasRole('SuperAdmin'); }
 
   ngOnInit(): void {
     const id = this.route.snapshot.paramMap.get('id');
@@ -378,6 +394,28 @@ export class UnitCreatePageComponent implements OnInit {
       error: err => {
         this.msg.add({ severity: 'error', summary: 'Error', detail: extractApiErrorMessage(err, 'No se pudo guardar la unidad.'), life: 5000 });
         this.isSaving = false;
+        this.cdr.markForCheck();
+      }
+    });
+  }
+
+  // Solo SuperAdmin: borra la unidad de la base (para una creada por error). El servidor la rechaza si ya tiene movimientos.
+  deletePermanently(): void {
+    if (!this.isEditing || this.isDeleting) return;
+
+    const question = `¿Eliminar definitivamente la unidad ${this.editingCode}?\n\nSe borra de la base de datos junto con sus vínculos con propietarios y residentes. No se puede deshacer.`;
+    if (!confirm(question)) return;
+
+    this.isDeleting = true;
+    this.unitsApi.delete(this.editingId, true).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: () => {
+        this.isDeleting = false;
+        this.msg.add({ severity: 'success', summary: 'Eliminada', detail: `La unidad ${this.editingCode} se eliminó definitivamente.`, life: 5000 });
+        this.router.navigate(['/units']);
+      },
+      error: err => {
+        this.isDeleting = false;
+        this.msg.add({ severity: 'error', summary: 'No se pudo eliminar', detail: extractApiErrorMessage(err, 'No se pudo eliminar la unidad.'), life: 9000 });
         this.cdr.markForCheck();
       }
     });

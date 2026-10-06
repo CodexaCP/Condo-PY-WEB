@@ -1,4 +1,4 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { API_BASE_URL } from '../config/api.config';
@@ -24,8 +24,10 @@ export class UnitsApiService {
     return this.http.put<Unit>(`${API_BASE_URL}/units/${id}`, request);
   }
 
-  delete(id: string): Observable<void> {
-    return this.http.delete<void>(`${API_BASE_URL}/units/${id}`);
+  // permanent (solo SuperAdmin): borra la unidad de la base y deja libre su código; falla si ya tiene movimientos.
+  delete(id: string, permanent = false): Observable<void> {
+    const params = permanent ? new HttpParams().set('permanent', true) : undefined;
+    return this.http.delete<void>(`${API_BASE_URL}/units/${id}`, { params });
   }
 
   // Carga masiva desde Excel (solo SuperAdmin): plantilla con una columna por dato de la unidad.
