@@ -144,8 +144,7 @@ export class AppMenu {
                         group('Reportes', 'pi pi-fw pi-chart-bar', 'reportes', [
                             { label: 'Liquidaciones (todas las empresas)', icon: 'pi pi-fw pi-history', routerLink: ['/superadmin-settlements'] }
                         ]),
-                        { label: 'Auditoría', icon: 'pi pi-fw pi-shield', routerLink: ['/auditoria'] },
-                        { label: 'Soporte', icon: 'pi pi-fw pi-headphones', routerLink: ['/soporte'] }
+                        { label: 'Auditoría', icon: 'pi pi-fw pi-shield', routerLink: ['/auditoria'] }
                     ]
                 }
             ];
@@ -203,7 +202,8 @@ export class AppMenu {
                         ]),
                         group('Mi cuenta', 'pi pi-fw pi-user', 'cuenta', [
                             { label: 'Mi plan', icon: 'pi pi-fw pi-bookmark', routerLink: ['/my-plan'] },
-                            { label: 'Tutoriales', icon: 'pi pi-fw pi-play-circle', routerLink: ['/tutorials'] }
+                            { label: 'Tutoriales', icon: 'pi pi-fw pi-play-circle', routerLink: ['/tutorials'] },
+                            { label: 'Soporte', icon: 'pi pi-fw pi-headphones', routerLink: ['/soporte'] }
                         ])
                     ]
                 }
