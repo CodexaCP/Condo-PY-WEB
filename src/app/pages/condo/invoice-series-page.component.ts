@@ -66,7 +66,7 @@ import { Building, InvoiceSeries, InvoiceSeriesDocumentType } from '../../api/mo
         <div class="series-form">
           <div class="field-block">
             <span>Edificio <em>*</em></span>
-            <select [(ngModel)]="form.buildingId" name="buildingId" required>
+            <select [(ngModel)]="form.buildingId" (ngModelChange)="onSeriesBuildingChange()" name="buildingId" required>
               <option value="" disabled>— Seleccionar —</option>
               <option *ngFor="let b of buildings" [value]="b.id">{{ b.name }}</option>
             </select>
@@ -368,6 +368,16 @@ export class InvoiceSeriesPageComponent implements OnInit {
         this.cdr.markForCheck();
       }
     });
+  }
+
+  // Al elegir el edificio se completan con sus datos fiscales (ficha del edificio) los campos del emisor que estén vacíos.
+  onSeriesBuildingChange(): void {
+    const b = this.buildings.find(x => x.id === this.form.buildingId);
+    if (!b) return;
+    if (!this.form.ruc.trim() && b.ruc) this.form.ruc = b.ruc;
+    if (!this.form.razonSocial.trim() && b.legalName) this.form.razonSocial = b.legalName;
+    if (!this.form.direccionEstablecimiento.trim()) this.form.direccionEstablecimiento = b.fiscalAddress || b.address || '';
+    if (!this.form.actividadEconomica.trim() && b.economicActivity) this.form.actividadEconomica = b.economicActivity;
   }
 
   private createInitialForm() {

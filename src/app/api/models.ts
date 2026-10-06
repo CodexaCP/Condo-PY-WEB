@@ -2,7 +2,67 @@ export type LateFeeFrequency = 'Daily' | 'Weekly' | 'Biweekly';
 export type InvoicingMode = 'Preimpresa' | 'Autoimpresa' | 'Electronica';
 export type IncomeTreatment = 'CreditToOwners' | 'ToReserveFund';
 
-export interface Building {
+export type BuildingPropertyType = 'Building' | 'Tower' | 'HorizontalCondominium' | 'GatedCommunity' | 'Other';
+export type TaxpayerType = 'Legal' | 'Natural';
+export type VatRegime = 'General' | 'Resimple' | 'Exempt';
+export type BankAccountType = 'Checking' | 'Savings';
+
+// Ficha de registro del edificio (todo opcional): datos generales, legales, fiscales, de cobranza y de configuración.
+export interface BuildingProfileData {
+  propertyType?: BuildingPropertyType | null;
+  department?: string | null;
+  city?: string | null;
+  neighborhood?: string | null;
+  locationReference?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  yearBuilt?: number | null;
+  towersCount?: number | null;
+  floorsCount?: number | null;
+  unitsCount?: number | null;
+  logoUrl?: string | null;
+  whatsAppPhone?: string | null;
+  officeHours?: string | null;
+
+  fincaNumber?: string | null;
+  padronNumber?: string | null;
+  cadastralAccount?: string | null;
+  legalEntityNumber?: string | null;
+  legalEntityDate?: string | null;
+  bylawsUrl?: string | null;
+  bylawsFileName?: string | null;
+  administratorName?: string | null;
+  administratorPhone?: string | null;
+  emergencyContactName?: string | null;
+  emergencyContactPhone?: string | null;
+
+  ruc?: string | null;
+  legalName?: string | null;
+  taxpayerType?: TaxpayerType | null;
+  vatRegime?: VatRegime | null;
+  economicActivity?: string | null;
+  fiscalAddress?: string | null;
+  invoiceEmail?: string | null;
+
+  defaultDueDay?: number | null;
+  graceDays?: number | null;
+  paymentInstructions?: string | null;
+
+  timeZoneId?: string | null;
+}
+
+export interface BuildingBankAccount {
+  id?: string | null;
+  bankName: string;
+  accountType: BankAccountType;
+  accountNumber: string;
+  holderName: string;
+  holderDocument?: string | null;
+  alias?: string | null;
+  isActive: boolean;
+}
+
+export interface Building extends BuildingProfileData {
   id: string;
   companyId: string;
   condominiumId: string | null;
@@ -31,9 +91,13 @@ export interface Building {
   settlementTemplateFileName?: string | null;
   settlementFieldPositionsJson?: string | null;
   settlementHideFrame?: boolean;
+  financeModuleEnabled?: boolean;
+  marketplaceEnabled?: boolean;
+  adsEnabled?: boolean;
+  bankAccounts?: BuildingBankAccount[];
 }
 
-export interface CreateBuildingRequest {
+export interface CreateBuildingRequest extends BuildingProfileData {
   companyId?: string | null;
   condominiumId?: string | null;
   name: string;
@@ -58,6 +122,7 @@ export interface CreateBuildingRequest {
   creditNoteTemplateFileName?: string | null;
   settlementTemplateUrl?: string | null;
   settlementTemplateFileName?: string | null;
+  bankAccounts?: BuildingBankAccount[] | null;
 }
 
 export interface Company {

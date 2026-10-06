@@ -62,7 +62,7 @@ import {
           <div class="form-row-wide">
             <label class="field-block">
               <span>Edificio *</span>
-              <select [(ngModel)]="form.buildingId" name="buildingId" required>
+              <select [(ngModel)]="form.buildingId" (ngModelChange)="onPeriodBuildingChange()" name="buildingId" required>
                 <option value="" disabled>— Seleccionar edificio —</option>
                 <option *ngFor="let b of buildings" [value]="b.id">{{ b.name }}</option>
               </select>
@@ -1277,6 +1277,27 @@ export class ExpensePeriodsPageComponent implements OnInit {
           this.cdr.markForCheck();
         }
       });
+  }
+
+  // Al elegir edificio en un periodo nuevo, el vencimiento y el corte de mora salen de la ficha del edificio
+  // (día de vencimiento y días de gracia); si no los tiene cargados queda lo que propone el formulario.
+  onPeriodBuildingChange(): void {
+    if (this.editingId) return;
+    const building = this.buildings.find(b => b.id === this.form.buildingId);
+    if (!building?.defaultDueDay) return;
+
+    // El vencimiento cae en el mes siguiente al período; el día se ajusta si ese mes es más corto.
+    const dueMonthIndex = this.form.month;
+    const lastDay = new Date(this.form.year, dueMonthIndex + 1, 0).getDate();
+    const due = new Date(this.form.year, dueMonthIndex, Math.min(building.defaultDueDay, lastDay));
+    this.form.dueDate = this.toIsoDate(due);
+    this.form.lateFeeDate = building.graceDays
+      ? this.toIsoDate(new Date(due.getFullYear(), due.getMonth(), due.getDate() + building.graceDays))
+      : '';
+  }
+
+  private toIsoDate(date: Date): string {
+    return `${date.getFullYear()}-${`${date.getMonth() + 1}`.padStart(2, '0')}-${`${date.getDate()}`.padStart(2, '0')}`;
   }
 
   private monthName(month: number): string {
