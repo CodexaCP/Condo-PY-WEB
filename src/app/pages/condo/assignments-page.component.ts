@@ -4,7 +4,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { forkJoin } from 'rxjs';
-import { AutoCompleteCompleteEvent, AutoComplete } from 'primeng/autocomplete';
+import { Select } from 'primeng/select';
 import { Button } from 'primeng/button';
 import { Card } from 'primeng/card';
 import { Tag } from 'primeng/tag';
@@ -18,11 +18,23 @@ import { extractApiErrorMessage } from '../../api/api-error.util';
 import { Assignment, Owner, Resident, Unit, UnitOwnerAssignment } from '../../api/models';
 
 type UnitOption = Unit & { display: string };
+type StatusFilter = 'all' | 'noOwner' | 'noResident' | 'complete';
+interface UnitRow {
+  unit: UnitOption;
+  ownerSummary: string;
+  ownerCount: number;
+  residentSummary: string;
+  residentCount: number;
+  search: string;
+}
+
+const BUILDING_KEY = 'assignments.buildingId';
+const PAGE_SIZE = 25;
 
 @Component({
   standalone: true,
   selector: 'app-assignments-page',
-  imports: [CommonModule, FormsModule, RouterLink, AutoComplete, Button, Card, Tag],
+  imports: [CommonModule, FormsModule, RouterLink, Select, Button, Card, Tag],
   template: `
     <p-card styleClass="app-page-card">
       <div class="app-toolbar">
@@ -34,292 +46,284 @@ type UnitOption = Unit & { display: string };
         </div>
       </div>
 
-      <!-- Unit search -->
-      <div class="search-row">
-        <div class="search-wrap">
-          <label class="search-label">Buscar unidad</label>
-          <p-autoComplete
-            [(ngModel)]="selectedUnit"
-            [suggestions]="unitSuggestions"
-            (completeMethod)="searchUnits($event)"
-            (onSelect)="onUnitSelected()"
-            (onClear)="clearUnit()"
-            [forceSelection]="true"
-            [dropdown]="true"
-            optionLabel="display"
-            placeholder="Escribi el codigo o edificio..."
-            styleClass="unit-autocomplete"
-            appendTo="body">
-            <ng-template #item let-unit>
-              <div class="unit-option">
-                <span class="unit-option-code">{{ unit.code }}</span>
-                <span class="unit-option-building">{{ unit.buildingName }}</span>
-              </div>
-            </ng-template>
-          </p-autoComplete>
-        </div>
+      <!-- Filtros -->
+      <div class="filters">
+        <label class="filter-block">
+          <span>Edificio</span>
+          <p-select [options]="buildingOptions" [ngModel]="buildingId" (ngModelChange)="buildingId = $event ?? ''; onFilterChange()"
+                    [ngModelOptions]="{ standalone: true }"
+                    optionLabel="name" optionValue="id" [filter]="true" filterBy="name" appendTo="body"
+                    styleClass="filter-select" placeholder="Todos los edificios"></p-select>
+        </label>
+        <label class="filter-block filter-grow">
+          <span>Buscar</span>
+          <input type="text" [ngModel]="search" (ngModelChange)="search = $event; onFilterChange()"
+                 placeholder="Unidad, piso, propietario o residente..." />
+        </label>
+        <label class="filter-block">
+          <span>Estado</span>
+          <select [ngModel]="status" (ngModelChange)="status = $event; onFilterChange()">
+            <option value="all">Todas</option>
+            <option value="noOwner">Sin propietario</option>
+            <option value="noResident">Sin residente</option>
+            <option value="complete">Con propietario y residente</option>
+          </select>
+        </label>
       </div>
 
-      <!-- Assignment panel for selected unit -->
-      <div class="assign-panel" *ngIf="selectedUnit">
-        <div class="assign-panel-head">
-          <div class="assign-unit-badge">{{ selectedUnit.code }}</div>
-          <div>
-            <h2>{{ selectedUnit.buildingName }}</h2>
-            <p>Piso {{ selectedUnit.floor }} · Coef. {{ selectedUnit.coefficient.toFixed(4) }}</p>
-          </div>
-        </div>
-
-        <div class="current-owners" *ngIf="currentPrimary || currentSecondary">
-          <div class="owner-chip primary-chip" *ngIf="currentPrimary">
-            <span class="dot"></span>
-            <div>
-              <small>Propietario principal</small>
-              <strong>{{ currentPrimary.ownerName }}</strong>
-              <small class="since">Desde {{ currentPrimary.startDate }}</small>
-              <small class="since" *ngIf="currentPrimary.ownershipPercentage">Titularidad {{ currentPrimary.ownershipPercentage }}%
-                <button type="button" class="pct-edit" (click)="editOwnership(currentPrimary)" title="Cambiar porcentaje"><span class="pi pi-pencil"></span></button></small>
-              <button type="button" class="pct-add" *ngIf="!currentPrimary.ownershipPercentage" (click)="editOwnership(currentPrimary)">Informar titularidad %</button>
-            </div>
-            <button  type="button" class="remove-btn" title="Quitar" (click)="removeOwner(currentPrimary)">
-              <span class="pi pi-times"></span>
-            </button>
-          </div>
-          <div class="owner-chip secondary-chip" *ngIf="currentSecondary">
-            <span class="dot dot-2"></span>
-            <div>
-              <small>Propietario 2</small>
-              <strong>{{ currentSecondary.ownerName }}</strong>
-              <small class="since">Desde {{ currentSecondary.startDate }}</small>
-              <small class="since" *ngIf="currentSecondary.ownershipPercentage">Titularidad {{ currentSecondary.ownershipPercentage }}%
-                <button type="button" class="pct-edit" (click)="editOwnership(currentSecondary)" title="Cambiar porcentaje"><span class="pi pi-pencil"></span></button></small>
-              <button type="button" class="pct-add" *ngIf="!currentSecondary.ownershipPercentage" (click)="editOwnership(currentSecondary)">Informar titularidad %</button>
-            </div>
-            <button  type="button" class="remove-btn" title="Quitar" (click)="removeOwner(currentSecondary)">
-              <span class="pi pi-times"></span>
-            </button>
-          </div>
-        </div>
-        <p class="no-owners" *ngIf="!currentPrimary && !currentSecondary">Esta unidad no tiene propietarios asignados.</p>
-
-        <!-- Add owner form -->
-        <form class="add-form" *ngIf="canAddMore" (ngSubmit)="addOwner()">
-          <div class="add-form-fields">
-            <label class="field-block">
-              <span>{{ !currentPrimary ? 'Propietario principal *' : 'Propietario 2 (opcional)' }}</span>
-              <select [(ngModel)]="addForm.ownerId" name="ownerId" required>
-                <option value="">— Seleccionar propietario —</option>
-                <option *ngFor="let o of availableOwners" [value]="o.id">{{ o.fullName }}</option>
-              </select>
-            </label>
-            <label class="field-block">
-              <span>Vigente desde</span>
-              <input type="date" [(ngModel)]="addForm.startDate" name="startDate" required />
-            </label>
-            <label class="field-block">
-              <span>Titularidad % <small>(opcional)</small></span>
-              <input type="number" [(ngModel)]="addForm.ownershipPercentage" name="ownershipPercentage" min="0" max="100" step="0.01" placeholder="Ej. 50" />
-            </label>
-          </div>
-          <div class="add-form-actions">
-            <p-button
-              type="submit"
-              [label]="!currentPrimary ? 'Asignar propietario principal' : 'Asignar propietario 2'"
-              icon="pi pi-user-plus"
-              [loading]="isSaving"
-              [disabled]="!addForm.ownerId">
-            </p-button>
-          </div>
-        </form>
-
-        <p class="max-owners" *ngIf="!canAddMore">
-          <span class="pi pi-info-circle"></span> La unidad ya tiene sus 2 propietarios asignados. Quitá uno para agregar otro.
-        </p>
-
-        <!-- Residentes de la unidad seleccionada -->
-        <div class="residents-block">
-          <h3 class="subsection-title">Residentes</h3>
-
-          <div class="current-residents" *ngIf="currentResidents.length">
-            <div class="resident-chip" *ngFor="let r of currentResidents" [class.ended-chip]="!!r.endDate">
-              <span class="dot" [class.dot-ended]="!!r.endDate"></span>
-              <div>
-                <small>{{ r.isPrimary ? 'Residente principal' : 'Residente' }}</small>
-                <strong>{{ r.residentName }}</strong>
-                <small class="since">
-                  Desde {{ r.startDate }}
-                  <span *ngIf="r.endDate"> · Finalizada el {{ r.endDate }}</span>
-                </small>
-              </div>
-              <button *ngIf="!r.endDate" type="button" class="remove-btn"
-                      title="Finalizar residencia" [disabled]="isSavingResident"
-                      (click)="endResidentResidency(r)">
-                <span class="pi pi-times"></span>
-              </button>
-            </div>
-          </div>
-          <p class="no-owners" *ngIf="!currentResidents.length">Esta unidad no tiene residentes asignados.</p>
-
-          <form class="add-form"  (ngSubmit)="addResident()">
-            <div class="add-form-fields">
-              <label class="field-block">
-                <span>Residente</span>
-                <select [(ngModel)]="residentAddForm.residentId" name="residentId" required>
-                  <option value="">— Seleccionar residente —</option>
-                  <option *ngFor="let r of availableResidents" [value]="r.id">{{ r.fullName }}</option>
-                </select>
-              </label>
-              <label class="field-block">
-                <span>Vigente desde</span>
-                <input type="date" [(ngModel)]="residentAddForm.startDate" name="residentStartDate" required />
-              </label>
-            </div>
-            <div class="add-form-actions residents-form-actions">
-              <label class="checkbox-inline">
-                <input type="checkbox" [(ngModel)]="residentAddForm.isPrimary" name="residentIsPrimary" />
-                <span>Es el residente principal (aparece en comprobantes; no hace falta que sea el único con acceso a la app)</span>
-              </label>
-              <p-button type="submit" label="Asignar residente" icon="pi pi-user-plus"
-                        [loading]="isSavingResident" [disabled]="!residentAddForm.residentId">
-              </p-button>
-            </div>
-          </form>
-          <small class="field-hint">
-            Podés asignar varios residentes a la misma unidad (ej. familia conviviendo). Que tengan
-            acceso a la app depende de si tienen una cuenta de usuario creada con su mismo correo
-            desde <a routerLink="/users">Usuarios</a> — asignar la unidad aquí no crea esa cuenta.
-          </small>
-        </div>
+      <div class="scope-summary" *ngIf="!loading">
+        <button type="button" class="scope-chip" [class.active]="status === 'noOwner'" (click)="quickStatus('noOwner')">
+          Sin propietario: <strong>{{ scopeNoOwner }}</strong>
+        </button>
+        <button type="button" class="scope-chip" [class.active]="status === 'noResident'" (click)="quickStatus('noResident')">
+          Sin residente: <strong>{{ scopeNoResident }}</strong>
+        </button>
+        <span class="scope-total">Mostrando {{ pagedRows.length }} de {{ filteredRows.length }} unidades</span>
       </div>
 
       <p class="app-state" *ngIf="loading">Cargando...</p>
 
-      <!-- All assignments list -->
-      <ng-container *ngIf="!loading && assignments.length">
-        <h3 class="section-title">Todas las asignaciones</h3>
-        <div class="app-list">
-          <div class="app-row header owners-grid">
+      <ng-container *ngIf="!loading">
+        <p class="app-state" *ngIf="!filteredRows.length">No hay unidades que coincidan con los filtros.</p>
+
+        <div class="app-list" *ngIf="filteredRows.length">
+          <div class="app-row header units-grid">
             <span>Unidad</span>
             <span>Edificio</span>
             <span>Propietario</span>
-            <span>Tipo</span>
             <span>Residente</span>
-            <span>Desde</span>
-            <span ></span>
+            <span>Estado</span>
+            <span></span>
           </div>
-          <div class="app-row owners-grid" *ngFor="let item of assignments">
-            <strong>{{ item.unitCode }}</strong>
-            <span>{{ item.buildingName }}</span>
-            <span>{{ item.ownerName }}</span>
-            <p-tag
-              [value]="(item.isPrimary ? 'Principal' : 'Secundario') + (item.ownershipPercentage ? ' · ' + item.ownershipPercentage + '%' : '')"
-              [severity]="item.isPrimary ? 'info' : 'secondary'">
-            </p-tag>
-            <span [class.no-resident]="!residentNameForUnit(item.unitId)">
-              {{ residentNameForUnit(item.unitId) || 'Sin residente asociado' }}
-            </span>
-            <span>{{ item.startDate }}</span>
-            <div >
-              <p-button
-                type="button"
-                icon="pi pi-trash"
-                severity="danger"
-                [rounded]="true"
-                [text]="true"
-                size="small"
-                [disabled]="isSaving"
-                (onClick)="removeOwner(item)">
-              </p-button>
+
+          <ng-container *ngFor="let row of pagedRows; trackBy: trackRow">
+            <div class="app-row units-grid unit-row" [class.open]="selectedUnit?.id === row.unit.id"
+                 (click)="toggleUnit(row.unit)">
+              <strong>{{ row.unit.code }} <small class="floor">Piso {{ row.unit.floor }}</small></strong>
+              <span>{{ row.unit.buildingName }}</span>
+              <span [class.no-resident]="!row.ownerCount">
+                {{ row.ownerSummary || 'Sin propietario' }}
+              </span>
+              <span [class.no-resident]="!row.residentCount">
+                {{ row.residentSummary || 'Sin residente' }}
+              </span>
+              <span class="status-tags">
+                <p-tag *ngIf="!row.ownerCount" value="Sin propietario" severity="danger"></p-tag>
+                <p-tag *ngIf="!row.residentCount" value="Sin residente" severity="warn"></p-tag>
+                <p-tag *ngIf="row.ownerCount && row.residentCount" value="Completa" severity="success"></p-tag>
+              </span>
+              <span class="chevron pi" [class.pi-chevron-down]="selectedUnit?.id === row.unit.id"
+                    [class.pi-chevron-right]="selectedUnit?.id !== row.unit.id"></span>
             </div>
-          </div>
+
+            <!-- Panel de la unidad abierta -->
+            <div class="assign-panel" *ngIf="selectedUnit?.id === row.unit.id">
+              <div class="assign-panel-head">
+                <div class="assign-unit-badge">{{ row.unit.code }}</div>
+                <div>
+                  <h2>{{ row.unit.buildingName }}</h2>
+                  <p>Piso {{ row.unit.floor }} · Coef. {{ row.unit.coefficient.toFixed(4) }}</p>
+                </div>
+              </div>
+
+              <!-- Propietarios -->
+              <button type="button" class="section-toggle" (click)="ownersOpen = !ownersOpen">
+                <span class="pi" [class.pi-chevron-down]="ownersOpen" [class.pi-chevron-right]="!ownersOpen"></span>
+                <span>Propietarios</span>
+                <small>{{ row.ownerCount }} de 2</small>
+              </button>
+              <div class="section-body" *ngIf="ownersOpen">
+                <div class="current-owners" *ngIf="currentPrimary || currentSecondary">
+                  <div class="owner-chip primary-chip" *ngIf="currentPrimary">
+                    <span class="dot"></span>
+                    <div>
+                      <small>Propietario principal</small>
+                      <strong>{{ currentPrimary.ownerName }}</strong>
+                      <small class="since">Desde {{ currentPrimary.startDate }}</small>
+                      <small class="since" *ngIf="currentPrimary.ownershipPercentage">Titularidad {{ currentPrimary.ownershipPercentage }}%
+                        <button type="button" class="pct-edit" (click)="editOwnership(currentPrimary)" title="Cambiar porcentaje"><span class="pi pi-pencil"></span></button></small>
+                      <button type="button" class="pct-add" *ngIf="!currentPrimary.ownershipPercentage" (click)="editOwnership(currentPrimary)">Informar titularidad %</button>
+                    </div>
+                    <button type="button" class="remove-btn" title="Quitar" [disabled]="isSaving" (click)="removeOwner(currentPrimary)">
+                      <span class="pi pi-times"></span>
+                    </button>
+                  </div>
+                  <div class="owner-chip secondary-chip" *ngIf="currentSecondary">
+                    <span class="dot dot-2"></span>
+                    <div>
+                      <small>Propietario 2</small>
+                      <strong>{{ currentSecondary.ownerName }}</strong>
+                      <small class="since">Desde {{ currentSecondary.startDate }}</small>
+                      <small class="since" *ngIf="currentSecondary.ownershipPercentage">Titularidad {{ currentSecondary.ownershipPercentage }}%
+                        <button type="button" class="pct-edit" (click)="editOwnership(currentSecondary)" title="Cambiar porcentaje"><span class="pi pi-pencil"></span></button></small>
+                      <button type="button" class="pct-add" *ngIf="!currentSecondary.ownershipPercentage" (click)="editOwnership(currentSecondary)">Informar titularidad %</button>
+                    </div>
+                    <button type="button" class="remove-btn" title="Quitar" [disabled]="isSaving" (click)="removeOwner(currentSecondary)">
+                      <span class="pi pi-times"></span>
+                    </button>
+                  </div>
+                </div>
+                <p class="no-owners" *ngIf="!currentPrimary && !currentSecondary">Esta unidad no tiene propietarios asignados.</p>
+
+                <form class="add-form" *ngIf="canAddMore" (ngSubmit)="addOwner()">
+                  <div class="add-form-fields">
+                    <label class="field-block">
+                      <span>{{ !currentPrimary ? 'Propietario principal *' : 'Propietario 2 (opcional)' }}</span>
+                      <p-select [options]="availableOwners" [(ngModel)]="addForm.ownerId" name="ownerId"
+                                optionLabel="fullName" optionValue="id" [filter]="true" filterBy="fullName,documentNumber,email"
+                                appendTo="body" placeholder="Buscar propietario..." styleClass="person-select"></p-select>
+                    </label>
+                    <label class="field-block">
+                      <span>Vigente desde</span>
+                      <input type="date" [(ngModel)]="addForm.startDate" name="startDate" required />
+                    </label>
+                    <label class="field-block">
+                      <span>Titularidad % <small>(opcional)</small></span>
+                      <input type="number" [(ngModel)]="addForm.ownershipPercentage" name="ownershipPercentage" min="0" max="100" step="0.01" placeholder="Ej. 50" />
+                    </label>
+                  </div>
+                  <div class="add-form-actions">
+                    <p-button
+                      type="submit"
+                      [label]="!currentPrimary ? 'Asignar propietario principal' : 'Asignar propietario 2'"
+                      icon="pi pi-user-plus"
+                      [loading]="isSaving"
+                      [disabled]="!addForm.ownerId">
+                    </p-button>
+                  </div>
+                </form>
+
+                <p class="max-owners" *ngIf="!canAddMore">
+                  <span class="pi pi-info-circle"></span> La unidad ya tiene sus 2 propietarios asignados. Quitá uno para agregar otro.
+                </p>
+              </div>
+
+              <!-- Residentes -->
+              <button type="button" class="section-toggle section-toggle-2" (click)="residentsOpen = !residentsOpen">
+                <span class="pi" [class.pi-chevron-down]="residentsOpen" [class.pi-chevron-right]="!residentsOpen"></span>
+                <span>Residentes</span>
+                <small>{{ row.residentCount }} activo{{ row.residentCount === 1 ? '' : 's' }}</small>
+              </button>
+              <div class="section-body" *ngIf="residentsOpen">
+                <div class="current-residents" *ngIf="activeResidents.length">
+                  <div class="resident-chip" *ngFor="let r of activeResidents">
+                    <span class="dot"></span>
+                    <div>
+                      <small>{{ r.isPrimary ? 'Residente principal' : 'Residente' }}</small>
+                      <strong>{{ r.residentName }}</strong>
+                      <small class="since">Desde {{ r.startDate }}</small>
+                    </div>
+                    <button type="button" class="remove-btn" title="Finalizar residencia" [disabled]="isSavingResident"
+                            (click)="endResidentResidency(r)">
+                      <span class="pi pi-times"></span>
+                    </button>
+                  </div>
+                </div>
+                <p class="no-owners" *ngIf="!activeResidents.length">Esta unidad no tiene residentes asignados.</p>
+
+                <ng-container *ngIf="endedResidents.length">
+                  <button type="button" class="history-toggle" (click)="showHistory = !showHistory">
+                    <span class="pi" [class.pi-chevron-down]="showHistory" [class.pi-chevron-right]="!showHistory"></span>
+                    Historial de residencias ({{ endedResidents.length }})
+                  </button>
+                  <div class="current-residents" *ngIf="showHistory">
+                    <div class="resident-chip ended-chip" *ngFor="let r of endedResidents">
+                      <span class="dot dot-ended"></span>
+                      <div>
+                        <small>{{ r.isPrimary ? 'Residente principal' : 'Residente' }}</small>
+                        <strong>{{ r.residentName }}</strong>
+                        <small class="since">Desde {{ r.startDate }} · Finalizada el {{ r.endDate }}</small>
+                      </div>
+                    </div>
+                  </div>
+                </ng-container>
+
+                <form class="add-form" (ngSubmit)="addResident()">
+                  <div class="add-form-fields">
+                    <label class="field-block">
+                      <span>Residente</span>
+                      <p-select [options]="availableResidents" [(ngModel)]="residentAddForm.residentId" name="residentId"
+                                optionLabel="fullName" optionValue="id" [filter]="true" filterBy="fullName,documentNumber,email"
+                                appendTo="body" placeholder="Buscar residente..." styleClass="person-select"></p-select>
+                    </label>
+                    <label class="field-block">
+                      <span>Vigente desde</span>
+                      <input type="date" [(ngModel)]="residentAddForm.startDate" name="residentStartDate" required />
+                    </label>
+                  </div>
+                  <div class="add-form-actions residents-form-actions">
+                    <label class="checkbox-inline">
+                      <input type="checkbox" [(ngModel)]="residentAddForm.isPrimary" name="residentIsPrimary" />
+                      <span>Es el residente principal (aparece en comprobantes; no hace falta que sea el único con acceso a la app)</span>
+                    </label>
+                    <p-button type="submit" label="Asignar residente" icon="pi pi-user-plus"
+                              [loading]="isSavingResident" [disabled]="!residentAddForm.residentId">
+                    </p-button>
+                  </div>
+                </form>
+                <small class="field-hint">
+                  Podés asignar varios residentes a la misma unidad (ej. familia conviviendo). Que tengan
+                  acceso a la app depende de si tienen una cuenta de usuario creada con su mismo correo
+                  desde <a routerLink="/users">Usuarios</a> — asignar la unidad aquí no crea esa cuenta.
+                </small>
+              </div>
+            </div>
+          </ng-container>
         </div>
-      </ng-container>
 
-      <p class="app-state" *ngIf="!loading && !assignments.length">No hay propietarios asignados.</p>
-
-      <!-- All resident assignments list -->
-      <ng-container *ngIf="!loading && residentAssignments.length">
-        <h3 class="section-title">Todas las asignaciones de residentes</h3>
-        <div class="app-list">
-          <div class="app-row header assign-grid">
-            <span>Unidad</span>
-            <span>Edificio</span>
-            <span>Residente</span>
-            <span>Tipo</span>
-            <span>Desde / Hasta</span>
-            <span ></span>
-          </div>
-          <div class="app-row assign-grid" *ngFor="let item of residentAssignments" [class.ended-row]="!!item.endDate">
-            <strong>{{ item.unitCode }}</strong>
-            <span>{{ item.buildingName }}</span>
-            <span>{{ item.residentName }}</span>
-            <p-tag
-              [value]="item.isPrimary ? 'Principal' : 'Residente'"
-              [severity]="item.isPrimary ? 'info' : 'secondary'">
-            </p-tag>
-            <span>{{ item.startDate }}<span *ngIf="item.endDate"> — {{ item.endDate }}</span></span>
-            <div >
-              <p-button
-                *ngIf="!item.endDate"
-                type="button"
-                icon="pi pi-times"
-                severity="danger"
-                [rounded]="true"
-                [text]="true"
-                size="small"
-                title="Finalizar residencia"
-                [disabled]="isSavingResident"
-                (onClick)="endResidentResidency(item)">
-              </p-button>
-            </div>
-          </div>
+        <div class="pager" *ngIf="pageCount > 1">
+          <p-button icon="pi pi-angle-left" [text]="true" [disabled]="page === 0" (onClick)="goPage(page - 1)"></p-button>
+          <span>Página {{ page + 1 }} de {{ pageCount }}</span>
+          <p-button icon="pi pi-angle-right" [text]="true" [disabled]="page >= pageCount - 1" (onClick)="goPage(page + 1)"></p-button>
         </div>
       </ng-container>
     </p-card>
   `,
   styles: [`
-    .search-row {
-      margin-bottom: 1.5rem;
+    .filters { display: flex; flex-wrap: wrap; gap: 1rem; align-items: flex-end; margin-bottom: 0.9rem; }
+    .filter-block { display: grid; gap: 0.4rem; min-width: 220px; }
+    .filter-block > span { font-weight: 700; color: #29484f; font-size: 0.88rem; }
+    .filter-grow { flex: 1; min-width: 260px; }
+    .filter-block input, .filter-block select {
+      border: 1.5px solid #d7e5e1; border-radius: 14px; padding: 0.7rem 1rem; font: inherit;
+      background: white; color: #18353a; width: 100%; box-sizing: border-box;
     }
-    .search-wrap {
-      display: grid;
-      gap: 0.5rem;
-      max-width: 480px;
+    .filter-block input:focus, .filter-block select:focus {
+      outline: none; border-color: var(--brand-blue, #1385b6); box-shadow: 0 0 0 3px rgba(19,133,182,0.12);
     }
-    .search-label {
-      font-weight: 700;
-      color: #29484f;
-      font-size: 0.9rem;
+    :host ::ng-deep .filter-select, :host ::ng-deep .person-select { width: 100%; }
+    :host ::ng-deep .filter-select { border-radius: 14px; border: 1.5px solid #d7e5e1; min-height: 2.9rem; }
+    :host ::ng-deep .person-select { border-radius: 14px; border: 1.5px solid #d7e5e1; min-height: 3rem; }
+
+    .scope-summary { display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem; margin-bottom: 1rem; }
+    .scope-chip {
+      background: rgba(19,133,182,0.06); border: 1.5px solid rgba(19,133,182,0.18); border-radius: 999px;
+      padding: 0.3rem 0.85rem; font: inherit; font-size: 0.82rem; color: #29484f; cursor: pointer;
     }
-    :host ::ng-deep .unit-autocomplete {
-      width: 100%;
+    .scope-chip.active { background: var(--brand-blue, #1385b6); color: white; border-color: transparent; }
+    .scope-total { margin-left: auto; color: var(--brand-muted, #6b878d); font-size: 0.82rem; }
+
+    .units-grid { grid-template-columns: 1fr 1fr 1.2fr 1.2fr 1.1fr 32px; }
+    .unit-row { cursor: pointer; }
+    .unit-row:hover { background: rgba(19,133,182,0.04); }
+    .unit-row.open { background: rgba(19,133,182,0.07); }
+    .floor { color: var(--brand-muted, #6b878d); font-weight: 400; margin-left: 0.35rem; }
+    .status-tags { display: flex; flex-wrap: wrap; gap: 0.3rem; }
+    .chevron { color: var(--brand-muted, #6b878d); font-size: 0.8rem; }
+    .no-resident { color: var(--brand-muted, #6b878d); font-style: italic; }
+
+    .section-toggle, .history-toggle {
+      display: flex; align-items: center; gap: 0.6rem; width: 100%; text-align: left;
+      background: rgba(19,133,182,0.06); border: none; border-radius: 12px; padding: 0.65rem 0.9rem;
+      font: inherit; font-weight: 700; color: var(--brand-ink, #18353a); cursor: pointer; margin-bottom: 0.9rem;
     }
-    :host ::ng-deep .unit-autocomplete .p-autocomplete-input {
-      width: 100%;
-      border-radius: 14px;
-      border: 1.5px solid #d7e5e1;
-      padding: 0.85rem 1rem;
-      font: inherit;
-    }
-    :host ::ng-deep .unit-autocomplete .p-autocomplete-input:focus {
-      border-color: var(--brand-blue, #1385b6);
-      box-shadow: 0 0 0 3px rgba(19,133,182,0.12);
-    }
-    .unit-option {
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-      padding: 0.25rem 0;
-    }
-    .unit-option-code {
-      font-weight: 800;
-      color: var(--brand-ink, #18353a);
-      min-width: 70px;
-    }
-    .unit-option-building {
-      color: var(--brand-muted, #6b878d);
-      font-size: 0.88rem;
-    }
+    .section-toggle-2 { background: rgba(15,160,144,0.07); margin-top: 1rem; }
+    .section-toggle small { margin-left: auto; font-weight: 400; color: var(--brand-muted, #6b878d); }
+    .section-toggle .pi { font-size: 0.78rem; }
+    .history-toggle { background: none; font-weight: 600; font-size: 0.85rem; padding: 0.3rem 0; width: auto; color: var(--brand-muted, #6b878d); }
+    .section-body { margin-bottom: 0.5rem; }
+
+    .pager { display: flex; justify-content: center; align-items: center; gap: 0.75rem; margin-top: 1rem; color: #29484f; font-size: 0.88rem; }
 
     /* Assignment panel */
     .assign-panel {
@@ -327,7 +331,7 @@ type UnitOption = Unit & { display: string };
       border: 1.5px solid var(--brand-blue, #1385b6);
       border-radius: 22px;
       padding: 1.5rem;
-      margin-bottom: 1.5rem;
+      margin: 0.5rem 0.75rem 1rem;
       box-shadow: 0 6px 20px rgba(19,133,182,0.10);
     }
     .assign-panel-head {
@@ -444,12 +448,7 @@ type UnitOption = Unit & { display: string };
     }
     .max-owners .pi { margin-right: 0.35rem; }
 
-    /* Residents block */
-    .residents-block {
-      border-top: 1px solid rgba(19,133,182,0.12);
-      margin-top: 1.5rem;
-      padding-top: 1.25rem;
-    }
+    /* Residents */
     .subsection-title { color: var(--brand-ink, #18353a); margin: 0 0 1rem; font-size: 0.95rem; font-weight: 700; }
     .current-residents { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-bottom: 1.25rem; }
     .resident-chip {
@@ -468,16 +467,10 @@ type UnitOption = Unit & { display: string };
     .field-hint { display: block; color: var(--brand-muted, #6b878d); font-size: 0.8rem; margin-top: 0.9rem; line-height: 1.4; }
     .ended-row { opacity: 0.6; }
 
-    /* List */
-    .section-title { color: var(--brand-ink, #18353a); margin: 0 0 0.75rem; font-size: 1rem; }
-    .assign-grid { grid-template-columns: 0.7fr 1fr 1fr 0.7fr 0.8fr 48px; }
-    .owners-grid { grid-template-columns: 0.7fr 1fr 1fr 0.7fr 1fr 0.8fr 48px; }
-    .no-resident { color: var(--brand-muted, #6b878d); font-style: italic; }
-
     @media (max-width: 860px) {
       .add-form-fields { grid-template-columns: 1fr; }
-      .assign-grid { grid-template-columns: 1fr; }
-      .owners-grid { grid-template-columns: 1fr; }
+      .units-grid { grid-template-columns: 1fr; }
+      .scope-total { margin-left: 0; }
     }
   `]
 })
@@ -494,10 +487,9 @@ export class AssignmentsPageComponent implements OnInit {
   units: UnitOption[] = [];
   owners: Owner[] = [];
   assignments: UnitOwnerAssignment[] = [];
-  unitSuggestions: UnitOption[] = [];
-
   residents: Resident[] = [];
   residentAssignments: Assignment[] = [];
+
   isSavingResident = false;
   residentAddForm = this.emptyResidentAddForm();
 
@@ -506,12 +498,36 @@ export class AssignmentsPageComponent implements OnInit {
   isSaving = false;
   addForm = this.emptyAddForm();
 
+  ownersOpen = true;
+  residentsOpen = true;
+  showHistory = false;
+
+  // Filtros y paginación: la tabla trabaja sobre un índice por unidad armado una sola vez por cambio de datos.
+  buildingOptions: { id: string; name: string }[] = [];
+  buildingId = '';
+  search = '';
+  status: StatusFilter = 'all';
+  page = 0;
+  pageCount = 1;
+  filteredRows: UnitRow[] = [];
+  pagedRows: UnitRow[] = [];
+  scopeNoOwner = 0;
+  scopeNoResident = 0;
+
+  private rows: UnitRow[] = [];
+  private ownersByUnit = new Map<string, UnitOwnerAssignment[]>();
+  private residentsByUnit = new Map<string, Assignment[]>();
+
+  private get unitOwners(): UnitOwnerAssignment[] {
+    return this.selectedUnit ? this.ownersByUnit.get(this.selectedUnit.id) ?? [] : [];
+  }
+
   get currentPrimary(): UnitOwnerAssignment | null {
-    return this.assignments.find(a => a.unitId === this.selectedUnit?.id && a.isPrimary) ?? null;
+    return this.unitOwners.find(a => a.isPrimary) ?? null;
   }
 
   get currentSecondary(): UnitOwnerAssignment | null {
-    return this.assignments.find(a => a.unitId === this.selectedUnit?.id && !a.isPrimary) ?? null;
+    return this.unitOwners.find(a => !a.isPrimary) ?? null;
   }
 
   get canAddMore(): boolean {
@@ -519,37 +535,29 @@ export class AssignmentsPageComponent implements OnInit {
   }
 
   get availableOwners(): Owner[] {
-    if (!this.selectedUnit) return this.owners;
-    const usedIds = new Set(
-      this.assignments
-        .filter(a => a.unitId === this.selectedUnit!.id)
-        .map(a => a.ownerId)
-    );
+    const usedIds = new Set(this.unitOwners.map(a => a.ownerId));
     return this.owners.filter(o => !usedIds.has(o.id));
   }
 
-  get currentResidents(): Assignment[] {
-    if (!this.selectedUnit) return [];
-    return this.residentAssignments
-      .filter(a => a.unitId === this.selectedUnit!.id)
-      .sort((a, b) => (a.endDate ? 1 : 0) - (b.endDate ? 1 : 0));
+  private get unitResidents(): Assignment[] {
+    return this.selectedUnit ? this.residentsByUnit.get(this.selectedUnit.id) ?? [] : [];
+  }
+
+  get activeResidents(): Assignment[] {
+    return this.unitResidents.filter(a => !a.endDate);
+  }
+
+  get endedResidents(): Assignment[] {
+    return this.unitResidents.filter(a => !!a.endDate);
   }
 
   get availableResidents(): Resident[] {
-    if (!this.selectedUnit) return this.residents;
-    const activeIds = new Set(
-      this.residentAssignments
-        .filter(a => a.unitId === this.selectedUnit!.id && !a.endDate)
-        .map(a => a.residentId)
-    );
+    const activeIds = new Set(this.activeResidents.map(a => a.residentId));
     return this.residents.filter(r => !activeIds.has(r.id));
   }
 
-  residentNameForUnit(unitId: string): string {
-    const active = this.residentAssignments.filter(a => a.unitId === unitId && !a.endDate);
-    if (active.length === 0) return '';
-    const primary = active.find(a => a.isPrimary);
-    return (primary ?? active[0]).residentName;
+  trackRow(_: number, row: UnitRow): string {
+    return row.unit.id;
   }
 
   ngOnInit(): void {
@@ -566,8 +574,9 @@ export class AssignmentsPageComponent implements OnInit {
         this.owners = owners;
         this.residents = residents;
         this.residentAssignments = residentAssignments;
+        this.buildBuildingOptions();
         this.loading = false;
-        this.cdr.markForCheck();
+        this.refresh();
       },
       error: (error) => {
         this.msg.add({ severity: 'error', summary: 'Error', detail: extractApiErrorMessage(error, 'No se pudieron cargar los datos.'), life: 5000 });
@@ -577,26 +586,106 @@ export class AssignmentsPageComponent implements OnInit {
     });
   }
 
-  searchUnits(event: AutoCompleteCompleteEvent): void {
-    const query = event.query.toLowerCase();
-    this.unitSuggestions = this.units.filter(u =>
-      u.code.toLowerCase().includes(query) ||
-      u.buildingName.toLowerCase().includes(query) ||
-      u.floor.toLowerCase().includes(query)
-    );
+  private buildBuildingOptions(): void {
+    const byId = new Map<string, string>();
+    this.units.forEach(u => byId.set(u.buildingId, u.buildingName));
+    const list = [...byId].map(([id, name]) => ({ id, name })).sort((a, b) => a.name.localeCompare(b.name, 'es'));
+    this.buildingOptions = list.length > 1 ? [{ id: '', name: 'Todos los edificios' }, ...list] : list;
+
+    const saved = this.readSavedBuilding();
+    if (list.length === 1) this.buildingId = list[0].id;
+    else if (saved && byId.has(saved)) this.buildingId = saved;
   }
 
-  onUnitSelected(): void {
-    this.addForm = this.emptyAddForm();
-    this.residentAddForm = this.emptyResidentAddForm();
+  // Reconstruye el índice por unidad y vuelve a aplicar los filtros (se llama al cargar y tras cada alta o baja).
+  private refresh(): void {
+    this.ownersByUnit = this.groupByUnit(this.assignments);
+    this.residentsByUnit = this.groupByUnit(this.residentAssignments);
+    this.rows = this.units.map(unit => {
+      const owners = this.ownersByUnit.get(unit.id) ?? [];
+      const active = (this.residentsByUnit.get(unit.id) ?? []).filter(a => !a.endDate);
+      const mainOwner = owners.find(o => o.isPrimary) ?? owners[0];
+      const mainResident = active.find(a => a.isPrimary) ?? active[0];
+      return {
+        unit,
+        ownerCount: owners.length,
+        ownerSummary: mainOwner ? mainOwner.ownerName + (owners.length > 1 ? ` +${owners.length - 1}` : '') : '',
+        residentCount: active.length,
+        residentSummary: mainResident ? mainResident.residentName + (active.length > 1 ? ` +${active.length - 1}` : '') : '',
+        search: [unit.code, unit.floor, ...owners.map(o => o.ownerName), ...active.map(a => a.residentName)].join(' ').toLowerCase()
+      };
+    });
+    this.applyFilters();
+  }
+
+  private groupByUnit<T extends { unitId: string }>(items: T[]): Map<string, T[]> {
+    const map = new Map<string, T[]>();
+    for (const item of items) {
+      const list = map.get(item.unitId);
+      if (list) list.push(item); else map.set(item.unitId, [item]);
+    }
+    return map;
+  }
+
+  private applyFilters(): void {
+    const q = this.search.trim().toLowerCase();
+    const inBuilding = this.rows.filter(r => !this.buildingId || r.unit.buildingId === this.buildingId);
+    this.scopeNoOwner = inBuilding.filter(r => !r.ownerCount).length;
+    this.scopeNoResident = inBuilding.filter(r => !r.residentCount).length;
+
+    this.filteredRows = inBuilding.filter(r => {
+      if (q && !r.search.includes(q)) return false;
+      switch (this.status) {
+        case 'noOwner': return !r.ownerCount;
+        case 'noResident': return !r.residentCount;
+        case 'complete': return !!r.ownerCount && !!r.residentCount;
+        default: return true;
+      }
+    });
+    this.pageCount = Math.max(1, Math.ceil(this.filteredRows.length / PAGE_SIZE));
+    this.page = Math.min(this.page, this.pageCount - 1);
+    this.pagedRows = this.filteredRows.slice(this.page * PAGE_SIZE, (this.page + 1) * PAGE_SIZE);
     this.cdr.markForCheck();
   }
 
-  clearUnit(): void {
+  onFilterChange(): void {
+    this.page = 0;
     this.selectedUnit = null;
-    this.addForm = this.emptyAddForm();
-    this.residentAddForm = this.emptyResidentAddForm();
+    this.saveBuilding();
+    this.applyFilters();
+  }
+
+  quickStatus(value: StatusFilter): void {
+    this.status = this.status === value ? 'all' : value;
+    this.onFilterChange();
+  }
+
+  goPage(page: number): void {
+    this.page = Math.max(0, Math.min(page, this.pageCount - 1));
+    this.selectedUnit = null;
+    this.applyFilters();
+  }
+
+  toggleUnit(unit: UnitOption): void {
+    if (this.selectedUnit?.id === unit.id) {
+      this.selectedUnit = null;
+    } else {
+      this.selectedUnit = unit;
+      this.addForm = this.emptyAddForm();
+      this.residentAddForm = this.emptyResidentAddForm();
+      this.ownersOpen = true;
+      this.residentsOpen = true;
+      this.showHistory = false;
+    }
     this.cdr.markForCheck();
+  }
+
+  private readSavedBuilding(): string | null {
+    try { return localStorage.getItem(BUILDING_KEY); } catch { return null; }
+  }
+
+  private saveBuilding(): void {
+    try { localStorage.setItem(BUILDING_KEY, this.buildingId); } catch { /* sin almacenamiento: no se recuerda */ }
   }
 
   addOwner(): void {
@@ -614,6 +703,7 @@ export class AssignmentsPageComponent implements OnInit {
     }).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (created) => {
         this.assignments = [...this.assignments, created];
+        this.refresh();
         this.addForm = this.emptyAddForm();
         this.isSaving = false;
         const transferred = created.transferredCredit ?? 0;
@@ -648,6 +738,7 @@ export class AssignmentsPageComponent implements OnInit {
     this.unitOwnersApi.updateOwnership(item.id, value).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (updated) => {
         this.assignments = this.assignments.map(a => a.id === updated.id ? { ...a, ownershipPercentage: updated.ownershipPercentage } : a);
+        this.refresh();
         this.isSaving = false;
         this.msg.add({ severity: 'success', summary: 'Guardado', detail: 'Titularidad actualizada.', life: 3000 });
         this.cdr.markForCheck();
@@ -711,6 +802,7 @@ export class AssignmentsPageComponent implements OnInit {
     this.unitOwnersApi.delete(item.id, reason).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (result) => {
         this.assignments = this.assignments.filter(a => a.id !== item.id);
+        this.refresh();
         this.isSaving = false;
         let detail = 'Propietario quitado de la unidad.';
         if (result?.heldCredit > 0) {
@@ -742,6 +834,7 @@ export class AssignmentsPageComponent implements OnInit {
     }).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (created) => {
         this.residentAssignments = [...this.residentAssignments, created];
+        this.refresh();
         this.residentAddForm = this.emptyResidentAddForm();
         this.isSavingResident = false;
         this.msg.add({ severity: 'success', summary: 'Guardado', detail: 'Residente asignado correctamente.', life: 4000 });
@@ -760,6 +853,7 @@ export class AssignmentsPageComponent implements OnInit {
     this.assignmentsApi.endResidency(item.id).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (updated) => {
         this.residentAssignments = this.residentAssignments.map(a => a.id === updated.id ? updated : a);
+        this.refresh();
         this.isSavingResident = false;
         this.msg.add({ severity: 'success', summary: 'Guardado', detail: 'Residencia finalizada correctamente.', life: 4000 });
         this.cdr.markForCheck();
@@ -773,10 +867,10 @@ export class AssignmentsPageComponent implements OnInit {
   }
 
   private emptyAddForm() {
-    return { ownerId: '', startDate: new Date().toISOString().slice(0, 10), ownershipPercentage: null as number | null };
+    return { ownerId: null as string | null, startDate: new Date().toISOString().slice(0, 10), ownershipPercentage: null as number | null };
   }
 
   private emptyResidentAddForm() {
-    return { residentId: '', isPrimary: false, startDate: new Date().toISOString().slice(0, 10) };
+    return { residentId: null as string | null, isPrimary: false, startDate: new Date().toISOString().slice(0, 10) };
   }
 }
