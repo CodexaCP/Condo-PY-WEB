@@ -27,6 +27,10 @@ const VISUALS: Record<string, NotificationVisual> = {
   PaymentApproved:          { icon: 'pi-check-circle',     color: TONE.ok },
   PaymentRejected:          { icon: 'pi-times-circle',     color: TONE.bad },
   LateFeeConfigChanged:     { icon: 'pi-exclamation-circle', color: TONE.plan },
+  // Avisos automáticos de cobro (Centro de configuración del edificio)
+  PaymentDueSoon:           { icon: 'pi-clock',            color: TONE.warn },
+  PaymentDueToday:          { icon: 'pi-calendar-times',   color: TONE.plan },
+  LateFeeApplied:           { icon: 'pi-percentage',       color: TONE.bad },
   // Facturas y notas de crédito
   InvoiceIssued:            { icon: 'pi-file',             color: TONE.info },
   CreditNoteApproved:       { icon: 'pi-receipt',          color: TONE.ok },
