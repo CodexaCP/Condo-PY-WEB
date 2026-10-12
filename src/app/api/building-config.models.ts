@@ -1,3 +1,5 @@
+import type { FinanceBudgetVsActual } from './models';
+
 // Tipos del Centro de configuración del edificio (backend: api/building-config/{buildingId}/...). Los enums viajan como texto.
 
 export type ConfigSectionStatus = 'Complete' | 'Incomplete' | 'Optional' | 'NotAvailable';
@@ -601,4 +603,79 @@ export interface AccountingEntries {
   totalCredit: number;
   // Cuentas financieras y rubros sin cuenta del plan que dejaron incompletos a algunos asientos.
   pending: string[];
+}
+
+// ── Informe de asamblea ───────────────────────────────────────────────────────
+
+export interface AssemblyReportRubro {
+  code: string;
+  name: string;
+  amount: number;
+}
+
+export interface AssemblyReportAccount {
+  name: string;
+  type: 'Cash' | 'Bank' | 'ReserveFund';
+  // Fila de los movimientos que no tienen cuenta asignada.
+  isUnassigned: boolean;
+  // Saldo al comienzo del rango, lo que entró y salió en el rango, y el saldo al final.
+  opening: number;
+  inflows: number;
+  outflows: number;
+  closing: number;
+}
+
+export interface AssemblyReportReserve {
+  accountName: string;
+  reserveFundPercentage: number | null;
+  opening: number;
+  contributions: number;
+  uses: number;
+  closing: number;
+}
+
+export interface ReceivablesSummary {
+  totalCharged: number;
+  totalCollected: number;
+  totalPending: number;
+  collectionRatePercentage: number;
+  overdueAmount: number;
+  overdueUnits: number;
+  aging: AgingBucket[];
+}
+
+// Datos del informe para la asamblea: los movimientos van por el criterio de caja; la morosidad y las cuentas por pagar son la situación a la
+// fecha de emisión (snapshotDate). La morosidad va solo agregada por antigüedad: no figura ninguna unidad ni propietario.
+export interface AssemblyReport {
+  buildingId: string;
+  buildingName: string;
+  from: string;
+  to: string;
+  generatedAt: string;
+  notes: string | null;
+  openingBalance: number;
+  totalIncome: number;
+  totalExpense: number;
+  netResult: number;
+  closingBalance: number;
+  accounts: AssemblyReportAccount[];
+  incomeLines: AssemblyReportRubro[];
+  expenseLines: AssemblyReportRubro[];
+  // Ejecución acumulada del ejercicio hasta el mes de cierre del rango; nula si no se cargó presupuesto.
+  budget: FinanceBudgetVsActual | null;
+  // Nulo si el edificio no tiene cuenta de fondo de reserva.
+  reserve: AssemblyReportReserve | null;
+  snapshotDate: string;
+  receivables: ReceivablesSummary;
+  payables: PayablesSummary;
+  warnings: string[];
+}
+
+export interface AssemblyReportRequest {
+  buildingId: string;
+  // Por defecto, del comienzo del ejercicio de hoy hasta hoy.
+  from?: string | null;
+  to?: string | null;
+  // Notas del administrador (texto libre, hasta 4000 caracteres); no se guardan: van solo en el informe generado.
+  notes?: string | null;
 }

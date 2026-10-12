@@ -109,6 +109,7 @@ export class AppMenu {
             { label: 'Libro de compras (IVA)', icon: 'pi pi-fw pi-book', routerLink: ['/finance/vat-purchases'] },
             { label: 'Conciliación bancaria', icon: 'pi pi-fw pi-check-square', routerLink: ['/finance/reconciliation'] },
             { label: 'Asientos contables', icon: 'pi pi-fw pi-sort-alt', routerLink: ['/finance/accounting'] },
+            { label: 'Informe de asamblea', icon: 'pi pi-fw pi-file-pdf', routerLink: ['/finance/assembly-report'] },
             { label: 'Configuración', icon: 'pi pi-fw pi-cog', routerLink: ['/finance/settings'] }
         ]);
 
