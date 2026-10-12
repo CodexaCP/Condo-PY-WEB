@@ -2946,3 +2946,56 @@ export interface UnitImportResult {
   rows: UnitImportRow[];
   buildings: UnitImportBuildingSummary[];
 }
+
+// Sobre común de los listados paginados en el servidor.
+export interface PagedResult<T> {
+  items: T[];
+  totalCount: number;
+  page: number;
+  pageSize: number;
+}
+
+export type UnitStatusFilter = '' | 'active' | 'inactive' | 'lateFeeExempt';
+
+export interface UnitPageCounts {
+  total: number;
+  active: number;
+  inactive: number;
+  lateFeeExempt: number;
+}
+
+export interface UnitPage extends PagedResult<Unit> {
+  // Pisos del edificio elegido (vacío si se miran todos): atajos de filtro.
+  floors: string[];
+  counts: UnitPageCounts;
+}
+
+export interface UnitPageQuery {
+  search?: string;
+  buildingId?: string;
+  floor?: string;
+  status?: UnitStatusFilter;
+  page: number;
+  pageSize: number;
+}
+
+export interface UserPageCounts {
+  all: number;
+  staff: number;
+  owners: number;
+  residents: number;
+}
+
+export interface UserPage extends PagedResult<ManagedUser> {
+  counts: UserPageCounts;
+}
+
+export interface UserPageQuery {
+  search?: string;
+  // '' = todos, 'staff' = personal (sin propietarios ni residentes) o el nombre exacto de un rol.
+  role?: string;
+  status?: '' | 'active' | 'inactive';
+  companyId?: string;
+  page: number;
+  pageSize: number;
+}

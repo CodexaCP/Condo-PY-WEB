@@ -2,7 +2,8 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { API_BASE_URL } from '../config/api.config';
-import { CreateUnitRequest, Unit, UnitImportResult } from './models';
+import { pagedParams } from './paged-params.util';
+import { CreateUnitRequest, Unit, UnitImportResult, UnitPage, UnitPageQuery } from './models';
 
 @Injectable({ providedIn: 'root' })
 export class UnitsApiService {
@@ -10,6 +11,15 @@ export class UnitsApiService {
 
   getAll(): Observable<Unit[]> {
     return this.http.get<Unit[]>(`${API_BASE_URL}/units`);
+  }
+
+  // Listado paginado en el servidor (búsqueda, edificio, piso y estado); trae también los contadores y los pisos del edificio.
+  getPaged(query: UnitPageQuery): Observable<UnitPage> {
+    const params = pagedParams({
+      search: query.search, buildingId: query.buildingId, floor: query.floor, status: query.status,
+      page: query.page, pageSize: query.pageSize
+    });
+    return this.http.get<UnitPage>(`${API_BASE_URL}/units/paged`, { params });
   }
 
   getById(id: string): Observable<Unit> {

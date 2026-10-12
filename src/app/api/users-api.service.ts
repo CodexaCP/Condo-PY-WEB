@@ -2,7 +2,8 @@ import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { API_BASE_URL } from '../config/api.config';
-import { BuildingCapacityResponse, CreateUserRequest, ManagedUser } from './models';
+import { pagedParams } from './paged-params.util';
+import { BuildingCapacityResponse, CreateUserRequest, ManagedUser, UserPage, UserPageQuery } from './models';
 
 @Injectable({ providedIn: 'root' })
 export class UsersApiService {
@@ -10,6 +11,15 @@ export class UsersApiService {
 
   getAll(): Observable<ManagedUser[]> {
     return this.http.get<ManagedUser[]>(`${API_BASE_URL}/users`);
+  }
+
+  // Listado paginado en el servidor (búsqueda, rol o grupo, estado y empresa); trae también los contadores por grupo.
+  getPaged(query: UserPageQuery): Observable<UserPage> {
+    const params = pagedParams({
+      search: query.search, role: query.role, status: query.status, companyId: query.companyId,
+      page: query.page, pageSize: query.pageSize
+    });
+    return this.http.get<UserPage>(`${API_BASE_URL}/users/paged`, { params });
   }
 
   getById(id: string): Observable<ManagedUser> {
