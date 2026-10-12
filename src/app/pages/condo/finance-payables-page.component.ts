@@ -11,14 +11,11 @@ import { PayableRow, PayablesPage, PayablesStatusFilter } from '../../api/buildi
 import { FinanceApiService } from '../../api/finance-api.service';
 import { FinanceBuildingAccess, FinancialAccount } from '../../api/models';
 import { FinanceBuildingPickerComponent } from './finance-building-picker.component';
-import { classifyFinanceError, FinanceErrorKind, GsPipe } from './finance-format';
+import { classifyFinanceError, FinanceErrorKind, GsPipe, todayParaguay } from './finance-format';
 import { FinanceStateComponent } from './finance-state.component';
 import { CONFIG_SECTION_STYLES } from './config-section.styles';
 
 const PAGE_SIZE = 25;
-
-// Hoy según el reloj del libro de Finanzas (Paraguay, UTC-3): el pago no puede ser de una fecha futura.
-const todayParaguay = (): string => new Date(Date.now() - 3 * 3600 * 1000).toISOString().slice(0, 10);
 
 // Cuentas por pagar: las facturas de proveedores con vencimiento. Mientras no se pagan no entran a la caja; al registrar el pago entran en la
 // fecha del pago y desde la cuenta elegida. Un mes cerrado no admite registrar ni deshacer pagos de ese mes.

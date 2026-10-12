@@ -305,6 +305,14 @@ export const appRoutes: Routes = [
                 loadComponent: () => import('./app/pages/condo/finance-vat-purchases-page.component').then(m => m.FinanceVatPurchasesPageComponent)
             },
             {
+                path: 'finance/reconciliation',
+                loadComponent: () => import('./app/pages/condo/finance-reconciliation-page.component').then(m => m.FinanceReconciliationPageComponent)
+            },
+            {
+                path: 'finance/reconciliation/:id',
+                loadComponent: () => import('./app/pages/condo/finance-reconciliation-detail-page.component').then(m => m.FinanceReconciliationDetailPageComponent)
+            },
+            {
                 path: 'finance/settings',
                 loadComponent: () => import('./app/pages/condo/finance-settings-page.component').then(m => m.FinanceSettingsPageComponent)
             },

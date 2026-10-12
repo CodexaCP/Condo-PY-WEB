@@ -107,6 +107,7 @@ export class AppMenu {
             { label: 'Fondo de reserva', icon: 'pi pi-fw pi-shield', routerLink: ['/finance/reserve-fund'] },
             { label: 'Cuentas por pagar', icon: 'pi pi-fw pi-credit-card', routerLink: ['/finance/payables'] },
             { label: 'Libro de compras (IVA)', icon: 'pi pi-fw pi-book', routerLink: ['/finance/vat-purchases'] },
+            { label: 'Conciliación bancaria', icon: 'pi pi-fw pi-check-square', routerLink: ['/finance/reconciliation'] },
             { label: 'Configuración', icon: 'pi pi-fw pi-cog', routerLink: ['/finance/settings'] }
         ]);
 

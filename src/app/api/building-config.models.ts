@@ -392,3 +392,112 @@ export interface VatPurchasesBook {
   unclassifiedCount: number;
   unclassifiedTotal: number;
 }
+
+// ── Conciliación bancaria manual ──────────────────────────────────────────────
+
+export type ReconciliationStatus = 'Open' | 'Completed';
+export type LedgerSourceType = 'OwnerPayment' | 'BuildingExpense' | 'BuildingIncome' | 'SupplierCreditNote';
+export type LedgerDirection = 'In' | 'Out';
+
+// Una cuenta bancaria del edificio con el estado de su conciliación.
+export interface ReconciliationAccount {
+  accountId: string;
+  accountName: string;
+  isActive: boolean;
+  // Saldo del libro a hoy.
+  bookBalance: number;
+  lastCompletedDate: string | null;
+  lastStatementBalance: number | null;
+  openReconciliationId: string | null;
+  openStatementDate: string | null;
+}
+
+export interface ReconciliationOverview {
+  buildingId: string;
+  canEdit: boolean;
+  accounts: ReconciliationAccount[];
+}
+
+export interface ReconciliationSummary {
+  id: string;
+  accountId: string;
+  accountName: string;
+  statementDate: string;
+  statementBalance: number;
+  status: ReconciliationStatus;
+  completedAtUtc: string | null;
+  completedByName: string | null;
+  reconciledBalanceAtCompletion: number | null;
+  markedCount: number;
+  notes: string | null;
+}
+
+// Un movimiento del libro en la pantalla de conciliación (marcado o pendiente).
+export interface ReconciliationMovement {
+  sourceType: LedgerSourceType;
+  sourceId: string;
+  date: string;
+  description: string;
+  thirdParty: string;
+  reference: string;
+  // Con signo: entradas positivas y salidas negativas. En un marcado, el importe vigente del libro.
+  amount: number;
+  direction: LedgerDirection;
+  isMarked: boolean;
+  reconciliationId: string | null;
+  // True si lo marcó esta conciliación (los de conciliaciones cerradas anteriores no se tocan desde esta).
+  inThisReconciliation: boolean;
+  // Ok, Changed (el importe cambió después de marcarlo) o Missing (ya no figura en el libro a esa fecha).
+  state: 'Ok' | 'Changed' | 'Missing';
+  markedAmount: number | null;
+  markedAtUtc: string | null;
+  markedByName: string | null;
+}
+
+export interface ReconciliationWorkspace {
+  id: string;
+  buildingId: string;
+  accountId: string;
+  accountName: string;
+  statementDate: string;
+  statementBalance: number;
+  notes: string | null;
+  status: ReconciliationStatus;
+  canEdit: boolean;
+  openingBalance: number;
+  bookBalance: number;
+  // Saldo inicial más lo ya marcado como conciliado, hasta la fecha de corte.
+  reconciledBalance: number;
+  // Saldo del extracto menos el saldo conciliado. Cero = conciliada.
+  difference: number;
+  isBalanced: boolean;
+  // Lo del libro hasta la fecha de corte que todavía no se marcó (depósitos y cheques en tránsito, por ejemplo).
+  pendingIn: number;
+  pendingOut: number;
+  pendingCount: number;
+  pendingTruncated: boolean;
+  changedCount: number;
+  missingCount: number;
+  alerts: string[];
+  marked: ReconciliationMovement[];
+  pending: ReconciliationMovement[];
+}
+
+export interface StartReconciliationRequest {
+  buildingId: string;
+  accountId: string;
+  statementDate: string;
+  statementBalance: number;
+  notes: string | null;
+}
+
+export interface UpdateReconciliationRequest {
+  statementDate: string;
+  statementBalance: number;
+  notes: string | null;
+}
+
+export interface ReconciliationItemRef {
+  sourceType: LedgerSourceType;
+  sourceId: string;
+}

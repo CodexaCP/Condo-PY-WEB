@@ -24,7 +24,8 @@ export const AUDIT_SECTION = 'audit';
 // Pantallas de Finanzas a las que lleva una sección con enlace «finance» (según su pestaña).
 const FINANCE_LINKS: Record<string, string> = {
   settings: '/finance/settings',
-  budget: '/finance/budget'
+  budget: '/finance/budget',
+  reconciliation: '/finance/reconciliation'
 };
 
 const STATUS_LABELS: Record<ConfigSectionStatus, string> = {

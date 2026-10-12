@@ -11,6 +11,9 @@ const MONTHS_SHORT = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 's
 export const formatGs = (v: number | null | undefined): string => (v === null || v === undefined ? '—' : GS.format(v));
 export const formatNum = (v: number | null | undefined): string => (v === null || v === undefined ? '—' : NUM.format(v));
 
+// Hoy según el reloj del libro de Finanzas (Paraguay, UTC-3), como «aaaa-mm-dd»: un movimiento o un corte no puede ser de una fecha futura.
+export const todayParaguay = (): string => new Date(Date.now() - 3 * 3600 * 1000).toISOString().slice(0, 10);
+
 // Categorías con las que los gastos y los ingresos cuentan en la liquidación (las mismas de las pantallas de gastos e ingresos).
 export const EXPENSE_CATEGORY_LABELS: Record<BuildingExpenseCategory, string> = {
   Utilities: 'Servicios',
