@@ -2999,3 +2999,36 @@ export interface UserPageQuery {
   page: number;
   pageSize: number;
 }
+
+// Carga masiva de propietarios o de residentes desde Excel.
+export type PeopleImportKind = 'owners' | 'residents';
+
+export interface PeopleImportRow {
+  rowNumber: number;
+  name: string;
+  document: string;
+  email: string;
+  building: string;
+  unit: string;
+  // 'Nueva' | 'Ya existe' | 'Misma persona' (vacío si la fila tiene error).
+  person: string;
+  // 'Se asigna' | 'Ya estaba asignada' | 'Sin unidad' (vacío si la fila tiene error).
+  assignment: string;
+  error?: string | null;
+}
+
+export interface PeopleImportResult {
+  confirmed: boolean;
+  totalRows: number;
+  validRows: number;
+  errorRows: number;
+  newPeople: number;
+  existingPeople: number;
+  newAssignments: number;
+  alreadyAssigned: number;
+  // Solo propietarios: contraseña inicial de las cuentas nuevas.
+  initialPassword?: string | null;
+  created: boolean;
+  message?: string | null;
+  rows: PeopleImportRow[];
+}

@@ -14,11 +14,12 @@ import { UploadsApiService } from '../../api/uploads-api.service';
 import { resolveUploadUrl } from '../../api/file-url.util';
 import { ResidentsApiService } from '../../api/residents-api.service';
 import { AuthService } from '../../auth/auth.service';
+import { PeopleImportPanelComponent } from './people-import-panel.component';
 
 @Component({
   standalone: true,
   selector: 'app-residents-page',
-  imports: [CommonModule, FormsModule, RouterLink, Button, Card, Tooltip],
+  imports: [CommonModule, FormsModule, RouterLink, Button, Card, Tooltip, PeopleImportPanelComponent],
   template: `
     <p-card styleClass="app-page-card">
       <div class="app-toolbar">
@@ -33,13 +34,20 @@ import { AuthService } from '../../auth/auth.service';
           </div>
         </div>
 
-        <p-button
-          *ngIf="!isReadOnly"
-          [label]="showForm ? 'Cerrar formulario' : 'Nuevo residente'"
-          [icon]="showForm ? 'pi pi-times' : 'pi pi-plus'"
-          (onClick)="toggleForm()">
-        </p-button>
+        <div class="toolbar-actions">
+          <p-button *ngIf="canImport" label="Importar desde Excel" icon="pi pi-file-excel" severity="secondary" [outlined]="true"
+                    (onClick)="showImport = !showImport"></p-button>
+          <p-button
+            *ngIf="!isReadOnly"
+            [label]="showForm ? 'Cerrar formulario' : 'Nuevo residente'"
+            [icon]="showForm ? 'pi pi-times' : 'pi pi-plus'"
+            (onClick)="toggleForm()">
+          </p-button>
+        </div>
       </div>
+
+      <!-- Carga masiva de residentes (independiente de la de propietarios) -->
+      <app-people-import-panel *ngIf="showImport && canImport" kind="residents" (imported)="reloadAfterImport()" (closed)="showImport = false"></app-people-import-panel>
 
       <form class="create-form" *ngIf="showForm" (ngSubmit)="submitResident()">
 
@@ -228,6 +236,7 @@ import { AuthService } from '../../auth/auth.service';
     </p-card>
   `,
   styles: [`
+    .toolbar-actions { display:flex; gap:0.6rem; flex-wrap:wrap; }
     /* ── Formulario ──────────────────────────────────── */
     .create-form {
       display:flex; flex-direction:column; gap:2rem;
@@ -318,6 +327,7 @@ export class ResidentsPageComponent implements OnInit {
   loading = true;
   isSaving = false;
   showForm = false;
+  showImport = false;
   editingId: string | null = null;
   form = this.createInitialForm();
 
@@ -327,6 +337,15 @@ export class ResidentsPageComponent implements OnInit {
 
   get isReadOnly(): boolean {
     return this.auth.hasRole('CompanyAdmin');
+  }
+
+  // La carga masiva la hacen el SuperAdmin y el Administrador de empresa (aunque este último no edite fichas a mano).
+  get canImport(): boolean {
+    return this.auth.hasRole('SuperAdmin') || this.auth.hasRole('CompanyAdmin');
+  }
+
+  reloadAfterImport(): void {
+    this.loadResidents();
   }
 
   ngOnInit(): void {

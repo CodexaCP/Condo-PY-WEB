@@ -8,11 +8,13 @@ import { Message } from 'primeng/message';
 import { Tag } from 'primeng/tag';
 import { OwnersApiService } from '../../api/owners-api.service';
 import { Owner } from '../../api/models';
+import { AuthService } from '../../auth/auth.service';
+import { PeopleImportPanelComponent } from './people-import-panel.component';
 
 @Component({
   standalone: true,
   selector: 'app-propietarios-page',
-  imports: [CommonModule, Button, Card, Message, Tag],
+  imports: [CommonModule, Button, Card, Message, Tag, PeopleImportPanelComponent],
   template: `
     <p-card styleClass="app-page-card">
       <div class="app-toolbar">
@@ -22,8 +24,14 @@ import { Owner } from '../../api/models';
             <p>Fichas de propietarios para asignación a unidades.</p>
           </div>
         </div>
-        <p-button label="Nuevo propietario" icon="pi pi-user-plus" (onClick)="goToCreate()"></p-button>
+        <div class="toolbar-actions">
+          <p-button *ngIf="canImport" label="Importar desde Excel" icon="pi pi-file-excel" severity="secondary" [outlined]="true" (onClick)="showImport = !showImport"></p-button>
+          <p-button label="Nuevo propietario" icon="pi pi-user-plus" (onClick)="goToCreate()"></p-button>
+        </div>
       </div>
+
+      <!-- Carga masiva de propietarios (independiente de la de residentes) -->
+      <app-people-import-panel *ngIf="showImport && canImport" kind="owners" (imported)="load()" (closed)="showImport = false"></app-people-import-panel>
 
       <p-message *ngIf="pageError" severity="error" [text]="pageError"></p-message>
       <p class="app-state" *ngIf="loading">Cargando propietarios...</p>
@@ -53,6 +61,7 @@ import { Owner } from '../../api/models';
     </p-card>
   `,
   styles: [`
+    .toolbar-actions { display:flex; gap:0.6rem; flex-wrap:wrap; }
     .grid-prop { grid-template-columns: 1.2fr 0.9fr 1.3fr 0.9fr 0.6fr; }
     .username-col { font-family: monospace; font-size: 0.88rem; color: var(--brand-muted); }
     .phone-col    { font-size: 0.9rem; color: var(--brand-muted); }
@@ -69,12 +78,21 @@ export class PropietariosPageComponent implements OnInit {
   private readonly router     = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
   private readonly cdr        = inject(ChangeDetectorRef);
+  private readonly auth       = inject(AuthService);
 
   items:    Owner[] = [];
   loading   = true;
   pageError = '';
+  showImport = false;
+
+  // La carga masiva la hacen el SuperAdmin y el Administrador de empresa.
+  get canImport(): boolean { return this.auth.hasRole('SuperAdmin') || this.auth.hasRole('CompanyAdmin'); }
 
   ngOnInit(): void {
+    this.load();
+  }
+
+  load(): void {
     this.api.getAll()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
