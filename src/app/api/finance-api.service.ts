@@ -2,6 +2,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { API_BASE_URL } from '../config/api.config';
+import { PayablesFilters, PayablesPage, PayablesSummary, VatPurchasesBook } from './building-config.models';
 import {
   FinanceAdminBuilding,
   FinanceBalances,
@@ -224,5 +225,37 @@ export class FinanceApiService {
   // Confirma la importación con las filas de la vista previa (corregidas por el usuario).
   commitPlanImport(request: LedgerPlanImportCommitRequest): Observable<LedgerPlanApplyResult> {
     return this.http.post<LedgerPlanApplyResult>(`${API_BASE_URL}/finance/categories/import/commit`, request);
+  }
+
+  // ── Cuentas por pagar y libro de compras (IVA) ──
+
+  getPayables(buildingId: string, filters: PayablesFilters = {}): Observable<PayablesPage> {
+    let params = this.params(buildingId);
+    if (filters.status) params = params.set('status', filters.status);
+    if (filters.supplierId) params = params.set('supplierId', filters.supplierId);
+    if (filters.from) params = params.set('from', filters.from);
+    if (filters.to) params = params.set('to', filters.to);
+    if (filters.page) params = params.set('page', filters.page);
+    if (filters.pageSize) params = params.set('pageSize', filters.pageSize);
+    return this.http.get<PayablesPage>(`${API_BASE_URL}/finance/payables`, { params });
+  }
+
+  getPayablesSummary(buildingId: string): Observable<PayablesSummary> {
+    return this.http.get<PayablesSummary>(`${API_BASE_URL}/finance/payables/summary`, { params: this.params(buildingId) });
+  }
+
+  getVatPurchases(buildingId: string, from?: string, to?: string): Observable<VatPurchasesBook> {
+    let params = this.params(buildingId);
+    if (from) params = params.set('from', from);
+    if (to) params = params.set('to', to);
+    return this.http.get<VatPurchasesBook>(`${API_BASE_URL}/finance/vat/purchases`, { params });
+  }
+
+  // Excel del libro de compras para el contador.
+  downloadVatPurchases(buildingId: string, from?: string, to?: string): Observable<Blob> {
+    let params = this.params(buildingId);
+    if (from) params = params.set('from', from);
+    if (to) params = params.set('to', to);
+    return this.http.get(`${API_BASE_URL}/finance/vat/purchases/export`, { params, responseType: 'blob' });
   }
 }

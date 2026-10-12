@@ -407,7 +407,22 @@ export interface BuildingExpense {
   ledgerCategoryId: string | null;
   ledgerCategoryCode: string | null;
   ledgerCategoryName: string | null;
+  // Proveedor de la lista de la empresa y datos de su factura (cuentas por pagar e IVA de las compras).
+  supplierId: string | null;
+  invoiceNumber: string | null;
+  invoiceTimbrado: string | null;
+  dueDate: string | null;
+  paidAt: string | null;
+  paidFromAccountId: string | null;
+  paidFromAccountName: string | null;
+  // None (sin vencimiento ni pago: cuenta en su fecha), Pending (a pagar), Overdue (vencido sin pagar) o Paid.
+  payableStatus: PayableStatus;
+  vatRate: number | null;
+  // IVA incluido en el monto vigente (null si el gasto no tiene tasa).
+  vatAmount: number | null;
 }
+
+export type PayableStatus = 'None' | 'Pending' | 'Overdue' | 'Paid';
 
 // Nota de crédito que emite el PROVEEDOR sobre un gasto del edificio (no confundir con la nota de crédito al propietario).
 export interface BuildingExpenseCreditNote {
@@ -595,6 +610,16 @@ export interface CreateBuildingExpenseRequest {
   paidByReserveFund: boolean;
   // Con rubro, la categoría se toma del rubro.
   ledgerCategoryId?: string | null;
+  // Proveedor de la lista de la empresa (el nombre sale de él) y datos de su factura.
+  supplierId?: string | null;
+  invoiceNumber?: string | null;
+  invoiceTimbrado?: string | null;
+  // Con vencimiento el gasto queda «a pagar» y entra a la caja al registrar su pago; sin vencimiento ni pago, entra en su fecha.
+  dueDate?: string | null;
+  paidAt?: string | null;
+  paidFromAccountId?: string | null;
+  // IVA incluido en el monto: 10, 5 o 0 (exento). Vacío = el que corresponde al rubro.
+  vatRate?: number | null;
 }
 
 export type BuildingIncomeCategory =

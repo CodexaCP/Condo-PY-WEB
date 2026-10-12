@@ -238,3 +238,157 @@ export interface VatTreatmentUpdateItem {
   categoryId: string;
   treatment: VatTreatment | null;
 }
+
+// ── Proveedores de la empresa ─────────────────────────────────────────────────
+
+export interface Supplier {
+  id: string;
+  companyId: string;
+  name: string;
+  ruc: string | null;
+  phone: string | null;
+  email: string | null;
+  address: string | null;
+  // Plazo de pago habitual en días: al cargarle un gasto, el vencimiento se propone como fecha del gasto + plazo.
+  paymentTermDays: number | null;
+  isActive: boolean;
+  // Gastos cargados con este proveedor (si tiene gastos no se elimina: se desactiva).
+  expenseCount: number;
+}
+
+export interface SupplierUpsertRequest {
+  // Solo lo usa el SuperAdmin al crear (no tiene empresa propia).
+  companyId?: string | null;
+  name: string;
+  ruc: string | null;
+  phone: string | null;
+  email: string | null;
+  address: string | null;
+  paymentTermDays: number | null;
+  isActive: boolean;
+}
+
+export interface SupplierPage {
+  totalCount: number;
+  page: number;
+  pageSize: number;
+  canEdit: boolean;
+  items: Supplier[];
+}
+
+export interface SupplierFilters {
+  companyId?: string;
+  q?: string;
+  isActive?: boolean;
+  page?: number;
+  pageSize?: number;
+}
+
+// ── Cuentas por pagar y por cobrar ────────────────────────────────────────────
+
+export interface AgingBucket {
+  label: string;
+  count: number;
+  total: number;
+}
+
+export interface PayablesSummary {
+  pendingCount: number;
+  pendingTotal: number;
+  overdueCount: number;
+  overdueTotal: number;
+  dueNext7DaysTotal: number;
+  aging: AgingBucket[];
+}
+
+export type PayablesStatusFilter = 'all' | 'pending' | 'overdue' | 'paid';
+
+export interface PayableRow {
+  expenseId: string;
+  expensePeriodId: string;
+  expensePeriodName: string;
+  supplierId: string | null;
+  supplierName: string;
+  supplierRuc: string | null;
+  description: string;
+  invoiceNumber: string | null;
+  expenseDate: string;
+  dueDate: string;
+  amount: number;
+  // Pending, Overdue o Paid.
+  status: string;
+  daysOverdue: number;
+  paidAt: string | null;
+  paidFromAccountName: string | null;
+  ledgerCategoryCode: string | null;
+  ledgerCategoryName: string | null;
+  vatRate: number | null;
+  vatAmount: number | null;
+}
+
+export interface PayablesPage {
+  buildingId: string;
+  summary: PayablesSummary;
+  totalCount: number;
+  page: number;
+  pageSize: number;
+  items: PayableRow[];
+}
+
+export interface PayablesFilters {
+  status?: PayablesStatusFilter;
+  supplierId?: string;
+  from?: string;
+  to?: string;
+  page?: number;
+  pageSize?: number;
+}
+
+export interface RegisterExpensePaymentRequest {
+  paidAt: string;
+  accountId: string | null;
+}
+
+// ── Libro de compras (IVA de los gastos) ──────────────────────────────────────
+
+export interface VatPurchaseRow {
+  date: string;
+  expenseId: string;
+  supplierName: string;
+  supplierRuc: string | null;
+  timbrado: string | null;
+  documentNumber: string | null;
+  isCreditNote: boolean;
+  description: string;
+  ledgerCategoryCode: string | null;
+  ledgerCategoryName: string | null;
+  // Total del comprobante con IVA incluido (negativo en una nota de crédito).
+  total: number;
+  vatRate: number;
+  base: number;
+  vat: number;
+}
+
+export interface VatRateTotals {
+  // 10, 5 o 0 (exento).
+  rate: number;
+  count: number;
+  total: number;
+  base: number;
+  vat: number;
+}
+
+export interface VatPurchasesBook {
+  buildingId: string;
+  buildingName: string;
+  from: string;
+  to: string;
+  rows: VatPurchaseRow[];
+  totalsByRate: VatRateTotals[];
+  grandTotal: number;
+  grandBase: number;
+  grandVat: number;
+  // Gastos del rango sin tasa de IVA cuya cuenta no es «no corresponde»: hay que clasificarlos para que entren al libro.
+  unclassifiedCount: number;
+  unclassifiedTotal: number;
+}

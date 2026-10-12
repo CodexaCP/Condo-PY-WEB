@@ -10,10 +10,12 @@ import { Tag } from 'primeng/tag';
 import { Tooltip } from 'primeng/tooltip';
 import { InputNumber } from 'primeng/inputnumber';
 import { extractApiErrorMessage } from '../../api/api-error.util';
+import { Supplier } from '../../api/building-config.models';
 import { BuildingExpensesApiService } from '../../api/building-expenses-api.service';
 import { FinanceAccessService } from '../../api/finance-access.service';
 import { FinanceApiService } from '../../api/finance-api.service';
 import { RecurringBuildingExpensesApiService } from '../../api/recurring-building-expenses-api.service';
+import { SuppliersApiService } from '../../api/suppliers-api.service';
 import { BuildingsApiService } from '../../api/buildings-api.service';
 import { ExpensePeriodsApiService } from '../../api/expense-periods-api.service';
 import { UnitsApiService } from '../../api/units-api.service';
@@ -352,11 +354,41 @@ interface RubroGroup {
             </label>
             <label class="field-block">
               <span>Proveedor</span>
-              <input [(ngModel)]="form.supplierName" name="supplierName" type="text" maxlength="160" placeholder="Nombre del proveedor..." />
+              <select *ngIf="supplierChoices.length" [(ngModel)]="form.supplierId" name="supplierId" (ngModelChange)="onSupplierChange()">
+                <option value="">— Otro (escribir el nombre) —</option>
+                <option *ngFor="let s of supplierChoices" [value]="s.id">{{ s.name }}{{ s.ruc ? ' · ' + s.ruc : '' }}{{ s.isActive ? '' : ' (desactivado)' }}</option>
+              </select>
+              <input *ngIf="!form.supplierId" [(ngModel)]="form.supplierName" name="supplierName" type="text" maxlength="160" placeholder="Nombre del proveedor..." />
+              <small class="field-hint" *ngIf="form.supplierId">El nombre sale del proveedor de la lista. Los proveedores se administran en el Centro de configuración.</small>
             </label>
             <label class="field-block">
               <span>Monto *</span>
               <p-inputnumber [(ngModel)]="form.amount" name="amount" [useGrouping]="true" prefix="₲ " [min]="1" [minFractionDigits]="0" [maxFractionDigits]="0" [required]="true" styleClass="w-full"></p-inputnumber>
+            </label>
+          </div>
+          <div class="form-row">
+            <label class="field-block">
+              <span>N° de factura</span>
+              <input [(ngModel)]="form.invoiceNumber" name="invoiceNumber" type="text" maxlength="50" placeholder="001-001-0000123" />
+            </label>
+            <label class="field-block">
+              <span>Timbrado</span>
+              <input [(ngModel)]="form.invoiceTimbrado" name="invoiceTimbrado" type="text" maxlength="20" />
+            </label>
+            <label class="field-block" *ngIf="financeOnForm">
+              <span>Vencimiento</span>
+              <input [(ngModel)]="form.dueDate" name="dueDate" type="date" [min]="form.expenseDate" />
+              <small class="field-hint">Con vencimiento queda «a pagar» y entra a la caja cuando se registra el pago (Finanzas → Cuentas por pagar). Sin vencimiento, cuenta en la fecha del gasto.</small>
+            </label>
+            <label class="field-block" *ngIf="financeOnForm">
+              <span>IVA incluido en el monto</span>
+              <select [(ngModel)]="form.vatRate" name="vatRate">
+                <option value="">Según el rubro</option>
+                <option value="10">10 %</option>
+                <option value="5">5 %</option>
+                <option value="0">Exento</option>
+              </select>
+              <small class="field-hint">Alimenta el libro de compras.</small>
             </label>
           </div>
           <div class="form-row">
@@ -416,6 +448,11 @@ interface RubroGroup {
             <small *ngIf="item.supplierName" class="supplier-tag">{{ item.supplierName }}</small>
             <small *ngIf="item.ledgerCategoryName" class="supplier-tag">Rubro: {{ item.ledgerCategoryCode }} · {{ item.ledgerCategoryName }}</small>
             <p-tag *ngIf="item.paidByReserveFund" value="Pagado por fondo de reserva" severity="info"></p-tag>
+            <p-tag *ngIf="item.payableStatus === 'Pending'" [value]="'A pagar · vence ' + item.dueDate" severity="warn"></p-tag>
+            <p-tag *ngIf="item.payableStatus === 'Overdue'" [value]="'Vencida · venció ' + item.dueDate" severity="danger"></p-tag>
+            <p-tag *ngIf="item.payableStatus === 'Paid'" [value]="'Pagada el ' + item.paidAt" severity="success"></p-tag>
+            <small *ngIf="item.invoiceNumber" class="supplier-tag">Factura {{ item.invoiceNumber }}</small>
+            <small *ngIf="item.vatRate !== null && item.vatRate !== undefined" class="supplier-tag">IVA {{ item.vatRate === 0 ? 'exento' : item.vatRate + ' %' }}<ng-container *ngIf="item.vatAmount"> · {{ formatCurrency(item.vatAmount) }}</ng-container></small>
           </div>
           <div>
             <span>{{ item.expensePeriodName }}</span>
@@ -583,6 +620,7 @@ export class BuildingExpensesPageComponent implements OnInit, OnChanges {
   private readonly unitsApi = inject(UnitsApiService);
   private readonly financeApi = inject(FinanceApiService);
   private readonly financeAccess = inject(FinanceAccessService);
+  private readonly suppliersApi = inject(SuppliersApiService);
   private readonly auth = inject(AuthService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly cdr = inject(ChangeDetectorRef);
@@ -601,6 +639,9 @@ export class BuildingExpensesPageComponent implements OnInit, OnChanges {
   private openGroups = new Set<string>();
   private allItems: BuildingExpense[] = [];
   buildings: Building[] = [];
+  // Proveedores de la empresa del edificio elegido en el formulario (la lista que se comparte entre sus edificios).
+  suppliers: Supplier[] = [];
+  private readonly suppliersByCompany = new Map<string, Supplier[]>();
   periods: ExpensePeriod[] = [];
   units: Unit[] = [];
   recurringItems: RecurringBuildingExpense[] = [];
@@ -856,7 +897,14 @@ export class BuildingExpensesPageComponent implements OnInit, OnChanges {
       distributionType: item.distributionType,
       targetUnitId: item.targetUnitId ?? '',
       notes: item.notes,
-      paidByReserveFund: item.paidByReserveFund
+      paidByReserveFund: item.paidByReserveFund,
+      supplierId: item.supplierId ?? '',
+      invoiceNumber: item.invoiceNumber ?? '',
+      invoiceTimbrado: item.invoiceTimbrado ?? '',
+      dueDate: item.dueDate ?? '',
+      vatRate: item.vatRate === null || item.vatRate === undefined ? '' : String(item.vatRate),
+      paidAt: item.paidAt,
+      paidFromAccountId: item.paidFromAccountId
     };
     this.planByBuilding.clear();
     this.refreshRubros();
@@ -879,7 +927,61 @@ export class BuildingExpensesPageComponent implements OnInit, OnChanges {
 
   // Arma la lista de rubros del edificio del formulario: subrubros de gastos activos con categoría (más el que el gasto ya tiene, aunque
   // se haya desactivado). Sin Finanzas en ese edificio no hay rubros y el campo no se muestra.
+  // Proveedores de la empresa del edificio elegido (se leen una vez por empresa).
+  private refreshSuppliers(): void {
+    const companyId = this.buildings.find((b) => b.id === this.form.buildingId)?.companyId ?? '';
+    if (!companyId) {
+      this.suppliers = [];
+      return;
+    }
+
+    const cached = this.suppliersByCompany.get(companyId);
+    if (cached) {
+      this.suppliers = cached;
+      return;
+    }
+
+    this.suppliersApi.getAll({ companyId, pageSize: 200 }).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: (page) => {
+        this.suppliersByCompany.set(companyId, page.items);
+        if (this.buildings.find((b) => b.id === this.form.buildingId)?.companyId === companyId) {
+          this.suppliers = page.items;
+          this.cdr.markForCheck();
+        }
+      },
+      // Sin acceso a la lista, el proveedor se escribe a mano como siempre.
+      error: () => {
+        this.suppliers = [];
+        this.cdr.markForCheck();
+      }
+    });
+  }
+
+  // Los activos y, al editar, el que ya tenía el gasto aunque se haya desactivado.
+  get supplierChoices(): Supplier[] {
+    return this.suppliers.filter((s) => s.isActive || s.id === this.form.supplierId);
+  }
+
+  // El edificio del formulario tiene Finanzas: solo entonces el vencimiento y el IVA tienen efecto.
+  get financeOnForm(): boolean {
+    return !!this.form.buildingId && this.financeAccess.buildings().some((b) => b.buildingId === this.form.buildingId);
+  }
+
+  // Elegir un proveedor toma su nombre y propone el vencimiento con su plazo de pago habitual (si todavía no hay uno).
+  onSupplierChange(): void {
+    const supplier = this.suppliers.find((s) => s.id === this.form.supplierId);
+    if (!supplier) return;
+
+    this.form.supplierName = supplier.name;
+    if (this.financeOnForm && !this.form.dueDate && supplier.paymentTermDays !== null && this.form.expenseDate) {
+      const due = new Date(`${this.form.expenseDate}T00:00:00`);
+      due.setDate(due.getDate() + supplier.paymentTermDays);
+      this.form.dueDate = `${due.getFullYear()}-${String(due.getMonth() + 1).padStart(2, '0')}-${String(due.getDate()).padStart(2, '0')}`;
+    }
+  }
+
   private refreshRubros(): void {
+    this.refreshSuppliers();
     const buildingId = this.form.buildingId;
     const available = !!buildingId && this.financeAccess.buildings().some((b) => b.buildingId === buildingId);
     if (!available) {
@@ -1109,7 +1211,14 @@ export class BuildingExpensesPageComponent implements OnInit, OnChanges {
       targetUnitId: this.requiresTargetUnit ? this.form.targetUnitId || null : null,
       notes: this.form.notes.trim(),
       paidByReserveFund: this.form.paidByReserveFund,
-      ledgerCategoryId: this.form.ledgerCategoryId || null
+      ledgerCategoryId: this.form.ledgerCategoryId || null,
+      supplierId: this.form.supplierId || null,
+      invoiceNumber: this.form.invoiceNumber.trim() || null,
+      invoiceTimbrado: this.form.invoiceTimbrado.trim() || null,
+      dueDate: this.form.dueDate || null,
+      vatRate: this.form.vatRate !== '' ? Number(this.form.vatRate) : null,
+      paidAt: this.form.dueDate ? this.form.paidAt : null,
+      paidFromAccountId: this.form.dueDate ? this.form.paidFromAccountId : null
     };
 
     const validationError = this.validateForm(request);
@@ -1458,7 +1567,15 @@ export class BuildingExpensesPageComponent implements OnInit, OnChanges {
       distributionType: 'ByCoefficient' as BuildingExpenseDistributionType,
       targetUnitId: '',
       notes: '',
-      paidByReserveFund: false
+      paidByReserveFund: false,
+      supplierId: '',
+      invoiceNumber: '',
+      invoiceTimbrado: '',
+      dueDate: '',
+      vatRate: '',
+      // El pago de una factura se registra desde Cuentas por pagar; al editar se conserva el que ya tenía.
+      paidAt: null as string | null,
+      paidFromAccountId: null as string | null
     };
   }
 
@@ -1485,6 +1602,9 @@ export class BuildingExpensesPageComponent implements OnInit, OnChanges {
     if (form.supplierName.length > 160) return 'El proveedor no puede superar los 160 caracteres.';
     if (form.notes.length > 500) return 'Las notas no pueden superar los 500 caracteres.';
     if (form.amount <= 0) return 'El monto debe ser mayor que cero.';
+    if ((form.invoiceNumber?.length ?? 0) > 50) return 'El número de factura no puede superar los 50 caracteres.';
+    if ((form.invoiceTimbrado?.length ?? 0) > 20) return 'El timbrado no puede superar los 20 caracteres.';
+    if (form.dueDate && form.dueDate < form.expenseDate) return 'El vencimiento no puede ser anterior a la fecha del gasto.';
     if (form.distributionType === 'ManualGroup') return 'La distribucion por grupo manual todavia no esta disponible.';
     if (form.distributionType === 'IndividualUnit' && !form.targetUnitId) return 'La unidad destino es obligatoria cuando la distribucion es por unidad individual.';
     const period = this.periods.find((item) => item.id === form.expensePeriodId);

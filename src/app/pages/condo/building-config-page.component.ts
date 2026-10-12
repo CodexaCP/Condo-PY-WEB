@@ -14,6 +14,7 @@ import { ConfigClosingSectionComponent } from './config-closing-section.componen
 import { ConfigFundsSectionComponent } from './config-funds-section.component';
 import { ConfigLateFeeSectionComponent } from './config-late-fee-section.component';
 import { ConfigNoticesSectionComponent } from './config-notices-section.component';
+import { ConfigSuppliersSectionComponent } from './config-suppliers-section.component';
 import { ConfigTaxesSectionComponent } from './config-taxes-section.component';
 import { ConfigBuildingPickerComponent } from './config-building-picker.component';
 
@@ -49,7 +50,7 @@ const STATUS_SEVERITIES: Record<ConfigSectionStatus, 'success' | 'warn' | 'info'
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     CommonModule, RouterLink, Card, Message, Tag, ConfigBuildingPickerComponent, ConfigAuditSectionComponent, ConfigClosingSectionComponent,
-    ConfigFundsSectionComponent, ConfigLateFeeSectionComponent, ConfigNoticesSectionComponent, ConfigTaxesSectionComponent
+    ConfigFundsSectionComponent, ConfigLateFeeSectionComponent, ConfigNoticesSectionComponent, ConfigSuppliersSectionComponent, ConfigTaxesSectionComponent
   ],
   template: `
     <p-card styleClass="app-page-card">
@@ -123,6 +124,7 @@ const STATUS_SEVERITIES: Record<ConfigSectionStatus, 'success' | 'warn' | 'info'
             <app-config-funds-section *ngSwitchCase="'funds'" [buildingId]="o.buildingId"></app-config-funds-section>
             <app-config-notices-section *ngSwitchCase="'documents'" [buildingId]="o.buildingId"></app-config-notices-section>
             <app-config-taxes-section *ngSwitchCase="'taxes'" [buildingId]="o.buildingId"></app-config-taxes-section>
+            <app-config-suppliers-section *ngSwitchCase="'suppliers'" [companyId]="companyId"></app-config-suppliers-section>
             <ng-container *ngSwitchCase="auditKey">
               <app-config-audit-section *ngIf="o.canViewAudit" [buildingId]="o.buildingId" [sections]="o.sections"></app-config-audit-section>
             </ng-container>
@@ -166,9 +168,11 @@ export class BuildingConfigPageComponent {
 
   readonly auditKey = AUDIT_SECTION;
   // Claves de las secciones «self» que ya tienen su pantalla dentro del Centro.
-  private readonly panelKeys = new Set<string>(['closing', 'late-fee', 'funds', 'documents', 'taxes']);
+  private readonly panelKeys = new Set<string>(['closing', 'late-fee', 'funds', 'documents', 'taxes', 'suppliers']);
 
   buildingId = '';
+  // Empresa del edificio: los proveedores son de la empresa.
+  companyId = '';
   overview: BuildingConfigOverview | null = null;
   loading = false;
   noBuilding = false;
@@ -221,6 +225,7 @@ export class BuildingConfigPageComponent {
 
     this.noBuilding = false;
     this.buildingId = building.id;
+    this.companyId = building.companyId ?? '';
     this.load();
   }
 

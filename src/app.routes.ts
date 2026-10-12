@@ -297,6 +297,14 @@ export const appRoutes: Routes = [
                 loadComponent: () => import('./app/pages/condo/finance-reserve-fund-page.component').then(m => m.FinanceReserveFundPageComponent)
             },
             {
+                path: 'finance/payables',
+                loadComponent: () => import('./app/pages/condo/finance-payables-page.component').then(m => m.FinancePayablesPageComponent)
+            },
+            {
+                path: 'finance/vat-purchases',
+                loadComponent: () => import('./app/pages/condo/finance-vat-purchases-page.component').then(m => m.FinanceVatPurchasesPageComponent)
+            },
+            {
                 path: 'finance/settings',
                 loadComponent: () => import('./app/pages/condo/finance-settings-page.component').then(m => m.FinanceSettingsPageComponent)
             },

@@ -12,6 +12,7 @@ import {
   CreateBuildingExpenseCreditNoteRequest,
   CreateBuildingExpenseRequest
 } from './models';
+import { RegisterExpensePaymentRequest } from './building-config.models';
 
 @Injectable({ providedIn: 'root' })
 export class BuildingExpensesApiService {
@@ -41,6 +42,15 @@ export class BuildingExpensesApiService {
 
   delete(id: string): Observable<void> {
     return this.http.delete<void>(`${API_BASE_URL}/building-expenses/${id}`);
+  }
+
+  // Cuentas por pagar: registra el pago de una factura con vencimiento (entra a la caja en la fecha del pago) o lo deshace.
+  registerPayment(id: string, request: RegisterExpensePaymentRequest): Observable<BuildingExpense> {
+    return this.http.put<BuildingExpense>(`${API_BASE_URL}/building-expenses/${id}/payment`, request);
+  }
+
+  undoPayment(id: string): Observable<BuildingExpense> {
+    return this.http.delete<BuildingExpense>(`${API_BASE_URL}/building-expenses/${id}/payment`);
   }
 
   downloadImportTemplate(buildingId: string): Observable<Blob> {

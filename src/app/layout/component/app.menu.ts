@@ -105,6 +105,8 @@ export class AppMenu {
             { label: 'Presupuesto', icon: 'pi pi-fw pi-calendar-plus', routerLink: ['/finance/budget'] },
             { label: 'Presupuesto vs. real', icon: 'pi pi-fw pi-chart-bar', routerLink: ['/finance/budget-vs-actual'] },
             { label: 'Fondo de reserva', icon: 'pi pi-fw pi-shield', routerLink: ['/finance/reserve-fund'] },
+            { label: 'Cuentas por pagar', icon: 'pi pi-fw pi-credit-card', routerLink: ['/finance/payables'] },
+            { label: 'Libro de compras (IVA)', icon: 'pi pi-fw pi-book', routerLink: ['/finance/vat-purchases'] },
             { label: 'Configuración', icon: 'pi pi-fw pi-cog', routerLink: ['/finance/settings'] }
         ]);
 
