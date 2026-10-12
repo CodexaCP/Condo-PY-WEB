@@ -179,6 +179,9 @@ export interface Unit {
   floor: string;
   coefficient: number;
   isActive: boolean;
+  // Exoneración de mora (Centro de configuración): la unidad no acumula mora automática mientras esté marcada.
+  lateFeeExempt?: boolean;
+  lateFeeExemptReason?: string | null;
 }
 
 export type PersonType = 'Natural' | 'Legal';

@@ -9,6 +9,7 @@ import { MessageService } from 'primeng/api';
 import { extractApiErrorMessage } from '../../api/api-error.util';
 import { FinanceApiService } from '../../api/finance-api.service';
 import { FinanceBudget, FinanceBudgetCell, FinanceBudgetRow, FinanceBuildingAccess, LedgerCategoryType } from '../../api/models';
+import { FinanceBudgetAlertsComponent } from './finance-budget-alerts.component';
 import { FinanceBuildingPickerComponent } from './finance-building-picker.component';
 import { FinanceExportButtonComponent, FinanceExportParams } from './finance-export-button.component';
 import { classifyFinanceError, FinanceErrorKind, GsPipe, monthShort, NumPipe } from './finance-format';
@@ -27,7 +28,7 @@ interface BudgetGroup {
   standalone: true,
   selector: 'app-finance-budget-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, FormsModule, Button, Card, Message, GsPipe, NumPipe, FinanceBuildingPickerComponent, FinanceExportButtonComponent, FinanceStateComponent],
+  imports: [CommonModule, FormsModule, Button, Card, Message, GsPipe, NumPipe, FinanceBudgetAlertsComponent, FinanceBuildingPickerComponent, FinanceExportButtonComponent, FinanceStateComponent],
   template: `
     <p-card styleClass="app-page-card">
       <div class="app-toolbar">
@@ -70,6 +71,7 @@ interface BudgetGroup {
           <label class="check"><input type="checkbox" [(ngModel)]="overwrite" /> <span>Reemplazar lo ya cargado</span></label>
         </div>
         <p-message *ngIf="!canEdit" severity="info" text="El presupuesto lo carga el Administrador de empresa; acá lo podés consultar."></p-message>
+        <app-finance-budget-alerts [buildingId]="b.buildingId"></app-finance-budget-alerts>
         <p class="muted small" *ngIf="canEdit && dirty">Hay cambios sin guardar. Guardalos o descartalos para cambiar de ejercicio o usar los atajos.</p>
         <p class="muted small">
           Ejercicio {{ b.fiscalYear }}: {{ b.fiscalYearStart | date: 'dd/MM/yyyy' }} al {{ b.fiscalYearEnd | date: 'dd/MM/yyyy' }}. Importes en guaraníes por mes. Los fondos no llevan presupuesto.

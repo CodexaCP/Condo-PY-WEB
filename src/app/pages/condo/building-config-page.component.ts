@@ -10,9 +10,14 @@ import { BuildingConfigApiService } from '../../api/building-config-api.service'
 import { BuildingConfigOverview, ConfigSection, ConfigSectionStatus } from '../../api/building-config.models';
 import { Building } from '../../api/models';
 import { ConfigAuditSectionComponent } from './config-audit-section.component';
+import { ConfigClosingSectionComponent } from './config-closing-section.component';
+import { ConfigFundsSectionComponent } from './config-funds-section.component';
+import { ConfigLateFeeSectionComponent } from './config-late-fee-section.component';
+import { ConfigNoticesSectionComponent } from './config-notices-section.component';
+import { ConfigTaxesSectionComponent } from './config-taxes-section.component';
 import { ConfigBuildingPickerComponent } from './config-building-picker.component';
 
-// Secciones «self» que se editan dentro del propio Centro (se abren con ?section=<clave>); el historial es una sección más.
+// Las secciones «self» se editan dentro del propio Centro (se abren con ?section=<clave>); el historial es una más.
 export const AUDIT_SECTION = 'audit';
 
 // Pantallas de Finanzas a las que lleva una sección con enlace «finance» (según su pestaña).
@@ -42,7 +47,10 @@ const STATUS_SEVERITIES: Record<ConfigSectionStatus, 'success' | 'warn' | 'info'
   standalone: true,
   selector: 'app-building-config-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, RouterLink, Card, Message, Tag, ConfigBuildingPickerComponent, ConfigAuditSectionComponent],
+  imports: [
+    CommonModule, RouterLink, Card, Message, Tag, ConfigBuildingPickerComponent, ConfigAuditSectionComponent, ConfigClosingSectionComponent,
+    ConfigFundsSectionComponent, ConfigLateFeeSectionComponent, ConfigNoticesSectionComponent, ConfigTaxesSectionComponent
+  ],
   template: `
     <p-card styleClass="app-page-card">
       <div class="app-toolbar">
@@ -109,7 +117,16 @@ const STATUS_SEVERITIES: Record<ConfigSectionStatus, 'success' | 'warn' | 'info'
 
         <ng-container *ngIf="section">
           <button type="button" class="back" (click)="openSection(null)">← Volver al Centro</button>
-          <app-config-audit-section *ngIf="section === auditKey && o.canViewAudit" [buildingId]="o.buildingId" [sections]="o.sections"></app-config-audit-section>
+          <ng-container [ngSwitch]="section">
+            <app-config-closing-section *ngSwitchCase="'closing'" [buildingId]="o.buildingId"></app-config-closing-section>
+            <app-config-late-fee-section *ngSwitchCase="'late-fee'" [buildingId]="o.buildingId"></app-config-late-fee-section>
+            <app-config-funds-section *ngSwitchCase="'funds'" [buildingId]="o.buildingId"></app-config-funds-section>
+            <app-config-notices-section *ngSwitchCase="'documents'" [buildingId]="o.buildingId"></app-config-notices-section>
+            <app-config-taxes-section *ngSwitchCase="'taxes'" [buildingId]="o.buildingId"></app-config-taxes-section>
+            <ng-container *ngSwitchCase="auditKey">
+              <app-config-audit-section *ngIf="o.canViewAudit" [buildingId]="o.buildingId" [sections]="o.sections"></app-config-audit-section>
+            </ng-container>
+          </ng-container>
         </ng-container>
       </ng-container>
     </p-card>
@@ -149,7 +166,7 @@ export class BuildingConfigPageComponent {
 
   readonly auditKey = AUDIT_SECTION;
   // Claves de las secciones «self» que ya tienen su pantalla dentro del Centro.
-  private readonly panelKeys = new Set<string>();
+  private readonly panelKeys = new Set<string>(['closing', 'late-fee', 'funds', 'documents', 'taxes']);
 
   buildingId = '';
   overview: BuildingConfigOverview | null = null;
@@ -160,7 +177,10 @@ export class BuildingConfigPageComponent {
 
   constructor() {
     this.route.queryParamMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(params => {
+      const previous = this.section;
       this.section = params.get('section');
+      // Al volver de una sección se recarga el resumen: lo que se guardó cambia su estado.
+      if (previous && !this.section && this.buildingId) this.load();
       this.cdr.markForCheck();
     });
   }

@@ -6,6 +6,7 @@ import { RouterLink } from '@angular/router';
 import { Card } from 'primeng/card';
 import { FinanceApiService } from '../../api/finance-api.service';
 import { BudgetStatus, FinanceBudgetTotals, FinanceBudgetVsActual, FinanceBudgetVsActualLine, FinanceBuildingAccess } from '../../api/models';
+import { FinanceBudgetAlertsComponent } from './finance-budget-alerts.component';
 import { FinanceBuildingPickerComponent } from './finance-building-picker.component';
 import { FinanceExportButtonComponent, FinanceExportParams } from './finance-export-button.component';
 import { classifyFinanceError, FinanceErrorKind, GsPipe, monthLabel, NumPipe } from './finance-format';
@@ -30,7 +31,7 @@ const STATUS_LABEL: Record<BudgetStatus, string> = {
   standalone: true,
   selector: 'app-finance-budget-vs-actual-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, FormsModule, RouterLink, Card, GsPipe, NumPipe, FinanceBuildingPickerComponent, FinanceExportButtonComponent, FinanceStateComponent],
+  imports: [CommonModule, FormsModule, RouterLink, Card, GsPipe, NumPipe, FinanceBudgetAlertsComponent, FinanceBuildingPickerComponent, FinanceExportButtonComponent, FinanceStateComponent],
   template: `
     <p-card styleClass="app-page-card">
       <div class="app-toolbar">
@@ -60,6 +61,8 @@ const STATUS_LABEL: Record<BudgetStatus, string> = {
           <span><i class="dot red"></i> Desvío mayor a {{ d.amberThresholdPct }} %</span>
           <span class="basis">Gastos: <strong>{{ d.expenseBasis.toLowerCase() }}</strong> · Ingresos: <strong>{{ d.incomeBasis.toLowerCase() }}</strong> · datos al {{ d.asOf | date: 'dd/MM/yyyy' }}</span>
         </div>
+
+        <app-finance-budget-alerts [buildingId]="d.buildingId" (saved)="reload()"></app-finance-budget-alerts>
 
         <p class="empty" *ngIf="!incomeGroups.length && !expenseGroups.length">
           Todavía no hay presupuesto cargado ni movimientos en este ejercicio.
@@ -199,6 +202,9 @@ export class FinanceBudgetVsActualPageComponent {
   }
 
   onError(err: unknown): void { this.setError(err); }
+
+  // Recalcula el semáforo (por ejemplo, después de cambiar el umbral).
+  reload(): void { this.load(); }
 
   onMonth(value: string): void {
     if (!value || value === this.monthValue) return;

@@ -133,8 +133,11 @@ interface BuildingGroup {
               <button class="row-link" (click)="goToEdit(u.id)" [disabled]="!canEdit">{{ u.code }}</button>
               <span class="floor-col">{{ u.floor }}</span>
               <span class="coef-col">{{ u.coefficient | number:'1.2-6' }}</span>
-              <p-tag [value]="u.isActive ? 'Activo' : 'Inactivo'"
-                     [severity]="u.isActive ? 'success' : 'secondary'"></p-tag>
+              <span class="state-col">
+                <p-tag [value]="u.isActive ? 'Activo' : 'Inactivo'"
+                       [severity]="u.isActive ? 'success' : 'secondary'"></p-tag>
+                <p-tag *ngIf="u.lateFeeExempt" value="Sin mora" severity="warn" [title]="'Exonerada de mora: ' + (u.lateFeeExemptReason || '')"></p-tag>
+              </span>
             </div>
           </div>
         </div>
@@ -192,7 +195,8 @@ interface BuildingGroup {
       background:rgba(19,133,182,0.06); padding:0.15rem 0.6rem; border-radius:20px;
     }
 
-    .grid-unit { grid-template-columns: 1fr 0.7fr 1fr 0.65fr; }
+    .grid-unit { grid-template-columns: 1fr 0.7fr 1fr 1fr; }
+    .state-col { display: flex; gap: 0.35rem; flex-wrap: wrap; align-items: center; }
     .floor-col { color:var(--brand-muted); font-size:0.9rem; }
     .coef-col  { font-family:monospace; font-size:0.88rem; color:var(--brand-ink); }
 

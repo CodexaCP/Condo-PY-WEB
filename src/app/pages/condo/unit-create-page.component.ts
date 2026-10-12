@@ -14,11 +14,12 @@ import { BuildingsApiService } from '../../api/buildings-api.service';
 import { UnitsApiService } from '../../api/units-api.service';
 import { Building } from '../../api/models';
 import { AuthService } from '../../auth/auth.service';
+import { UnitLateFeeExemptionComponent } from './unit-late-fee-exemption.component';
 
 @Component({
   standalone: true,
   selector: 'app-unit-create-page',
-  imports: [CommonModule, FormsModule, Button, Card, Message, Tooltip],
+  imports: [CommonModule, FormsModule, Button, Card, Message, Tooltip, UnitLateFeeExemptionComponent],
   template: `
     <p-card styleClass="app-page-card">
 
@@ -137,6 +138,14 @@ import { AuthService } from '../../auth/auth.service';
               <span class="coef-suffix">de 1.0</span>
             </div>
           </div>
+        </section>
+
+        <!-- ══ MORA (SuperAdmin y Administrador de empresa, al editar) ═══ -->
+        <section class="form-section" *ngIf="isEditing && canExempt">
+          <h2 class="section-title">Mora</h2>
+          <p class="section-desc">Una unidad exonerada no acumula mora automática. Queda registrado quién la exoneró y por qué.</p>
+          <app-unit-late-fee-exemption [unitId]="editingId" [exempt]="lateFeeExempt" [reason]="lateFeeExemptReason"
+                                       (saved)="onExemptionSaved($event)"></app-unit-late-fee-exemption>
         </section>
 
         <!-- ══ ELIMINAR DEFINITIVAMENTE (solo SuperAdmin, al editar) ══ -->
@@ -293,7 +302,12 @@ export class UnitCreatePageComponent implements OnInit {
 
   form = this.emptyForm();
 
+  lateFeeExempt = false;
+  lateFeeExemptReason: string | null = null;
+
   get isSuperAdmin(): boolean { return this.auth.hasRole('SuperAdmin'); }
+  // Exonerar de mora: lo mismo que permite el backend (SuperAdmin y Administrador de empresa).
+  get canExempt(): boolean { return this.auth.hasRole('SuperAdmin', 'CompanyAdmin'); }
 
   ngOnInit(): void {
     const id = this.route.snapshot.paramMap.get('id');
@@ -419,6 +433,11 @@ export class UnitCreatePageComponent implements OnInit {
         this.cdr.markForCheck();
       }
     });
+  }
+
+  onExemptionSaved(state: { exempt: boolean; reason: string | null }): void {
+    this.lateFeeExempt = state.exempt;
+    this.lateFeeExemptReason = state.reason;
   }
 
   cancel(): void { this.router.navigate(['/units']); }
