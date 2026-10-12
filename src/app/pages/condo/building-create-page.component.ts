@@ -970,6 +970,9 @@ export class BuildingCreatePageComponent implements OnInit {
 
   ngOnInit(): void {
     const id = this.route.snapshot.paramMap.get('id');
+    // El Centro de configuración abre la ficha en la pestaña que corresponde (?tab=legal, billing, accounting...).
+    const requestedTab = this.route.snapshot.queryParamMap.get('tab');
+    if (requestedTab && TABS.some(t => t.key === requestedTab)) this.activeTab = requestedTab as TabKey;
 
     forkJoin({
       companies:    this.isSuperAdmin ? this.companiesApi.getAll() : of([] as Company[]),

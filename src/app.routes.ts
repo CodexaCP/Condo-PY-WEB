@@ -266,6 +266,11 @@ export const appRoutes: Routes = [
                 path: 'my-plan',
                 loadComponent: () => import('./app/pages/condo/my-plan-page.component').then(m => m.MyPlanPageComponent)
             },
+            // ── Centro de configuración del edificio ─────────────────────
+            {
+                path: 'building-config',
+                loadComponent: () => import('./app/pages/condo/building-config-page.component').then(m => m.BuildingConfigPageComponent)
+            },
             // ── Finanzas del edificio ─────────────────────────────────────
             {
                 path: 'finance/dashboard',

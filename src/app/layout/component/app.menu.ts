@@ -129,6 +129,7 @@ export class AppMenu {
                         group('Configuración', 'pi pi-fw pi-cog', 'configuracion', [
                             { label: 'Condominios', icon: 'pi pi-fw pi-map', routerLink: ['/condominiums'] },
                             { label: 'Unidades', icon: 'pi pi-fw pi-th-large', routerLink: ['/units'] },
+                            { label: 'Centro de configuración', icon: 'pi pi-fw pi-sliders-h', routerLink: ['/building-config'] },
                             { label: 'Finanzas por edificio', icon: 'pi pi-fw pi-calculator', routerLink: ['/finance-admin'] },
                             { label: 'Marketplace por edificio', icon: 'pi pi-fw pi-shop', routerLink: ['/marketplace-admin'] },
                             { label: 'Publicidad por edificio', icon: 'pi pi-fw pi-megaphone', routerLink: ['/ad-buildings'] },
@@ -164,6 +165,7 @@ export class AppMenu {
                     items: [
                         group('Inmuebles y personas', 'pi pi-fw pi-home', 'inmuebles', [
                             { label: 'Edificios', icon: 'pi pi-fw pi-home', routerLink: ['/buildings'] },
+                            { label: 'Centro de configuración', icon: 'pi pi-fw pi-sliders-h', routerLink: ['/building-config'] },
                             ...(isCompanyAdmin ? [{ label: 'Condominios', icon: 'pi pi-fw pi-map', routerLink: ['/condominiums'] }] : []),
                             { label: 'Unidades', icon: 'pi pi-fw pi-th-large', routerLink: ['/units'] },
                             { label: 'Asignaciones', icon: 'pi pi-fw pi-link', routerLink: ['/assignments'] },
