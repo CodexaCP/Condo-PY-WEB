@@ -172,7 +172,7 @@ export class BuildingConfigPageComponent {
 
   readonly auditKey = AUDIT_SECTION;
   // Claves de las secciones «self» que ya tienen su pantalla dentro del Centro.
-  private readonly panelKeys = new Set<string>(['closing', 'late-fee', 'funds', 'documents', 'taxes', 'suppliers']);
+  private readonly panelKeys = new Set<string>(['closing', 'late-fee', 'funds', 'documents', 'taxes', 'suppliers', 'payments']);
 
   buildingId = '';
   // Empresa del edificio: los proveedores son de la empresa.
