@@ -25,7 +25,8 @@ export const AUDIT_SECTION = 'audit';
 const FINANCE_LINKS: Record<string, string> = {
   settings: '/finance/settings',
   budget: '/finance/budget',
-  reconciliation: '/finance/reconciliation'
+  reconciliation: '/finance/reconciliation',
+  accounting: '/finance/accounting'
 };
 
 const STATUS_LABELS: Record<ConfigSectionStatus, string> = {

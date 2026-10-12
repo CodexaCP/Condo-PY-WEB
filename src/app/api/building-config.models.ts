@@ -501,3 +501,104 @@ export interface ReconciliationItemRef {
   sourceType: LedgerSourceType;
   sourceId: string;
 }
+
+// ── Asientos sugeridos y contrapartidas contables ─────────────────────────────
+
+// Una cuenta del plan que se puede elegir como contrapartida (cuenta final de activo o de fondos).
+export interface AccountingPlanOption {
+  id: string;
+  code: string;
+  externalCode: string | null;
+  name: string;
+  type: 'Asset' | 'Fund';
+  groupName: string;
+  isActive: boolean;
+}
+
+// Una cuenta financiera del edificio con la cuenta del plan que la representa.
+export interface AccountingRoleAccount {
+  financialAccountId: string;
+  name: string;
+  type: 'Cash' | 'Bank' | 'ReserveFund';
+  isActive: boolean;
+  ledgerCategoryId: string | null;
+  code: string | null;
+  categoryName: string | null;
+  // Sugerencia por el nombre y tipo de la cuenta; no se aplica sola.
+  suggestedCategoryId: string | null;
+}
+
+export interface AccountingRoles {
+  buildingId: string;
+  financeAvailable: boolean;
+  canEdit: boolean;
+  accounts: AccountingRoleAccount[];
+  vatCreditCategoryId: string | null;
+  vatCreditCode: string | null;
+  vatCreditName: string | null;
+  suggestedVatCreditCategoryId: string | null;
+  options: AccountingPlanOption[];
+  // Todas las cuentas financieras activas y el IVA crédito tienen su cuenta del plan.
+  isComplete: boolean;
+}
+
+export interface UpdateAccountingRolesRequest {
+  // Solo las cuentas que vienen se modifican; null en ledgerCategoryId quita la asignación.
+  accounts: { financialAccountId: string; ledgerCategoryId: string | null }[];
+  setVatCredit: boolean;
+  vatCreditCategoryId: string | null;
+}
+
+export interface AccountingLine {
+  // Nula cuando falta la asignación (renglón marcado).
+  categoryId: string | null;
+  code: string;
+  externalCode: string | null;
+  name: string;
+  debit: number;
+  credit: number;
+  // Financial (banco, caja o fondo), Rubro (ingreso o gasto) o VatCredit.
+  kind: 'Financial' | 'Rubro' | 'VatCredit';
+  missing: boolean;
+}
+
+export interface AccountingEntry {
+  number: number;
+  date: string;
+  description: string;
+  thirdParty: string;
+  reference: string;
+  sourceType: LedgerSourceType;
+  sourceId: string;
+  lines: AccountingLine[];
+  debit: number;
+  credit: number;
+  // Todos los renglones tienen cuenta del plan. Un asiento incompleto no se da por cuadrado para el contador.
+  isComplete: boolean;
+  issues: string[];
+}
+
+export interface AccountingTotal {
+  categoryId: string | null;
+  code: string;
+  externalCode: string | null;
+  name: string;
+  debit: number;
+  credit: number;
+  missing: boolean;
+}
+
+export interface AccountingEntries {
+  buildingId: string;
+  buildingName: string;
+  from: string;
+  to: string;
+  entries: AccountingEntry[];
+  totals: AccountingTotal[];
+  entryCount: number;
+  incompleteCount: number;
+  totalDebit: number;
+  totalCredit: number;
+  // Cuentas financieras y rubros sin cuenta del plan que dejaron incompletos a algunos asientos.
+  pending: string[];
+}

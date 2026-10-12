@@ -108,6 +108,7 @@ export class AppMenu {
             { label: 'Cuentas por pagar', icon: 'pi pi-fw pi-credit-card', routerLink: ['/finance/payables'] },
             { label: 'Libro de compras (IVA)', icon: 'pi pi-fw pi-book', routerLink: ['/finance/vat-purchases'] },
             { label: 'Conciliación bancaria', icon: 'pi pi-fw pi-check-square', routerLink: ['/finance/reconciliation'] },
+            { label: 'Asientos contables', icon: 'pi pi-fw pi-sort-alt', routerLink: ['/finance/accounting'] },
             { label: 'Configuración', icon: 'pi pi-fw pi-cog', routerLink: ['/finance/settings'] }
         ]);
 
