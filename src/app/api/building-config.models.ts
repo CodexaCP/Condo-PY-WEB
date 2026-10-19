@@ -605,6 +605,53 @@ export interface AccountingEntries {
   pending: string[];
 }
 
+// ── Libros contables ──────────────────────────────────────────────────────────
+
+export type AccountingBookHolder = 'Consortium' | 'AdminCompany';
+
+// Datos con que se completa el encabezado del Libro Diario cuando el titular no los pisa.
+export interface AccountingBookDefaults {
+  legalName: string | null;
+  ruc: string | null;
+  address: string | null;
+}
+
+export interface AccountingBooks {
+  buildingId: string;
+  financeAvailable: boolean;
+  canEdit: boolean;
+  // Ya se guardó la configuración alguna vez (sin guardar rige el consorcio con los datos de la ficha).
+  configured: boolean;
+  holder: AccountingBookHolder;
+  // Lo que cargó el usuario; vacío = se usa el dato por defecto del titular.
+  holderLegalName: string | null;
+  holderRuc: string | null;
+  holderAddress: string | null;
+  accountantName: string | null;
+  accountantRegistration: string | null;
+  bookNumber: string | null;
+  rubricDate: string | null;
+  authorizedFolios: number | null;
+  usedFolios: number | null;
+  consortiumDefaults: AccountingBookDefaults;
+  adminCompanyDefaults: AccountingBookDefaults;
+  // Lo que saldría hoy en el encabezado del Diario.
+  effective: AccountingBookDefaults;
+}
+
+export interface UpdateAccountingBooksRequest {
+  holder: AccountingBookHolder;
+  holderLegalName: string | null;
+  holderRuc: string | null;
+  holderAddress: string | null;
+  accountantName: string | null;
+  accountantRegistration: string | null;
+  bookNumber: string | null;
+  rubricDate: string | null;
+  authorizedFolios: number | null;
+  usedFolios: number | null;
+}
+
 // ── Informe de asamblea ───────────────────────────────────────────────────────
 
 export interface AssemblyReportRubro {

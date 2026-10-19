@@ -3,6 +3,7 @@ import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { API_BASE_URL } from '../config/api.config';
 import {
+  AccountingBooks,
   BudgetAlerts,
   BuildingConfigOverview,
   ConfigAuditFilters,
@@ -12,6 +13,7 @@ import {
   NoticeRules,
   PeriodClosing,
   UnitLateFeeExemptionRequest,
+  UpdateAccountingBooksRequest,
   UpdateFundPolicyRequest,
   UpdateLateFeePolicyRequest,
   UpdateNoticeRuleItem,
@@ -98,6 +100,16 @@ export class BuildingConfigApiService {
 
   updateNoticeRules(buildingId: string, rules: UpdateNoticeRuleItem[]): Observable<NoticeRules> {
     return this.http.put<NoticeRules>(this.url(buildingId, 'notice-rules'), { rules });
+  }
+
+  // ── Libros contables ──
+
+  getBooks(buildingId: string): Observable<AccountingBooks> {
+    return this.http.get<AccountingBooks>(this.url(buildingId, 'books'));
+  }
+
+  updateBooks(buildingId: string, request: UpdateAccountingBooksRequest): Observable<AccountingBooks> {
+    return this.http.put<AccountingBooks>(this.url(buildingId, 'books'), request);
   }
 
   // ── Impuestos ──

@@ -10,6 +10,7 @@ import { BuildingConfigApiService } from '../../api/building-config-api.service'
 import { BuildingConfigOverview, ConfigSection, ConfigSectionStatus } from '../../api/building-config.models';
 import { Building } from '../../api/models';
 import { ConfigAuditSectionComponent } from './config-audit-section.component';
+import { ConfigBooksSectionComponent } from './config-books-section.component';
 import { ConfigClosingSectionComponent } from './config-closing-section.component';
 import { ConfigFundsSectionComponent } from './config-funds-section.component';
 import { ConfigLateFeeSectionComponent } from './config-late-fee-section.component';
@@ -52,7 +53,7 @@ const STATUS_SEVERITIES: Record<ConfigSectionStatus, 'success' | 'warn' | 'info'
   selector: 'app-building-config-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
-    CommonModule, RouterLink, Card, Message, Tag, ConfigBuildingPickerComponent, ConfigAuditSectionComponent, ConfigClosingSectionComponent,
+    CommonModule, RouterLink, Card, Message, Tag, ConfigBuildingPickerComponent, ConfigAuditSectionComponent, ConfigBooksSectionComponent, ConfigClosingSectionComponent,
     ConfigFundsSectionComponent, ConfigLateFeeSectionComponent, ConfigNoticesSectionComponent, ConfigPaymentsSectionComponent, ConfigSuppliersSectionComponent, ConfigTaxesSectionComponent
   ],
   template: `
@@ -123,6 +124,7 @@ const STATUS_SEVERITIES: Record<ConfigSectionStatus, 'success' | 'warn' | 'info'
           <button type="button" class="back" (click)="openSection(null)">← Volver al Centro</button>
           <ng-container [ngSwitch]="section">
             <app-config-closing-section *ngSwitchCase="'closing'" [buildingId]="o.buildingId"></app-config-closing-section>
+            <app-config-books-section *ngSwitchCase="'books'" [buildingId]="o.buildingId"></app-config-books-section>
             <app-config-late-fee-section *ngSwitchCase="'late-fee'" [buildingId]="o.buildingId"></app-config-late-fee-section>
             <app-config-funds-section *ngSwitchCase="'funds'" [buildingId]="o.buildingId"></app-config-funds-section>
             <app-config-notices-section *ngSwitchCase="'documents'" [buildingId]="o.buildingId"></app-config-notices-section>
@@ -172,7 +174,7 @@ export class BuildingConfigPageComponent {
 
   readonly auditKey = AUDIT_SECTION;
   // Claves de las secciones «self» que ya tienen su pantalla dentro del Centro.
-  private readonly panelKeys = new Set<string>(['closing', 'late-fee', 'funds', 'documents', 'taxes', 'suppliers', 'payments']);
+  private readonly panelKeys = new Set<string>(['closing', 'late-fee', 'funds', 'documents', 'taxes', 'suppliers', 'payments', 'books']);
 
   buildingId = '';
   // Empresa del edificio: los proveedores son de la empresa.
