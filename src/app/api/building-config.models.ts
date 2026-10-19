@@ -668,6 +668,10 @@ export type JournalDifferenceKind = 'Changed' | 'Missing' | 'Removed';
 
 export interface JournalDifference {
   kind: JournalDifferenceKind;
+  sourceType: LedgerSourceType;
+  // Qué pasó en palabras («Pago revertido», «Gasto modificado»…) y el motivo si el sistema lo guardó (reversa de un pago, nota anulada).
+  cause: string;
+  reason: string | null;
   entryId: string | null;
   entryLabel: string | null;
   operationDate: string;
@@ -705,8 +709,18 @@ export interface JournalPreview {
   // Asientos ya asentados que cambiaron y se corrigen al asentar, y cuántos asientos nuevos eso crea.
   differences: JournalDifference[];
   correctionEntryCount: number;
+  // Períodos en borrador con gastos o ingresos en lo que se asentaría: mientras estén en borrador pueden cambiar, así que no se asienta.
+  draftPeriods: string[];
   // Hay algo para asentar y todos los asientos están completos.
   canPost: boolean;
+}
+
+// Cuántos asientos vigentes del Libro diario salen de un pago, un gasto o un período: avisa antes de revertir o deshacer algo ya asentado.
+export interface JournalImpact {
+  posted: boolean;
+  postedCount: number;
+  labels: string[];
+  postedThrough: string | null;
 }
 
 export interface PostJournalResult {

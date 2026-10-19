@@ -27,6 +27,7 @@ import {
   RegisterCreditNoteFiscalDataRequest
 } from '../../api/models';
 import { isPdfUrl, resolveUploadUrl } from '../../api/file-url.util';
+import { JournalImpactNoticeComponent } from './journal-impact-notice.component';
 
 const CREDIT_NOTE_STATUS_LABELS: Record<string, string> = {
   Draft: 'Borrador',
@@ -52,7 +53,7 @@ const STATUS_SEVERITY: Record<string, 'warn' | 'info' | 'success' | 'danger' | '
 @Component({
   standalone: true,
   selector: 'app-owner-payment-detail-page',
-  imports: [CommonModule, FormsModule, Button, Card, InputNumber, Message, Tag],
+  imports: [CommonModule, FormsModule, Button, Card, InputNumber, Message, Tag, JournalImpactNoticeComponent],
   template: `
     <p-card styleClass="app-page-card">
       <!-- Header -->
@@ -478,6 +479,7 @@ const STATUS_SEVERITY: Record<string, 'warn' | 'info' | 'success' | 'danger' | '
             </p-button>
           </div>
           <div class="reject-form" *ngIf="showReverseForm">
+            <app-journal-impact-notice kind="payment" [ownerPaymentId]="payment.id"></app-journal-impact-notice>
             <label class="field-label">Motivo de la reversa <span class="required">*</span></label>
             <textarea
               [(ngModel)]="reverseReason"

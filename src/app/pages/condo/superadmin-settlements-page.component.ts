@@ -13,11 +13,12 @@ import { CompaniesApiService } from '../../api/companies-api.service';
 import { BuildingsApiService } from '../../api/buildings-api.service';
 import { ExpensePeriodsApiService } from '../../api/expense-periods-api.service';
 import { Building, Company, ExpensePeriod, ExpenseSettlementSummary } from '../../api/models';
+import { JournalImpactNoticeComponent } from './journal-impact-notice.component';
 
 @Component({
   standalone: true,
   selector: 'app-superadmin-settlements-page',
-  imports: [CommonModule, FormsModule, Button, Card, Tag, Message],
+  imports: [CommonModule, FormsModule, Button, Card, Tag, Message, JournalImpactNoticeComponent],
   template: `
     <p-card styleClass="app-page-card">
       <div class="app-page-head">
@@ -82,6 +83,7 @@ import { Building, Company, ExpensePeriod, ExpenseSettlementSummary } from '../.
                     (onClick)="showUnpublishForm = true"></p-button>
 
           <div class="reject-form" *ngIf="showUnpublishForm">
+            <app-journal-impact-notice kind="period" [periodId]="periodId"></app-journal-impact-notice>
             <label class="field-label">Motivo <span class="required">*</span></label>
             <textarea [(ngModel)]="unpublishReason" rows="4" maxlength="500"
                       placeholder="Por qué se deshace esta publicación (obligatorio, máx. 500 caracteres)..."

@@ -5,6 +5,8 @@ import { FormsModule } from '@angular/forms';
 import { MessageService } from 'primeng/api';
 import { Card } from 'primeng/card';
 import { Tag } from 'primeng/tag';
+import { catchError, of } from 'rxjs';
+import { AccountingApiService } from '../../api/accounting-api.service';
 import { extractApiErrorMessage } from '../../api/api-error.util';
 import { BuildingExpensesApiService } from '../../api/building-expenses-api.service';
 import { PayableRow, PayablesPage, PayablesStatusFilter } from '../../api/building-config.models';
@@ -142,6 +144,7 @@ const PAGE_SIZE = 25;
 export class FinancePayablesPageComponent {
   private readonly api = inject(FinanceApiService);
   private readonly expensesApi = inject(BuildingExpensesApiService);
+  private readonly accountingApi = inject(AccountingApiService);
   private readonly msg = inject(MessageService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly cdr = inject(ChangeDetectorRef);
@@ -222,8 +225,17 @@ export class FinancePayablesPageComponent {
   }
 
   undo(r: PayableRow): void {
-    if (!confirm(`¿Deshacer el pago de ${r.supplierName || 'la factura'}? Vuelve a quedar a pagar y sale de la caja de la fecha en que se registró.`)) return;
-    this.run(this.expensesApi.undoPayment(r.expenseId), 'Pago deshecho.');
+    // Si el gasto ya está asentado en el Libro diario se avisa antes: el asiento no se modifica, se corrige con un contraasiento.
+    this.busy = true;
+    this.accountingApi.getJournalImpact({ expenseId: r.expenseId }).pipe(catchError(() => of(null)), takeUntilDestroyed(this.destroyRef)).subscribe(impact => {
+      this.busy = false;
+      this.cdr.markForCheck();
+      const warning = impact?.posted
+        ? ` Este gasto ya está asentado en el Libro diario (${impact.labels.join(', ')}): el asiento no se modifica, al volver a asentar se genera un contraasiento.`
+        : '';
+      if (!confirm(`¿Deshacer el pago de ${r.supplierName || 'la factura'}? Vuelve a quedar a pagar y sale de la caja de la fecha en que se registró.${warning}`)) return;
+      this.run(this.expensesApi.undoPayment(r.expenseId), 'Pago deshecho.');
+    });
   }
 
   private run(call: ReturnType<BuildingExpensesApiService['undoPayment']>, success: string): void {

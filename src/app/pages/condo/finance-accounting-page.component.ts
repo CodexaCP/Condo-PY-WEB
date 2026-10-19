@@ -11,7 +11,7 @@ import { Tag } from 'primeng/tag';
 import { extractApiErrorMessage } from '../../api/api-error.util';
 import { AccountingApiService } from '../../api/accounting-api.service';
 import {
-  AccountingEntries, AccountingPlanOption, AccountingRoleAccount, AccountingRoles, Journal, JournalDifferenceKind, JournalDifferences, JournalPreview
+  AccountingEntries, AccountingPlanOption, AccountingRoleAccount, AccountingRoles, Journal, JournalDifferences, JournalPreview
 } from '../../api/building-config.models';
 import { FinanceBuildingAccess } from '../../api/models';
 import { FinanceBuildingPickerComponent } from './finance-building-picker.component';
@@ -99,7 +99,7 @@ function shortDate(iso: string): string {
                   <thead><tr><th>Qué pasó</th><th>Operación</th><th>Detalle</th><th>Asiento</th><th class="num">Antes</th><th class="num">Ahora</th></tr></thead>
                   <tbody>
                     <tr *ngFor="let d of differences.items">
-                      <td>{{ kindLabel(d.kind) }}</td>
+                      <td>{{ d.cause }}<div class="muted small" *ngIf="d.reason">Motivo: {{ d.reason }}</div></td>
                       <td class="nowrap">{{ d.operationDate | date: 'dd/MM/yyyy' }}</td>
                       <td>{{ d.description }}<span *ngIf="d.thirdParty"> · {{ d.thirdParty }}</span></td>
                       <td class="nowrap">{{ d.entryLabel || '—' }}</td>
@@ -124,14 +124,18 @@ function shortDate(iso: string): string {
                 <div class="notice info" *ngIf="p.entryCount === 0 && p.correctionEntryCount === 0">
                   No hay movimientos del {{ p.from | date: 'dd/MM/yyyy' }} al {{ p.through | date: 'dd/MM/yyyy' }}. Podés igual dejarlo asentado hasta esa fecha.
                 </div>
-                <div class="notice info" *ngIf="p.correctionEntryCount > 0 && p.incompleteCount === 0">
+                <div class="notice info" *ngIf="p.correctionEntryCount > 0 && p.incompleteCount === 0 && !p.draftPeriods.length">
                   Además se corregirán <strong>{{ p.differences.length }} asientos que cambiaron</strong>: se crean {{ p.correctionEntryCount }} asientos
                   (contraasiento y, si el movimiento sigue existiendo, asiento nuevo) con fecha {{ p.through | date: 'dd/MM/yyyy' }}. Los originales no se tocan.
                   <span *ngIf="p.entryCount === 0">Numeración: <strong>{{ p.firstLabel }}</strong> a <strong>{{ p.lastLabel }}</strong>.</span>
                 </div>
-                <div class="notice info" *ngIf="p.entryCount > 0 && p.incompleteCount === 0">
+                <div class="notice info" *ngIf="p.entryCount > 0 && p.incompleteCount === 0 && !p.draftPeriods.length">
                   Se asentarán <strong>{{ p.entryCount }} asientos</strong> del {{ p.from | date: 'dd/MM/yyyy' }} al {{ p.through | date: 'dd/MM/yyyy' }}
                   (<strong>{{ p.firstLabel }}</strong> a <strong>{{ p.lastLabel }}</strong>), por {{ p.totalDebit | gs }}.
+                </div>
+                <div class="notice" *ngIf="p.draftPeriods.length">
+                  <strong>No se puede asentar todavía:</strong> hay gastos o ingresos en períodos en borrador ({{ p.draftPeriods.join(', ') }}).
+                  Mientras un período está en borrador se puede editar, así que se asienta recién cuando se publica. Publicalo o elegí una fecha anterior a sus movimientos.
                 </div>
                 <div class="notice" *ngIf="p.incompleteCount > 0">
                   <strong>{{ p.incompleteCount }} asientos están incompletos</strong> y por eso no se puede asentar: falta la cuenta del plan de {{ p.pending.join(', ') }}.
@@ -139,7 +143,7 @@ function shortDate(iso: string): string {
                   <a class="link" *ngIf="needsChart(p.pending)" routerLink="/finance/settings" [queryParams]="{ buildingId: buildingId }">Ir al plan de cuentas</a>
                   <div class="small muted" *ngIf="needsChart(p.pending)">Un «(sin rubro)» significa que el plan no tiene una cuenta de esa categoría: en el plan de cuentas asigná la función «Cuenta por defecto…» a una cuenta (solo el SuperAdmin edita el plan).</div>
                 </div>
-                <div class="actions" *ngIf="p.incompleteCount === 0">
+                <div class="actions" *ngIf="p.incompleteCount === 0 && !p.draftPeriods.length">
                   <button type="button" class="btn" [disabled]="posting" (click)="confirmPost()">
                     {{ posting ? 'Asentando...' : (p.entryCount + p.correctionEntryCount > 0 ? 'Asentar ' + (p.entryCount + p.correctionEntryCount) + ' asientos' : 'Asentar hasta esa fecha') }}
                   </button>
@@ -495,10 +499,6 @@ export class FinanceAccountingPageComponent {
   needsChart(pending: string[]): boolean { return pending.some(p => p.startsWith('Rubro:')); }
   needsRoles(pending: string[]): boolean { return pending.some(p => !p.startsWith('Rubro:')); }
 
-  kindLabel(kind: JournalDifferenceKind): string {
-    return kind === 'Changed' ? 'Cambió' : kind === 'Missing' ? 'Sin asentar' : 'Ya no existe';
-  }
-
   pageCount(j: Journal): number { return Math.max(1, Math.ceil(j.totalCount / j.pageSize)); }
 
   clearPreview(): void {
@@ -528,7 +528,7 @@ export class FinanceAccountingPageComponent {
 
   confirmPost(): void {
     const p = this.preview;
-    if (!p || this.posting || p.incompleteCount > 0) return;
+    if (!p || this.posting || p.incompleteCount > 0 || p.draftPeriods.length > 0) return;
 
     const total = p.entryCount + p.correctionEntryCount;
     const fixes = p.correctionEntryCount > 0 ? ` Incluye ${p.correctionEntryCount} asientos de corrección (contraasientos y asientos nuevos).` : '';

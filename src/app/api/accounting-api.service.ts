@@ -3,7 +3,8 @@ import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { API_BASE_URL } from '../config/api.config';
 import {
-  AccountingEntries, AccountingRoles, Journal, JournalDifferences, JournalFilters, JournalPreview, PostJournalResult, UpdateAccountingRolesRequest
+  AccountingEntries, AccountingRoles, Journal, JournalDifferences, JournalFilters, JournalImpact, JournalPreview, PostJournalResult,
+  UpdateAccountingRolesRequest
 } from './building-config.models';
 
 // Asientos contables sugeridos (partida doble, criterio de caja) y asignación de las cuentas del plan que hacen de contrapartida
@@ -45,6 +46,16 @@ export class AccountingApiService {
     if (filters.page) params = params.set('page', filters.page);
     if (filters.pageSize) params = params.set('pageSize', filters.pageSize);
     return this.http.get<Journal>(this.journalBase, { params });
+  }
+
+  // Aviso previo a revertir un pago, deshacer la publicación de un período o deshacer el pago de un gasto: cuántos asientos vigentes del Libro
+  // diario salen de eso. Nunca falla: sin Finanzas, sin permiso o sin asientos responde «nada asentado».
+  getJournalImpact(source: { ownerPaymentId?: string; periodId?: string; expenseId?: string }): Observable<JournalImpact> {
+    let params = new HttpParams();
+    if (source.ownerPaymentId) params = params.set('ownerPaymentId', source.ownerPaymentId);
+    if (source.periodId) params = params.set('periodId', source.periodId);
+    if (source.expenseId) params = params.set('expenseId', source.expenseId);
+    return this.http.get<JournalImpact>(`${this.journalBase}/impact`, { params });
   }
 
   // Asientos ya asentados que cambiaron desde entonces (se corrigen con contraasiento al asentar).
