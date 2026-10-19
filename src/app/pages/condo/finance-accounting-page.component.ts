@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, DestroyRef, inject } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { MessageService } from 'primeng/api';
 import { Button } from 'primeng/button';
 import { Card } from 'primeng/card';
@@ -48,7 +49,7 @@ function shortDate(iso: string): string {
   standalone: true,
   selector: 'app-finance-accounting-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, FormsModule, Button, Card, Message, Tag, GsPipe, FinanceBuildingPickerComponent, FinanceStateComponent],
+  imports: [CommonModule, FormsModule, RouterLink, Button, Card, Message, Tag, GsPipe, FinanceBuildingPickerComponent, FinanceStateComponent],
   template: `
     <p-card styleClass="app-page-card">
       <div class="app-toolbar">
@@ -107,7 +108,9 @@ function shortDate(iso: string): string {
                 </div>
                 <div class="notice" *ngIf="p.incompleteCount > 0">
                   <strong>{{ p.incompleteCount }} asientos están incompletos</strong> y por eso no se puede asentar: falta la cuenta del plan de {{ p.pending.join(', ') }}.
-                  <button type="button" class="link" (click)="setTab('roles')">Asignar las cuentas</button>
+                  <button type="button" class="link" *ngIf="needsRoles(p.pending)" (click)="setTab('roles')">Asignar las cuentas financieras</button>
+                  <a class="link" *ngIf="needsChart(p.pending)" routerLink="/finance/settings" [queryParams]="{ buildingId: buildingId }">Ir al plan de cuentas</a>
+                  <div class="small muted" *ngIf="needsChart(p.pending)">Un «(sin rubro)» significa que el plan no tiene una cuenta de esa categoría: en el plan de cuentas asigná la función «Cuenta por defecto…» a una cuenta (solo el SuperAdmin edita el plan).</div>
                 </div>
                 <div class="actions" *ngIf="p.incompleteCount === 0">
                   <button type="button" class="btn" [disabled]="posting" (click)="confirmPost()">
@@ -192,7 +195,9 @@ function shortDate(iso: string): string {
 
             <div class="notice" *ngIf="e.incompleteCount > 0">
               <strong>{{ e.incompleteCount }} asientos están incompletos</strong> porque falta la cuenta del plan de: {{ e.pending.join(', ') }}.
-              <button type="button" class="link" (click)="setTab('roles')">Asignar las cuentas</button>
+              <button type="button" class="link" *ngIf="needsRoles(e.pending)" (click)="setTab('roles')">Asignar las cuentas financieras</button>
+              <a class="link" *ngIf="needsChart(e.pending)" routerLink="/finance/settings" [queryParams]="{ buildingId: buildingId }">Ir al plan de cuentas</a>
+              <div class="small muted" *ngIf="needsChart(e.pending)">Un «(sin rubro)» significa que el plan no tiene una cuenta de esa categoría: en el plan de cuentas asigná la función «Cuenta por defecto…» a una cuenta (solo el SuperAdmin edita el plan).</div>
             </div>
 
             <p class="muted" *ngIf="!e.entries.length">No hay movimientos en el rango, así que no hay asientos.</p>
@@ -454,6 +459,10 @@ export class FinanceAccountingPageComponent {
     this.jPage = page;
     this.loadJournal();
   }
+
+  // Lo pendiente puede ser una cuenta financiera o el IVA (se asignan en «Cuentas del plan») o un rubro (se resuelve en el plan de cuentas).
+  needsChart(pending: string[]): boolean { return pending.some(p => p.startsWith('Rubro:')); }
+  needsRoles(pending: string[]): boolean { return pending.some(p => !p.startsWith('Rubro:')); }
 
   pageCount(j: Journal): number { return Math.max(1, Math.ceil(j.totalCount / j.pageSize)); }
 
