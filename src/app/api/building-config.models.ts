@@ -398,7 +398,7 @@ export interface VatPurchasesBook {
 // ── Conciliación bancaria manual ──────────────────────────────────────────────
 
 export type ReconciliationStatus = 'Open' | 'Completed';
-export type LedgerSourceType = 'OwnerPayment' | 'BuildingExpense' | 'BuildingIncome' | 'SupplierCreditNote';
+export type LedgerSourceType = 'OwnerPayment' | 'BuildingExpense' | 'BuildingIncome' | 'SupplierCreditNote' | 'OpeningBalance';
 export type LedgerDirection = 'In' | 'Out';
 
 // Una cuenta bancaria del edificio con el estado de su conciliación.
@@ -539,6 +539,12 @@ export interface AccountingRoles {
   vatCreditCode: string | null;
   vatCreditName: string | null;
   suggestedVatCreditCategoryId: string | null;
+  // Contrapartida de la apertura (saldos iniciales) y cuenta del resultado del ejercicio: la asignada al edificio y la que rige por defecto
+  // cuando no hay ninguna asignada (3.2.01 «Resultados acumulados» y 3.2.02 «Resultado del período» del plan genérico).
+  openingEquityCategoryId: string | null;
+  defaultOpeningEquityCategoryId: string | null;
+  periodResultCategoryId: string | null;
+  defaultPeriodResultCategoryId: string | null;
   options: AccountingPlanOption[];
   // Todas las cuentas financieras activas y el IVA crédito tienen su cuenta del plan.
   isComplete: boolean;
@@ -549,6 +555,11 @@ export interface UpdateAccountingRolesRequest {
   accounts: { financialAccountId: string; ledgerCategoryId: string | null }[];
   setVatCredit: boolean;
   vatCreditCategoryId: string | null;
+  // Se aplican solo cuando vienen sus set*: null = volver a la cuenta por defecto. Deben ser cuentas finales de fondos.
+  setOpeningEquity?: boolean;
+  openingEquityCategoryId?: string | null;
+  setPeriodResult?: boolean;
+  periodResultCategoryId?: string | null;
 }
 
 export interface AccountingLine {
@@ -559,8 +570,8 @@ export interface AccountingLine {
   name: string;
   debit: number;
   credit: number;
-  // Financial (banco, caja o fondo), Rubro (ingreso o gasto) o VatCredit.
-  kind: 'Financial' | 'Rubro' | 'VatCredit';
+  // Financial (banco, caja o fondo), Rubro (ingreso o gasto), VatCredit o Equity (contrapartida de la apertura).
+  kind: 'Financial' | 'Rubro' | 'VatCredit' | 'Equity';
   missing: boolean;
 }
 
@@ -853,6 +864,83 @@ export interface JournalTrialBalance {
   // Las sumas del debe y del haber coinciden y los saldos deudores igualan a los acreedores.
   isBalanced: boolean;
   difference: number;
+}
+
+// ── Cierre del ejercicio y estados (balance general y de resultados) ──────────
+
+export interface FiscalClosingAccount {
+  code: string;
+  name: string;
+  // Income (ingreso) o Expense (gasto).
+  type: 'Income' | 'Expense';
+  // Importe del ejercicio en positivo (lo ganado o lo gastado).
+  amount: number;
+}
+
+export interface FiscalYearClosing {
+  buildingId: string;
+  buildingName: string;
+  fiscalYear: number;
+  fiscalYears: number[];
+  start: string;
+  end: string;
+  isClosed: boolean;
+  // Números de los asientos de cierre vigentes (si está cerrado).
+  closingLabels: string[];
+  canClose: boolean;
+  // Si no se puede cerrar, por qué.
+  blockers: string[];
+  accounts: FiscalClosingAccount[];
+  totalIncome: number;
+  totalExpense: number;
+  // Ingresos menos gastos: positivo = superávit, negativo = déficit.
+  result: number;
+  resultAccount: string | null;
+  equityAccount: string | null;
+  canReopen: boolean;
+  canEdit: boolean;
+}
+
+export interface FiscalYearClosingResult {
+  createdCount: number;
+  firstLabel: string | null;
+  lastLabel: string | null;
+}
+
+export interface StatementAccount {
+  code: string;
+  externalCode: string | null;
+  name: string;
+  // En positivo, con el signo natural de la cuenta.
+  amount: number;
+}
+
+export interface JournalStatements {
+  buildingId: string;
+  buildingName: string;
+  fiscalYear: number;
+  fiscalYears: number[];
+  from: string;
+  asOf: string;
+  yearClosed: boolean;
+  assets: StatementAccount[];
+  liabilities: StatementAccount[];
+  equity: StatementAccount[];
+  income: StatementAccount[];
+  expenses: StatementAccount[];
+  totalAssets: number;
+  totalLiabilities: number;
+  totalEquity: number;
+  totalIncome: number;
+  totalExpenses: number;
+  // Ingresos menos gastos del ejercicio hasta la fecha (sin contar los asientos de cierre).
+  result: number;
+  // Resultado que todavía no pasó a fondos (ejercicio sin cerrar): se suma al patrimonio para que el balance cuadre.
+  pendingResult: number;
+  isBalanced: boolean;
+  difference: number;
+  // Hay renglones de una clase que no se pudo determinar.
+  unclassifiedNet: number;
 }
 
 // ── Informe de asamblea ───────────────────────────────────────────────────────

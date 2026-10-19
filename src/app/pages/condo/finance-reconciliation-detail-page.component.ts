@@ -21,7 +21,8 @@ const SOURCE_LABELS: Record<LedgerSourceType, string> = {
   OwnerPayment: 'Cobro',
   BuildingExpense: 'Gasto',
   BuildingIncome: 'Ingreso',
-  SupplierCreditNote: 'NC de proveedor'
+  SupplierCreditNote: 'NC de proveedor',
+  OpeningBalance: 'Apertura'
 };
 
 // Pantalla de trabajo de una conciliación: arriba el saldo del extracto contra el saldo conciliado; abajo, lo pendiente (que se tilda cuando

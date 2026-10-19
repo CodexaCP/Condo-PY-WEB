@@ -19,10 +19,12 @@ import { classifyFinanceError, exportErrorMessage, exportFileName, FinanceErrorK
 import { FinanceStateComponent } from './finance-state.component';
 import { FinanceJournalLedgerComponent } from './finance-journal-ledger.component';
 import { FinanceTrialBalanceComponent } from './finance-trial-balance.component';
+import { FinanceStatementsComponent } from './finance-statements.component';
+import { FinanceFiscalClosingComponent } from './finance-fiscal-closing.component';
 import { bookFileName, saveBlob } from './journal-download';
 import { CONFIG_SECTION_STYLES } from './config-section.styles';
 
-type Tab = 'journal' | 'ledger' | 'balance' | 'entries' | 'roles';
+type Tab = 'journal' | 'ledger' | 'balance' | 'statements' | 'closing' | 'entries' | 'roles';
 
 const JOURNAL_PAGE_SIZE = 50;
 
@@ -54,7 +56,7 @@ function shortDate(iso: string): string {
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     CommonModule, FormsModule, RouterLink, Button, Card, Message, Tag, GsPipe, FinanceBuildingPickerComponent, FinanceStateComponent,
-    FinanceJournalLedgerComponent, FinanceTrialBalanceComponent
+    FinanceJournalLedgerComponent, FinanceTrialBalanceComponent, FinanceStatementsComponent, FinanceFiscalClosingComponent
   ],
   template: `
     <p-card styleClass="app-page-card">
@@ -79,6 +81,8 @@ function shortDate(iso: string): string {
           <button type="button" role="tab" [class.active]="tab === 'journal'" (click)="setTab('journal')">Libro diario</button>
           <button type="button" role="tab" [class.active]="tab === 'ledger'" (click)="setTab('ledger')">Libro mayor</button>
           <button type="button" role="tab" [class.active]="tab === 'balance'" (click)="setTab('balance')">Sumas y saldos</button>
+          <button type="button" role="tab" [class.active]="tab === 'statements'" (click)="setTab('statements')">Balance general</button>
+          <button type="button" role="tab" [class.active]="tab === 'closing'" (click)="setTab('closing')">Cierre del ejercicio</button>
           <button type="button" role="tab" [class.active]="tab === 'entries'" (click)="setTab('entries')">Asientos sugeridos</button>
           <button type="button" role="tab" [class.active]="tab === 'roles'" (click)="setTab('roles')">
             Cuentas del plan <span class="dot" *ngIf="roles && !roles.isComplete" title="Faltan cuentas por asignar"></span>
@@ -204,6 +208,8 @@ function shortDate(iso: string): string {
                   <span class="entry-date">{{ en.date | date: 'dd/MM/yyyy' }}</span>
                   <p-tag *ngIf="en.kind === 'Reversal'" [value]="'Contraasiento del N° ' + (en.reversesLabel || '')" severity="warn" styleClass="tag-sm"></p-tag>
                   <p-tag *ngIf="en.reversedByLabel" [value]="'Anulado por el N° ' + en.reversedByLabel" severity="danger" styleClass="tag-sm"></p-tag>
+                  <p-tag *ngIf="en.kind === 'Opening'" value="Apertura" severity="info" styleClass="tag-sm"></p-tag>
+                  <p-tag *ngIf="en.kind === 'Closing'" value="Cierre del ejercicio" severity="secondary" styleClass="tag-sm"></p-tag>
                   <span class="muted small" *ngIf="en.operationDate !== en.date"> · operación del {{ en.operationDate | date: 'dd/MM/yyyy' }}</span>
                   <div class="muted small">{{ en.description }}<span *ngIf="en.thirdParty"> · {{ en.thirdParty }}</span><span *ngIf="en.reference"> · {{ en.reference }}</span></div>
                 </div>
@@ -257,6 +263,32 @@ function shortDate(iso: string): string {
           <app-finance-trial-balance [buildingId]="buildingId" [buildingName]="buildingName" [fiscalYear]="jYear" [refreshKey]="refreshKey"></app-finance-trial-balance>
         </ng-container>
 
+        <!-- ══ BALANCE GENERAL Y ESTADO DE RESULTADOS ══ -->
+        <ng-container *ngIf="tab === 'statements'">
+          <div class="filters" *ngIf="journal?.fiscalYears?.length">
+            <label class="field">
+              <span>Ejercicio</span>
+              <select [ngModel]="jYear" (ngModelChange)="onJournalYear($event)">
+                <option *ngFor="let y of journal!.fiscalYears" [ngValue]="y">{{ y }}</option>
+              </select>
+            </label>
+          </div>
+          <app-finance-statements [buildingId]="buildingId" [buildingName]="buildingName" [fiscalYear]="jYear" [refreshKey]="refreshKey"></app-finance-statements>
+        </ng-container>
+
+        <!-- ══ CIERRE DEL EJERCICIO ══ -->
+        <ng-container *ngIf="tab === 'closing'">
+          <div class="filters" *ngIf="journal?.fiscalYears?.length">
+            <label class="field">
+              <span>Ejercicio</span>
+              <select [ngModel]="jYear" (ngModelChange)="onJournalYear($event)">
+                <option *ngFor="let y of journal!.fiscalYears" [ngValue]="y">{{ y }}</option>
+              </select>
+            </label>
+          </div>
+          <app-finance-fiscal-closing [buildingId]="buildingId" [fiscalYear]="jYear" [refreshKey]="refreshKey" (changed)="onClosingChanged()"></app-finance-fiscal-closing>
+        </ng-container>
+
         <!-- ══ ASIENTOS SUGERIDOS ══ -->
         <ng-container *ngIf="tab === 'entries'">
           <div class="filters">
@@ -288,6 +320,7 @@ function shortDate(iso: string): string {
                 <div>
                   <strong>Sugerido {{ en.number }} · {{ en.date | date: 'dd/MM/yyyy' }}</strong>
                   <p-tag *ngIf="!en.isComplete" value="Incompleto" severity="warn" styleClass="tag-sm"></p-tag>
+                  <p-tag *ngIf="en.sourceType === 'OpeningBalance'" value="Apertura" severity="info" styleClass="tag-sm"></p-tag>
                   <p-tag *ngIf="e.postedThrough && en.date <= e.postedThrough" value="Ya asentado" severity="success" styleClass="tag-sm"></p-tag>
                   <div class="muted small">{{ en.description }}<span *ngIf="en.thirdParty"> · {{ en.thirdParty }}</span><span *ngIf="en.reference"> · {{ en.reference }}</span></div>
                 </div>
@@ -375,6 +408,32 @@ function shortDate(iso: string): string {
                         Usar {{ optionLabel(r.suggestedVatCreditCategoryId) }}
                       </button>
                     </td>
+                  </tr>
+                  <tr [class.changed]="equitySelection !== equityOriginal">
+                    <td><strong>Contrapartida de la apertura</strong><div class="muted small">De dónde salieron los saldos iniciales de las cuentas financieras.</div></td>
+                    <td>Apertura</td>
+                    <td>
+                      <select class="cell-select" [(ngModel)]="equitySelection" [disabled]="!r.canEdit">
+                        <option [ngValue]="''">Por defecto: {{ optionLabel(r.defaultOpeningEquityCategoryId) || 'ninguna en el plan' }}</option>
+                        <optgroup *ngFor="let g of fundGroups" [label]="g.name">
+                          <option *ngFor="let o of g.items" [ngValue]="o.id">{{ o.code }} · {{ o.name }}{{ o.isActive ? '' : ' (inactiva)' }}</option>
+                        </optgroup>
+                      </select>
+                    </td>
+                    <td></td>
+                  </tr>
+                  <tr [class.changed]="resultSelection !== resultOriginal">
+                    <td><strong>Resultado del ejercicio</strong><div class="muted small">Donde se saldan los ingresos y gastos al cerrar el ejercicio.</div></td>
+                    <td>Cierre</td>
+                    <td>
+                      <select class="cell-select" [(ngModel)]="resultSelection" [disabled]="!r.canEdit">
+                        <option [ngValue]="''">Por defecto: {{ optionLabel(r.defaultPeriodResultCategoryId) || 'ninguna en el plan' }}</option>
+                        <optgroup *ngFor="let g of fundGroups" [label]="g.name">
+                          <option *ngFor="let o of g.items" [ngValue]="o.id">{{ o.code }} · {{ o.name }}{{ o.isActive ? '' : ' (inactiva)' }}</option>
+                        </optgroup>
+                      </select>
+                    </td>
+                    <td></td>
                   </tr>
                 </tbody>
               </table>
@@ -478,13 +537,19 @@ export class FinanceAccountingPageComponent {
   original: Record<string, string> = {};
   vatSelection = '';
   vatOriginal = '';
+  fundGroups: OptionGroup[] = [];
+  equitySelection = '';
+  equityOriginal = '';
+  resultSelection = '';
+  resultOriginal = '';
   loadingRoles = false;
   rolesError = '';
   saving = false;
 
   get changedCount(): number {
     const accounts = this.roles?.accounts.filter(a => this.selection[a.financialAccountId] !== this.original[a.financialAccountId]).length ?? 0;
-    return accounts + (this.vatSelection !== this.vatOriginal ? 1 : 0);
+    return accounts + (this.vatSelection !== this.vatOriginal ? 1 : 0)
+      + (this.equitySelection !== this.equityOriginal ? 1 : 0) + (this.resultSelection !== this.resultOriginal ? 1 : 0);
   }
 
   // Cuentas sin asignar que tienen una sugerida.
@@ -552,6 +617,12 @@ export class FinanceAccountingPageComponent {
   // Lo pendiente puede ser una cuenta financiera o el IVA (se asignan en «Cuentas del plan») o un rubro (se resuelve en el plan de cuentas).
   needsChart(pending: string[]): boolean { return pending.some(p => p.startsWith('Rubro:')); }
   needsRoles(pending: string[]): boolean { return pending.some(p => !p.startsWith('Rubro:')); }
+
+  // Se cerró o reabrió un ejercicio: el Libro diario (nuevos asientos) y los libros derivados vuelven a leer.
+  onClosingChanged(): void {
+    this.refreshKey++;
+    this.loadJournal();
+  }
 
   pageCount(j: Journal): number { return Math.max(1, Math.ceil(j.totalCount / j.pageSize)); }
 
@@ -639,9 +710,15 @@ export class FinanceAccountingPageComponent {
       .filter(a => this.selection[a.financialAccountId] !== this.original[a.financialAccountId])
       .map(a => ({ financialAccountId: a.financialAccountId, ledgerCategoryId: this.selection[a.financialAccountId] || null }));
     const vatChanged = this.vatSelection !== this.vatOriginal;
+    const equityChanged = this.equitySelection !== this.equityOriginal;
+    const resultChanged = this.resultSelection !== this.resultOriginal;
 
     this.saving = true;
-    this.api.updateRoles(this.buildingId, { accounts, setVatCredit: vatChanged, vatCreditCategoryId: vatChanged ? this.vatSelection || null : null })
+    this.api.updateRoles(this.buildingId, {
+      accounts, setVatCredit: vatChanged, vatCreditCategoryId: vatChanged ? this.vatSelection || null : null,
+      setOpeningEquity: equityChanged, openingEquityCategoryId: equityChanged ? this.equitySelection || null : null,
+      setPeriodResult: resultChanged, periodResultCategoryId: resultChanged ? this.resultSelection || null : null
+    })
       .pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
         next: roles => {
           this.setRoles(roles);
@@ -817,6 +894,12 @@ export class FinanceAccountingPageComponent {
 
     this.vatSelection = roles.vatCreditCategoryId ?? '';
     this.vatOriginal = roles.vatCreditCategoryId ?? '';
+    this.equitySelection = roles.openingEquityCategoryId ?? '';
+    this.equityOriginal = roles.openingEquityCategoryId ?? '';
+    this.resultSelection = roles.periodResultCategoryId ?? '';
+    this.resultOriginal = roles.periodResultCategoryId ?? '';
+    // La contrapartida de la apertura y el resultado son cuentas finales de fondos o patrimonio.
+    this.fundGroups = this.group(roles.options.filter(o => o.type === 'Fund'));
     this.groups = this.group(roles.options);
     // El IVA crédito es una cuenta de activo (no de fondos).
     this.vatGroups = this.group(roles.options.filter(o => o.type === 'Asset'));

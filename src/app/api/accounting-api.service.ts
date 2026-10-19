@@ -3,8 +3,8 @@ import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { API_BASE_URL } from '../config/api.config';
 import {
-  AccountingEntries, AccountingRoles, Journal, JournalDifferences, JournalFilters, JournalImpact, JournalLedger, JournalPreview, JournalTrialBalance,
-  PostJournalResult, UpdateAccountingRolesRequest
+  AccountingEntries, AccountingRoles, FiscalYearClosing, FiscalYearClosingResult, Journal, JournalDifferences, JournalFilters, JournalImpact,
+  JournalLedger, JournalPreview, JournalStatements, JournalTrialBalance, PostJournalResult, UpdateAccountingRolesRequest
 } from './building-config.models';
 
 // Asientos contables sugeridos (partida doble, criterio de caja) y asignación de las cuentas del plan que hacen de contrapartida
@@ -71,6 +71,29 @@ export class AccountingApiService {
 
   downloadTrialBalance(buildingId: string, fiscalYear?: number | null): Observable<Blob> {
     return this.http.get(`${this.journalBase}/trial-balance/export`, { params: this.bookParams(buildingId, fiscalYear), responseType: 'blob' });
+  }
+
+  // Balance general (situación patrimonial) a una fecha y estado de resultados del ejercicio.
+  getStatements(buildingId: string, fiscalYear?: number | null, asOf?: string): Observable<JournalStatements> {
+    return this.http.get<JournalStatements>(`${this.journalBase}/statements`, { params: this.bookParams(buildingId, fiscalYear, { asOf }) });
+  }
+
+  downloadStatements(buildingId: string, fiscalYear?: number | null, asOf?: string): Observable<Blob> {
+    return this.http.get(`${this.journalBase}/statements/export`, { params: this.bookParams(buildingId, fiscalYear, { asOf }), responseType: 'blob' });
+  }
+
+  // ── Cierre del ejercicio ──
+
+  getClosing(buildingId: string, fiscalYear?: number | null): Observable<FiscalYearClosing> {
+    return this.http.get<FiscalYearClosing>(`${this.journalBase}/closing`, { params: this.bookParams(buildingId, fiscalYear) });
+  }
+
+  closeFiscalYear(buildingId: string, fiscalYear: number): Observable<FiscalYearClosingResult> {
+    return this.http.post<FiscalYearClosingResult>(`${this.journalBase}/closing/close`, { fiscalYear }, { params: this.bookParams(buildingId) });
+  }
+
+  reopenFiscalYear(buildingId: string, fiscalYear: number, reason: string): Observable<FiscalYearClosingResult> {
+    return this.http.post<FiscalYearClosingResult>(`${this.journalBase}/closing/reopen`, { fiscalYear, reason }, { params: this.bookParams(buildingId) });
   }
 
   // Libro Diario del ejercicio en hojas con folio correlativo (PDF para imprimir y rubricar) o en Excel.
