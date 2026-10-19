@@ -9,14 +9,18 @@ import { Message } from 'primeng/message';
 import { Tag } from 'primeng/tag';
 import { extractApiErrorMessage } from '../../api/api-error.util';
 import { AccountingApiService } from '../../api/accounting-api.service';
-import { AccountingEntries, AccountingPlanOption, AccountingRoleAccount, AccountingRoles } from '../../api/building-config.models';
+import {
+  AccountingEntries, AccountingPlanOption, AccountingRoleAccount, AccountingRoles, Journal, JournalPreview
+} from '../../api/building-config.models';
 import { FinanceBuildingAccess } from '../../api/models';
 import { FinanceBuildingPickerComponent } from './finance-building-picker.component';
 import { classifyFinanceError, exportErrorMessage, exportFileName, FinanceErrorKind, GsPipe } from './finance-format';
 import { FinanceStateComponent } from './finance-state.component';
 import { CONFIG_SECTION_STYLES } from './config-section.styles';
 
-type Tab = 'entries' | 'roles';
+type Tab = 'journal' | 'entries' | 'roles';
+
+const JOURNAL_PAGE_SIZE = 50;
 
 interface OptionGroup {
   name: string;
@@ -25,9 +29,21 @@ interface OptionGroup {
 
 const ACCOUNT_TYPE_LABELS: Record<string, string> = { Cash: 'Caja', Bank: 'Banco', ReserveFund: 'Fondo de reserva' };
 
-// Asientos contables sugeridos para el contador: un asiento de partida doble por cada movimiento del libro (criterio de caja), con la cuenta
-// del plan de cada cuenta financiera, el IVA crédito de las compras y el rubro. Son sugeridos: no asientan nada ni cambian saldos. Si falta
-// la cuenta del plan de algún renglón, el asiento queda incompleto y se avisa; las cuentas se asignan en la pestaña «Cuentas del plan».
+// Fecha local en formato yyyy-MM-dd (lo que usan los campos de fecha y el backend).
+function isoDate(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+// yyyy-MM-dd -> dd/MM/yyyy
+function shortDate(iso: string): string {
+  const [y, m, d] = iso.split('-');
+  return `${d}/${m}/${y}`;
+}
+
+// Asientos contables para el contador: un asiento de partida doble por cada movimiento del libro (criterio de caja), con la cuenta del plan
+// de cada cuenta financiera, el IVA crédito de las compras y el rubro. Los «sugeridos» se arman al consultar y no cambian saldos; el Libro
+// diario guarda los ya asentados, con su número correlativo por ejercicio, y no se pueden modificar (un error se corrige con un contraasiento).
+// Si falta la cuenta del plan de algún renglón, el asiento queda incompleto y no se asienta; las cuentas se asignan en «Cuentas del plan».
 @Component({
   standalone: true,
   selector: 'app-finance-accounting-page',
@@ -39,7 +55,7 @@ const ACCOUNT_TYPE_LABELS: Record<string, string> = { Cash: 'Caja', Bank: 'Banco
         <div class="app-page-head">
           <div>
             <h1>Asientos contables</h1>
-            <p>Partida doble sugerida a partir del libro, para el contador.</p>
+            <p>Partida doble a partir del libro, para el contador: lo asentado tiene número y no se modifica.</p>
           </div>
         </div>
         <div class="controls">
@@ -53,13 +69,111 @@ const ACCOUNT_TYPE_LABELS: Record<string, string> = { Cash: 'Caja', Bank: 'Banco
 
       <ng-container *ngIf="buildingId && !noBuilding && !errorKind">
         <nav class="tabs" role="tablist">
+          <button type="button" role="tab" [class.active]="tab === 'journal'" (click)="setTab('journal')">Libro diario</button>
           <button type="button" role="tab" [class.active]="tab === 'entries'" (click)="setTab('entries')">Asientos sugeridos</button>
           <button type="button" role="tab" [class.active]="tab === 'roles'" (click)="setTab('roles')">
             Cuentas del plan <span class="dot" *ngIf="roles && !roles.isComplete" title="Faltan cuentas por asignar"></span>
           </button>
         </nav>
 
-        <!-- ══ ASIENTOS ══ -->
+        <!-- ══ LIBRO DIARIO (asentados) ══ -->
+        <ng-container *ngIf="tab === 'journal'">
+          <p-message *ngIf="journalError" severity="error" [text]="journalError"></p-message>
+          <p class="app-state" *ngIf="loadingJournal && !journal">Cargando...</p>
+
+          <ng-container *ngIf="journal as j">
+            <div class="posted-banner" [class.none]="!j.postedThrough">
+              <strong *ngIf="j.postedThrough">Asentado hasta el {{ j.postedThrough | date: 'dd/MM/yyyy' }}</strong>
+              <strong *ngIf="!j.postedThrough">Todavía no se asentó nada</strong>
+              <span class="muted small">Lo asentado tiene número correlativo por ejercicio y no se puede editar ni borrar: un error se corrige con un contraasiento.</span>
+            </div>
+
+            <!-- Asentar -->
+            <div class="post-box" *ngIf="j.canPost">
+              <h3>Asentar período</h3>
+              <div class="filters">
+                <label class="field"><span>Asentar hasta (inclusive)</span><input type="date" [(ngModel)]="postThrough" (ngModelChange)="clearPreview()" [max]="today" /></label>
+                <p-button type="button" label="Ver qué se asentaría" icon="pi pi-search" severity="secondary" [outlined]="true"
+                          [loading]="previewing" [disabled]="!postThrough" (onClick)="previewPost()"></p-button>
+              </div>
+              <p-message *ngIf="postError" severity="error" [text]="postError"></p-message>
+              <ng-container *ngIf="preview as p">
+                <div class="notice info" *ngIf="p.entryCount === 0">
+                  No hay movimientos del {{ p.from | date: 'dd/MM/yyyy' }} al {{ p.through | date: 'dd/MM/yyyy' }}. Podés igual dejarlo asentado hasta esa fecha.
+                </div>
+                <div class="notice info" *ngIf="p.entryCount > 0 && p.incompleteCount === 0">
+                  Se asentarán <strong>{{ p.entryCount }} asientos</strong> del {{ p.from | date: 'dd/MM/yyyy' }} al {{ p.through | date: 'dd/MM/yyyy' }}
+                  (<strong>{{ p.firstLabel }}</strong> a <strong>{{ p.lastLabel }}</strong>), por {{ p.totalDebit | gs }}.
+                </div>
+                <div class="notice" *ngIf="p.incompleteCount > 0">
+                  <strong>{{ p.incompleteCount }} asientos están incompletos</strong> y por eso no se puede asentar: falta la cuenta del plan de {{ p.pending.join(', ') }}.
+                  <button type="button" class="link" (click)="setTab('roles')">Asignar las cuentas</button>
+                </div>
+                <div class="actions" *ngIf="p.incompleteCount === 0">
+                  <button type="button" class="btn" [disabled]="posting" (click)="confirmPost()">
+                    {{ posting ? 'Asentando...' : (p.entryCount > 0 ? 'Asentar ' + p.entryCount + ' asientos' : 'Asentar hasta esa fecha') }}
+                  </button>
+                </div>
+              </ng-container>
+            </div>
+
+            <!-- Filtros -->
+            <div class="filters">
+              <label class="field" *ngIf="j.fiscalYears.length">
+                <span>Ejercicio</span>
+                <select [ngModel]="j.fiscalYear" (ngModelChange)="onJournalYear($event)">
+                  <option *ngFor="let y of j.fiscalYears" [ngValue]="y">{{ y }}</option>
+                </select>
+              </label>
+              <label class="field"><span>N° de asiento</span><input type="number" min="1" step="1" [(ngModel)]="jNumber" (change)="reloadJournal()" placeholder="Todos" /></label>
+              <label class="field"><span>Desde</span><input type="date" [(ngModel)]="jFrom" (ngModelChange)="reloadJournal()" /></label>
+              <label class="field"><span>Hasta</span><input type="date" [(ngModel)]="jTo" (ngModelChange)="reloadJournal()" /></label>
+            </div>
+
+            <div class="kpis" *ngIf="j.totalCount > 0">
+              <div class="kpi"><span>Asientos</span><strong>{{ j.totalCount }}</strong></div>
+              <div class="kpi"><span>Ejercicio</span><strong>{{ j.fiscalYear }}</strong></div>
+              <div class="kpi"><span>Total debe</span><strong>{{ j.totalDebit | gs }}</strong></div>
+              <div class="kpi"><span>Total haber</span><strong>{{ j.totalCredit | gs }}</strong></div>
+            </div>
+
+            <p class="muted" *ngIf="!j.entries.length">
+              {{ j.postedThrough ? 'No hay asientos con ese filtro.' : 'Cuando asientes un período, sus asientos aparecen acá con su número.' }}
+            </p>
+
+            <article class="entry posted" *ngFor="let en of j.entries">
+              <header>
+                <div>
+                  <strong class="entry-no">N° {{ en.label }}</strong>
+                  <span class="entry-date">{{ en.date | date: 'dd/MM/yyyy' }}</span>
+                  <p-tag *ngIf="en.kind === 'Reversal'" value="Contraasiento" severity="warn" styleClass="tag-sm"></p-tag>
+                  <div class="muted small">{{ en.description }}<span *ngIf="en.thirdParty"> · {{ en.thirdParty }}</span><span *ngIf="en.reference"> · {{ en.reference }}</span></div>
+                </div>
+              </header>
+              <table class="t">
+                <thead><tr><th>Cuenta</th><th class="num">Debe</th><th class="num">Haber</th></tr></thead>
+                <tbody>
+                  <tr *ngFor="let l of en.lines">
+                    <td [class.indent]="l.credit > 0 && l.debit === 0">
+                      <strong *ngIf="l.code">{{ l.code }}</strong> {{ l.name }}
+                      <span class="muted small" *ngIf="l.externalCode">· contador {{ l.externalCode }}</span>
+                    </td>
+                    <td class="num">{{ l.debit ? (l.debit | gs) : '' }}</td>
+                    <td class="num">{{ l.credit ? (l.credit | gs) : '' }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </article>
+
+            <div class="pager" *ngIf="j.totalCount > j.pageSize">
+              <button type="button" class="btn secondary sm" [disabled]="j.page <= 1" (click)="journalPage(j.page - 1)">← Anterior</button>
+              <span class="muted small">Página {{ j.page }} de {{ pageCount(j) }}</span>
+              <button type="button" class="btn secondary sm" [disabled]="j.page >= pageCount(j)" (click)="journalPage(j.page + 1)">Siguiente →</button>
+            </div>
+          </ng-container>
+        </ng-container>
+
+        <!-- ══ ASIENTOS SUGERIDOS ══ -->
         <ng-container *ngIf="tab === 'entries'">
           <div class="filters">
             <label class="field"><span>Desde</span><input type="date" [(ngModel)]="from" (ngModelChange)="reloadEntries()" /></label>
@@ -86,8 +200,9 @@ const ACCOUNT_TYPE_LABELS: Record<string, string> = { Cash: 'Caja', Bank: 'Banco
             <article class="entry" *ngFor="let en of e.entries" [class.incomplete]="!en.isComplete">
               <header>
                 <div>
-                  <strong>N° {{ en.number }} · {{ en.date | date: 'dd/MM/yyyy' }}</strong>
+                  <strong>Sugerido {{ en.number }} · {{ en.date | date: 'dd/MM/yyyy' }}</strong>
                   <p-tag *ngIf="!en.isComplete" value="Incompleto" severity="warn" styleClass="tag-sm"></p-tag>
+                  <p-tag *ngIf="e.postedThrough && en.date <= e.postedThrough" value="Ya asentado" severity="success" styleClass="tag-sm"></p-tag>
                   <div class="muted small">{{ en.description }}<span *ngIf="en.thirdParty"> · {{ en.thirdParty }}</span><span *ngIf="en.reference"> · {{ en.reference }}</span></div>
                 </div>
               </header>
@@ -120,6 +235,7 @@ const ACCOUNT_TYPE_LABELS: Record<string, string> = { Cash: 'Caja', Bank: 'Banco
                 </tbody>
               </table>
             </div>
+            <p class="muted small">El «Sugerido n» es solo el orden en esta lista y cambia con el filtro: el número real del asiento lo da el Libro diario al asentar.</p>
             <p class="muted small">Criterio de caja: un asiento por cada cobro, gasto, ingreso o nota de crédito del proveedor del libro. No incluye apertura, transferencias entre cuentas propias ni retenciones. El paquete del contador (Excel del ejercicio) trae estas mismas hojas.</p>
           </ng-container>
         </ng-container>
@@ -196,7 +312,15 @@ const ACCOUNT_TYPE_LABELS: Record<string, string> = { Cash: 'Caja', Bank: 'Banco
     .tabs button { background: none; border: none; padding: 0.6rem 1.1rem; cursor: pointer; font: inherit; font-size: 0.92rem; font-weight: 600; color: var(--brand-muted); border-bottom: 2px solid transparent; margin-bottom: -2px; }
     .tabs button.active { color: #1385B6; border-bottom-color: #1385B6; }
     .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #e0a23b; margin-left: 0.3rem; }
-    .filters { display: flex; gap: 0.8rem; flex-wrap: wrap; margin-bottom: 0.8rem; }
+    .filters { display: flex; gap: 0.8rem; flex-wrap: wrap; margin-bottom: 0.8rem; align-items: flex-end; }
+    .posted-banner { display: grid; gap: 0.2rem; padding: 0.8rem 1.1rem; margin: 0.4rem 0 1rem; border-radius: 12px; border: 1px solid #6AC64A; background: rgba(106,198,74,0.1); }
+    .posted-banner.none { border-color: #e0a23b; background: rgba(224,162,59,0.08); }
+    .posted-banner strong { font-size: 1.05rem; color: var(--brand-ink); }
+    .post-box { padding: 0.2rem 1.1rem 0.9rem; margin: 0 0 1rem; border: 1px solid var(--brand-border); border-radius: 12px; }
+    .entry.posted { border-left: 4px solid #1385B6; }
+    .entry-no { font-size: 1.1rem; color: #1385B6; }
+    .entry-date { margin-left: 0.7rem; font-weight: 600; color: var(--brand-ink); }
+    .pager { display: flex; gap: 1rem; align-items: center; justify-content: center; margin: 1rem 0; }
     .kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.9rem; margin: 0.8rem 0; }
     .kpi { display: grid; gap: 0.25rem; padding: 0.9rem 1.1rem; border-radius: 14px; background: var(--p-content-background, #fff); border: 1px solid var(--brand-border); }
     .kpi span { font-size: 0.82rem; font-weight: 600; color: var(--brand-muted); }
@@ -224,7 +348,7 @@ export class FinanceAccountingPageComponent {
 
   buildingId = '';
   buildingName = '';
-  tab: Tab = 'entries';
+  tab: Tab = 'journal';
   noBuilding = false;
   errorKind: FinanceErrorKind | '' = '';
   errorMessage = '';
@@ -237,6 +361,22 @@ export class FinanceAccountingPageComponent {
   loadingEntries = false;
   entriesError = '';
   exporting = false;
+
+  // Libro diario (asentados)
+  readonly today = isoDate(new Date());
+  journal: Journal | null = null;
+  loadingJournal = false;
+  journalError = '';
+  jYear: number | null = null;
+  jNumber: number | null = null;
+  jFrom = '';
+  jTo = '';
+  jPage = 1;
+  postThrough = '';
+  preview: JournalPreview | null = null;
+  previewing = false;
+  posting = false;
+  postError = '';
 
   // Cuentas del plan
   roles: AccountingRoles | null = null;
@@ -287,8 +427,95 @@ export class FinanceAccountingPageComponent {
     this.entries = null;
     this.roles = null;
     this.errorKind = '';
+    this.journal = null;
+    this.jYear = this.jNumber = null;
+    this.jFrom = this.jTo = this.postThrough = '';
+    this.jPage = 1;
+    this.preview = null;
+    this.postError = '';
+    this.loadJournal();
     this.loadEntries();
     this.loadRoles();
+  }
+
+  // ── Libro diario ──
+
+  reloadJournal(): void {
+    this.jPage = 1;
+    this.loadJournal();
+  }
+
+  onJournalYear(year: number): void {
+    this.jYear = year;
+    this.reloadJournal();
+  }
+
+  journalPage(page: number): void {
+    this.jPage = page;
+    this.loadJournal();
+  }
+
+  pageCount(j: Journal): number { return Math.max(1, Math.ceil(j.totalCount / j.pageSize)); }
+
+  clearPreview(): void {
+    this.preview = null;
+    this.postError = '';
+  }
+
+  previewPost(): void {
+    if (!this.postThrough || this.previewing) return;
+
+    this.previewing = true;
+    this.postError = '';
+    this.api.previewJournal(this.buildingId, this.postThrough).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: preview => {
+        this.preview = preview;
+        this.previewing = false;
+        this.cdr.markForCheck();
+      },
+      error: err => {
+        this.preview = null;
+        this.previewing = false;
+        this.postError = extractApiErrorMessage(err, 'No se pudo calcular qué se asentaría.');
+        this.cdr.markForCheck();
+      }
+    });
+  }
+
+  confirmPost(): void {
+    const p = this.preview;
+    if (!p || this.posting || p.incompleteCount > 0) return;
+
+    const text = p.entryCount > 0
+      ? `Se asentarán ${p.entryCount} asientos (${p.firstLabel} a ${p.lastLabel}) hasta el ${shortDate(p.through)}. Lo asentado no se puede modificar. ¿Continuar?`
+      : `Se dejará asentado hasta el ${shortDate(p.through)} sin movimientos. ¿Continuar?`;
+    if (!confirm(text)) return;
+
+    this.posting = true;
+    this.postError = '';
+    this.api.postJournal(this.buildingId, p.through).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: result => {
+        this.posting = false;
+        this.preview = null;
+        this.postThrough = '';
+        this.jYear = null;
+        this.jPage = 1;
+        this.msg.add({
+          severity: 'success', life: 5000,
+          summary: result.postedCount > 0 ? `Se asentaron ${result.postedCount} asientos` : 'Período asentado',
+          detail: result.postedCount > 0 ? `${result.firstLabel} a ${result.lastLabel}` : undefined
+        });
+        this.loadJournal();
+        // Los sugeridos marcan hasta qué día ya están asentados.
+        this.loadEntries();
+        this.cdr.markForCheck();
+      },
+      error: err => {
+        this.posting = false;
+        this.postError = extractApiErrorMessage(err, 'No se pudo asentar.');
+        this.cdr.markForCheck();
+      }
+    });
   }
 
   onError(err: unknown): void { this.setBlockingError(err); }
@@ -352,6 +579,40 @@ export class FinanceAccountingPageComponent {
         const detail = await exportErrorMessage(err, 'No se pudo generar el Excel.');
         this.exporting = false;
         this.msg.add({ severity: 'error', summary: 'Error', detail, life: 7000 });
+        this.cdr.markForCheck();
+      }
+    });
+  }
+
+  private loadJournal(): void {
+    this.loadingJournal = true;
+    this.journalError = '';
+    this.api.getJournal(this.buildingId, {
+      fiscalYear: this.jYear ?? undefined, from: this.jFrom || undefined, to: this.jTo || undefined,
+      number: this.jNumber || undefined, page: this.jPage, pageSize: JOURNAL_PAGE_SIZE
+    }).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: journal => {
+        this.journal = journal;
+        this.jYear = journal.fiscalYear;
+        // Fecha sugerida para asentar: ayer, si todavía no está asentada.
+        if (!this.postThrough) {
+          const yesterday = isoDate(new Date(Date.now() - 86_400_000));
+          this.postThrough = journal.postedThrough && yesterday <= journal.postedThrough ? '' : yesterday;
+        }
+
+        this.loadingJournal = false;
+        this.cdr.markForCheck();
+      },
+      error: err => {
+        const { kind, message } = classifyFinanceError(err, 'No se pudo cargar el Libro diario.');
+        this.journal = null;
+        this.loadingJournal = false;
+        if (kind === 'other') {
+          this.journalError = message;
+        } else {
+          this.errorKind = kind;
+          this.errorMessage = message;
+        }
         this.cdr.markForCheck();
       }
     });

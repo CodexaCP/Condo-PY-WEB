@@ -21,6 +21,7 @@ const ACTION_LABELS: Record<string, string> = {
   Deleted: 'Eliminó',
   Closed: 'Cerró',
   Reopened: 'Reabrió',
+  Posted: 'Asentó',
   Enabled: 'Activó',
   Disabled: 'Desactivó',
   Started: 'Inició',

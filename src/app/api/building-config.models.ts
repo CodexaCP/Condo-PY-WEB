@@ -572,6 +572,7 @@ export interface AccountingEntry {
   reference: string;
   sourceType: LedgerSourceType;
   sourceId: string;
+  sourceAccountId: string | null;
   lines: AccountingLine[];
   debit: number;
   credit: number;
@@ -603,6 +604,91 @@ export interface AccountingEntries {
   totalCredit: number;
   // Cuentas financieras y rubros sin cuenta del plan que dejaron incompletos a algunos asientos.
   pending: string[];
+  // Último día asentado en el Libro Diario: los sugeridos hasta esa fecha ya tienen su número real.
+  postedThrough: string | null;
+}
+
+// ── Libro Diario: asientos asentados ──────────────────────────────────────────
+
+export type JournalEntryKind = 'Auto' | 'Opening' | 'Adjustment' | 'Reversal' | 'Closing';
+
+export interface JournalEntryLine {
+  ledgerCategoryId: string | null;
+  code: string;
+  externalCode: string | null;
+  name: string;
+  debit: number;
+  credit: number;
+  kind: string;
+}
+
+export interface JournalEntry {
+  id: string;
+  fiscalYear: number;
+  number: number;
+  // Número completo para mostrar y citar, por ejemplo 2026-000012.
+  label: string;
+  date: string;
+  operationDate: string;
+  description: string;
+  thirdParty: string;
+  reference: string;
+  kind: JournalEntryKind;
+  sourceType: LedgerSourceType | null;
+  sourceId: string | null;
+  reversesEntryId: string | null;
+  debit: number;
+  credit: number;
+  postedAtUtc: string;
+  postedByUserId: string | null;
+  lines: JournalEntryLine[];
+}
+
+export interface Journal {
+  buildingId: string;
+  buildingName: string;
+  fiscalYear: number;
+  fiscalYears: number[];
+  postedThrough: string | null;
+  entries: JournalEntry[];
+  totalCount: number;
+  page: number;
+  pageSize: number;
+  totalDebit: number;
+  totalCredit: number;
+  canPost: boolean;
+}
+
+export interface JournalPreview {
+  buildingId: string;
+  postedThrough: string | null;
+  from: string;
+  through: string;
+  entryCount: number;
+  incompleteCount: number;
+  pending: string[];
+  firstLabel: string | null;
+  lastLabel: string | null;
+  totalDebit: number;
+  totalCredit: number;
+  // Hay algo para asentar y todos los asientos están completos.
+  canPost: boolean;
+}
+
+export interface PostJournalResult {
+  postedCount: number;
+  firstLabel: string | null;
+  lastLabel: string | null;
+  postedThrough: string;
+}
+
+export interface JournalFilters {
+  fiscalYear?: number;
+  from?: string;
+  to?: string;
+  number?: number;
+  page?: number;
+  pageSize?: number;
 }
 
 // ── Libros contables ──────────────────────────────────────────────────────────
