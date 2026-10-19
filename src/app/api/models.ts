@@ -2109,7 +2109,7 @@ export interface LedgerCategoryCopyResult {
 // ── Finanzas del edificio: libro (saldos, movimientos, flujo y tablero) ───────
 
 export type LedgerDirection = 'In' | 'Out';
-export type LedgerSourceType = 'OwnerPayment' | 'BuildingExpense' | 'BuildingIncome' | 'SupplierCreditNote' | 'OpeningBalance';
+export type LedgerSourceType = 'OwnerPayment' | 'BuildingExpense' | 'BuildingIncome' | 'SupplierCreditNote' | 'OpeningBalance' | 'Transfer';
 
 export interface FinanceAccountBalance {
   id: string;

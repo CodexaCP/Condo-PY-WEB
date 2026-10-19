@@ -106,11 +106,12 @@ export class AccountingApiService {
 
   // Aviso previo a revertir un pago, deshacer la publicación de un período o deshacer el pago de un gasto: cuántos asientos vigentes del Libro
   // diario salen de eso. Nunca falla: sin Finanzas, sin permiso o sin asientos responde «nada asentado».
-  getJournalImpact(source: { ownerPaymentId?: string; periodId?: string; expenseId?: string }): Observable<JournalImpact> {
+  getJournalImpact(source: { ownerPaymentId?: string; periodId?: string; expenseId?: string; transferId?: string }): Observable<JournalImpact> {
     let params = new HttpParams();
     if (source.ownerPaymentId) params = params.set('ownerPaymentId', source.ownerPaymentId);
     if (source.periodId) params = params.set('periodId', source.periodId);
     if (source.expenseId) params = params.set('expenseId', source.expenseId);
+    if (source.transferId) params = params.set('transferId', source.transferId);
     return this.http.get<JournalImpact>(`${this.journalBase}/impact`, { params });
   }
 

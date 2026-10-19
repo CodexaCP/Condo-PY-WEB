@@ -321,6 +321,7 @@ function shortDate(iso: string): string {
                   <strong>Sugerido {{ en.number }} · {{ en.date | date: 'dd/MM/yyyy' }}</strong>
                   <p-tag *ngIf="!en.isComplete" value="Incompleto" severity="warn" styleClass="tag-sm"></p-tag>
                   <p-tag *ngIf="en.sourceType === 'OpeningBalance'" value="Apertura" severity="info" styleClass="tag-sm"></p-tag>
+                  <p-tag *ngIf="en.sourceType === 'Transfer'" value="Transferencia" severity="secondary" styleClass="tag-sm"></p-tag>
                   <p-tag *ngIf="e.postedThrough && en.date <= e.postedThrough" value="Ya asentado" severity="success" styleClass="tag-sm"></p-tag>
                   <div class="muted small">{{ en.description }}<span *ngIf="en.thirdParty"> · {{ en.thirdParty }}</span><span *ngIf="en.reference"> · {{ en.reference }}</span></div>
                 </div>

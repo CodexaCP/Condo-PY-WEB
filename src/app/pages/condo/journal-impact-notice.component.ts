@@ -30,16 +30,17 @@ export class JournalImpactNoticeComponent implements OnChanges {
   private readonly destroyRef = inject(DestroyRef);
   private readonly cdr = inject(ChangeDetectorRef);
 
-  @Input() kind: 'payment' | 'period' | 'expense' = 'payment';
+  @Input() kind: 'payment' | 'period' | 'expense' | 'transfer' = 'payment';
   @Input() ownerPaymentId = '';
   @Input() periodId = '';
   @Input() expenseId = '';
+  @Input() transferId = '';
 
   impact: JournalImpact | null = null;
 
   get headline(): string {
     return this.kind === 'period' ? 'Este período tiene movimientos ya asentados en el Libro diario'
-      : (this.kind === 'payment' ? 'Este pago' : 'Este gasto') + ' ya está asentado en el Libro diario';
+      : (this.kind === 'payment' ? 'Este pago' : this.kind === 'transfer' ? 'Esta operación' : 'Este gasto') + ' ya está asentado en el Libro diario';
   }
 
   get closing(): string {
@@ -48,7 +49,7 @@ export class JournalImpactNoticeComponent implements OnChanges {
 
   ngOnChanges(): void {
     const source = this.kind === 'payment' ? { ownerPaymentId: this.ownerPaymentId }
-      : this.kind === 'period' ? { periodId: this.periodId } : { expenseId: this.expenseId };
+      : this.kind === 'period' ? { periodId: this.periodId } : this.kind === 'transfer' ? { transferId: this.transferId } : { expenseId: this.expenseId };
     if (!Object.values(source)[0]) {
       this.impact = null;
       return;

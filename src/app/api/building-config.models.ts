@@ -398,7 +398,7 @@ export interface VatPurchasesBook {
 // ── Conciliación bancaria manual ──────────────────────────────────────────────
 
 export type ReconciliationStatus = 'Open' | 'Completed';
-export type LedgerSourceType = 'OwnerPayment' | 'BuildingExpense' | 'BuildingIncome' | 'SupplierCreditNote' | 'OpeningBalance';
+export type LedgerSourceType = 'OwnerPayment' | 'BuildingExpense' | 'BuildingIncome' | 'SupplierCreditNote' | 'OpeningBalance' | 'Transfer';
 export type LedgerDirection = 'In' | 'Out';
 
 // Una cuenta bancaria del edificio con el estado de su conciliación.

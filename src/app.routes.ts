@@ -305,6 +305,10 @@ export const appRoutes: Routes = [
                 loadComponent: () => import('./app/pages/condo/finance-vat-purchases-page.component').then(m => m.FinanceVatPurchasesPageComponent)
             },
             {
+                path: 'finance/operations',
+                loadComponent: () => import('./app/pages/condo/finance-operations-page.component').then(m => m.FinanceOperationsPageComponent)
+            },
+            {
                 path: 'finance/reconciliation',
                 loadComponent: () => import('./app/pages/condo/finance-reconciliation-page.component').then(m => m.FinanceReconciliationPageComponent)
             },
