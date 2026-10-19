@@ -3,7 +3,7 @@ import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { API_BASE_URL } from '../config/api.config';
 import {
-  AccountingEntries, AccountingRoles, Journal, JournalFilters, JournalPreview, PostJournalResult, UpdateAccountingRolesRequest
+  AccountingEntries, AccountingRoles, Journal, JournalDifferences, JournalFilters, JournalPreview, PostJournalResult, UpdateAccountingRolesRequest
 } from './building-config.models';
 
 // Asientos contables sugeridos (partida doble, criterio de caja) y asignación de las cuentas del plan que hacen de contrapartida
@@ -45,6 +45,11 @@ export class AccountingApiService {
     if (filters.page) params = params.set('page', filters.page);
     if (filters.pageSize) params = params.set('pageSize', filters.pageSize);
     return this.http.get<Journal>(this.journalBase, { params });
+  }
+
+  // Asientos ya asentados que cambiaron desde entonces (se corrigen con contraasiento al asentar).
+  getJournalDifferences(buildingId: string): Observable<JournalDifferences> {
+    return this.http.get<JournalDifferences>(`${this.journalBase}/differences`, { params: new HttpParams().set('buildingId', buildingId) });
   }
 
   // Lo que se asentaría hasta ese día, sin asentar nada.

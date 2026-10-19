@@ -11,7 +11,7 @@ import { Tag } from 'primeng/tag';
 import { extractApiErrorMessage } from '../../api/api-error.util';
 import { AccountingApiService } from '../../api/accounting-api.service';
 import {
-  AccountingEntries, AccountingPlanOption, AccountingRoleAccount, AccountingRoles, Journal, JournalPreview
+  AccountingEntries, AccountingPlanOption, AccountingRoleAccount, AccountingRoles, Journal, JournalDifferenceKind, JournalDifferences, JournalPreview
 } from '../../api/building-config.models';
 import { FinanceBuildingAccess } from '../../api/models';
 import { FinanceBuildingPickerComponent } from './finance-building-picker.component';
@@ -89,6 +89,28 @@ function shortDate(iso: string): string {
               <span class="muted small">Lo asentado tiene número correlativo por ejercicio y no se puede editar ni borrar: un error se corrige con un contraasiento.</span>
             </div>
 
+            <!-- Diferencias contra lo asentado -->
+            <div class="notice" *ngIf="differences && differences.items.length">
+              <strong>{{ differences.items.length }} asientos cambiaron desde que se asentaron.</strong>
+              Lo asentado no se modifica: al asentar se corrigen con un contraasiento y, si el movimiento sigue existiendo, un asiento nuevo.
+              <span *ngIf="differences.incompleteCount > 0">Falta la cuenta del plan de {{ differences.pending.join(', ') }}: hasta asignarla no se puede corregir.</span>
+              <div class="table-wrap">
+                <table class="t">
+                  <thead><tr><th>Qué pasó</th><th>Operación</th><th>Detalle</th><th>Asiento</th><th class="num">Antes</th><th class="num">Ahora</th></tr></thead>
+                  <tbody>
+                    <tr *ngFor="let d of differences.items">
+                      <td>{{ kindLabel(d.kind) }}</td>
+                      <td class="nowrap">{{ d.operationDate | date: 'dd/MM/yyyy' }}</td>
+                      <td>{{ d.description }}<span *ngIf="d.thirdParty"> · {{ d.thirdParty }}</span></td>
+                      <td class="nowrap">{{ d.entryLabel || '—' }}</td>
+                      <td class="num">{{ d.amountBefore !== null ? (d.amountBefore | gs) : '—' }}</td>
+                      <td class="num">{{ d.amountAfter !== null ? (d.amountAfter | gs) : '—' }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
             <!-- Asentar -->
             <div class="post-box" *ngIf="j.canPost">
               <h3>Asentar período</h3>
@@ -99,8 +121,13 @@ function shortDate(iso: string): string {
               </div>
               <p-message *ngIf="postError" severity="error" [text]="postError"></p-message>
               <ng-container *ngIf="preview as p">
-                <div class="notice info" *ngIf="p.entryCount === 0">
+                <div class="notice info" *ngIf="p.entryCount === 0 && p.correctionEntryCount === 0">
                   No hay movimientos del {{ p.from | date: 'dd/MM/yyyy' }} al {{ p.through | date: 'dd/MM/yyyy' }}. Podés igual dejarlo asentado hasta esa fecha.
+                </div>
+                <div class="notice info" *ngIf="p.correctionEntryCount > 0 && p.incompleteCount === 0">
+                  Además se corregirán <strong>{{ p.differences.length }} asientos que cambiaron</strong>: se crean {{ p.correctionEntryCount }} asientos
+                  (contraasiento y, si el movimiento sigue existiendo, asiento nuevo) con fecha {{ p.through | date: 'dd/MM/yyyy' }}. Los originales no se tocan.
+                  <span *ngIf="p.entryCount === 0">Numeración: <strong>{{ p.firstLabel }}</strong> a <strong>{{ p.lastLabel }}</strong>.</span>
                 </div>
                 <div class="notice info" *ngIf="p.entryCount > 0 && p.incompleteCount === 0">
                   Se asentarán <strong>{{ p.entryCount }} asientos</strong> del {{ p.from | date: 'dd/MM/yyyy' }} al {{ p.through | date: 'dd/MM/yyyy' }}
@@ -114,7 +141,7 @@ function shortDate(iso: string): string {
                 </div>
                 <div class="actions" *ngIf="p.incompleteCount === 0">
                   <button type="button" class="btn" [disabled]="posting" (click)="confirmPost()">
-                    {{ posting ? 'Asentando...' : (p.entryCount > 0 ? 'Asentar ' + p.entryCount + ' asientos' : 'Asentar hasta esa fecha') }}
+                    {{ posting ? 'Asentando...' : (p.entryCount + p.correctionEntryCount > 0 ? 'Asentar ' + (p.entryCount + p.correctionEntryCount) + ' asientos' : 'Asentar hasta esa fecha') }}
                   </button>
                 </div>
               </ng-container>
@@ -149,7 +176,9 @@ function shortDate(iso: string): string {
                 <div>
                   <strong class="entry-no">N° {{ en.label }}</strong>
                   <span class="entry-date">{{ en.date | date: 'dd/MM/yyyy' }}</span>
-                  <p-tag *ngIf="en.kind === 'Reversal'" value="Contraasiento" severity="warn" styleClass="tag-sm"></p-tag>
+                  <p-tag *ngIf="en.kind === 'Reversal'" [value]="'Contraasiento del N° ' + (en.reversesLabel || '')" severity="warn" styleClass="tag-sm"></p-tag>
+                  <p-tag *ngIf="en.reversedByLabel" [value]="'Anulado por el N° ' + en.reversedByLabel" severity="danger" styleClass="tag-sm"></p-tag>
+                  <span class="muted small" *ngIf="en.operationDate !== en.date"> · operación del {{ en.operationDate | date: 'dd/MM/yyyy' }}</span>
                   <div class="muted small">{{ en.description }}<span *ngIf="en.thirdParty"> · {{ en.thirdParty }}</span><span *ngIf="en.reference"> · {{ en.reference }}</span></div>
                 </div>
               </header>
@@ -370,6 +399,7 @@ export class FinanceAccountingPageComponent {
   // Libro diario (asentados)
   readonly today = isoDate(new Date());
   journal: Journal | null = null;
+  differences: JournalDifferences | null = null;
   loadingJournal = false;
   journalError = '';
   jYear: number | null = null;
@@ -433,6 +463,7 @@ export class FinanceAccountingPageComponent {
     this.roles = null;
     this.errorKind = '';
     this.journal = null;
+    this.differences = null;
     this.jYear = this.jNumber = null;
     this.jFrom = this.jTo = this.postThrough = '';
     this.jPage = 1;
@@ -463,6 +494,10 @@ export class FinanceAccountingPageComponent {
   // Lo pendiente puede ser una cuenta financiera o el IVA (se asignan en «Cuentas del plan») o un rubro (se resuelve en el plan de cuentas).
   needsChart(pending: string[]): boolean { return pending.some(p => p.startsWith('Rubro:')); }
   needsRoles(pending: string[]): boolean { return pending.some(p => !p.startsWith('Rubro:')); }
+
+  kindLabel(kind: JournalDifferenceKind): string {
+    return kind === 'Changed' ? 'Cambió' : kind === 'Missing' ? 'Sin asentar' : 'Ya no existe';
+  }
 
   pageCount(j: Journal): number { return Math.max(1, Math.ceil(j.totalCount / j.pageSize)); }
 
@@ -495,8 +530,10 @@ export class FinanceAccountingPageComponent {
     const p = this.preview;
     if (!p || this.posting || p.incompleteCount > 0) return;
 
-    const text = p.entryCount > 0
-      ? `Se asentarán ${p.entryCount} asientos (${p.firstLabel} a ${p.lastLabel}) hasta el ${shortDate(p.through)}. Lo asentado no se puede modificar. ¿Continuar?`
+    const total = p.entryCount + p.correctionEntryCount;
+    const fixes = p.correctionEntryCount > 0 ? ` Incluye ${p.correctionEntryCount} asientos de corrección (contraasientos y asientos nuevos).` : '';
+    const text = total > 0
+      ? `Se asentarán ${total} asientos (${p.firstLabel} a ${p.lastLabel}) hasta el ${shortDate(p.through)}.${fixes} Lo asentado no se puede modificar. ¿Continuar?`
       : `Se dejará asentado hasta el ${shortDate(p.through)} sin movimientos. ¿Continuar?`;
     if (!confirm(text)) return;
 
@@ -593,6 +630,22 @@ export class FinanceAccountingPageComponent {
     });
   }
 
+  // Asientos asentados que cambiaron. Con diferencias y nada nuevo que asentar, la fecha sugerida es el propio «asentado hasta»
+  // (alcanza para asentar solo las correcciones).
+  private loadDifferences(): void {
+    this.api.getJournalDifferences(this.buildingId).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: differences => {
+        this.differences = differences;
+        if (!this.postThrough && differences.items.length > 0 && differences.postedThrough) this.postThrough = differences.postedThrough;
+        this.cdr.markForCheck();
+      },
+      error: () => {
+        this.differences = null;
+        this.cdr.markForCheck();
+      }
+    });
+  }
+
   private loadJournal(): void {
     this.loadingJournal = true;
     this.journalError = '';
@@ -610,6 +663,7 @@ export class FinanceAccountingPageComponent {
         }
 
         this.loadingJournal = false;
+        this.loadDifferences();
         this.cdr.markForCheck();
       },
       error: err => {

@@ -637,6 +637,9 @@ export interface JournalEntry {
   sourceType: LedgerSourceType | null;
   sourceId: string | null;
   reversesEntryId: string | null;
+  // Número del asiento que este contraasiento invierte, y del contraasiento que anuló a este asiento (si lo hay).
+  reversesLabel: string | null;
+  reversedByLabel: string | null;
   debit: number;
   credit: number;
   postedAtUtc: string;
@@ -659,6 +662,34 @@ export interface Journal {
   canPost: boolean;
 }
 
+// Changed: el movimiento cambió después de asentarlo (contraasiento + asiento nuevo). Missing: movimiento de un día ya asentado sin asiento
+// (asiento nuevo). Removed: el movimiento ya no existe (contraasiento).
+export type JournalDifferenceKind = 'Changed' | 'Missing' | 'Removed';
+
+export interface JournalDifference {
+  kind: JournalDifferenceKind;
+  entryId: string | null;
+  entryLabel: string | null;
+  operationDate: string;
+  description: string;
+  thirdParty: string;
+  amountBefore: number | null;
+  amountAfter: number | null;
+  // El asiento nuevo estaría incompleto (falta una cuenta del plan).
+  incomplete: boolean;
+}
+
+export interface JournalDifferences {
+  buildingId: string;
+  postedThrough: string | null;
+  items: JournalDifference[];
+  changedCount: number;
+  missingCount: number;
+  removedCount: number;
+  incompleteCount: number;
+  pending: string[];
+}
+
 export interface JournalPreview {
   buildingId: string;
   postedThrough: string | null;
@@ -671,12 +702,17 @@ export interface JournalPreview {
   lastLabel: string | null;
   totalDebit: number;
   totalCredit: number;
+  // Asientos ya asentados que cambiaron y se corrigen al asentar, y cuántos asientos nuevos eso crea.
+  differences: JournalDifference[];
+  correctionEntryCount: number;
   // Hay algo para asentar y todos los asientos están completos.
   canPost: boolean;
 }
 
 export interface PostJournalResult {
   postedCount: number;
+  // Cuántos de los asientos creados son correcciones (contraasientos y asientos de reemplazo).
+  correctionEntryCount: number;
   firstLabel: string | null;
   lastLabel: string | null;
   postedThrough: string;
