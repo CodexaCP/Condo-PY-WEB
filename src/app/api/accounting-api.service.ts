@@ -3,8 +3,8 @@ import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { API_BASE_URL } from '../config/api.config';
 import {
-  AccountingEntries, AccountingRoles, Journal, JournalDifferences, JournalFilters, JournalImpact, JournalPreview, PostJournalResult,
-  UpdateAccountingRolesRequest
+  AccountingEntries, AccountingRoles, Journal, JournalDifferences, JournalFilters, JournalImpact, JournalLedger, JournalPreview, JournalTrialBalance,
+  PostJournalResult, UpdateAccountingRolesRequest
 } from './building-config.models';
 
 // Asientos contables sugeridos (partida doble, criterio de caja) y asignación de las cuentas del plan que hacen de contrapartida
@@ -46,6 +46,39 @@ export class AccountingApiService {
     if (filters.page) params = params.set('page', filters.page);
     if (filters.pageSize) params = params.set('pageSize', filters.pageSize);
     return this.http.get<Journal>(this.journalBase, { params });
+  }
+
+  // ── Libros oficiales (de lo asentado): Libro Diario imprimible, Libro Mayor y balance de sumas y saldos ──
+
+  private bookParams(buildingId: string, fiscalYear?: number | null, extra: Record<string, string | number | undefined> = {}): HttpParams {
+    let params = new HttpParams().set('buildingId', buildingId);
+    if (fiscalYear) params = params.set('fiscalYear', fiscalYear);
+    for (const [key, value] of Object.entries(extra)) if (value !== undefined && value !== '') params = params.set(key, value);
+    return params;
+  }
+
+  getLedger(buildingId: string, fiscalYear?: number | null, account?: string): Observable<JournalLedger> {
+    return this.http.get<JournalLedger>(`${this.journalBase}/ledger`, { params: this.bookParams(buildingId, fiscalYear, { account }) });
+  }
+
+  downloadLedger(buildingId: string, fiscalYear?: number | null): Observable<Blob> {
+    return this.http.get(`${this.journalBase}/ledger/export`, { params: this.bookParams(buildingId, fiscalYear), responseType: 'blob' });
+  }
+
+  getTrialBalance(buildingId: string, fiscalYear?: number | null): Observable<JournalTrialBalance> {
+    return this.http.get<JournalTrialBalance>(`${this.journalBase}/trial-balance`, { params: this.bookParams(buildingId, fiscalYear) });
+  }
+
+  downloadTrialBalance(buildingId: string, fiscalYear?: number | null): Observable<Blob> {
+    return this.http.get(`${this.journalBase}/trial-balance/export`, { params: this.bookParams(buildingId, fiscalYear), responseType: 'blob' });
+  }
+
+  // Libro Diario del ejercicio en hojas con folio correlativo (PDF para imprimir y rubricar) o en Excel.
+  downloadBook(buildingId: string, format: 'pdf' | 'excel', fiscalYear?: number | null, startFolio?: number | null): Observable<Blob> {
+    const path = format === 'pdf' ? 'book/pdf' : 'book/export';
+    return this.http.get(`${this.journalBase}/${path}`, {
+      params: this.bookParams(buildingId, fiscalYear, { startFolio: startFolio ?? undefined }), responseType: 'blob'
+    });
   }
 
   // Aviso previo a revertir un pago, deshacer la publicación de un período o deshacer el pago de un gasto: cuántos asientos vigentes del Libro

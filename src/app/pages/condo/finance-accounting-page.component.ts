@@ -17,9 +17,12 @@ import { FinanceBuildingAccess } from '../../api/models';
 import { FinanceBuildingPickerComponent } from './finance-building-picker.component';
 import { classifyFinanceError, exportErrorMessage, exportFileName, FinanceErrorKind, GsPipe } from './finance-format';
 import { FinanceStateComponent } from './finance-state.component';
+import { FinanceJournalLedgerComponent } from './finance-journal-ledger.component';
+import { FinanceTrialBalanceComponent } from './finance-trial-balance.component';
+import { bookFileName, saveBlob } from './journal-download';
 import { CONFIG_SECTION_STYLES } from './config-section.styles';
 
-type Tab = 'journal' | 'entries' | 'roles';
+type Tab = 'journal' | 'ledger' | 'balance' | 'entries' | 'roles';
 
 const JOURNAL_PAGE_SIZE = 50;
 
@@ -49,7 +52,10 @@ function shortDate(iso: string): string {
   standalone: true,
   selector: 'app-finance-accounting-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, FormsModule, RouterLink, Button, Card, Message, Tag, GsPipe, FinanceBuildingPickerComponent, FinanceStateComponent],
+  imports: [
+    CommonModule, FormsModule, RouterLink, Button, Card, Message, Tag, GsPipe, FinanceBuildingPickerComponent, FinanceStateComponent,
+    FinanceJournalLedgerComponent, FinanceTrialBalanceComponent
+  ],
   template: `
     <p-card styleClass="app-page-card">
       <div class="app-toolbar">
@@ -71,6 +77,8 @@ function shortDate(iso: string): string {
       <ng-container *ngIf="buildingId && !noBuilding && !errorKind">
         <nav class="tabs" role="tablist">
           <button type="button" role="tab" [class.active]="tab === 'journal'" (click)="setTab('journal')">Libro diario</button>
+          <button type="button" role="tab" [class.active]="tab === 'ledger'" (click)="setTab('ledger')">Libro mayor</button>
+          <button type="button" role="tab" [class.active]="tab === 'balance'" (click)="setTab('balance')">Sumas y saldos</button>
           <button type="button" role="tab" [class.active]="tab === 'entries'" (click)="setTab('entries')">Asientos sugeridos</button>
           <button type="button" role="tab" [class.active]="tab === 'roles'" (click)="setTab('roles')">
             Cuentas del plan <span class="dot" *ngIf="roles && !roles.isComplete" title="Faltan cuentas por asignar"></span>
@@ -87,6 +95,20 @@ function shortDate(iso: string): string {
               <strong *ngIf="j.postedThrough">Asentado hasta el {{ j.postedThrough | date: 'dd/MM/yyyy' }}</strong>
               <strong *ngIf="!j.postedThrough">Todavía no se asentó nada</strong>
               <span class="muted small">Lo asentado tiene número correlativo por ejercicio y no se puede editar ni borrar: un error se corrige con un contraasiento.</span>
+            </div>
+
+            <!-- Imprimir el Libro Diario -->
+            <div class="post-box" *ngIf="j.postedThrough">
+              <h3>Imprimir el Libro Diario del ejercicio {{ j.fiscalYear }}</h3>
+              <p class="muted small">
+                Hojas sueltas con folio correlativo, con el encabezado del titular y las sumas de cada hoja. La rúbrica de las hojas en el Registro Público de Comercio es un
+                trámite externo: acá solo se imprimen. Los datos del titular, el contador y la rúbrica se cargan en el Centro de configuración → Libros contables.
+              </p>
+              <div class="filters">
+                <label class="field"><span>Primer folio</span><input type="number" min="1" step="1" [(ngModel)]="startFolio" /></label>
+                <p-button type="button" label="Libro Diario (PDF)" icon="pi pi-file-pdf" [loading]="printing === 'pdf'" [disabled]="!!printing || !startFolio || startFolio < 1" (onClick)="downloadBook('pdf')"></p-button>
+                <p-button type="button" label="Excel" icon="pi pi-file-excel" severity="secondary" [outlined]="true" [loading]="printing === 'excel'" [disabled]="!!printing || !startFolio || startFolio < 1" (onClick)="downloadBook('excel')"></p-button>
+              </div>
             </div>
 
             <!-- Diferencias contra lo asentado -->
@@ -207,6 +229,32 @@ function shortDate(iso: string): string {
               <button type="button" class="btn secondary sm" [disabled]="j.page >= pageCount(j)" (click)="journalPage(j.page + 1)">Siguiente →</button>
             </div>
           </ng-container>
+        </ng-container>
+
+        <!-- ══ LIBRO MAYOR ══ -->
+        <ng-container *ngIf="tab === 'ledger'">
+          <div class="filters" *ngIf="journal?.fiscalYears?.length">
+            <label class="field">
+              <span>Ejercicio</span>
+              <select [ngModel]="jYear" (ngModelChange)="onJournalYear($event)">
+                <option *ngFor="let y of journal!.fiscalYears" [ngValue]="y">{{ y }}</option>
+              </select>
+            </label>
+          </div>
+          <app-finance-journal-ledger [buildingId]="buildingId" [buildingName]="buildingName" [fiscalYear]="jYear" [refreshKey]="refreshKey"></app-finance-journal-ledger>
+        </ng-container>
+
+        <!-- ══ SUMAS Y SALDOS ══ -->
+        <ng-container *ngIf="tab === 'balance'">
+          <div class="filters" *ngIf="journal?.fiscalYears?.length">
+            <label class="field">
+              <span>Ejercicio</span>
+              <select [ngModel]="jYear" (ngModelChange)="onJournalYear($event)">
+                <option *ngFor="let y of journal!.fiscalYears" [ngValue]="y">{{ y }}</option>
+              </select>
+            </label>
+          </div>
+          <app-finance-trial-balance [buildingId]="buildingId" [buildingName]="buildingName" [fiscalYear]="jYear" [refreshKey]="refreshKey"></app-finance-trial-balance>
         </ng-container>
 
         <!-- ══ ASIENTOS SUGERIDOS ══ -->
@@ -411,6 +459,11 @@ export class FinanceAccountingPageComponent {
   jFrom = '';
   jTo = '';
   jPage = 1;
+  // Impresión del Libro Diario: primer folio (por defecto el siguiente a los folios usados de la rúbrica) y archivo que se está generando.
+  startFolio: number | null = null;
+  printing: '' | 'pdf' | 'excel' = '';
+  // Cambia al asentar: los libros derivados (Mayor y sumas y saldos) vuelven a leer.
+  refreshKey = 0;
   postThrough = '';
   preview: JournalPreview | null = null;
   previewing = false;
@@ -468,6 +521,7 @@ export class FinanceAccountingPageComponent {
     this.errorKind = '';
     this.journal = null;
     this.differences = null;
+    this.startFolio = null;
     this.jYear = this.jNumber = null;
     this.jFrom = this.jTo = this.postThrough = '';
     this.jPage = 1;
@@ -546,6 +600,7 @@ export class FinanceAccountingPageComponent {
         this.postThrough = '';
         this.jYear = null;
         this.jPage = 1;
+        this.refreshKey++;
         this.msg.add({
           severity: 'success', life: 5000,
           summary: result.postedCount > 0 ? `Se asentaron ${result.postedCount} asientos` : 'Período asentado',
@@ -604,6 +659,28 @@ export class FinanceAccountingPageComponent {
       });
   }
 
+  // Libro Diario del ejercicio con folios: PDF para imprimir y rubricar, o Excel.
+  downloadBook(format: 'pdf' | 'excel'): void {
+    if (this.printing || !this.journal || !this.startFolio || this.startFolio < 1) return;
+
+    this.printing = format;
+    const year = this.journal.fiscalYear;
+    this.api.downloadBook(this.buildingId, format, year, Math.floor(this.startFolio)).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: blob => {
+        saveBlob(blob, bookFileName('libro-diario', this.buildingName, year, format === 'pdf' ? 'pdf' : 'xlsx'));
+        this.printing = '';
+        this.msg.add({ severity: 'success', summary: format === 'pdf' ? 'Libro Diario generado' : 'Excel generado', life: 4000 });
+        this.cdr.markForCheck();
+      },
+      error: async err => {
+        const detail = await exportErrorMessage(err, 'No se pudo generar el Libro Diario.');
+        this.printing = '';
+        this.msg.add({ severity: 'error', summary: 'Error', detail, life: 7000 });
+        this.cdr.markForCheck();
+      }
+    });
+  }
+
   download(): void {
     if (this.exporting || !this.entries) return;
 
@@ -656,6 +733,8 @@ export class FinanceAccountingPageComponent {
       next: journal => {
         this.journal = journal;
         this.jYear = journal.fiscalYear;
+        // Primer folio para imprimir: el siguiente a los folios usados de la rúbrica (se puede cambiar a mano).
+        if (this.startFolio === null) this.startFolio = journal.suggestedStartFolio;
         // Fecha sugerida para asentar: ayer, si todavía no está asentada.
         if (!this.postThrough) {
           const yesterday = isoDate(new Date(Date.now() - 86_400_000));

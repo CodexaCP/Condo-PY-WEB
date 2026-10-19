@@ -660,6 +660,8 @@ export interface Journal {
   totalDebit: number;
   totalCredit: number;
   canPost: boolean;
+  // Primer folio sugerido para imprimir el Libro Diario: el siguiente a los folios usados de la rúbrica (1 si no se cargó).
+  suggestedStartFolio: number;
 }
 
 // Changed: el movimiento cambió después de asentarlo (contraasiento + asiento nuevo). Missing: movimiento de un día ya asentado sin asiento
@@ -786,6 +788,71 @@ export interface UpdateAccountingBooksRequest {
   rubricDate: string | null;
   authorizedFolios: number | null;
   usedFolios: number | null;
+}
+
+// ── Libros oficiales: Libro Mayor y balance de sumas y saldos ─────────────────
+
+export interface JournalLedgerMovement {
+  date: string;
+  entryId: string;
+  // Número del asiento (2026-000012).
+  entryLabel: string;
+  description: string;
+  debit: number;
+  credit: number;
+  // Saldo acumulado de la cuenta después de este movimiento (positivo = deudor, negativo = acreedor).
+  balance: number;
+}
+
+export interface JournalLedgerAccount {
+  code: string;
+  externalCode: string | null;
+  name: string;
+  openingBalance: number;
+  debit: number;
+  credit: number;
+  closingBalance: number;
+  movementCount: number;
+  // Solo cuando se pide una cuenta: los movimientos del período en orden.
+  movements: JournalLedgerMovement[];
+}
+
+export interface JournalLedger {
+  buildingId: string;
+  buildingName: string;
+  fiscalYear: number;
+  fiscalYears: number[];
+  from: string;
+  to: string;
+  accounts: JournalLedgerAccount[];
+  totalDebit: number;
+  totalCredit: number;
+}
+
+export interface JournalTrialBalanceRow {
+  code: string;
+  externalCode: string | null;
+  name: string;
+  openingDebit: number;
+  openingCredit: number;
+  debit: number;
+  credit: number;
+  closingDebit: number;
+  closingCredit: number;
+}
+
+export interface JournalTrialBalance {
+  buildingId: string;
+  buildingName: string;
+  fiscalYear: number;
+  fiscalYears: number[];
+  from: string;
+  to: string;
+  rows: JournalTrialBalanceRow[];
+  totals: JournalTrialBalanceRow;
+  // Las sumas del debe y del haber coinciden y los saldos deudores igualan a los acreedores.
+  isBalanced: boolean;
+  difference: number;
 }
 
 // ── Informe de asamblea ───────────────────────────────────────────────────────
