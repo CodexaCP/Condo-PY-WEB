@@ -137,6 +137,7 @@ export class AppMenu {
                             { label: 'Unidades', icon: 'pi pi-fw pi-th-large', routerLink: ['/units'] },
                             { label: 'Centro de configuración', icon: 'pi pi-fw pi-sliders-h', routerLink: ['/building-config'] },
                             { label: 'Finanzas por edificio', icon: 'pi pi-fw pi-calculator', routerLink: ['/finance-admin'] },
+                            { label: 'Cobros online', icon: 'pi pi-fw pi-credit-card', routerLink: ['/online-payments'] },
                             { label: 'Marketplace por edificio', icon: 'pi pi-fw pi-shop', routerLink: ['/marketplace-admin'] },
                             { label: 'Publicidad por edificio', icon: 'pi pi-fw pi-megaphone', routerLink: ['/ad-buildings'] },
                             { label: 'Campañas de publicidad', icon: 'pi pi-fw pi-images', routerLink: ['/ad-campaigns'] },
@@ -184,7 +185,8 @@ export class AppMenu {
                             { label: 'Periodos', icon: 'pi pi-fw pi-calendar', routerLink: ['/expense-periods'] },
                             { label: 'Estado de cuenta', icon: 'pi pi-fw pi-file-pdf', routerLink: ['/account-statements'] },
                             { label: 'Morosidad', icon: 'pi pi-fw pi-exclamation-triangle', routerLink: ['/morosity'] },
-                            { label: 'Cobranza', icon: 'pi pi-fw pi-dollar', routerLink: ['/collections'] }
+                            { label: 'Cobranza', icon: 'pi pi-fw pi-dollar', routerLink: ['/collections'] },
+                            { label: 'Cobros online', icon: 'pi pi-fw pi-credit-card', routerLink: ['/online-payments'] }
                         ]),
                         group('Facturación', 'pi pi-fw pi-receipt', 'facturacion', [
                             ...(canManageInvoicing ? [{ label: 'Timbrados', icon: 'pi pi-fw pi-receipt', routerLink: ['/invoice-series'] }] : []),

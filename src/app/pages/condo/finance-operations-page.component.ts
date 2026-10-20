@@ -295,7 +295,8 @@ export class FinanceOperationsPageComponent {
 
   get fromOptions(): FinanceTransferAccount[] { return this.activeAccounts.filter(a => a.id !== this.toId); }
 
-  get toOptions(): FinanceTransferAccount[] { return this.activeAccounts.filter(a => a.id !== this.fromId); }
+  // La cuenta de cobros online por liquidar solo puede ser el origen (los cobros entran por el proveedor): al liquidarse, su saldo pasa al banco.
+  get toOptions(): FinanceTransferAccount[] { return this.activeAccounts.filter(a => a.id !== this.fromId && a.type !== 'Clearing'); }
 
   get requiresSupport(): boolean {
     const types = [this.fromId, this.toId].map(id => this.data?.accounts.find(a => a.id === id)?.type);
@@ -303,7 +304,7 @@ export class FinanceOperationsPageComponent {
   }
 
   typeLabel(a: FinanceTransferAccount): string {
-    return a.type === 'Cash' ? 'Caja' : a.type === 'Bank' ? 'Banco' : 'Fondo de reserva';
+    return a.type === 'Cash' ? 'Caja' : a.type === 'Bank' ? 'Banco' : a.type === 'Clearing' ? 'Cobros online por liquidar' : 'Fondo de reserva';
   }
 
   private first(type: FinanceTransferAccount['type']): FinanceTransferAccount | undefined {

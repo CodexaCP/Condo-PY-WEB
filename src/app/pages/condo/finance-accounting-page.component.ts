@@ -33,7 +33,7 @@ interface OptionGroup {
   items: AccountingPlanOption[];
 }
 
-const ACCOUNT_TYPE_LABELS: Record<string, string> = { Cash: 'Caja', Bank: 'Banco', ReserveFund: 'Fondo de reserva' };
+const ACCOUNT_TYPE_LABELS: Record<string, string> = { Cash: 'Caja', Bank: 'Banco', ReserveFund: 'Fondo de reserva', Clearing: 'Cobros online por liquidar' };
 
 // Fecha local en formato yyyy-MM-dd (lo que usan los campos de fecha y el backend).
 function isoDate(d: Date): string {

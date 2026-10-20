@@ -17,7 +17,7 @@ import { CONFIG_SECTION_STYLES } from './config-section.styles';
 
 const NOTES_MAX = 4000;
 
-const ACCOUNT_TYPE_LABELS: Record<string, string> = { Cash: 'caja', Bank: 'banco', ReserveFund: 'fondo de reserva' };
+const ACCOUNT_TYPE_LABELS: Record<string, string> = { Cash: 'caja', Bank: 'banco', ReserveFund: 'fondo de reserva', Clearing: 'cobros online por liquidar' };
 
 // Informe para la asamblea de propietarios: saldos por cuenta, estado de resultados por rubro (criterio de caja), ejecución presupuestaria
 // del ejercicio, fondo de reserva, morosidad por antigüedad, cuentas por pagar y las notas del administrador. Se ve en pantalla y se baja en

@@ -858,7 +858,7 @@ export interface ExpensePeriodOperationalAlerts {
   items: ExpensePeriodOperationalAlertItem[];
 }
 
-export type PaymentMethod = 'Cash' | 'BankTransfer' | 'Card' | 'Check' | 'Other';
+export type PaymentMethod = 'Cash' | 'BankTransfer' | 'Card' | 'Check' | 'Other' | 'Online';
 
 export interface PaymentAllocation {
   id: string;
@@ -1738,7 +1738,7 @@ export interface AnnouncementBroadcastRequest {
 
 export type OwnerPaymentStatus = 'Pending' | 'UnderReview' | 'Approved' | 'Rejected';
 // App: lo declara el propietario. Web: lo registra el personal ya cobrado.
-export type OwnerPaymentChannel = 'App' | 'Web';
+export type OwnerPaymentChannel = 'App' | 'Web' | 'Online';
 
 export interface OwnerPaymentUnit {
   unitId: string;
@@ -1920,7 +1920,7 @@ export interface PlanCloneResult {
 
 // ── Finanzas del edificio ─────────────────────────────────────────────────────
 
-export type FinancialAccountType = 'Cash' | 'Bank' | 'ReserveFund';
+export type FinancialAccountType = 'Cash' | 'Bank' | 'ReserveFund' | 'Clearing';
 // Clase de la cuenta en el plan: 1 Activo, 2 Pasivo, 3 Patrimonio / Fondos, 4 Ingresos, 5 Egresos. Solo Income y Expense reciben
 // gastos e ingresos cargados; el resto es de referencia (y se exporta al contador).
 export type LedgerCategoryType = 'Income' | 'Expense' | 'Fund' | 'Asset' | 'Liability';
@@ -2137,6 +2137,8 @@ export interface FinanceBalances {
   cashBalance: number;
   bankBalance: number;
   reserveFundBalance: number;
+  // Cobros online que el proveedor todavía no liquidó: no es dinero disponible (no suma a caja, banco ni fondo).
+  clearingBalance: number;
   defaultAccountId: string | null;
   warnings: string[];
 }

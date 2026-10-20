@@ -35,8 +35,9 @@ export class PaymentConnectionsApiService {
     return this.http.put<PaymentConnection>(`${this.base}/${id}`, request);
   }
 
-  setBuildings(id: string, buildingIds: string[]): Observable<PaymentConnection> {
-    return this.http.put<PaymentConnection>(`${this.base}/${id}/buildings`, { buildingIds });
+  // testBuildingIds: de los edificios indicados, cuáles son de prueba (ausente = no se cambia).
+  setBuildings(id: string, buildingIds: string[], testBuildingIds?: string[]): Observable<PaymentConnection> {
+    return this.http.put<PaymentConnection>(`${this.base}/${id}/buildings`, { buildingIds, testBuildingIds });
   }
 
   activate(id: string): Observable<PaymentConnection> {

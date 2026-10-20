@@ -31,7 +31,7 @@ const STATUS_SEVERITY: Record<string, 'warn' | 'info' | 'success' | 'danger' | '
 };
 
 const METHOD_LABELS: Record<string, string> = {
-  Cash: 'Efectivo', BankTransfer: 'Transferencia', Card: 'Tarjeta', Check: 'Cheque', Other: 'Otro'
+  Cash: 'Efectivo', BankTransfer: 'Transferencia', Card: 'Tarjeta', Check: 'Cheque', Other: 'Otro', Online: 'Pago online'
 };
 
 type BuildingGroup = { label: string; items: OwnerPayment[]; pendingCount: number };
@@ -200,7 +200,7 @@ const FILTERS: { label: string; value: string }[] = [
 
       <p class="app-state" *ngIf="loading">Cargando pagos...</p>
       <p class="app-state" *ngIf="!loading && !filtered.length && !pageError">
-        {{ tab === 'web' ? 'Todavía no hay pagos registrados por el sistema.' : 'No hay pagos ' + (selectedStatus ? 'con este estado' : 'registrados') + '.' }}
+        {{ tab === 'web' ? 'Todavía no hay pagos registrados por el sistema ni cobrados online.' : 'No hay pagos ' + (selectedStatus ? 'con este estado' : 'registrados') + '.' }}
       </p>
 
       <!-- Agrupado por edificio: cada usuario solo recibe del backend los pagos de sus edificios asignados. -->
@@ -417,7 +417,7 @@ export class OwnerPaymentsPageComponent implements OnInit {
   get canRevertLegacy(): boolean { return this.auth.hasRole('SuperAdmin'); }
 
   get pendingAppCount(): number {
-    return this.all.filter(p => p.channel !== 'Web' && (p.status === 'Pending' || p.status === 'UnderReview')).length;
+    return this.all.filter(p => p.channel === 'App' && (p.status === 'Pending' || p.status === 'UnderReview')).length;
   }
 
   get filteredOwners(): Owner[] {
@@ -473,7 +473,7 @@ export class OwnerPaymentsPageComponent implements OnInit {
 
   countFor(status: string): number {
     if (!status) return 0;
-    return this.all.filter(p => p.channel !== 'Web' && p.status === status).length;
+    return this.all.filter(p => p.channel === 'App' && p.status === status).length;
   }
 
   goToDetail(id: string): void {
@@ -493,11 +493,11 @@ export class OwnerPaymentsPageComponent implements OnInit {
   applyFilter(): void {
     if (this.tab === 'web') {
       const q = this.webSearch.trim().toLowerCase();
-      this.filtered = this.all.filter(p => p.channel === 'Web'
+      this.filtered = this.all.filter(p => (p.channel === 'Web' || p.channel === 'Online')
         && (!q || p.ownerFullName.toLowerCase().includes(q) || p.reference.toLowerCase().includes(q)
             || (p.externalReference ?? '').toLowerCase().includes(q)));
     } else {
-      const app = this.all.filter(p => p.channel !== 'Web');
+      const app = this.all.filter(p => p.channel === 'App');
       this.filtered = this.selectedStatus ? app.filter(p => p.status === this.selectedStatus) : app;
     }
     this.groups = this.buildGroups(this.filtered);

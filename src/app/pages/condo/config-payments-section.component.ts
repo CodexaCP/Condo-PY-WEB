@@ -2,6 +2,7 @@ import { CommonModule, DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, DestroyRef, inject, Input, OnChanges } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { forkJoin } from 'rxjs';
 import { MessageService } from 'primeng/api';
 import { Message } from 'primeng/message';
@@ -37,6 +38,9 @@ interface ConnectionForm {
   environment: PaymentEnvironment;
   settings: Record<string, string>;
   secrets: Record<string, string>;
+  holderName: string;
+  holderTaxId: string;
+  holderBankNote: string;
 }
 
 // Pagos online del Centro de configuración: las conexiones de la empresa con el comercio del proveedor (Bancard Tpago o vPOS) y los
@@ -47,7 +51,7 @@ interface ConnectionForm {
   standalone: true,
   selector: 'app-config-payments-section',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, FormsModule, Message, Tag, DatePipe],
+  imports: [CommonModule, FormsModule, RouterLink, Message, Tag, DatePipe],
   template: `
     <h2>Pagos online</h2>
     <p class="muted small">
@@ -109,6 +113,27 @@ interface ConnectionForm {
 
         <p class="muted small">{{ product.description }}</p>
 
+        <h3>Titular del comercio</h3>
+        <p class="muted small">
+          Es a nombre de quién se cobra: el propietario lo ve antes de pagar y cada cobro guarda una copia. Tiene que coincidir con el titular de la
+          cuenta que recibe el dinero (la administradora o el consorcio, según quién firmó con el proveedor). Obligatorio para activar la conexión.
+        </p>
+        <div class="form">
+          <label class="field wide">
+            <span>Nombre o razón social del titular</span>
+            <input type="text" name="holderName" maxlength="200" [(ngModel)]="form.holderName" placeholder="Ej. Administradora Sol S.A." />
+          </label>
+          <label class="field">
+            <span>RUC o cédula del titular</span>
+            <input type="text" name="holderTaxId" maxlength="30" [(ngModel)]="form.holderTaxId" placeholder="Ej. 80012345-6" />
+          </label>
+          <label class="field wide">
+            <span>Cuenta receptora (opcional)</span>
+            <input type="text" name="holderBankNote" maxlength="500" [(ngModel)]="form.holderBankNote" placeholder="Ej. Cta. cte. Itaú terminada en 4567" />
+            <span class="hint">Solo una nota interna para reconocer a qué cuenta acredita el proveedor.</span>
+          </label>
+        </div>
+
         <h3>Datos del comercio</h3>
         <div class="form">
           <ng-container *ngFor="let f of settingFields">
@@ -166,14 +191,28 @@ interface ConnectionForm {
         <div class="chips">
           <span class="chip" *ngFor="let b of c.buildings" [class.here]="b.buildingId === buildingId">
             {{ b.buildingName }}<small *ngIf="b.buildingId === buildingId"> · este edificio</small>
+            <small *ngIf="b.isTest" title="Un cobro de prueba se aplica a la deuda real solo en los edificios de prueba"> · de prueba</small>
           </span>
           <span class="muted small" *ngIf="!c.buildings.length">No sirve a ningún edificio todavía.</span>
         </div>
 
         <ng-container *ngIf="list!.canEdit">
           <div class="notice" *ngIf="c.missingFields.length">Faltan datos para activarla: {{ c.missingFields.join(', ') }}.</div>
+          <div class="notice" *ngIf="c.status !== 'Active' && (!c.holderName || !c.holderTaxId)">
+            Falta el <strong>titular del comercio</strong> (nombre y RUC o cédula): es obligatorio para activar la conexión.
+          </div>
+          <div class="notice info" *ngIf="isSimulator(c)">
+            <strong>Simulador de cobros.</strong> Solo para pruebas: sus cobros se aplican a la deuda únicamente en los edificios marcados «de prueba»; en cualquier
+            otro quedan registrados como simulados. Se responden desde <a [routerLink]="['/online-payments']">Cobros online</a>.
+          </div>
 
           <dl class="facts">
+            <dt>Titular del comercio</dt>
+            <dd>{{ c.holderName || '—' }}<ng-container *ngIf="c.holderTaxId"> · {{ c.holderTaxId }}</ng-container></dd>
+            <ng-container *ngIf="c.holderBankNote">
+              <dt>Cuenta receptora</dt>
+              <dd>{{ c.holderBankNote }}</dd>
+            </ng-container>
             <ng-container *ngFor="let f of fieldsOf(c)">
               <dt>{{ f.label }}</dt>
               <dd>
@@ -201,12 +240,24 @@ interface ConnectionForm {
           <!-- Edificios de la conexión -->
           <div class="panel inner" *ngIf="buildingsFor?.id === c.id">
             <h3>Edificios de «{{ c.name }}»</h3>
-            <p class="muted small">Elegí en qué edificios de la empresa se usa esta conexión. Un edificio puede tener varias conexiones.</p>
+            <p class="muted small">
+              Elegí en qué edificios de la empresa se usa esta conexión. Un edificio puede tener varias conexiones. Al sumar un edificio con Finanzas se
+              crea su cuenta «Cobros online por liquidar».
+            </p>
+            <p class="muted small">
+              Marcá «de prueba» solo en edificios donde querés probar con plata de mentira: ahí un cobro de sandbox o del simulador SÍ se aplica a la deuda.
+              En los demás queda registrado como simulado y no toca la deuda real.
+            </p>
             <p class="app-state" *ngIf="!companyBuildings">Cargando edificios...</p>
             <div class="checks" *ngIf="companyBuildings">
-              <label class="check" *ngFor="let b of companyBuildings">
-                <input type="checkbox" [checked]="buildingsFor!.selected.has(b.id)" (change)="toggleBuilding(b.id)" /> {{ b.name }}
-              </label>
+              <div class="check-row" *ngFor="let b of companyBuildings">
+                <label class="check">
+                  <input type="checkbox" [checked]="buildingsFor!.selected.has(b.id)" (change)="toggleBuilding(b.id)" /> {{ b.name }}
+                </label>
+                <label class="check test" *ngIf="buildingsFor!.selected.has(b.id)">
+                  <input type="checkbox" [checked]="buildingsFor!.tests.has(b.id)" (change)="toggleTest(b.id)" /> de prueba
+                </label>
+              </div>
               <p class="muted" *ngIf="!companyBuildings.length">La empresa no tiene edificios.</p>
             </div>
             <div class="actions">
@@ -252,6 +303,8 @@ interface ConnectionForm {
     .notes { margin: 0.6rem 0; padding-left: 1.2rem; color: var(--brand-muted); font-size: 0.85rem; display: grid; gap: 0.25rem; }
     .history { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.6rem; max-height: 22rem; overflow: auto; }
     .history li { padding-bottom: 0.5rem; border-bottom: 1px solid var(--brand-border); font-size: 0.88rem; }
+    .check-row { display: flex; align-items: center; gap: 1.2rem; flex-wrap: wrap; }
+    .check.test { color: var(--brand-muted); font-size: 0.85rem; }
     @media (max-width: 700px) { .facts { grid-template-columns: 1fr; } }
   `]
 })
@@ -278,7 +331,7 @@ export class ConfigPaymentsSectionComponent implements OnChanges {
   editing: { id: string | null } | null = null;
   editingConnection: PaymentConnection | null = null;
   form: ConnectionForm = this.emptyForm();
-  buildingsFor: { id: string; selected: Set<string> } | null = null;
+  buildingsFor: { id: string; selected: Set<string>; tests: Set<string> } | null = null;
   historyFor: { id: string; items: PaymentConnectionAudit[] | null } | null = null;
 
   readonly statusLabel = (s: PaymentConnectionStatus): string => STATUS_LABELS[s] ?? s;
@@ -301,8 +354,11 @@ export class ConfigPaymentsSectionComponent implements OnChanges {
 
   maskedFor(key: string): string | null { return this.editingConnection?.secretsMasked?.[key] ?? null; }
 
+  // Conexión del proveedor falso: solo existe en servidores de prueba y nunca en producción.
+  isSimulator(c: PaymentConnection): boolean { return c.providerCode === 'Fake'; }
+
   private emptyForm(): ConnectionForm {
-    return { name: '', providerCode: '', productCode: '', environment: 'Sandbox', settings: {}, secrets: {} };
+    return { name: '', providerCode: '', productCode: '', environment: 'Sandbox', settings: {}, secrets: {}, holderName: '', holderTaxId: '', holderBankNote: '' };
   }
 
   ngOnChanges(): void {
@@ -369,7 +425,10 @@ export class ConfigPaymentsSectionComponent implements OnChanges {
       productCode: c.productCode,
       environment: c.environment,
       settings: { ...(c.settings ?? {}) },
-      secrets: {}
+      secrets: {},
+      holderName: c.holderName ?? '',
+      holderTaxId: c.holderTaxId ?? '',
+      holderBankNote: c.holderBankNote ?? ''
     };
   }
 
@@ -403,6 +462,9 @@ export class ConfigPaymentsSectionComponent implements OnChanges {
       providerCode: this.form.providerCode,
       productCode: this.form.productCode,
       environment: this.form.environment,
+      holderName: this.form.holderName.trim(),
+      holderTaxId: this.form.holderTaxId.trim(),
+      holderBankNote: this.form.holderBankNote.trim(),
       settings: { ...this.form.settings },
       // Solo viajan las claves que se escribieron: vacío conserva la actual.
       secrets: Object.fromEntries(Object.entries(this.form.secrets).filter(([, v]) => (v ?? '').trim().length > 0))
@@ -429,7 +491,11 @@ export class ConfigPaymentsSectionComponent implements OnChanges {
 
   startBuildings(c: PaymentConnection): void {
     this.closePanels();
-    this.buildingsFor = { id: c.id, selected: new Set(c.buildings.map(b => b.buildingId)) };
+    this.buildingsFor = {
+      id: c.id,
+      selected: new Set(c.buildings.map(b => b.buildingId)),
+      tests: new Set(c.buildings.filter(b => b.isTest).map(b => b.buildingId))
+    };
     if (this.companyBuildings) return;
 
     this.buildingsApi.getAll().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
@@ -444,7 +510,19 @@ export class ConfigPaymentsSectionComponent implements OnChanges {
   toggleBuilding(id: string): void {
     const selected = this.buildingsFor?.selected;
     if (!selected) return;
-    if (selected.has(id)) selected.delete(id); else selected.add(id);
+    if (selected.has(id)) {
+      selected.delete(id);
+      this.buildingsFor?.tests.delete(id);
+    } else {
+      selected.add(id);
+    }
+  }
+
+  // Edificio de prueba: un cobro de sandbox o del simulador se aplica a la deuda solo acá; en cualquier otro queda registrado como simulado.
+  toggleTest(id: string): void {
+    const tests = this.buildingsFor?.tests;
+    if (!tests) return;
+    if (tests.has(id)) tests.delete(id); else tests.add(id);
   }
 
   saveBuildings(): void {
@@ -452,7 +530,7 @@ export class ConfigPaymentsSectionComponent implements OnChanges {
     if (!target) return;
 
     this.saving = true;
-    this.api.setBuildings(target.id, [...target.selected]).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+    this.api.setBuildings(target.id, [...target.selected], [...target.tests]).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: updated => {
         this.saving = false;
         this.buildingsFor = null;

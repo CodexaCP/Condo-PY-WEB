@@ -242,6 +242,10 @@ export const appRoutes: Routes = [
                 path: 'owner-payments/:id',
                 loadComponent: () => import('./app/pages/condo/owner-payment-detail-page.component').then(m => m.OwnerPaymentDetailPageComponent)
             },
+            {
+                path: 'online-payments',
+                loadComponent: () => import('./app/pages/condo/online-payments-page.component').then(m => m.OnlinePaymentsPageComponent)
+            },
 
             // ── Comunicados ───────────────────────────────────────────────
             {

@@ -405,7 +405,7 @@ export type LedgerDirection = 'In' | 'Out';
 export interface ReconciliationAccount {
   accountId: string;
   accountName: string;
-  accountType: 'Cash' | 'Bank' | 'ReserveFund';
+  accountType: 'Cash' | 'Bank' | 'ReserveFund' | 'Clearing';
   isActive: boolean;
   // Saldo del libro a hoy.
   bookBalance: number;
@@ -526,7 +526,7 @@ export interface AccountingPlanOption {
 export interface AccountingRoleAccount {
   financialAccountId: string;
   name: string;
-  type: 'Cash' | 'Bank' | 'ReserveFund';
+  type: 'Cash' | 'Bank' | 'ReserveFund' | 'Clearing';
   isActive: boolean;
   ledgerCategoryId: string | null;
   code: string | null;
@@ -958,7 +958,7 @@ export interface AssemblyReportRubro {
 
 export interface AssemblyReportAccount {
   name: string;
-  type: 'Cash' | 'Bank' | 'ReserveFund';
+  type: 'Cash' | 'Bank' | 'ReserveFund' | 'Clearing';
   // Fila de los movimientos que no tienen cuenta asignada.
   isUnassigned: boolean;
   // Saldo al comienzo del rango, lo que entró y salió en el rango, y el saldo al final.

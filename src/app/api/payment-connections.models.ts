@@ -39,6 +39,8 @@ export interface PaymentConnectionBuilding {
   buildingId: string;
   buildingName: string;
   isEnabled: boolean;
+  // Edificio de prueba: un cobro de sandbox o del simulador se aplica a la deuda solo acá; en cualquier otro queda simulado.
+  isTest: boolean;
 }
 
 export interface PaymentConnection {
@@ -60,6 +62,10 @@ export interface PaymentConnection {
   secretsMasked?: Record<string, string> | null;
   secretsUpdatedAtUtc?: string | null;
   missingFields: string[];
+  // Titular del comercio: a nombre de quién se cobra. Obligatorio para activar.
+  holderName?: string | null;
+  holderTaxId?: string | null;
+  holderBankNote?: string | null;
 }
 
 export interface PaymentConnectionList {
@@ -79,6 +85,10 @@ export interface PaymentConnectionRequest {
   settings: Record<string, string>;
   // Vacío o ausente = se conserva la clave actual; con valor = se reemplaza.
   secrets: Record<string, string>;
+  // Titular del comercio. Ausente = no se toca; vacío borra el dato.
+  holderName?: string | null;
+  holderTaxId?: string | null;
+  holderBankNote?: string | null;
 }
 
 export interface PaymentConnectionAudit {

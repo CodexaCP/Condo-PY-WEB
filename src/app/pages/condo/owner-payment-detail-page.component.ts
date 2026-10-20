@@ -81,6 +81,7 @@ const STATUS_SEVERITY: Record<string, 'warn' | 'info' | 'success' | 'danger' | '
             styleClass="status-tag">
           </p-tag>
           <p-tag *ngIf="payment.channel === 'Web'" value="Registrado por el sistema" severity="secondary"></p-tag>
+          <p-tag *ngIf="payment.channel === 'Online'" value="Cobro online" severity="info"></p-tag>
           <span *ngIf="payment.resolvedAt" class="resolved-date">
             {{ payment.reversedAt ? 'Revertido' : (payment.status === 'Approved' ? 'Aprobado' : 'Rechazado') }} el
             {{ payment.resolvedAt | date:'dd/MM/yyyy HH:mm' }}
@@ -100,32 +101,32 @@ const STATUS_SEVERITY: Record<string, 'warn' | 'info' | 'success' | 'danger' | '
               <span class="monospace">{{ payment.reference }}</span>
             </div>
             <div class="detail-item">
-              <label>{{ payment.channel === 'Web' ? 'Fecha del pago' : 'Fecha del comprobante' }}</label>
+              <label>{{ isSystem(payment) ? 'Fecha del pago' : 'Fecha del comprobante' }}</label>
               <span>{{ payment.paymentDate | date:'dd/MM/yyyy' }}</span>
             </div>
             <div class="detail-item">
-              <label>{{ payment.channel === 'Web' ? 'Monto recibido' : 'Monto declarado' }}</label>
+              <label>{{ isSystem(payment) ? 'Monto recibido' : 'Monto declarado' }}</label>
               <span class="amount">{{ payment.declaredAmount | number:'1.0-2' }}</span>
             </div>
-            <div class="detail-item" *ngIf="payment.reviewedAmount !== null && payment.channel !== 'Web'">
+            <div class="detail-item" *ngIf="payment.reviewedAmount !== null && !isSystem(payment)">
               <label>Monto revisado</label>
               <span class="amount highlight">{{ payment.reviewedAmount | number:'1.0-2' }}</span>
             </div>
             <div class="detail-item">
-              <label>{{ payment.channel === 'Web' ? 'Registrado el' : 'Enviado el' }}</label>
+              <label>{{ isSystem(payment) ? (payment.channel === 'Online' ? 'Cobrado el' : 'Registrado el') : 'Enviado el' }}</label>
               <span>{{ payment.createdAtUtc | date:'dd/MM/yyyy HH:mm' }}</span>
             </div>
             <div class="detail-item" *ngIf="payment.reviewedByUserFullName">
-              <label>{{ payment.channel === 'Web' ? 'Registrado por' : 'Revisado por' }}</label>
+              <label>{{ isSystem(payment) ? 'Registrado por' : 'Revisado por' }}</label>
               <span>{{ payment.reviewedByUserFullName }}</span>
             </div>
-            <ng-container *ngIf="payment.channel === 'Web'">
+            <ng-container *ngIf="isSystem(payment)">
               <div class="detail-item">
                 <label>Método</label>
                 <span>{{ methodLabel(payment.method) }}</span>
               </div>
               <div class="detail-item" *ngIf="payment.externalReference">
-                <label>N° de transferencia / documento</label>
+                <label>{{ payment.channel === 'Online' ? 'Transacción del proveedor' : 'N° de transferencia / documento' }}</label>
                 <span class="monospace">{{ payment.externalReference }}</span>
               </div>
               <div class="detail-item" *ngIf="payment.notes">
@@ -858,8 +859,11 @@ export class OwnerPaymentDetailPageComponent implements OnInit {
     if (!this.showReverseForm) this.reverseReason = '';
   }
 
+  // Pago que no pasó por la revisión de la app: lo registró el personal (Web) o lo confirmó el proveedor de pagos (Online).
+  isSystem(payment: { channel: string }): boolean { return payment.channel === 'Web' || payment.channel === 'Online'; }
+
   methodLabel(method: string): string {
-    return ({ Cash: 'Efectivo', BankTransfer: 'Transferencia', Card: 'Tarjeta', Check: 'Cheque', Other: 'Otro' } as Record<string, string>)[method] ?? method;
+    return ({ Cash: 'Efectivo', BankTransfer: 'Transferencia', Card: 'Tarjeta', Check: 'Cheque', Other: 'Otro', Online: 'Pago online' } as Record<string, string>)[method] ?? method;
   }
 
   toggleRejectForm(): void {

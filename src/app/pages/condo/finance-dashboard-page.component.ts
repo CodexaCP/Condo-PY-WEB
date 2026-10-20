@@ -130,6 +130,15 @@ const OTHERS_COLOR = '#94a3b8';
               <span class="kd muted">Bancos</span>
             </div>
           </div>
+          <!-- Cobros online que el proveedor todavía no liquidó: un derecho de cobro, no dinero disponible (no suma a caja ni banco). -->
+          <div class="card kpi" *ngIf="d.balances.clearingBalance">
+            <div class="ki ki-bank"><i class="pi pi-hourglass"></i></div>
+            <div class="kb">
+              <span class="kl">Cobros online por liquidar</span>
+              <strong class="kv sm">{{ d.balances.clearingBalance | gs }}</strong>
+              <span class="kd muted">A acreditar por el proveedor</span>
+            </div>
+          </div>
         </div>
 
         <ng-container *ngFor="let w of d.balances.warnings">
@@ -531,7 +540,7 @@ export class FinanceDashboardPageComponent {
   }
 
   typeLabel(type: string): string {
-    return type === 'Cash' ? 'Caja' : type === 'Bank' ? 'Banco' : 'Fondo de reserva';
+    return type === 'Cash' ? 'Caja' : type === 'Bank' ? 'Banco' : type === 'Clearing' ? 'Cobros online por liquidar' : 'Fondo de reserva';
   }
 
   private resetExtras(): void {

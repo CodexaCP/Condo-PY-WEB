@@ -14,7 +14,8 @@ import { FinancialAccount, FinancialAccountType } from '../../api/models';
 const TYPE_LABELS: Record<FinancialAccountType, string> = {
   Cash: 'Caja',
   Bank: 'Banco',
-  ReserveFund: 'Fondo de reserva'
+  ReserveFund: 'Fondo de reserva',
+  Clearing: 'Cobros online por liquidar'
 };
 
 // Cuentas financieras del edificio (caja, bancos y fondo de reserva) con su saldo inicial a la fecha de arranque.
@@ -70,11 +71,12 @@ const TYPE_LABELS: Record<FinancialAccountType, string> = {
         <span>{{ typeLabel(item.type) }}<small class="reconciles" *ngIf="item.reconciles"> · se concilia</small></span>
         <span class="num">{{ formatCurrency(item.openingBalance) }}</span>
         <p-tag [value]="item.isActive ? 'Activa' : 'Inactiva'" [severity]="item.isActive ? 'success' : 'secondary'"></p-tag>
-        <div class="app-actions" *ngIf="canEdit">
+        <div class="app-actions" *ngIf="canEdit && item.type !== 'Clearing'">
           <p-button type="button" icon="pi pi-pencil" severity="secondary" [rounded]="true" [text]="true" (onClick)="openEdit(item)" aria-label="Editar"></p-button>
           <p-button type="button" icon="pi pi-trash" severity="danger" [rounded]="true" [text]="true" (onClick)="askDelete(item)" aria-label="Eliminar"></p-button>
         </div>
-        <span *ngIf="!canEdit"></span>
+        <small class="system-account" *ngIf="item.type === 'Clearing'" title="La crea y la administra el sistema">La administra el sistema</small>
+        <span *ngIf="!canEdit && item.type !== 'Clearing'"></span>
       </div>
       <div class="app-row acc-grid total">
         <strong>Total de saldos iniciales</strong>
@@ -178,6 +180,7 @@ const TYPE_LABELS: Record<FinancialAccountType, string> = {
     .ficha-form .checkbox > span { margin: 0; }
     .ficha-form .hint { margin: -0.4rem 0 0; font-size: 0.8rem; color: var(--brand-muted); line-height: 1.4; }
     .reconciles { color: var(--brand-muted); }
+    .system-account { color: var(--brand-muted); font-size: 0.8rem; }
     .req { color: var(--red-400, #f87171); }
     .ficha-footer { display: flex; justify-content: flex-end; gap: 0.75rem; padding-top: 0.5rem; }
     .confirm-text { margin: 0 0 1.2rem; color: var(--brand-ink); line-height: 1.6; }
@@ -220,7 +223,7 @@ export class FinanceAccountsEditorComponent implements OnChanges {
 
   // Cajas y bancos activos: pueden ser la cuenta por defecto (el fondo de reserva tiene su propia cuenta).
   get operatingAccounts(): FinancialAccount[] {
-    return this.items.filter(x => x.isActive && x.type !== 'ReserveFund');
+    return this.items.filter(x => x.isActive && x.type !== 'ReserveFund' && x.type !== 'Clearing');
   }
 
   changeDefault(accountId: string | null): void {

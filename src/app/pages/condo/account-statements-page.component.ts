@@ -631,6 +631,7 @@ export class AccountStatementsPageComponent implements OnInit {
       : method === 'BankTransfer' ? 'Transferencia'
       : method === 'Card' ? 'Tarjeta'
       : method === 'Check' ? 'Cheque'
+      : method === 'Online' ? 'Pago online'
       : 'Otro';
   }
 
