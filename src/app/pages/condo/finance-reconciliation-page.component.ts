@@ -50,7 +50,7 @@ import { FinanceStateComponent } from './finance-state.component';
             <tbody>
               <ng-container *ngFor="let a of o.accounts">
                 <tr [class.inactive]="!a.isActive">
-                  <td><strong>{{ a.accountName }}</strong> <span class="muted small" *ngIf="a.accountType !== 'Bank'">({{ a.accountType === 'Cash' ? 'caja' : 'fondo de reserva' }})</span> <span class="muted small" *ngIf="!a.isActive">(inactiva)</span></td>
+                  <td><strong>{{ a.accountName }}</strong> <span class="muted small" *ngIf="a.accountType === 'Cash' || a.accountType === 'ReserveFund'">({{ a.accountType === 'Cash' ? 'caja' : 'fondo de reserva' }})</span> <span class="muted small" *ngIf="!a.isActive">(inactiva)</span></td>
                   <td class="num">{{ a.bookBalance | gs }}</td>
                   <td>
                     <span *ngIf="a.lastCompletedDate">{{ a.lastCompletedDate | date: 'dd/MM/yyyy' }} · extracto {{ a.lastStatementBalance | gs }}</span>
