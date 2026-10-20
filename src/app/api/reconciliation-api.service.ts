@@ -29,8 +29,14 @@ export class ReconciliationApiService {
     return this.http.get<ReconciliationSummary[]>(`${this.base}/history`, { params });
   }
 
-  get(id: string): Observable<ReconciliationWorkspace> {
-    return this.http.get<ReconciliationWorkspace>(`${this.base}/${id}`);
+  // Por defecto solo lo conciliado en esta conciliación; con includePrevious también lo de otras conciliaciones de la cuenta.
+  get(id: string, includePrevious = false): Observable<ReconciliationWorkspace> {
+    return this.http.get<ReconciliationWorkspace>(`${this.base}/${id}`, { params: new HttpParams().set('includePrevious', includePrevious) });
+  }
+
+  // Excel de la conciliación: resumen, conciliados, todos los pendientes y, si se pide, lo de otras conciliaciones.
+  exportExcel(id: string, includePrevious = false): Observable<Blob> {
+    return this.http.get(`${this.base}/${id}/export`, { params: new HttpParams().set('includePrevious', includePrevious), responseType: 'blob' });
   }
 
   start(request: StartReconciliationRequest): Observable<ReconciliationWorkspace> {

@@ -1,4 +1,4 @@
-import { CommonModule } from '@angular/common';
+import { CommonModule, NgTemplateOutlet } from '@angular/common';
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, DestroyRef, inject, OnInit } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
@@ -10,9 +10,11 @@ import { Message } from 'primeng/message';
 import { Tag } from 'primeng/tag';
 import { extractApiErrorMessage } from '../../api/api-error.util';
 import { LedgerSourceType, ReconciliationItemRef, ReconciliationMovement, ReconciliationWorkspace } from '../../api/building-config.models';
+import { FinanceAccessService } from '../../api/finance-access.service';
 import { ReconciliationApiService } from '../../api/reconciliation-api.service';
 import { CONFIG_SECTION_STYLES } from './config-section.styles';
-import { classifyFinanceError, GsPipe, todayParaguay } from './finance-format';
+import { classifyFinanceError, exportFileName, GsPipe, todayParaguay } from './finance-format';
+import { saveBlob } from './journal-download';
 
 // El backend acepta hasta este número de movimientos por pedido: una selección más grande se manda en tandas.
 const MAX_ITEMS_PER_REQUEST = 500;
@@ -33,7 +35,7 @@ const SOURCE_LABELS: Record<LedgerSourceType, string> = {
   standalone: true,
   selector: 'app-finance-reconciliation-detail-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, FormsModule, RouterLink, Card, Message, Tag, GsPipe],
+  imports: [CommonModule, NgTemplateOutlet, FormsModule, RouterLink, Card, Message, Tag, GsPipe],
   template: `
     <p-card styleClass="app-page-card">
       <a class="back" [routerLink]="['/finance/reconciliation']" [queryParams]="backParams">← Volver a las conciliaciones</a>
@@ -49,9 +51,12 @@ const SOURCE_LABELS: Record<LedgerSourceType, string> = {
               <p-tag [value]="d.status === 'Open' ? 'Abierta' : 'Cerrada'" [severity]="d.status === 'Open' ? 'warn' : 'success'"></p-tag>
             </p>
           </div>
-          <div class="head-actions" *ngIf="d.canEdit && d.status === 'Open'">
-            <button type="button" class="btn secondary" [disabled]="busy" (click)="editing = !editing">Editar extracto</button>
-            <button type="button" class="btn secondary danger-text" [disabled]="busy" (click)="discard()">Descartar</button>
+          <div class="head-actions">
+            <button type="button" class="btn secondary" [disabled]="exporting" (click)="exportExcel()" title="Resumen, conciliados y todos los pendientes">{{ exporting ? 'Generando...' : 'Exportar a Excel' }}</button>
+            <ng-container *ngIf="d.canEdit && d.status === 'Open'">
+              <button type="button" class="btn secondary" [disabled]="busy" (click)="editing = !editing">Editar extracto</button>
+              <button type="button" class="btn secondary danger-text" [disabled]="busy" (click)="discard()">Descartar</button>
+            </ng-container>
           </div>
         </div>
 
@@ -95,15 +100,20 @@ const SOURCE_LABELS: Record<LedgerSourceType, string> = {
         <p class="muted small">Movimientos del libro hasta la fecha de corte que todavía no están conciliados. Tildá los que aparecen en el extracto; los que el banco aún no registró (cheques o depósitos en tránsito) quedan pendientes.</p>
         <p-message *ngIf="d.pendingTruncated" severity="warn" text="Hay más de 1000 pendientes: se muestran los primeros. Conciliá estos y volvé a abrir la pantalla para ver el resto."></p-message>
         <div class="bulk" *ngIf="d.canEdit && d.status === 'Open' && d.pending.length">
-          <label class="check"><input type="checkbox" [checked]="allPendingSelected" (change)="togglePending($any($event.target).checked)" /> Seleccionar todos</label>
+          <label class="check"><input type="checkbox" [checked]="allPendingSelected" (change)="togglePending($any($event.target).checked)" /> Seleccionar todos ({{ pendingFiltered.length }})</label>
           <button type="button" class="btn sm" [disabled]="busy || !pendingSel.size" (click)="markSelected()">Marcar {{ pendingSel.size }} como conciliados</button>
         </div>
         <p class="muted" *ngIf="!d.pending.length">No hay movimientos pendientes.</p>
+        <div class="list-tools" *ngIf="d.pending.length">
+          <input type="search" class="search" placeholder="Buscar por detalle, referencia, importe o fecha" [ngModel]="pendingSearch" (ngModelChange)="onSearch('pending', $event)" name="pendingSearch" />
+          <span class="muted small" *ngIf="pendingSearch">{{ pendingFiltered.length }} de {{ d.pending.length }}</span>
+        </div>
+        <ng-container *ngTemplateOutlet="pager; context: { kind: 'pending', page: pendingPage, pages: pendingPages, total: pendingFiltered.length }"></ng-container>
         <div class="table-wrap" *ngIf="d.pending.length">
           <table class="t">
             <thead><tr><th *ngIf="d.canEdit && d.status === 'Open'"></th><th>Fecha</th><th>Tipo</th><th>Detalle</th><th class="num">Importe</th></tr></thead>
             <tbody>
-              <tr *ngFor="let m of d.pending">
+              <tr *ngFor="let m of pendingView">
                 <td *ngIf="d.canEdit && d.status === 'Open'"><input type="checkbox" [checked]="pendingSel.has(key(m))" (change)="toggle(pendingSel, m)" [attr.aria-label]="'Marcar ' + m.description" /></td>
                 <td class="nowrap">{{ m.date | date: 'dd/MM/yyyy' }}</td>
                 <td>{{ sourceLabel(m) }}</td>
@@ -114,17 +124,27 @@ const SOURCE_LABELS: Record<LedgerSourceType, string> = {
           </table>
         </div>
 
-        <h3>Conciliados <span class="muted small">({{ d.marked.length }})</span></h3>
+        <h3>Conciliados en esta conciliación <span class="muted small">({{ ownCount }})</span></h3>
+        <label class="check others" *ngIf="d.previousMarkedCount > 0 || showOthers">
+          <input type="checkbox" [checked]="showOthers" (change)="toggleOthers($any($event.target).checked)" />
+          Mostrar también los conciliados en otras conciliaciones de esta cuenta ({{ d.previousMarkedCount }}, suman {{ d.previousMarkedAmount | gs }})
+        </label>
+        <p class="muted small" *ngIf="d.previousMarkedCount > 0 && !showOthers">Hay {{ d.previousMarkedCount }} movimientos conciliados en otras conciliaciones de la cuenta: cuentan en el saldo conciliado pero no se listan acá.</p>
         <div class="bulk" *ngIf="d.canEdit && d.status === 'Open' && ownMarked.length">
-          <label class="check"><input type="checkbox" [checked]="allMarkedSelected" (change)="toggleMarked($any($event.target).checked)" /> Seleccionar todos los de esta conciliación</label>
+          <label class="check"><input type="checkbox" [checked]="allMarkedSelected" (change)="toggleMarked($any($event.target).checked)" /> Seleccionar todos los de esta conciliación ({{ markedFiltered.length }})</label>
           <button type="button" class="btn sm secondary" [disabled]="busy || !markedSel.size" (click)="unmarkSelected()">Desmarcar {{ markedSel.size }}</button>
         </div>
-        <p class="muted" *ngIf="!d.marked.length">Todavía no se concilió ningún movimiento.</p>
+        <p class="muted" *ngIf="!d.marked.length">Todavía no se concilió ningún movimiento{{ showOthers ? '' : ' en esta conciliación' }}.</p>
+        <div class="list-tools" *ngIf="d.marked.length">
+          <input type="search" class="search" placeholder="Buscar por detalle, referencia, importe o fecha" [ngModel]="markedSearch" (ngModelChange)="onSearch('marked', $event)" name="markedSearch" />
+          <span class="muted small" *ngIf="markedSearch">{{ markedFiltered.length }} de {{ d.marked.length }}</span>
+        </div>
+        <ng-container *ngTemplateOutlet="pager; context: { kind: 'marked', page: markedPage, pages: markedPages, total: markedFiltered.length }"></ng-container>
         <div class="table-wrap" *ngIf="d.marked.length">
           <table class="t">
             <thead><tr><th *ngIf="d.canEdit && d.status === 'Open'"></th><th>Fecha</th><th>Tipo</th><th>Detalle</th><th class="num">Importe</th><th>Marcado</th></tr></thead>
             <tbody>
-              <tr *ngFor="let m of d.marked" [class.warn-row]="m.state !== 'Ok'">
+              <tr *ngFor="let m of markedView" [class.warn-row]="m.state !== 'Ok'">
                 <td *ngIf="d.canEdit && d.status === 'Open'">
                   <input *ngIf="m.inThisReconciliation" type="checkbox" [checked]="markedSel.has(key(m))" (change)="toggle(markedSel, m)" [attr.aria-label]="'Desmarcar ' + m.description" />
                 </td>
@@ -148,6 +168,21 @@ const SOURCE_LABELS: Record<LedgerSourceType, string> = {
         </div>
       </ng-container>
     </p-card>
+
+    <ng-template #pager let-kind="kind" let-page="page" let-pages="pages" let-total="total">
+      <div class="pager" *ngIf="total > 0">
+        <span class="muted small">{{ total }} movimientos · página {{ page }} de {{ pages }}</span>
+        <button type="button" class="btn sm secondary" [disabled]="page <= 1" (click)="goto(kind, 1)" aria-label="Primera página">«</button>
+        <button type="button" class="btn sm secondary" [disabled]="page <= 1" (click)="goto(kind, page - 1)" aria-label="Página anterior">‹</button>
+        <button type="button" class="btn sm secondary" [disabled]="page >= pages" (click)="goto(kind, page + 1)" aria-label="Página siguiente">›</button>
+        <button type="button" class="btn sm secondary" [disabled]="page >= pages" (click)="goto(kind, pages)" aria-label="Última página">»</button>
+        <label class="small muted">Por página
+          <select [ngModel]="pageSize" (ngModelChange)="setPageSize($event)" [name]="'pageSize-' + kind">
+            <option *ngFor="let n of pageSizes" [ngValue]="n">{{ n }}</option>
+          </select>
+        </label>
+      </div>
+    </ng-template>
   `,
   styles: [CONFIG_SECTION_STYLES, `
     .back { color: #1385B6; font-weight: 600; text-decoration: none; display: inline-block; margin-bottom: 0.8rem; }
@@ -170,6 +205,11 @@ const SOURCE_LABELS: Record<LedgerSourceType, string> = {
     .close-bar, .reopen-bar { display: flex; gap: 1rem; align-items: flex-end; flex-wrap: wrap; margin: 0.8rem 0; }
     .reopen-bar .field { flex: 1; min-width: 18rem; }
     .bulk { display: flex; gap: 1rem; align-items: center; flex-wrap: wrap; margin: 0.5rem 0; }
+    .list-tools { display: flex; gap: 0.8rem; align-items: center; flex-wrap: wrap; margin: 0.4rem 0; }
+    .search { min-width: 18rem; padding: 0.45rem 0.75rem; border: 1px solid rgba(19,133,182,0.25); border-radius: 10px; font: inherit; font-size: 0.9rem; color: var(--brand-ink); background: var(--surface-ground, #f8fafc); }
+    .pager { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; margin: 0.4rem 0; }
+    .pager select { margin-left: 0.3rem; padding: 0.25rem 0.4rem; border: 1px solid rgba(19,133,182,0.25); border-radius: 8px; font: inherit; }
+    .others { margin: 0.2rem 0 0.4rem; }
     tr.warn-row td { background: rgba(224,162,59,0.1); }
     @media (max-width: 900px) { .kpis { grid-template-columns: 1fr 1fr; } }
   `]
@@ -196,11 +236,33 @@ export class FinanceReconciliationDetailPageComponent implements OnInit {
   reason = '';
   readonly pendingSel = new Set<string>();
   readonly markedSel = new Set<string>();
+  private readonly access = inject(FinanceAccessService);
+
+  // Listas grandes: búsqueda y paginación en la pantalla (el servidor manda todo lo de esta conciliación).
+  readonly pageSizes = [25, 50, 100, 250];
+  pageSize = 50;
+  pendingSearch = '';
+  markedSearch = '';
+  pendingPage = 1;
+  markedPage = 1;
+  pendingFiltered: ReconciliationMovement[] = [];
+  markedFiltered: ReconciliationMovement[] = [];
+  pendingView: ReconciliationMovement[] = [];
+  markedView: ReconciliationMovement[] = [];
+  pendingPages = 1;
+  markedPages = 1;
+  // Listar también los conciliados en otras conciliaciones de la cuenta (por defecto solo los de esta).
+  showOthers = false;
+  exporting = false;
 
   get backParams(): Record<string, string> { return this.w ? { buildingId: this.w.buildingId } : {}; }
   get ownMarked(): ReconciliationMovement[] { return this.w?.marked.filter(m => m.inThisReconciliation) ?? []; }
-  get allPendingSelected(): boolean { return !!this.w?.pending.length && this.pendingSel.size === this.w.pending.length; }
-  get allMarkedSelected(): boolean { return !!this.ownMarked.length && this.markedSel.size === this.ownMarked.length; }
+  get ownCount(): number { return this.ownMarked.length; }
+  get allPendingSelected(): boolean { return !!this.pendingFiltered.length && this.pendingFiltered.every(m => this.pendingSel.has(this.key(m))); }
+  get allMarkedSelected(): boolean {
+    const own = this.markedFiltered.filter(m => m.inThisReconciliation);
+    return !!own.length && own.every(m => this.markedSel.has(this.key(m)));
+  }
 
   key(m: ReconciliationItemRef): string { return `${m.sourceType}|${m.sourceId}`; }
   sourceLabel(m: ReconciliationMovement): string { return SOURCE_LABELS[m.sourceType] ?? m.sourceType; }
@@ -208,6 +270,70 @@ export class FinanceReconciliationDetailPageComponent implements OnInit {
   ngOnInit(): void {
     this.id = this.route.snapshot.paramMap.get('id') ?? '';
     this.load();
+  }
+
+  onSearch(kind: 'pending' | 'marked', text: string): void {
+    if (kind === 'pending') { this.pendingSearch = text; this.pendingPage = 1; } else { this.markedSearch = text; this.markedPage = 1; }
+    this.refreshViews();
+  }
+
+  goto(kind: 'pending' | 'marked', page: number): void {
+    if (kind === 'pending') this.pendingPage = page; else this.markedPage = page;
+    this.refreshViews();
+  }
+
+  setPageSize(size: number): void {
+    this.pageSize = Number(size);
+    this.pendingPage = 1;
+    this.markedPage = 1;
+    this.refreshViews();
+  }
+
+  toggleOthers(checked: boolean): void {
+    this.showOthers = checked;
+    this.markedPage = 1;
+    this.load();
+  }
+
+  exportExcel(): void {
+    if (this.exporting || !this.w) return;
+    const w = this.w;
+    const building = this.access.buildings().find(b => b.buildingId === w.buildingId)?.buildingName ?? '';
+    const fileName = exportFileName(`conciliacion-${w.accountName}`, building, w.statementDate);
+    this.exporting = true;
+    this.api.exportExcel(this.id, this.showOthers).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: blob => {
+        saveBlob(blob, fileName);
+        this.exporting = false;
+        this.msg.add({ severity: 'success', summary: 'Excel generado', detail: fileName, life: 4000 });
+        this.cdr.markForCheck();
+      },
+      error: err => {
+        this.exporting = false;
+        this.msg.add({ severity: 'error', summary: 'No se pudo exportar', detail: extractApiErrorMessage(err, 'No se pudo generar el Excel.'), life: 7000 });
+        this.cdr.markForCheck();
+      }
+    });
+  }
+
+  // Aplica la búsqueda y la página a las dos listas.
+  private refreshViews(): void {
+    const matches = (m: ReconciliationMovement, term: string): boolean => {
+      if (!term) return true;
+      const text = `${m.description} ${m.thirdParty} ${m.reference} ${this.sourceLabel(m)} ${m.amount} ${m.date}`.toLowerCase();
+      return term.toLowerCase().split(/\s+/).filter(Boolean).every(t => text.includes(t));
+    };
+
+    const w = this.w;
+    this.pendingFiltered = (w?.pending ?? []).filter(m => matches(m, this.pendingSearch.trim()));
+    this.markedFiltered = (w?.marked ?? []).filter(m => matches(m, this.markedSearch.trim()));
+    this.pendingPages = Math.max(1, Math.ceil(this.pendingFiltered.length / this.pageSize));
+    this.markedPages = Math.max(1, Math.ceil(this.markedFiltered.length / this.pageSize));
+    this.pendingPage = Math.min(Math.max(1, this.pendingPage), this.pendingPages);
+    this.markedPage = Math.min(Math.max(1, this.markedPage), this.markedPages);
+    this.pendingView = this.pendingFiltered.slice((this.pendingPage - 1) * this.pageSize, this.pendingPage * this.pageSize);
+    this.markedView = this.markedFiltered.slice((this.markedPage - 1) * this.pageSize, this.markedPage * this.pageSize);
+    this.cdr.markForCheck();
   }
 
   toggle(set: Set<string>, m: ReconciliationMovement): void {
@@ -218,13 +344,13 @@ export class FinanceReconciliationDetailPageComponent implements OnInit {
 
   togglePending(checked: boolean): void {
     this.pendingSel.clear();
-    if (checked) this.w?.pending.forEach(m => this.pendingSel.add(this.key(m)));
+    if (checked) this.pendingFiltered.forEach(m => this.pendingSel.add(this.key(m)));
     this.cdr.markForCheck();
   }
 
   toggleMarked(checked: boolean): void {
     this.markedSel.clear();
-    if (checked) this.ownMarked.forEach(m => this.markedSel.add(this.key(m)));
+    if (checked) this.markedFiltered.filter(m => m.inThisReconciliation).forEach(m => this.markedSel.add(this.key(m)));
     this.cdr.markForCheck();
   }
 
@@ -306,6 +432,8 @@ export class FinanceReconciliationDetailPageComponent implements OnInit {
     this.editing = false;
     this.msg.add({ severity: 'success', summary: success, life: 3500 });
     this.cdr.markForCheck();
+    // Las respuestas de las acciones traen solo lo de esta conciliación: con «otras» a la vista se vuelve a leer completo.
+    if (this.showOthers) this.load();
   }
 
   private fail(err: unknown, fallback: string): void {
@@ -324,12 +452,13 @@ export class FinanceReconciliationDetailPageComponent implements OnInit {
     const own = new Set(workspace.marked.filter(m => m.inThisReconciliation).map(m => this.key(m)));
     for (const k of [...this.pendingSel]) if (!pending.has(k)) this.pendingSel.delete(k);
     for (const k of [...this.markedSel]) if (!own.has(k)) this.markedSel.delete(k);
+    this.refreshViews();
   }
 
   private load(): void {
     this.loading = true;
     this.error = '';
-    this.api.get(this.id).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+    this.api.get(this.id, this.showOthers).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: workspace => {
         this.setWorkspace(workspace);
         this.loading = false;

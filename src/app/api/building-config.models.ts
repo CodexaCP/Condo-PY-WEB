@@ -484,6 +484,10 @@ export interface ReconciliationWorkspace {
   alerts: string[];
   marked: ReconciliationMovement[];
   pending: ReconciliationMovement[];
+  // Los conciliados de otras conciliaciones de la cuenta cuentan en el saldo conciliado pero solo se listan si se piden (includePrevious).
+  previousMarkedCount: number;
+  previousMarkedAmount: number;
+  includesPrevious: boolean;
 }
 
 export interface StartReconciliationRequest {
