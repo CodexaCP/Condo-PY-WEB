@@ -31,7 +31,7 @@ import { FinanceStateComponent } from './finance-state.component';
         <div class="app-page-head">
           <div>
             <h1>Conciliación bancaria</h1>
-            <p>Compará lo que registró el sistema con el extracto de cada cuenta bancaria.</p>
+            <p>Compará lo que registró el sistema con el extracto de cada cuenta que se concilia.</p>
           </div>
         </div>
         <app-finance-building-picker (selected)="onBuilding($event)" (failed)="onError($event)"></app-finance-building-picker>
@@ -42,7 +42,7 @@ import { FinanceStateComponent } from './finance-state.component';
       <ng-container *ngIf="overview as o">
         <p class="muted small" *ngIf="!o.canEdit">Solo el SuperAdmin y el Administrador de empresa pueden armar, cerrar y reabrir conciliaciones. Acá podés consultarlas.</p>
         <p-message *ngIf="!o.accounts.length" severity="info"
-                   text="El edificio no tiene cuentas bancarias cargadas en Finanzas. Creá una en Finanzas → Configuración → Cuentas."></p-message>
+                   text="El edificio no tiene cuentas para conciliar. Los bancos se concilian solos; en la caja o el fondo de reserva activalo en Finanzas → Configuración → Cuentas (casilla «Se concilia con el extracto»)."></p-message>
 
         <div class="table-wrap" *ngIf="o.accounts.length">
           <table class="t">
@@ -50,7 +50,7 @@ import { FinanceStateComponent } from './finance-state.component';
             <tbody>
               <ng-container *ngFor="let a of o.accounts">
                 <tr [class.inactive]="!a.isActive">
-                  <td><strong>{{ a.accountName }}</strong> <span class="muted small" *ngIf="!a.isActive">(inactiva)</span></td>
+                  <td><strong>{{ a.accountName }}</strong> <span class="muted small" *ngIf="a.accountType !== 'Bank'">({{ a.accountType === 'Cash' ? 'caja' : 'fondo de reserva' }})</span> <span class="muted small" *ngIf="!a.isActive">(inactiva)</span></td>
                   <td class="num">{{ a.bookBalance | gs }}</td>
                   <td>
                     <span *ngIf="a.lastCompletedDate">{{ a.lastCompletedDate | date: 'dd/MM/yyyy' }} · extracto {{ a.lastStatementBalance | gs }}</span>

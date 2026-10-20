@@ -405,6 +405,7 @@ export type LedgerDirection = 'In' | 'Out';
 export interface ReconciliationAccount {
   accountId: string;
   accountName: string;
+  accountType: 'Cash' | 'Bank' | 'ReserveFund';
   isActive: boolean;
   // Saldo del libro a hoy.
   bookBalance: number;

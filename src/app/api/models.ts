@@ -1982,6 +1982,8 @@ export interface FinancialAccount {
   type: FinancialAccountType;
   openingBalance: number;
   isActive: boolean;
+  // Se concilia con un extracto (por defecto los bancos; la empresa puede activarlo en cualquier cuenta).
+  reconciles: boolean;
 }
 
 export interface FinancialAccountUpsertRequest {
@@ -1990,6 +1992,8 @@ export interface FinancialAccountUpsertRequest {
   type: FinancialAccountType;
   openingBalance: number;
   isActive: boolean;
+  // Nulo al crear = lo que corresponde al tipo; al editar = no cambia.
+  reconciles?: boolean | null;
 }
 
 export interface LedgerCategory {

@@ -67,7 +67,7 @@ const TYPE_LABELS: Record<FinancialAccountType, string> = {
       </div>
       <div class="app-row acc-grid" *ngFor="let item of items">
         <strong>{{ item.name }}</strong>
-        <span>{{ typeLabel(item.type) }}</span>
+        <span>{{ typeLabel(item.type) }}<small class="reconciles" *ngIf="item.reconciles"> · se concilia</small></span>
         <span class="num">{{ formatCurrency(item.openingBalance) }}</span>
         <p-tag [value]="item.isActive ? 'Activa' : 'Inactiva'" [severity]="item.isActive ? 'success' : 'secondary'"></p-tag>
         <div class="app-actions" *ngIf="canEdit">
@@ -98,7 +98,7 @@ const TYPE_LABELS: Record<FinancialAccountType, string> = {
         </label>
         <label>
           <span>Tipo</span>
-          <select [(ngModel)]="form.type" name="type">
+          <select [(ngModel)]="form.type" name="type" (ngModelChange)="onTypeChange()">
             <option *ngFor="let t of typeOptions" [value]="t" [disabled]="typeTaken(t)">
               {{ typeLabel(t) }}{{ typeTaken(t) ? ' (ya existe)' : '' }}
             </option>
@@ -112,6 +112,11 @@ const TYPE_LABELS: Record<FinancialAccountType, string> = {
           <input [(ngModel)]="form.isActive" name="isActive" type="checkbox" />
           <span>Cuenta activa</span>
         </label>
+        <label class="checkbox">
+          <input [(ngModel)]="form.reconciles" name="reconciles" type="checkbox" (ngModelChange)="reconcilesTouched = true" />
+          <span>Se concilia con el extracto</span>
+        </label>
+        <p class="hint">Activala para conciliar esta cuenta contra un extracto en Conciliación bancaria. Los bancos vienen activados; podés activarla también en la caja o en un fondo de reserva que esté en una cuenta bancaria.</p>
         <div class="ficha-footer">
           <p-button type="button" label="Cancelar" severity="secondary" [outlined]="true" (onClick)="closeForm()"></p-button>
           <p-button type="submit" [loading]="saving" [label]="editing ? 'Guardar cambios' : 'Crear cuenta'"></p-button>
@@ -171,6 +176,8 @@ const TYPE_LABELS: Record<FinancialAccountType, string> = {
     .ficha-form input:focus, .ficha-form select:focus { outline: none; border-color: var(--brand-blue, #1385B6); }
     .ficha-form .checkbox { display: flex; align-items: center; gap: 0.5rem; }
     .ficha-form .checkbox > span { margin: 0; }
+    .ficha-form .hint { margin: -0.4rem 0 0; font-size: 0.8rem; color: var(--brand-muted); line-height: 1.4; }
+    .reconciles { color: var(--brand-muted); }
     .req { color: var(--red-400, #f87171); }
     .ficha-footer { display: flex; justify-content: flex-end; gap: 0.75rem; padding-top: 0.5rem; }
     .confirm-text { margin: 0 0 1.2rem; color: var(--brand-ink); line-height: 1.6; }
@@ -199,6 +206,8 @@ export class FinanceAccountsEditorComponent implements OnChanges {
   formVisible = false;
   editing: FinancialAccount | null = null;
   form = this.emptyForm();
+  // Si la persona tocó la casilla, cambiar el tipo no la pisa.
+  reconcilesTouched = false;
   saving = false;
   deleteTarget: FinancialAccount | null = null;
   savingDefault = false;
@@ -275,14 +284,22 @@ export class FinanceAccountsEditorComponent implements OnChanges {
   openCreate(type?: FinancialAccountType, name = ''): void {
     this.editing = null;
     const firstFree = this.typeOptions.find(t => !this.typeTaken(t)) ?? 'Bank';
-    this.form = { ...this.emptyForm(), type: type ?? firstFree, name };
+    const chosen = type ?? firstFree;
+    this.form = { ...this.emptyForm(), type: chosen, name, reconciles: chosen === 'Bank' };
+    this.reconcilesTouched = false;
     this.formVisible = true;
   }
 
   openEdit(item: FinancialAccount): void {
     this.editing = item;
-    this.form = { name: item.name, type: item.type, openingBalance: item.openingBalance, isActive: item.isActive };
+    this.form = { name: item.name, type: item.type, openingBalance: item.openingBalance, isActive: item.isActive, reconciles: item.reconciles };
+    this.reconcilesTouched = true;
     this.formVisible = true;
+  }
+
+  // Al elegir el tipo de una cuenta nueva, la casilla toma lo habitual (los bancos se concilian) mientras no la hayan tocado.
+  onTypeChange(): void {
+    if (!this.editing && !this.reconcilesTouched) this.form.reconciles = this.form.type === 'Bank';
   }
 
   closeForm(): void {
@@ -300,7 +317,8 @@ export class FinanceAccountsEditorComponent implements OnChanges {
       name,
       type: this.form.type,
       openingBalance: this.form.openingBalance ?? 0,
-      isActive: this.form.isActive
+      isActive: this.form.isActive,
+      reconciles: this.form.reconciles
     };
 
     this.saving = true;
@@ -352,6 +370,6 @@ export class FinanceAccountsEditorComponent implements OnChanges {
   }
 
   private emptyForm() {
-    return { name: '', type: 'Cash' as FinancialAccountType, openingBalance: 0 as number | null, isActive: true };
+    return { name: '', type: 'Cash' as FinancialAccountType, openingBalance: 0 as number | null, isActive: true, reconciles: false };
   }
 }
