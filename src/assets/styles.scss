@@ -295,7 +295,7 @@
 /* Ilustración: edificios y tarjetas del panel (vista de ejemplo) */
 .lp-visual {
   position: relative;
-  height: 470px;
+  height: 510px;
   margin: 0.5rem 0 1rem;
   user-select: none;
 }
@@ -303,7 +303,7 @@
 .lp-visual-svg {
   position: absolute;
   left: 50%;
-  top: 60px;
+  top: 70px;
   width: 520px;
   height: 400px;
   transform: translateX(-46%);
@@ -395,42 +395,66 @@
   strong { display: block; font-size: 1rem; line-height: 1.1; }
 }
 
-.lp-vc-fin { left: 0; top: 178px; width: 232px; }
+.lp-vc-fin { left: 0; top: 226px; width: 232px; }
 .lp-vc-mor { right: 0; top: 0; width: 236px; }
-.lp-vc-pro { left: 70px; bottom: 6px; width: 196px; }
+.lp-vc-pro { left: 90px; bottom: 6px; width: 196px; }
 .lp-vc-vot { right: 0; bottom: 30px; width: 214px; }
 /* Video promocional: cuadrado arriba a la izquierda de la ilustración */
 .lp-vc-video {
   left: 0; top: 0;
-  width: 160px; height: 160px;
-  padding: 0;
-  overflow: hidden;
-  border: 4px solid #fff;
-  border-radius: 22px;
-  box-shadow: 0 0 0 1px var(--ex-line), 0 18px 40px rgba(31, 111, 178, .28);
+  width: 204px; height: 204px;
+  padding: 4px;                      /* grosor del aro con el degradado de la marca */
+  overflow: visible;
+  border: none;
+  border-radius: 30px;
+  background: var(--ex-gradient);
+  box-shadow: 0 22px 48px rgba(31, 111, 178, .34), 0 4px 14px rgba(22, 50, 74, .16);
   pointer-events: none;
+  backdrop-filter: none;
+
+  /* halo suave que late detrás del cuadrado */
+  &::before {
+    content: '';
+    position: absolute;
+    inset: -14px;
+    border-radius: 40px;
+    background: radial-gradient(circle, rgba(46, 196, 182, .38) 0%, transparent 70%);
+    z-index: -1;
+    animation: lp-halo 3.2s ease-in-out infinite;
+  }
 
   video {
     display: block;
     width: 100%; height: 100%;
     object-fit: cover;
+    border-radius: 26px;
+    background: #0f2a43;
     pointer-events: none;
   }
 }
 
+@keyframes lp-halo {
+  0%, 100% { opacity: .55; transform: scale(.97); }
+  50% { opacity: 1; transform: scale(1.04); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lp-vc-video::before { animation: none; }
+}
+
 .lp-vc-tag {
   position: absolute;
-  left: 8px; bottom: 8px;
-  display: flex; align-items: center; gap: 0.3rem;
-  padding: 0.2rem 0.55rem;
+  left: 14px; bottom: 14px;
+  display: flex; align-items: center; gap: 0.35rem;
+  padding: 0.3rem 0.7rem;
   border-radius: 999px;
-  background: rgba(15, 42, 67, .72);
+  background: rgba(15, 42, 67, .74);
   color: #fff;
-  font-size: 0.6rem;
-  font-weight: 600;
+  font-size: 0.7rem;
+  font-weight: 700;
   letter-spacing: 0.02em;
-  backdrop-filter: blur(4px);
-  i { font-size: 0.7rem; color: var(--ex-green-light); }
+  backdrop-filter: blur(6px);
+  i { font-size: 0.8rem; color: var(--ex-green-light); }
 }
 
 .lp-vc-pill {
