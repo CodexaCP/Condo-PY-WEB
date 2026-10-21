@@ -28,37 +28,8 @@ import { PushService } from '../../core/push.service';
 
                 <!-- Logo + nombre -->
                 <div class="lp-brand-top">
-                    <div class="lp-logo-ring">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 188" class="lp-logo-svg">
-                            <rect x="8"   y="10"  width="76" height="138" fill="#fff" opacity=".95"/>
-                            <rect x="16"  y="20"  width="14" height="21" rx="2" fill="#1AB7AF"/>
-                            <rect x="36"  y="20"  width="14" height="21" rx="2" fill="#1AB7AF"/>
-                            <rect x="56"  y="20"  width="14" height="21" rx="2" fill="#1AB7AF"/>
-                            <rect x="16"  y="48"  width="14" height="21" rx="2" fill="#1AB7AF"/>
-                            <rect x="36"  y="48"  width="14" height="21" rx="2" fill="#1AB7AF"/>
-                            <rect x="56"  y="48"  width="14" height="21" rx="2" fill="#1AB7AF"/>
-                            <rect x="16"  y="76"  width="14" height="21" rx="2" fill="#1AB7AF"/>
-                            <rect x="36"  y="76"  width="14" height="21" rx="2" fill="#1AB7AF"/>
-                            <rect x="56"  y="76"  width="14" height="21" rx="2" fill="#1AB7AF"/>
-                            <rect x="16"  y="104" width="14" height="21" rx="2" fill="#1AB7AF"/>
-                            <rect x="36"  y="104" width="14" height="21" rx="2" fill="#1AB7AF"/>
-                            <rect x="56"  y="104" width="14" height="21" rx="2" fill="#1AB7AF"/>
-                            <rect x="4"   y="148" width="82" height="8"  fill="#fff" opacity=".7"/>
-                            <rect x="90"  y="24"  width="60" height="124" fill="#fff" opacity=".95"/>
-                            <rect x="98"  y="34"  width="12" height="17" rx="2" fill="#6AC64A"/>
-                            <rect x="115" y="34"  width="12" height="17" rx="2" fill="#6AC64A"/>
-                            <rect x="98"  y="57"  width="12" height="17" rx="2" fill="#6AC64A"/>
-                            <rect x="115" y="57"  width="12" height="17" rx="2" fill="#6AC64A"/>
-                            <rect x="98"  y="80"  width="12" height="17" rx="2" fill="#6AC64A"/>
-                            <rect x="115" y="80"  width="12" height="17" rx="2" fill="#6AC64A"/>
-                            <rect x="98"  y="103" width="12" height="17" rx="2" fill="#6AC64A"/>
-                            <rect x="115" y="103" width="12" height="17" rx="2" fill="#6AC64A"/>
-                            <rect x="148" y="94"  width="44" height="54" fill="#fff" opacity=".95"/>
-                            <rect x="156" y="104" width="12" height="15" rx="2" fill="#6AC64A"/>
-                            <rect x="88"  y="148" width="106" height="8" fill="#fff" opacity=".7"/>
-                        </svg>
-                    </div>
-                    <span class="lp-brand-name">CONDOPY</span>
+                    <img src="/brand/expenses-icon.svg" alt="Expenses" class="lp-logo-img" />
+                    <span class="lp-brand-name">EXPENSES</span>
                 </div>
 
                 <!-- Slogan -->
@@ -66,10 +37,10 @@ import { PushService } from '../../core/push.service';
                     <div class="lp-slogan-eyebrow">Plataforma de administración condominal</div>
                     <h1 class="lp-slogan">
                         Cuando todo está claro,<br>
-                        <span class="lp-slogan-accent">todos confían.</span>
+                        <span class="lp-slogan-accent">everyone trusts.</span>
                     </h1>
                     <p class="lp-slogan-sub">
-                        CONDOPY reúne la administración, las finanzas y la comunicación
+                        Expenses reúne la administración, las finanzas y la comunicación
                         del edificio en una plataforma diseñada para brindar
                         <strong>transparencia, orden y tranquilidad.</strong>
                     </p>
@@ -140,23 +111,8 @@ import { PushService } from '../../core/push.service';
 
                     <!-- Mobile: logo pequeño -->
                     <div class="lp-mobile-logo">
-                        <div class="lp-logo-ring lp-logo-ring-sm">
-                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 188" class="lp-logo-svg-sm">
-                                <rect x="8" y="10" width="76" height="138" fill="#fff" opacity=".95"/>
-                                <rect x="16" y="20" width="14" height="21" rx="2" fill="#1AB7AF"/>
-                                <rect x="36" y="20" width="14" height="21" rx="2" fill="#1AB7AF"/>
-                                <rect x="56" y="20" width="14" height="21" rx="2" fill="#1AB7AF"/>
-                                <rect x="16" y="48" width="14" height="21" rx="2" fill="#1AB7AF"/>
-                                <rect x="36" y="48" width="14" height="21" rx="2" fill="#1AB7AF"/>
-                                <rect x="56" y="48" width="14" height="21" rx="2" fill="#1AB7AF"/>
-                                <rect x="90" y="24" width="60" height="124" fill="#fff" opacity=".95"/>
-                                <rect x="98" y="34" width="12" height="17" rx="2" fill="#6AC64A"/>
-                                <rect x="115" y="34" width="12" height="17" rx="2" fill="#6AC64A"/>
-                                <rect x="148" y="94" width="44" height="54" fill="#fff" opacity=".95"/>
-                                <rect x="156" y="104" width="12" height="15" rx="2" fill="#6AC64A"/>
-                            </svg>
-                        </div>
-                        <span class="lp-mobile-brand-name">CONDOPY</span>
+                        <img src="/brand/expenses-icon.svg" alt="Expenses" class="lp-logo-img-sm" />
+                        <span class="lp-mobile-brand-name">EXPENSES</span>
                     </div>
 
                     <div class="lp-form-head">
@@ -199,12 +155,12 @@ import { PushService } from '../../core/push.service';
                         Entrar al sistema
                     </button>
 
-                    <a class="lp-apk-link" href="/downloads/condopy.apk" download="CondoPY.apk">
+                    <a class="lp-apk-link" href="/downloads/condopy.apk" download="Expenses.apk">
                         <i class="pi pi-android"></i> Descargar app para Android
                     </a>
 
                     <div class="lp-form-footer">
-                        <i class="pi pi-lock"></i> Acceso seguro · CONDOPY
+                        <i class="pi pi-lock"></i> Acceso seguro · Expenses
                     </div>
                 </div>
             </div>

@@ -143,8 +143,23 @@
 }
 
 /* ══════════════════════════════════════════════════
-   LOGIN PAGE v2 — diseño dividido marca / formulario
+   LOGIN PAGE v3 — marca Expenses, paleta clara
    ══════════════════════════════════════════════════ */
+
+/* Paleta de la marca Expenses (solo pantallas públicas) */
+.lp-root, .auth-page {
+  --ex-blue: #1F6FB2;
+  --ex-blue-dark: #1B5E9E;
+  --ex-green: #3DAE6B;
+  --ex-green-light: #5CC36A;
+  --ex-ink: #16324a;
+  --ex-muted: #5f7b88;
+  --ex-line: #dbe6ef;
+  --ex-surface: #ffffff;
+  --ex-bg: linear-gradient(135deg, #f8fbfd 0%, #eef5fa 55%, #f1f9f4 100%);
+  --ex-gradient: linear-gradient(135deg, #1B5E9E 0%, #1F8FB0 55%, #5CC36A 100%);
+  --brand-blue: var(--ex-blue);
+}
 
 /* Fuente para elementos de marca */
 .lp-brand, .lp-mobile-logo, .lp-brand-name,
@@ -159,10 +174,10 @@
   min-width: 100vw;
   position: relative;
   overflow: hidden;
-  background: linear-gradient(135deg, #0d2d3e 0%, #0e3a50 50%, #0d3325 100%);
+  background: var(--ex-bg);
 }
 
-/* Orbs decorativos */
+/* Orbs decorativos (halos suaves sobre fondo claro) */
 .lp-orb {
   position: absolute;
   border-radius: 50%;
@@ -171,17 +186,17 @@
 }
 .lp-orb-a {
   width: 600px; height: 600px;
-  background: radial-gradient(circle, rgba(26,183,175,.45) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(31,111,178,.14) 0%, transparent 70%);
   top: -180px; left: -180px;
 }
 .lp-orb-b {
   width: 500px; height: 500px;
-  background: radial-gradient(circle, rgba(19,133,182,.35) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(31,143,176,.10) 0%, transparent 70%);
   bottom: -150px; right: 35%;
 }
 .lp-orb-c {
   width: 380px; height: 380px;
-  background: radial-gradient(circle, rgba(106,198,74,.3) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(92,195,106,.18) 0%, transparent 70%);
   bottom: -100px; right: -100px;
 }
 
@@ -204,23 +219,13 @@
   margin-bottom: 3.5rem;
 }
 
-.lp-logo-ring {
-  width: 64px; height: 64px;
-  border-radius: 18px;
-  background: linear-gradient(135deg, #1AB7AF 0%, #1385B6 55%, #6AC64A 100%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 8px 28px rgba(26,183,175,.5);
-  flex-shrink: 0;
-}
-.lp-logo-svg { width: 38px; height: 36px; }
+.lp-logo-img { width: 92px; height: auto; flex-shrink: 0; }
 
 .lp-brand-name {
   font-size: 1.9rem;
   font-weight: 900;
-  letter-spacing: -0.03em;
-  color: #ffffff;
+  letter-spacing: -0.01em;
+  color: var(--ex-blue);
 }
 
 /* Slogan */
@@ -233,7 +238,7 @@
   font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: rgba(26,183,175,.85);
+  color: var(--ex-green);
   margin-bottom: 1rem;
   display: flex;
   align-items: center;
@@ -243,7 +248,7 @@
     content: '';
     display: inline-block;
     width: 24px; height: 2px;
-    background: #1AB7AF;
+    background: var(--ex-green);
     border-radius: 2px;
   }
 }
@@ -253,13 +258,13 @@
   font-weight: 900;
   line-height: 1.1;
   letter-spacing: -0.03em;
-  color: #ffffff;
+  color: var(--ex-ink);
   margin: 0 0 1.4rem;
   text-wrap: balance;
 }
 
 .lp-slogan-accent {
-  background: linear-gradient(90deg, #1AB7AF 0%, #6AC64A 100%);
+  background: linear-gradient(90deg, #1F6FB2 0%, #3DAE6B 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -267,14 +272,14 @@
 
 .lp-slogan-sub {
   font-size: 1.02rem;
-  color: rgba(255,255,255,.72);
+  color: var(--ex-muted);
   line-height: 1.75;
   max-width: 420px;
   margin: 0;
   font-weight: 400;
 
   strong {
-    color: rgba(255,255,255,.95);
+    color: var(--ex-ink);
     font-weight: 600;
   }
 }
@@ -282,7 +287,7 @@
 /* Divisor */
 .lp-divider {
   height: 1px;
-  background: linear-gradient(90deg, rgba(26,183,175,.5) 0%, rgba(255,255,255,.08) 100%);
+  background: linear-gradient(90deg, rgba(31,111,178,.35) 0%, rgba(31,111,178,.04) 100%);
   margin: 1.75rem 0;
 }
 
@@ -298,25 +303,26 @@
   display: flex;
   align-items: flex-start;
   gap: 0.75rem;
-  background: rgba(255,255,255,.05);
-  border: 1px solid rgba(255,255,255,.08);
+  background: var(--ex-surface);
+  border: 1px solid var(--ex-line);
   border-radius: 12px;
   padding: 0.9rem 1rem;
-  transition: background .2s;
+  box-shadow: 0 1px 2px rgba(22,50,74,.04);
+  transition: box-shadow .2s, border-color .2s;
 
-  &:hover { background: rgba(255,255,255,.08); }
+  &:hover { border-color: rgba(31,111,178,.35); box-shadow: 0 6px 18px rgba(31,111,178,.10); }
 }
 
 .lp-pillar-icon {
   width: 34px; height: 34px;
   border-radius: 9px;
-  background: rgba(26,183,175,.18);
-  border: 1px solid rgba(26,183,175,.25);
+  background: rgba(31,111,178,.09);
+  border: 1px solid rgba(31,111,178,.16);
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 0.9rem;
-  color: #1AB7AF;
+  color: var(--ex-blue);
   flex-shrink: 0;
 }
 
@@ -324,13 +330,13 @@
   display: block;
   font-size: 0.82rem;
   font-weight: 700;
-  color: rgba(255,255,255,.92);
+  color: var(--ex-ink);
   margin-bottom: 0.2rem;
 }
 
 .lp-pillar p {
   font-size: 0.74rem;
-  color: rgba(255,255,255,.42);
+  color: var(--ex-muted);
   margin: 0;
   line-height: 1.45;
 }
@@ -340,8 +346,8 @@
   display: flex;
   align-items: center;
   gap: 0;
-  background: rgba(255,255,255,.04);
-  border: 1px solid rgba(255,255,255,.07);
+  background: rgba(255,255,255,.7);
+  border: 1px solid var(--ex-line);
   border-radius: 10px;
   padding: 0.7rem 1.2rem;
   margin-bottom: 1.5rem;
@@ -355,21 +361,21 @@
   justify-content: center;
   font-size: 0.76rem;
   font-weight: 600;
-  color: rgba(255,255,255,.5);
+  color: var(--ex-muted);
 
-  i { font-size: 0.82rem; color: #1AB7AF; }
+  i { font-size: 0.82rem; color: var(--ex-green); }
 }
 
 .lp-trust-sep {
   width: 1px; height: 20px;
-  background: rgba(255,255,255,.1);
+  background: var(--ex-line);
 }
 
 /* Badge de versión */
 .lp-brand-footer { margin-top: auto; }
 .lp-version-badge {
   font-size: 0.72rem;
-  color: rgba(255,255,255,.25);
+  color: #94a3b8;
   font-weight: 500;
   letter-spacing: 0.04em;
 }
@@ -390,19 +396,18 @@
     position: absolute;
     left: 0; top: 10%; bottom: 10%;
     width: 1px;
-    background: linear-gradient(180deg, transparent, rgba(255,255,255,.1) 30%, rgba(255,255,255,.1) 70%, transparent);
+    background: linear-gradient(180deg, transparent, var(--ex-line) 30%, var(--ex-line) 70%, transparent);
   }
 }
 
 .lp-form-card {
-  background: rgba(255,255,255,.97);
+  background: var(--ex-surface);
+  border: 1px solid var(--ex-line);
   border-radius: 24px;
   padding: 2.6rem 2.8rem;
   width: 100%;
   max-width: 400px;
-  box-shadow:
-    0 40px 100px rgba(0,0,0,.35),
-    0 0 0 1px rgba(255,255,255,.06);
+  box-shadow: 0 24px 60px rgba(31,111,178,.12), 0 2px 6px rgba(22,50,74,.05);
   display: flex;
   flex-direction: column;
   gap: 1.2rem;
@@ -419,13 +424,13 @@
     font-size: 1.65rem;
     font-weight: 800;
     letter-spacing: -0.025em;
-    color: #0d2d3e;
+    color: var(--ex-ink);
     margin: 0 0 0.3rem;
   }
 
   p {
     font-size: 0.85rem;
-    color: #5f7b88;
+    color: var(--ex-muted);
     margin: 0;
     line-height: 1.5;
   }
@@ -452,16 +457,16 @@
   border: 1.5px solid #d1dde8 !important;
   background: #f8fafd !important;
   font-size: 0.92rem !important;
-  color: #0d2d3e !important;
+  color: var(--ex-ink) !important;
   box-sizing: border-box !important;
   transition: border-color .15s, box-shadow .15s !important;
   font-family: inherit !important;
 
   &:focus {
     outline: none !important;
-    border-color: #1AB7AF !important;
+    border-color: var(--ex-blue) !important;
     background: #fff !important;
-    box-shadow: 0 0 0 3px rgba(26,183,175,.15) !important;
+    box-shadow: 0 0 0 3px rgba(31,111,178,.15) !important;
   }
 }
 
@@ -481,9 +486,9 @@
 
     &:focus {
       outline: none !important;
-      border-color: #1AB7AF !important;
+      border-color: var(--ex-blue) !important;
       background: #fff !important;
-      box-shadow: 0 0 0 3px rgba(26,183,175,.15) !important;
+      box-shadow: 0 0 0 3px rgba(31,111,178,.15) !important;
     }
   }
 }
@@ -494,7 +499,7 @@
   padding: 0.85rem 1.5rem;
   border-radius: 12px;
   border: none;
-  background: linear-gradient(135deg, #1AB7AF 0%, #1385B6 60%, #0e9b6a 100%);
+  background: var(--ex-gradient);
   color: #ffffff;
   font-size: 1rem;
   font-weight: 700;
@@ -504,15 +509,15 @@
   align-items: center;
   justify-content: center;
   gap: 0.55rem;
-  box-shadow: 0 6px 24px rgba(26,183,175,.4);
+  box-shadow: 0 6px 20px rgba(31,111,178,.28);
   transition: opacity .18s, transform .15s, box-shadow .18s;
   letter-spacing: 0.01em;
   margin-top: 0.25rem;
 
   &:hover:not(:disabled) {
-    opacity: 0.92;
+    opacity: 0.94;
     transform: translateY(-1px);
-    box-shadow: 0 10px 32px rgba(26,183,175,.5);
+    box-shadow: 0 10px 28px rgba(31,111,178,.36);
   }
 
   &:active:not(:disabled) { transform: translateY(0); }
@@ -531,6 +536,9 @@
   gap: 0.4rem;
   padding-top: 0.25rem;
 }
+
+/* ── Recuperar / restablecer contraseña ─────────── */
+.auth-logo { display: block; width: 76px; height: auto; margin: 0 auto 0.5rem; }
 
 /* ── RESPONSIVE ─────────────────────────────────── */
 @media (max-width: 860px) {
@@ -574,20 +582,13 @@
     margin-bottom: 0.25rem;
   }
 
-  .lp-logo-ring-sm {
-    width: 42px; height: 42px;
-    border-radius: 12px;
-  }
-  .lp-logo-svg-sm { width: 24px; height: 22px; }
+  .lp-logo-img-sm { width: 54px; height: auto; }
 
   .lp-mobile-brand-name {
     font-size: 1.3rem;
     font-weight: 900;
-    letter-spacing: -0.02em;
-    background: linear-gradient(135deg, #1AB7AF, #1385B6);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+    letter-spacing: -0.01em;
+    color: var(--ex-blue);
   }
 
   .lp-brand { display: none; }

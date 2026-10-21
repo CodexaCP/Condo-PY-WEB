@@ -15,7 +15,8 @@ import { AuthService } from '../../auth/auth.service';
     <div class="auth-page">
       <p-card styleClass="auth-card">
         <div class="auth-head">
-          <span class="auth-brand">CONDOPY</span>
+          <img src="/brand/expenses-icon.svg" alt="Expenses" class="auth-logo" />
+          <span class="auth-brand">EXPENSES</span>
           <h1>¿Olvidaste tu contraseña?</h1>
           <p>Ingresá tu correo o usuario y te mandamos instrucciones para restablecerla.</p>
         </div>
@@ -47,7 +48,7 @@ import { AuthService } from '../../auth/auth.service';
   styles: [`
     .auth-page {
       min-height: 100vh; display: flex; align-items: center; justify-content: center;
-      padding: 1.5rem; background: linear-gradient(135deg, #0d2d3e 0%, #0e3a50 50%, #0d3325 100%);
+      padding: 1.5rem; background: var(--ex-bg);
     }
     :host ::ng-deep .auth-card { width: 100%; max-width: 420px; border-radius: 20px; }
     .auth-head { text-align: center; margin-bottom: 1.5rem; }

@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 160" role="img" aria-label="Expenses">
+  <defs>
+    <linearGradient id="exg" gradientUnits="userSpaceOnUse" x1="20" y1="20" x2="232" y2="146">
+      <stop offset="0" stop-color="#1B5E9E"/>
+      <stop offset="0.5" stop-color="#1F8FB0"/>
+      <stop offset="1" stop-color="#5CC36A"/>
+    </linearGradient>
+    <linearGradient id="exa" gradientUnits="userSpaceOnUse" x1="30" y1="130" x2="172" y2="12">
+      <stop offset="0" stop-color="#2FA088"/>
+      <stop offset="1" stop-color="#5CC36A"/>
+    </linearGradient>
+  </defs>
+  <!-- E: marco azul con corte diagonal -->
+  <path d="M8 22H110L82 52H44V108H98L70 138H8Z" fill="#1F6FB2"/>
+  <!-- X -->
+  <path d="M124 46H162L232 142H194Z" fill="url(#exg)"/>
+  <path d="M194 46H232L162 142H124Z" fill="url(#exg)"/>
+  <!-- Flecha de crecimiento -->
+  <path d="M26 128L74 82L94 104L146 46" fill="none" stroke="url(#exa)" stroke-width="14" stroke-linejoin="miter" stroke-linecap="butt"/>
+  <path d="M174 14L128 34L160 62Z" fill="#5CC36A"/>
+</svg>
