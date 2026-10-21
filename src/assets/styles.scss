@@ -215,7 +215,7 @@
   display: flex;
   align-items: center;
   gap: 1rem;
-  margin-bottom: 2.25rem;
+  margin-bottom: 1.25rem;
 }
 
 .lp-logo-img { width: 72px; height: auto; flex-shrink: 0; }
@@ -236,9 +236,18 @@
   color: var(--ex-muted);
 }
 
+/* Titular a la izquierda y video promocional a la derecha */
+.lp-hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 2rem;
+}
+
 /* Slogan */
 .lp-slogan-block {
-  margin-bottom: 0.5rem;
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 .lp-slogan-eyebrow {
@@ -262,7 +271,7 @@
 }
 
 .lp-slogan {
-  font-size: 3.1rem;
+  font-size: clamp(2rem, min(5.2vh, 3.1vw), 3.1rem);
   font-weight: 900;
   line-height: 1.1;
   letter-spacing: -0.03em;
@@ -295,17 +304,20 @@
 /* Ilustración: edificios y tarjetas del panel (vista de ejemplo) */
 .lp-visual {
   position: relative;
-  height: 510px;
-  margin: 0.5rem 0 1rem;
+  /* ocupa lo que sobra de alto: así la pantalla entera cabe sin scroll */
+  flex: 1 1 0;
+  min-height: 0;
+  margin: 0.5rem 0;
   user-select: none;
 }
 
 .lp-visual-svg {
   position: absolute;
   left: 50%;
-  top: 70px;
-  width: 520px;
-  height: 400px;
+  top: 0;
+  height: 100%;
+  width: auto;
+  aspect-ratio: 520 / 400;
   transform: translateX(-46%);
   filter: drop-shadow(0 24px 30px rgba(31, 111, 178, .14));
 }
@@ -313,7 +325,7 @@
 .lp-visual-note {
   position: absolute;
   right: 0;
-  bottom: -0.6rem;
+  bottom: 0;
   font-size: 0.66rem;
   color: #94a3b8;
   letter-spacing: 0.04em;
@@ -395,28 +407,28 @@
   strong { display: block; font-size: 1rem; line-height: 1.1; }
 }
 
-.lp-vc-fin { left: 0; top: 226px; width: 232px; }
-.lp-vc-mor { right: 0; top: 0; width: 236px; }
-.lp-vc-pro { left: 90px; bottom: 6px; width: 196px; }
-.lp-vc-vot { right: 0; bottom: 30px; width: 214px; }
-/* Video promocional: cuadrado arriba a la izquierda de la ilustración */
-.lp-vc-video {
-  left: 0; top: 0;
-  width: 204px; height: 204px;
+/* Las tarjetas se anclan al centro de la ilustración para que el conjunto quede junto a cualquier ancho. */
+.lp-vc-fin { left: max(0px, calc(50% - 470px)); top: 0; width: 232px; }
+.lp-vc-mor { left: min(calc(100% - 236px), calc(50% + 150px)); top: 0; width: 236px; }
+.lp-vc-pro { left: max(40px, calc(50% - 410px)); bottom: 0; width: 196px; }
+.lp-vc-vot { left: min(calc(100% - 214px), calc(50% + 160px)); bottom: 24px; width: 214px; }
+
+/* Video promocional: abierto (16:9), en bucle, sin sonido y sin controles, a la derecha del titular */
+.lp-promo {
+  position: relative;
+  flex: 0 1 clamp(280px, 34vw, 560px);
+  aspect-ratio: 16 / 9;
   padding: 4px;                      /* grosor del aro con el degradado de la marca */
-  overflow: visible;
-  border: none;
-  border-radius: 30px;
+  border-radius: 28px;
   background: var(--ex-gradient);
   box-shadow: 0 22px 48px rgba(31, 111, 178, .34), 0 4px 14px rgba(22, 50, 74, .16);
   pointer-events: none;
-  backdrop-filter: none;
 
-  /* halo suave que late detrás del cuadrado */
+  /* halo suave que late detrás del video */
   &::before {
     content: '';
     position: absolute;
-    inset: -14px;
+    inset: -16px;
     border-radius: 40px;
     background: radial-gradient(circle, rgba(46, 196, 182, .38) 0%, transparent 70%);
     z-index: -1;
@@ -427,7 +439,7 @@
     display: block;
     width: 100%; height: 100%;
     object-fit: cover;
-    border-radius: 26px;
+    border-radius: 24px;
     background: #0f2a43;
     pointer-events: none;
   }
@@ -439,7 +451,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .lp-vc-video::before { animation: none; }
+  .lp-promo::before { animation: none; }
 }
 
 .lp-vc-tag {
@@ -458,7 +470,7 @@
 }
 
 .lp-vc-pill {
-  left: 268px; bottom: -4px;
+  left: calc(50% - 20px); bottom: -6px;
   display: flex; align-items: center; gap: 0.5rem;
   padding: 0.5rem 0.8rem;
   i { color: var(--ex-blue); }
@@ -470,8 +482,7 @@
   display: flex;
   align-items: center;
   gap: 0;
-  margin-top: auto;
-  padding-top: 0.5rem;
+  margin-top: 0.5rem;
 }
 
 .lp-trust-item {
@@ -684,9 +695,26 @@
 .auth-logo { display: block; width: 76px; height: auto; margin: 0 auto 0.5rem; }
 
 /* ── RESPONSIVE ─────────────────────────────────── */
-/* Con poco ancho la ilustración no entra: queda el mensaje y los indicadores. */
+/* Escritorio: la pantalla ocupa exactamente el alto de la ventana, sin scroll. */
+@media (min-width: 1200px) {
+  .lp-root { height: 100vh; min-height: 640px; }
+  .lp-brand { min-height: 0; }
+}
+
+/* Ventanas bajas: se quitan tarjetas (y después toda la ilustración) para que nada se corte. */
+@media (min-width: 1200px) and (max-height: 820px) {
+  .lp-vc-pro, .lp-vc-pill, .lp-visual-note { display: none; }
+}
+
+@media (min-width: 1200px) and (max-height: 720px) {
+  .lp-visual { display: none; }
+}
+
+/* Con poco ancho la ilustración no entra: queda el mensaje, el video y los indicadores. */
 @media (max-width: 1199px) {
   .lp-visual { display: none; }
+  .lp-hero { flex-wrap: wrap; }
+  .lp-promo { flex-basis: 100%; max-width: 420px; margin-top: 1.5rem; }
   .lp-trust-row { flex-direction: column; align-items: flex-start; gap: 0.9rem; margin-top: 1.5rem; }
   .lp-trust-sep { display: none; }
   .lp-trust-item { padding: 0; }

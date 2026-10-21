@@ -39,17 +39,26 @@ interface Tower { cx: number; cy: number; a: number; b: number; h: number; floor
                     </div>
                 </div>
 
-                <!-- Mensaje principal -->
-                <div class="lp-slogan-block">
-                    <div class="lp-slogan-eyebrow">Control condominial · en tiempo real</div>
-                    <h1 class="lp-slogan">
-                        Cada edificio.<br>
-                        Cada movimiento.<br>
-                        <span class="lp-slogan-accent">Todo bajo control.</span>
-                    </h1>
-                    <p class="lp-slogan-sub">
-                        Finanzas, operaciones y comunidad conectadas en una sola plataforma.
-                    </p>
+                <!-- Mensaje principal + video promocional -->
+                <div class="lp-hero">
+                    <div class="lp-slogan-block">
+                        <div class="lp-slogan-eyebrow">Control condominial · en tiempo real</div>
+                        <h1 class="lp-slogan">
+                            Cada edificio.<br>
+                            Cada movimiento.<br>
+                            <span class="lp-slogan-accent">Todo bajo control.</span>
+                        </h1>
+                        <p class="lp-slogan-sub">
+                            Finanzas, operaciones y comunidad conectadas en una sola plataforma.
+                        </p>
+                    </div>
+
+                    <!-- Video promocional: en bucle, sin sonido y sin controles (no se puede pausar) -->
+                    <div class="lp-promo">
+                        <video src="/brand/expenses-promo.mp4" [muted]="true" autoplay loop playsinline
+                               disablepictureinpicture disableremoteplayback preload="auto" tabindex="-1"></video>
+                        <span class="lp-vc-tag"><i class="pi pi-play-circle"></i> Conocé Expenses</span>
+                    </div>
                 </div>
 
                 <!-- Ilustración: edificios y tarjetas del panel (vista de ejemplo) -->
@@ -161,13 +170,6 @@ interface Tower { cx: number; cy: number; a: number; b: number; h: number; floor
                     </div>
 
                     <div class="lp-vc lp-vc-pill"><i class="pi pi-building"></i><span>Condominios administrados</span><b>4</b></div>
-
-                    <!-- Video promocional: cuadrado, en bucle, sin sonido y sin controles (no se puede pausar) -->
-                    <div class="lp-vc lp-vc-video">
-                        <video src="/brand/expenses-promo.mp4" [muted]="true" autoplay loop playsinline
-                               disablepictureinpicture disableremoteplayback preload="auto" tabindex="-1"></video>
-                        <span class="lp-vc-tag"><i class="pi pi-play-circle"></i> Conocé Expenses</span>
-                    </div>
 
                     <span class="lp-visual-note">Vista de ejemplo</span>
                 </div>
