@@ -12,6 +12,9 @@ import { homeRoute } from '../../auth/auth.guard';
 import { PushService } from '../../core/push.service';
 import { salesWhatsAppUrl } from '../../config/sales.config';
 
+// Torre isométrica de la ilustración: centro de la base, medios ejes de la base (a horizontal, b = a/2 vertical), alto y pisos.
+interface Tower { cx: number; cy: number; a: number; b: number; h: number; floors: number; }
+
 @Component({
     selector: 'app-login',
     standalone: true,
@@ -49,10 +52,124 @@ import { salesWhatsAppUrl } from '../../config/sales.config';
                     </p>
                 </div>
 
-                <!-- Video promocional -->
-                <div class="lp-video">
-                    <video src="/brand/expenses-promo.mp4" autoplay muted loop playsinline controls preload="metadata"
-                           aria-label="Video de presentación de Expenses"></video>
+                <!-- Ilustración: edificios y tarjetas del panel (vista de ejemplo) -->
+                <div class="lp-visual" aria-hidden="true">
+                    <svg class="lp-visual-svg" viewBox="0 0 520 400" xmlns="http://www.w3.org/2000/svg">
+                        <defs>
+                            <linearGradient id="lpPlat" x1="0" y1="0" x2="1" y2="1">
+                                <stop offset="0" stop-color="#ffffff" />
+                                <stop offset="1" stop-color="#dcebf7" />
+                            </linearGradient>
+                            <linearGradient id="lpWallL" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="0" stop-color="#e9f0f7" />
+                                <stop offset="1" stop-color="#c3d4e4" />
+                            </linearGradient>
+                            <linearGradient id="lpWallR" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="0" stop-color="#ffffff" />
+                                <stop offset="1" stop-color="#dbe7f2" />
+                            </linearGradient>
+                            <radialGradient id="lpTree" cx="0.4" cy="0.35" r="0.7">
+                                <stop offset="0" stop-color="#7ed08b" />
+                                <stop offset="1" stop-color="#3a9a5b" />
+                            </radialGradient>
+                        </defs>
+
+                        <!-- Plataforma -->
+                        <polygon points="10,279 260,404 260,390 10,265" fill="#b9cde0" />
+                        <polygon points="510,279 260,404 260,390 510,265" fill="#cfdeec" />
+                        <polygon points="10,265 260,390 510,265 260,140" fill="url(#lpPlat)" stroke="#c9dbea" stroke-width="1.5" />
+                        <polygon points="60,265 260,365 460,265 260,165" fill="none" stroke="#bfe3ee" stroke-width="1" stroke-dasharray="4 5" />
+
+                        <!-- Árboles -->
+                        @for (t of trees; track $index) {
+                            <rect [attr.x]="t[0] - 1.5" [attr.y]="t[1]" width="3" height="9" fill="#8a6d4f" />
+                            <circle [attr.cx]="t[0]" [attr.cy]="t[1] - 3" [attr.r]="t[2]" fill="url(#lpTree)" />
+                        }
+
+                        <!-- Torres (de atrás hacia adelante) -->
+                        @for (t of towers; track $index) {
+                            <polygon [attr.points]="leftFace(t)" fill="url(#lpWallL)" />
+                            <polygon [attr.points]="rightFace(t)" fill="url(#lpWallR)" />
+                            <g [attr.transform]="leftMatrix(t)">
+                                @for (r of floorList(t); track r) {
+                                    @for (c of columns; track c) {
+                                        <rect [attr.x]="0.12 + c * 0.22" [attr.y]="0.03 + r * (0.94 / t.floors)" width="0.14" [attr.height]="0.94 / t.floors * 0.5" fill="#7fa3c7" opacity="0.8" />
+                                    }
+                                }
+                            </g>
+                            <g [attr.transform]="rightMatrix(t)">
+                                @for (r of floorList(t); track r) {
+                                    @for (c of columns; track c) {
+                                        <rect [attr.x]="0.12 + c * 0.22" [attr.y]="0.03 + r * (0.94 / t.floors)" width="0.14" [attr.height]="0.94 / t.floors * 0.5" fill="#9bbbd8" opacity="0.85" />
+                                    }
+                                }
+                            </g>
+                            <polygon [attr.points]="topFace(t)" fill="#f6f9fc" stroke="#d3e1ee" stroke-width="1" />
+                        }
+
+                        <!-- Nodos de conexión -->
+                        @for (n of nodes; track $index) {
+                            <circle [attr.cx]="n[0]" [attr.cy]="n[1]" r="9" fill="#2ec4b6" opacity="0.18" />
+                            <circle [attr.cx]="n[0]" [attr.cy]="n[1]" r="3.5" fill="#2ec4b6" />
+                        }
+                    </svg>
+
+                    <!-- Finanzas -->
+                    <div class="lp-vc lp-vc-fin">
+                        <div class="lp-vc-head"><span class="lp-vc-ico"><i class="pi pi-chart-bar"></i></span><b>FINANZAS</b><em>En línea</em></div>
+                        <small>Total recaudado</small>
+                        <div class="lp-vc-big">Gs. 48.230.750</div>
+                        <div class="lp-vc-up">↑ 12% vs. mes anterior</div>
+                        <svg class="lp-spark" viewBox="0 0 100 30" preserveAspectRatio="none"><polyline points="0,26 14,20 28,23 42,14 56,17 70,8 84,10 100,2" fill="none" stroke="#2fb67c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></svg>
+                        <small class="lp-vc-sub">Últimos movimientos</small>
+                        <ul class="lp-vc-rows">
+                            <li><span>18/04</span><span>Expensas ordinarias</span><b>1.250.000</b></li>
+                            <li><span>18/04</span><span>Expensas extraordinarias</span><b>320.000</b></li>
+                            <li><span>17/04</span><span>Comisión administración</span><b>600.000</b></li>
+                            <li><span>16/04</span><span>Pago proveedor (mant.)</span><b>450.000</b></li>
+                        </ul>
+                    </div>
+
+                    <!-- Morosidad -->
+                    <div class="lp-vc lp-vc-mor">
+                        <div class="lp-vc-head"><span class="lp-vc-ico"><i class="pi pi-percentage"></i></span><b>MOROSIDAD</b><em>En línea</em></div>
+                        <div class="lp-vc-big">8,4% <span class="lp-vc-down">↓ 2,1% vs. mes anterior</span></div>
+                        <div class="lp-vc-bar"><i style="width: 38%"></i></div>
+                        <div class="lp-vc-two">
+                            <div><small>Deudores</small><strong>18</strong><small>(8,4%)</small></div>
+                            <div><small>Total de unidades</small><strong>214</strong><small>(100%)</small></div>
+                        </div>
+                    </div>
+
+                    <!-- Proveedores -->
+                    <div class="lp-vc lp-vc-pro">
+                        <div class="lp-vc-head"><span class="lp-vc-ico"><i class="pi pi-truck"></i></span><b>PROVEEDORES</b><em>En línea</em></div>
+                        <ul class="lp-vc-kv">
+                            <li><span>Pendientes de pago</span><b>3</b></li>
+                            <li><span>Vencidos</span><b>1</b></li>
+                            <li><span>Monto total</span><b>Gs. 4.820.000</b></li>
+                        </ul>
+                    </div>
+
+                    <!-- Votaciones -->
+                    <div class="lp-vc lp-vc-vot">
+                        <div class="lp-vc-head"><span class="lp-vc-ico"><i class="pi pi-users"></i></span><b>VOTACIONES</b><em>En línea</em></div>
+                        <div class="lp-vc-title">Asamblea Ordinaria 2025</div>
+                        <small>Resultados disponibles</small>
+                        <div class="lp-vc-bar lp-vc-bar-green"><i style="width: 68%"></i><span>68%</span></div>
+                        <small>145 de 214 propietarios</small>
+                    </div>
+
+                    <div class="lp-vc lp-vc-pill"><i class="pi pi-building"></i><span>Condominios administrados</span><b>4</b></div>
+
+                    <!-- Video promocional: cuadrado, en bucle, sin sonido y sin controles (no se puede pausar) -->
+                    <div class="lp-vc lp-vc-video">
+                        <video src="/brand/expenses-promo.mp4" [muted]="true" autoplay loop playsinline
+                               disablepictureinpicture disableremoteplayback preload="auto" tabindex="-1"></video>
+                        <span class="lp-vc-tag"><i class="pi pi-play-circle"></i> Conocé Expenses</span>
+                    </div>
+
+                    <span class="lp-visual-note">Vista de ejemplo</span>
                 </div>
 
                 <!-- Indicadores de confianza -->
@@ -184,10 +301,46 @@ export class Login {
 
     readonly whatsappUrl = salesWhatsAppUrl();
 
+    // Ilustración: torres de atrás hacia adelante (el orden de dibujo es el de la lista), árboles [x, y, radio] y nodos de conexión [x, y].
+    readonly towers: Tower[] = [
+        { cx: 255, cy: 215, a: 50, b: 25, h: 175, floors: 14 },
+        { cx: 352, cy: 262, a: 46, b: 23, h: 125, floors: 10 },
+        { cx: 168, cy: 278, a: 46, b: 23, h: 112, floors: 9 }
+    ];
+    readonly trees: number[][] = [[88, 282, 9], [110, 296, 8], [405, 296, 9], [430, 280, 8], [300, 322, 8], [214, 318, 7], [455, 262, 7]];
+    readonly nodes: number[][] = [[255, 245], [352, 288], [168, 304], [300, 205], [210, 215]];
+    readonly columns = [0, 1, 2, 3];
+
     email = '';
     password = '';
     errorMessage = '';
     isSubmitting = false;
+
+    floorList(t: Tower): number[] {
+        return Array.from({ length: t.floors }, (_, i) => i);
+    }
+
+    // Caras de una torre isométrica: izquierda, derecha y techo.
+    leftFace(t: Tower): string {
+        return `${t.cx - t.a},${t.cy} ${t.cx},${t.cy + t.b} ${t.cx},${t.cy + t.b - t.h} ${t.cx - t.a},${t.cy - t.h}`;
+    }
+
+    rightFace(t: Tower): string {
+        return `${t.cx},${t.cy + t.b} ${t.cx + t.a},${t.cy} ${t.cx + t.a},${t.cy - t.h} ${t.cx},${t.cy + t.b - t.h}`;
+    }
+
+    topFace(t: Tower): string {
+        return `${t.cx - t.a},${t.cy - t.h} ${t.cx},${t.cy + t.b - t.h} ${t.cx + t.a},${t.cy - t.h} ${t.cx},${t.cy - t.b - t.h}`;
+    }
+
+    // Llevan el cuadrado unitario (u a lo ancho, v hacia arriba) sobre cada cara, para dibujar las ventanas sin calcular cada una.
+    leftMatrix(t: Tower): string {
+        return `matrix(${t.a} ${t.b} 0 ${-t.h} ${t.cx - t.a} ${t.cy})`;
+    }
+
+    rightMatrix(t: Tower): string {
+        return `matrix(${t.a} ${-t.b} 0 ${-t.h} ${t.cx} ${t.cy + t.b})`;
+    }
 
     submit(): void {
         if (!this.email || !this.password) {
