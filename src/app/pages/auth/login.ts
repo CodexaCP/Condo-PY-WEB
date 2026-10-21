@@ -10,6 +10,7 @@ import { AppFloatingConfigurator } from '../../layout/component/app.floatingconf
 import { AuthService } from '../../auth/auth.service';
 import { homeRoute } from '../../auth/auth.guard';
 import { PushService } from '../../core/push.service';
+import { salesWhatsAppUrl } from '../../config/sales.config';
 
 @Component({
     selector: 'app-login',
@@ -164,9 +165,32 @@ import { PushService } from '../../core/push.service';
                     </div>
                 </div>
             </div>
+
+            @if (whatsappUrl) {
+                <a class="lp-wa-fab" [href]="whatsappUrl" target="_blank" rel="noopener noreferrer"
+                   aria-label="Pedir una cotización por WhatsApp" title="Pedir una cotización por WhatsApp">
+                    <i class="pi pi-whatsapp"></i>
+                    <span class="lp-wa-label">Pedí tu cotización</span>
+                </a>
+            }
         </div>
     `,
     styles: [`
+        .lp-wa-fab {
+            position: fixed; right: 1.25rem; bottom: 1.25rem; z-index: 50;
+            display: flex; align-items: center; gap: 0.6rem;
+            padding: 0.85rem 1.1rem; border-radius: 999px;
+            background: #25d366; color: #fff; text-decoration: none;
+            font-size: 0.95rem; font-weight: 600;
+            box-shadow: 0 8px 24px rgba(37, 211, 102, 0.4);
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
+        }
+        .lp-wa-fab:hover { transform: translateY(-2px); box-shadow: 0 12px 28px rgba(37, 211, 102, 0.5); }
+        .lp-wa-fab i { font-size: 1.6rem; }
+        @media (max-width: 640px) {
+            .lp-wa-fab { padding: 0.9rem; }
+            .lp-wa-label { display: none; }
+        }
         .lp-forgot-row { display: flex; justify-content: flex-end; margin: -0.5rem 0 1.25rem; }
         .lp-forgot-row a { font-size: 0.82rem; color: var(--brand-blue, #1385b6); text-decoration: none; }
         .lp-forgot-row a:hover { text-decoration: underline; }
@@ -183,6 +207,8 @@ export class Login {
     private readonly auth = inject(AuthService);
     private readonly router = inject(Router);
     private readonly pushSvc = inject(PushService);
+
+    readonly whatsappUrl = salesWhatsAppUrl();
 
     email = '';
     password = '';
