@@ -366,7 +366,7 @@ interface RubroGroup {
                 <i class="pi pi-percentage"></i>
                 {{ pendingDiscount.supplierName }} tiene un descuento acordado pendiente de ₲ {{ pendingDiscount.pendingTotal | number: '1.0-0' }} (
                 <ng-container *ngFor="let n of pendingDiscount.notes; let last = last">NC {{ n.numero }}{{ last ? '' : ', ' }}</ng-container>).
-                Revisá que esta factura lo traiga aplicado y después registralo en Finanzas → Cuentas por proveedor.
+                Revisá que esta factura lo traiga aplicado y después registralo en Finanzas → Cuentas por pagar y cobrar.
               </small>
             </label>
             <label class="field-block">

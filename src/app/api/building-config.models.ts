@@ -340,6 +340,8 @@ export interface PayablesPage {
 export interface PayablesFilters {
   status?: PayablesStatusFilter;
   supplierId?: string;
+  // Por nombre: sirve también para proveedores escritos a mano (sin ficha).
+  supplierName?: string;
   from?: string;
   to?: string;
   page?: number;

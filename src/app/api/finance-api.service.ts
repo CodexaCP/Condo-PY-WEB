@@ -233,6 +233,7 @@ export class FinanceApiService {
     let params = this.params(buildingId);
     if (filters.status) params = params.set('status', filters.status);
     if (filters.supplierId) params = params.set('supplierId', filters.supplierId);
+    if (filters.supplierName) params = params.set('supplierName', filters.supplierName);
     if (filters.from) params = params.set('from', filters.from);
     if (filters.to) params = params.set('to', filters.to);
     if (filters.page) params = params.set('page', filters.page);

@@ -305,8 +305,10 @@ export const appRoutes: Routes = [
                 loadComponent: () => import('./app/pages/condo/finance-payables-page.component').then(m => m.FinancePayablesPageComponent)
             },
             {
+                // Se unificó con Cuentas por pagar (solapa «Por cobrar a proveedores»).
                 path: 'finance/supplier-accounts',
-                loadComponent: () => import('./app/pages/condo/supplier-accounts-page.component').then(m => m.SupplierAccountsPageComponent)
+                redirectTo: 'finance/payables',
+                pathMatch: 'full'
             },
             {
                 path: 'finance/vat-purchases',

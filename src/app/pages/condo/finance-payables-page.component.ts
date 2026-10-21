@@ -11,7 +11,9 @@ import { extractApiErrorMessage } from '../../api/api-error.util';
 import { BuildingExpensesApiService } from '../../api/building-expenses-api.service';
 import { PayableRow, PayablesPage, PayablesStatusFilter } from '../../api/building-config.models';
 import { FinanceApiService } from '../../api/finance-api.service';
-import { FinanceBuildingAccess, FinancialAccount } from '../../api/models';
+import { FinanceBuildingAccess, FinancialAccount, SupplierAccountsSummary } from '../../api/models';
+import { SupplierAccountsApiService } from '../../api/supplier-accounts-api.service';
+import { SupplierAccountsPanelComponent } from './supplier-accounts-panel.component';
 import { FinanceBuildingPickerComponent } from './finance-building-picker.component';
 import { classifyFinanceError, FinanceErrorKind, GsPipe, todayParaguay } from './finance-format';
 import { FinanceStateComponent } from './finance-state.component';
@@ -19,20 +21,25 @@ import { CONFIG_SECTION_STYLES } from './config-section.styles';
 
 const PAGE_SIZE = 25;
 
-// Cuentas por pagar: las facturas de proveedores con vencimiento. Mientras no se pagan no entran a la caja; al registrar el pago entran en la
-// fecha del pago y desde la cuenta elegida. Un mes cerrado no admite registrar ni deshacer pagos de ese mes.
+type PayablesTab = 'payables' | 'receivables' | 'summary';
+
+// Cuentas por pagar y por cobrar a proveedores en una sola pantalla, con un filtro de proveedor y tres solapas:
+//  - Por pagar: las facturas de proveedores con vencimiento. Mientras no se pagan no entran a la caja; al registrar el pago entran en la
+//    fecha del pago y desde la cuenta elegida. Un mes cerrado no admite registrar ni deshacer pagos de ese mes.
+//  - Por cobrar: las notas de crédito del proveedor sobre gastos ya pagados (devolución de dinero o descuento en su próxima factura).
+//  - Resumen: por proveedor, lo que se le debe, lo que debe y el saldo neto.
 @Component({
   standalone: true,
   selector: 'app-finance-payables-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, FormsModule, Card, Tag, GsPipe, FinanceBuildingPickerComponent, FinanceStateComponent],
+  imports: [CommonModule, FormsModule, Card, Tag, GsPipe, FinanceBuildingPickerComponent, FinanceStateComponent, SupplierAccountsPanelComponent],
   template: `
     <p-card styleClass="app-page-card">
       <div class="app-toolbar">
         <div class="app-page-head">
           <div>
-            <h1>Cuentas por pagar</h1>
-            <p>Facturas de proveedores con vencimiento: lo que hay que pagar y lo ya pagado.</p>
+            <h1>Cuentas por pagar y por cobrar</h1>
+            <p>Lo que se le debe a cada proveedor y lo que cada proveedor le debe al edificio (devoluciones y descuentos pendientes).</p>
           </div>
         </div>
         <app-finance-building-picker (selected)="onBuilding($event)" (failed)="onError($event)"></app-finance-building-picker>
@@ -45,8 +52,31 @@ const PAGE_SIZE = 25;
           <div class="kpi main"><span>A pagar</span><strong>{{ d.summary.pendingTotal | gs }}</strong><small>{{ d.summary.pendingCount }} facturas</small></div>
           <div class="kpi"><span>Vencido</span><strong class="neg">{{ d.summary.overdueTotal | gs }}</strong><small>{{ d.summary.overdueCount }} facturas</small></div>
           <div class="kpi"><span>Vence en 7 días</span><strong>{{ d.summary.dueNext7DaysTotal | gs }}</strong></div>
+          <div class="kpi receivable" *ngIf="supplierAccounts as a"><span>Por cobrar a proveedores</span><strong>{{ a.receivableTotal | gs }}</strong><small>Devoluciones {{ a.pendingRefundTotal | gs }} · descuentos {{ a.pendingDiscountTotal | gs }}</small></div>
+          <div class="kpi" *ngIf="supplierAccounts as a"><span>Saldo neto</span><strong [class.neg]="a.payableTotal - a.receivableTotal < 0">{{ a.payableTotal - a.receivableTotal | gs }}</strong><small>Por pagar − por cobrar</small></div>
         </div>
 
+        <div class="filters">
+          <label class="field"><span>Proveedor</span>
+            <select [(ngModel)]="supplierName" (ngModelChange)="onSupplierFilter()">
+              <option value="">Todos los proveedores</option>
+              <option *ngFor="let s of supplierAccounts?.suppliers" [value]="s.supplierName">{{ s.supplierName }}</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="tabs" role="tablist">
+          <button type="button" role="tab" [class.on]="tab === 'payables'" [attr.aria-selected]="tab === 'payables'" (click)="tab = 'payables'">Por pagar</button>
+          <button type="button" role="tab" [class.on]="tab === 'receivables'" [attr.aria-selected]="tab === 'receivables'" (click)="tab = 'receivables'">
+            Por cobrar a proveedores<span class="badge" *ngIf="supplierAccounts && supplierAccounts.receivableTotal > 0"> · {{ supplierAccounts.receivableTotal | gs }}</span>
+          </button>
+          <button type="button" role="tab" [class.on]="tab === 'summary'" [attr.aria-selected]="tab === 'summary'" (click)="tab = 'summary'">Resumen por proveedor</button>
+        </div>
+
+        <app-supplier-accounts-panel *ngIf="tab !== 'payables'" [buildingId]="buildingId" [view]="tab === 'summary' ? 'summary' : 'receivables'" [supplierName]="supplierName"
+          (changed)="loadAccounts()" (supplierPicked)="pickSupplier($event)" (failed)="onError($event)"></app-supplier-accounts-panel>
+
+        <ng-container *ngIf="tab === 'payables'">
         <div class="aging" *ngIf="d.summary.overdueCount">
           <span class="muted">Lo vencido, por antigüedad:</span>
           <span class="chip" *ngFor="let b of d.summary.aging" [class.empty]="!b.count">{{ b.label }}: <strong>{{ b.total | gs }}</strong> ({{ b.count }})</span>
@@ -119,11 +149,17 @@ const PAGE_SIZE = 25;
           <span class="muted">Página {{ page }} de {{ pages }} · {{ d.totalCount }} facturas</span>
           <button type="button" class="btn sm secondary" [disabled]="page >= pages" (click)="go(page + 1)">Siguiente</button>
         </div>
+        </ng-container>
       </ng-container>
     </p-card>
   `,
   styles: [CONFIG_SECTION_STYLES, `
-    .kpis { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.9rem; margin: 0.8rem 0; }
+    .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr)); gap: 0.9rem; margin: 0.8rem 0; }
+    .kpi.receivable { background: var(--brand-gradient-soft); border-color: transparent; }
+    .tabs { display: flex; gap: 0.25rem; flex-wrap: wrap; border-bottom: 1px solid var(--brand-border); margin: 0.4rem 0 1rem; }
+    .tabs button { background: none; border: none; border-bottom: 3px solid transparent; padding: 0.6rem 1rem; font: inherit; font-weight: 600; color: var(--brand-muted); cursor: pointer; }
+    .tabs button.on { color: var(--brand-ink); border-bottom-color: var(--p-primary-color, #1385b6); }
+    .tabs .badge { font-weight: 500; font-size: 0.85rem; }
     .kpi { display: grid; gap: 0.25rem; padding: 1rem 1.1rem; border-radius: 14px; background: var(--p-content-background, #fff); border: 1px solid var(--brand-border); }
     .kpi span { font-size: 0.82rem; font-weight: 600; color: var(--brand-muted); }
     .kpi strong { font-size: 1.35rem; color: var(--brand-ink); }
@@ -143,6 +179,7 @@ const PAGE_SIZE = 25;
 })
 export class FinancePayablesPageComponent {
   private readonly api = inject(FinanceApiService);
+  private readonly accountsApi = inject(SupplierAccountsApiService);
   private readonly expensesApi = inject(BuildingExpensesApiService);
   private readonly accountingApi = inject(AccountingApiService);
   private readonly msg = inject(MessageService);
@@ -155,6 +192,9 @@ export class FinancePayablesPageComponent {
   data: PayablesPage | null = null;
   accounts: FinancialAccount[] = [];
   status: PayablesStatusFilter = 'all';
+  tab: PayablesTab = 'payables';
+  supplierName = '';
+  supplierAccounts: SupplierAccountsSummary | null = null;
   from = '';
   to = '';
   page = 1;
@@ -189,6 +229,9 @@ export class FinancePayablesPageComponent {
     this.noBuilding = false;
     this.buildingId = building.buildingId;
     this.status = 'all';
+    this.tab = 'payables';
+    this.supplierName = '';
+    this.supplierAccounts = null;
     this.from = this.to = '';
     this.page = 1;
     this.paying = '';
@@ -200,9 +243,32 @@ export class FinancePayablesPageComponent {
       error: () => { this.accounts = []; }
     });
     this.load();
+    this.loadAccounts();
   }
 
   onError(err: unknown): void { this.setError(err); }
+
+  // Totales por cobrar y lista de proveedores del filtro (también sirve de recarga después de una devolución o un descuento).
+  loadAccounts(): void {
+    if (!this.buildingId) return;
+    this.accountsApi.getSummary(this.buildingId).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: summary => { this.supplierAccounts = summary; this.cdr.markForCheck(); },
+      error: () => { this.supplierAccounts = null; this.cdr.markForCheck(); }
+    });
+  }
+
+  onSupplierFilter(): void {
+    this.page = 1;
+    this.load();
+  }
+
+  // Un proveedor tocado en el resumen pasa a ser el filtro y se abren sus notas por cobrar.
+  pickSupplier(name: string): void {
+    this.supplierName = this.supplierName === name ? '' : name;
+    this.tab = this.supplierName ? 'receivables' : 'summary';
+    this.onSupplierFilter();
+    this.cdr.markForCheck();
+  }
 
   reload(): void {
     this.page = 1;
@@ -246,6 +312,7 @@ export class FinancePayablesPageComponent {
         this.paying = '';
         this.msg.add({ severity: 'success', summary: success, life: 3500 });
         this.load();
+        this.loadAccounts();
       },
       error: err => {
         this.busy = false;
@@ -259,7 +326,7 @@ export class FinancePayablesPageComponent {
     this.loading = true;
     this.errorKind = '';
     this.api.getPayables(this.buildingId, {
-      status: this.status, from: this.from || undefined, to: this.to || undefined, page: this.page, pageSize: PAGE_SIZE
+      status: this.status, supplierName: this.supplierName || undefined, from: this.from || undefined, to: this.to || undefined, page: this.page, pageSize: PAGE_SIZE
     }).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: data => {
         this.data = data;
