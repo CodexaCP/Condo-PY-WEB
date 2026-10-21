@@ -699,6 +699,8 @@
 @media (min-width: 1200px) {
   .lp-root { height: 100vh; min-height: 640px; }
   .lp-brand { min-height: 0; }
+  /* El video sube junto al logo (no hay nada a su lado ahí) y queda separado de la tarjeta Morosidad. */
+  .lp-promo { margin-top: -3.5rem; }
 }
 
 /* Ventanas bajas: se quitan tarjetas (y después toda la ilustración) para que nada se corte. */
