@@ -16,6 +16,8 @@ import { FinanceAccessService } from '../../api/finance-access.service';
 import { FinanceApiService } from '../../api/finance-api.service';
 import { RecurringBuildingExpensesApiService } from '../../api/recurring-building-expenses-api.service';
 import { SuppliersApiService } from '../../api/suppliers-api.service';
+import { SupplierAccountsApiService } from '../../api/supplier-accounts-api.service';
+import { SupplierPendingDiscount } from '../../api/models';
 import { BuildingsApiService } from '../../api/buildings-api.service';
 import { ExpensePeriodsApiService } from '../../api/expense-periods-api.service';
 import { UnitsApiService } from '../../api/units-api.service';
@@ -358,8 +360,14 @@ interface RubroGroup {
                 <option value="">— Otro (escribir el nombre) —</option>
                 <option *ngFor="let s of supplierChoices" [value]="s.id">{{ s.name }}{{ s.ruc ? ' · ' + s.ruc : '' }}{{ s.isActive ? '' : ' (desactivado)' }}</option>
               </select>
-              <input *ngIf="!form.supplierId" [(ngModel)]="form.supplierName" name="supplierName" type="text" maxlength="160" placeholder="Nombre del proveedor..." />
+              <input *ngIf="!form.supplierId" [(ngModel)]="form.supplierName" name="supplierName" type="text" maxlength="160" placeholder="Nombre del proveedor..." (blur)="checkPendingDiscount()" />
               <small class="field-hint" *ngIf="form.supplierId">El nombre sale del proveedor de la lista. Los proveedores se administran en el Centro de configuración.</small>
+              <small class="discount-alert" *ngIf="pendingDiscount && pendingDiscount.pendingTotal > 0">
+                <i class="pi pi-percentage"></i>
+                {{ pendingDiscount.supplierName }} tiene un descuento acordado pendiente de ₲ {{ pendingDiscount.pendingTotal | number: '1.0-0' }} (
+                <ng-container *ngFor="let n of pendingDiscount.notes; let last = last">NC {{ n.numero }}{{ last ? '' : ', ' }}</ng-container>).
+                Revisá que esta factura lo traiga aplicado y después registralo en Finanzas → Cuentas por proveedor.
+              </small>
             </label>
             <label class="field-block">
               <span>Monto *</span>
@@ -554,6 +562,8 @@ interface RubroGroup {
       outline: none; border-color: #1385b6; box-shadow: 0 0 0 3px rgba(19,133,182,0.12);
     }
     .field-hint { font-size: 0.78rem; color: #6b878d; }
+    .discount-alert { display: block; margin-top: 0.3rem; padding: 0.5rem 0.65rem; border-radius: 8px; background: #fffbeb; color: #92400e; font-size: 0.8rem; line-height: 1.4; }
+    .discount-alert .pi { margin-right: 0.3rem; }
     .form-actions { display: flex; justify-content: flex-end; gap: 0.75rem; padding-top: 0.25rem; }
 
     /* Apply recurring box */
@@ -621,6 +631,7 @@ export class BuildingExpensesPageComponent implements OnInit, OnChanges {
   private readonly financeApi = inject(FinanceApiService);
   private readonly financeAccess = inject(FinanceAccessService);
   private readonly suppliersApi = inject(SuppliersApiService);
+  private readonly supplierAccountsApi = inject(SupplierAccountsApiService);
   private readonly auth = inject(AuthService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly cdr = inject(ChangeDetectorRef);
@@ -970,9 +981,13 @@ export class BuildingExpensesPageComponent implements OnInit, OnChanges {
   // Elegir un proveedor toma su nombre y propone el vencimiento con su plazo de pago habitual (si todavía no hay uno).
   onSupplierChange(): void {
     const supplier = this.suppliers.find((s) => s.id === this.form.supplierId);
-    if (!supplier) return;
+    if (!supplier) {
+      this.pendingDiscount = null;
+      return;
+    }
 
     this.form.supplierName = supplier.name;
+    this.checkPendingDiscount();
     if (this.financeOnForm && !this.form.dueDate && supplier.paymentTermDays !== null && this.form.expenseDate) {
       const due = new Date(`${this.form.expenseDate}T00:00:00`);
       due.setDate(due.getDate() + supplier.paymentTermDays);
@@ -1124,6 +1139,27 @@ export class BuildingExpensesPageComponent implements OnInit, OnChanges {
     });
   }
 
+  // Descuentos acordados con el proveedor (notas de crédito sin aplicar del todo): al cargar su factura se avisa para revisar que vengan aplicados.
+  pendingDiscount: SupplierPendingDiscount | null = null;
+  private discountCheckKey = '';
+
+  checkPendingDiscount(): void {
+    const name = this.form.supplierName.trim();
+    if (!this.form.buildingId || !name || this.editingId) {
+      this.pendingDiscount = null;
+      this.discountCheckKey = '';
+      return;
+    }
+
+    const key = `${this.form.buildingId}|${name.toLowerCase()}`;
+    if (key === this.discountCheckKey) return;
+    this.discountCheckKey = key;
+    this.supplierAccountsApi.getPendingDiscount(this.form.buildingId, name).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: (d) => { this.pendingDiscount = d; this.cdr.markForCheck(); },
+      error: () => { this.pendingDiscount = null; }
+    });
+  }
+
   onFormBuildingChange(): void {
     if (!this.availablePeriods.some((item) => item.id === this.form.expensePeriodId)) {
       this.form.expensePeriodId = '';
@@ -1134,6 +1170,8 @@ export class BuildingExpensesPageComponent implements OnInit, OnChanges {
     // El rubro es del plan de cuentas de cada edificio: al cambiar de edificio se vuelve a elegir.
     this.form.ledgerCategoryId = '';
     this.refreshRubros();
+    this.discountCheckKey = '';
+    this.checkPendingDiscount();
   }
 
   onDistributionTypeChange(): void {

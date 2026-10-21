@@ -424,6 +424,20 @@ export interface BuildingExpense {
 
 export type PayableStatus = 'None' | 'Pending' | 'Overdue' | 'Paid';
 
+// Cómo recupera el edificio lo que el proveedor acredita cuando el gasto YA estaba pagado.
+export type SupplierRecoveryType = 'None' | 'Refund' | 'NextInvoiceDiscount';
+export type SupplierRecoveryStatus = 'None' | 'Pending' | 'Recovered';
+
+export interface BuildingExpenseCreditNoteDiscount {
+  id: string;
+  amount: number;
+  appliedOn: string;
+  appliedToExpenseId: string | null;
+  appliedToExpenseDescription: string | null;
+  appliedToInvoiceNumber: string | null;
+  note: string;
+}
+
 // Nota de crédito que emite el PROVEEDOR sobre un gasto del edificio (no confundir con la nota de crédito al propietario).
 export interface BuildingExpenseCreditNote {
   id: string;
@@ -443,6 +457,15 @@ export interface BuildingExpenseCreditNote {
   createdAtUtc: string;
   voidReason: string;
   voidedAtUtc: string | null;
+  recoveryType: SupplierRecoveryType;
+  recoveryStatus: SupplierRecoveryStatus;
+  refundedOn: string | null;
+  refundReference: string | null;
+  recoveredAtUtc: string | null;
+  // Lo que el proveedor todavía debe al edificio por esta nota (devolución pendiente o descuento sin aplicar).
+  pendingRecoveryAmount: number;
+  discountAppliedAmount: number;
+  discounts: BuildingExpenseCreditNoteDiscount[];
   // Solo en notas de período publicado (Credited): lo acreditado como saldo a favor de cada unidad.
   allocations: BuildingExpenseCreditNoteAllocation[];
 }
@@ -475,6 +498,10 @@ export interface BuildingExpenseCreditNotePreview {
   rows: BuildingExpenseCreditNotePreviewRow[];
   unitsWithoutOwner: string[];
   message: string | null;
+  // El gasto ya estaba pagado al proveedor: hay que elegir cómo se recupera.
+  expensePaid: boolean;
+  // Período publicado con devolución de dinero: el saldo a favor se acredita recién al marcarla devuelta.
+  ownersCreditedOnRefund: boolean;
 }
 
 // Una fila del anexo de notas de crédito de proveedor de un edificio y período (para la liquidación y el contador).
@@ -502,6 +529,10 @@ export interface PeriodSupplierCreditNote {
   voidReason: string;
   allocationsCount: number;
   allocatedAmount: number;
+  recoveryType: SupplierRecoveryType;
+  recoveryStatus: SupplierRecoveryStatus;
+  refundedOn: string | null;
+  pendingRecoveryAmount: number;
 }
 
 export interface CreateBuildingExpenseCreditNoteRequest {
@@ -511,6 +542,73 @@ export interface CreateBuildingExpenseCreditNoteRequest {
   amount: number;
   reason: string;
   documentUrl: string;
+  // Obligatorio si el gasto ya estaba pagado al proveedor; si todavía está por pagar se ignora.
+  recoveryType?: SupplierRecoveryType | null;
+}
+
+export interface MarkCreditNoteRefundedRequest {
+  refundedOn: string;
+  reference: string | null;
+}
+
+export interface AddCreditNoteDiscountRequest {
+  amount: number;
+  appliedOn: string;
+  appliedToExpenseId?: string | null;
+  note: string | null;
+}
+
+// Cuentas por pagar y por cobrar por proveedor de un edificio.
+export interface SupplierAccountRow {
+  supplierKey: string;
+  supplierName: string;
+  supplierId: string | null;
+  payableCount: number;
+  payableTotal: number;
+  payableOverdueTotal: number;
+  receivableCount: number;
+  pendingRefundTotal: number;
+  pendingDiscountTotal: number;
+  receivableTotal: number;
+  // Por pagar menos por cobrar (negativo = el proveedor debe más de lo que se le debe).
+  netBalance: number;
+}
+
+export interface SupplierAccountsSummary {
+  buildingId: string;
+  payableTotal: number;
+  payableOverdueTotal: number;
+  pendingRefundTotal: number;
+  pendingDiscountTotal: number;
+  receivableTotal: number;
+  suppliers: SupplierAccountRow[];
+}
+
+export interface SupplierReceivable {
+  creditNoteId: string;
+  buildingExpenseId: string;
+  supplierKey: string;
+  supplierName: string;
+  numero: string;
+  timbrado: string | null;
+  issueDate: string;
+  expenseDescription: string;
+  expensePeriodName: string;
+  amount: number;
+  recoveryType: SupplierRecoveryType;
+  recoveryStatus: SupplierRecoveryStatus;
+  discountApplied: number;
+  pendingAmount: number;
+  refundedOn: string | null;
+  refundReference: string | null;
+  daysPending: number;
+}
+
+// Descuentos acordados con el proveedor que todavía no se aplicaron: se avisa al cargar su próxima factura.
+export interface SupplierPendingDiscount {
+  supplierName: string;
+  pendingTotal: number;
+  notes: SupplierReceivable[];
 }
 
 export interface BuildingExpenseCreditNoteResult {

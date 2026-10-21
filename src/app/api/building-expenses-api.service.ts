@@ -7,6 +7,9 @@ import {
   BuildingExpenseCreditNote,
   BuildingExpenseCreditNotePreview,
   BuildingExpenseCreditNoteResult,
+  AddCreditNoteDiscountRequest,
+  MarkCreditNoteRefundedRequest,
+  SupplierRecoveryType,
   BuildingExpenseImportResult,
   PeriodSupplierCreditNote,
   CreateBuildingExpenseCreditNoteRequest,
@@ -110,8 +113,21 @@ export class BuildingExpensesApiService {
     return `${API_BASE_URL}/building-expenses/credit-notes/export?${query}`;
   }
 
-  previewCreditNote(expenseId: string, amount: number): Observable<BuildingExpenseCreditNotePreview> {
-    return this.http.post<BuildingExpenseCreditNotePreview>(`${API_BASE_URL}/building-expenses/${expenseId}/credit-notes/preview`, { amount });
+  previewCreditNote(expenseId: string, amount: number, recoveryType?: SupplierRecoveryType | null): Observable<BuildingExpenseCreditNotePreview> {
+    return this.http.post<BuildingExpenseCreditNotePreview>(`${API_BASE_URL}/building-expenses/${expenseId}/credit-notes/preview`, { amount, recoveryType: recoveryType ?? null });
+  }
+
+  // Cuentas por cobrar al proveedor: el dinero volvió (y, en período publicado, ahí se acredita el saldo a favor de las unidades) o se aplicó un descuento.
+  markCreditNoteRefunded(id: string, request: MarkCreditNoteRefundedRequest): Observable<BuildingExpenseCreditNoteResult> {
+    return this.http.post<BuildingExpenseCreditNoteResult>(`${API_BASE_URL}/building-expenses/credit-notes/${id}/mark-refunded`, request);
+  }
+
+  addCreditNoteDiscount(id: string, request: AddCreditNoteDiscountRequest): Observable<BuildingExpenseCreditNoteResult> {
+    return this.http.post<BuildingExpenseCreditNoteResult>(`${API_BASE_URL}/building-expenses/credit-notes/${id}/discounts`, request);
+  }
+
+  removeCreditNoteDiscount(id: string, discountId: string): Observable<BuildingExpenseCreditNoteResult> {
+    return this.http.delete<BuildingExpenseCreditNoteResult>(`${API_BASE_URL}/building-expenses/credit-notes/${id}/discounts/${discountId}`);
   }
 
   voidCreditNote(id: string, reason: string): Observable<BuildingExpenseCreditNoteResult> {

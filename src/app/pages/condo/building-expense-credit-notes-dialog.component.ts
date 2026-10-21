@@ -8,7 +8,7 @@ import { Tag } from 'primeng/tag';
 import { extractApiErrorMessage } from '../../api/api-error.util';
 import { BuildingExpensesApiService } from '../../api/building-expenses-api.service';
 import { isPdfUrl, resolveUploadUrl } from '../../api/file-url.util';
-import { BuildingExpense, BuildingExpenseCreditNote, BuildingExpenseCreditNotePreview } from '../../api/models';
+import { BuildingExpense, BuildingExpenseCreditNote, BuildingExpenseCreditNotePreview, SupplierRecoveryType } from '../../api/models';
 import { UploadsApiService } from '../../api/uploads-api.service';
 
 const ALLOWED_EXTENSIONS = ['.pdf', '.jpg', '.jpeg', '.png', '.webp', '.xml'];
@@ -36,7 +36,8 @@ const MAX_FILE_BYTES = 10 * 1024 * 1024;
           <div><span>Facturado por el proveedor</span><strong>{{ gs(expense.originalAmount) }}</strong></div>
           <div class="minus"><span>(−) Notas de crédito aplicadas</span><strong>{{ gs(expense.creditedAmount) }}</strong></div>
           <div class="total"><span>Monto que se reparte</span><strong>{{ gs(expense.amount) }}</strong></div>
-          <div class="credited" *ngIf="creditedSoFar > 0"><span>Acreditado como saldo a favor de las unidades</span><strong>{{ gs(creditedSoFar) }}</strong></div>
+          <div class="credited" *ngIf="creditedToUnits > 0"><span>Acreditado como saldo a favor de las unidades</span><strong>{{ gs(creditedToUnits) }}</strong></div>
+          <div class="minus" *ngIf="pendingFromSupplier > 0"><span>Por cobrar al proveedor</span><strong>{{ gs(pendingFromSupplier) }}</strong></div>
         </div>
 
         <div class="notice warn" *ngIf="recalculate">
@@ -63,6 +64,28 @@ const MAX_FILE_BYTES = 10 * 1024 * 1024;
               · {{ n.reason }}
             </small>
             <small *ngIf="n.status === 'Voided'" class="void-reason">Anulada: {{ n.voidReason }}</small>
+
+            <!-- Cuenta por cobrar al proveedor (gasto ya pagado) -->
+            <div class="recovery" *ngIf="n.status === 'Applied' && n.recoveryType === 'Refund'">
+              <p-tag *ngIf="n.recoveryStatus === 'Pending'" value="Devolución pendiente del proveedor" severity="warn"></p-tag>
+              <p-tag *ngIf="n.recoveryStatus === 'Recovered'" [value]="'Devuelto el ' + (n.refundedOn | date: 'dd/MM/yyyy')" severity="success"></p-tag>
+              <small *ngIf="n.recoveryStatus === 'Pending' && n.mode === 'Credited'">Los propietarios reciben su saldo a favor cuando marques que el dinero fue devuelto.</small>
+              <small *ngIf="n.refundReference">Referencia: {{ n.refundReference }}</small>
+            </div>
+            <div class="recovery" *ngIf="n.status === 'Applied' && n.recoveryType === 'NextInvoiceDiscount'">
+              <p-tag *ngIf="n.recoveryStatus === 'Pending'" [value]="'Descuento pendiente: ' + gs(n.pendingRecoveryAmount)" severity="warn"></p-tag>
+              <p-tag *ngIf="n.recoveryStatus === 'Recovered'" value="Descuento aplicado por completo" severity="success"></p-tag>
+              <div class="alloc" *ngIf="n.discounts.length">
+                <span class="alloc-title">Descuentos ya aplicados por el proveedor:</span>
+                <span class="alloc-row" *ngFor="let d of n.discounts">
+                  <span>
+                    {{ d.appliedOn | date: 'dd/MM/yyyy' }}<ng-container *ngIf="d.note"> · {{ d.note }}</ng-container>
+                    <button type="button" class="link-btn" (click)="removeDiscount(n, d.id)" [disabled]="saving" title="Quitar este descuento">quitar</button>
+                  </span>
+                  <strong>{{ gs(d.amount) }}</strong>
+                </span>
+              </div>
+            </div>
             <a *ngIf="n.documentUrl" [href]="fileUrl(n.documentUrl)" target="_blank" rel="noopener" class="doc-link">
               <i class="pi" [ngClass]="isPdf(n.documentUrl) ? 'pi-file-pdf' : 'pi-paperclip'"></i> Ver documento del proveedor
             </a>
@@ -71,9 +94,41 @@ const MAX_FILE_BYTES = 10 * 1024 * 1024;
               <span class="alloc-row" *ngFor="let a of n.allocations"><span>Unidad {{ a.unitCode }} · {{ a.ownerName }}</span><strong>{{ gs(a.amount) }}</strong></span>
             </div>
           </div>
-          <div class="note-actions" *ngIf="n.status === 'Applied' && (isDraft || n.mode === 'Credited')">
-            <p-button *ngIf="voidingId !== n.id" type="button" label="Anular" icon="pi pi-undo" size="small" severity="danger" [outlined]="true"
+          <div class="note-actions" *ngIf="n.status === 'Applied'">
+            <p-button *ngIf="n.recoveryType === 'Refund' && n.recoveryStatus === 'Pending' && refundingId !== n.id" type="button" label="Marcar devuelto" icon="pi pi-check"
+              size="small" severity="success" [outlined]="true" (onClick)="startRefund(n)"></p-button>
+            <p-button *ngIf="n.recoveryType === 'NextInvoiceDiscount' && n.recoveryStatus === 'Pending' && discountingId !== n.id" type="button" label="Registrar descuento aplicado"
+              icon="pi pi-percentage" size="small" severity="success" [outlined]="true" (onClick)="startDiscount(n)"></p-button>
+            <p-button *ngIf="voidingId !== n.id && (isDraft || n.mode === 'Credited')" type="button" label="Anular" icon="pi pi-undo" size="small" severity="danger" [outlined]="true"
               (onClick)="startVoid(n)"></p-button>
+          </div>
+          <div class="void-box" *ngIf="refundingId === n.id">
+            <label class="field">
+              <span>Fecha en que el proveedor devolvió el dinero *</span>
+              <input type="date" [max]="today" [min]="n.issueDate" [(ngModel)]="refundForm.refundedOn" name="refundedOn" />
+            </label>
+            <input type="text" maxlength="200" placeholder="Referencia (transferencia, cheque...) — opcional" [(ngModel)]="refundForm.reference" name="refundReference" />
+            <small class="hint" *ngIf="n.mode === 'Credited'">Al confirmar se acredita el saldo a favor de las unidades (como se hacía antes al registrar la nota).</small>
+            <div class="void-actions">
+              <p-button type="button" label="Volver" size="small" severity="secondary" [outlined]="true" [disabled]="saving" (onClick)="refundingId = null"></p-button>
+              <p-button type="button" label="Confirmar devolución" size="small" severity="success" [loading]="saving" [disabled]="!refundForm.refundedOn" (onClick)="confirmRefund(n)"></p-button>
+            </div>
+          </div>
+          <div class="void-box" *ngIf="discountingId === n.id">
+            <label class="field">
+              <span>Monto descontado por el proveedor (₲) * — falta aplicar {{ gs(n.pendingRecoveryAmount) }}</span>
+              <input type="number" min="1" [max]="n.pendingRecoveryAmount" step="1" [(ngModel)]="discountForm.amount" name="discountAmount" />
+            </label>
+            <label class="field">
+              <span>Fecha de la factura con el descuento *</span>
+              <input type="date" [max]="today" [min]="n.issueDate" [(ngModel)]="discountForm.appliedOn" name="discountDate" />
+            </label>
+            <input type="text" maxlength="500" placeholder="Factura donde vino el descuento (número) — opcional" [(ngModel)]="discountForm.note" name="discountNote" />
+            <div class="void-actions">
+              <p-button type="button" label="Volver" size="small" severity="secondary" [outlined]="true" [disabled]="saving" (onClick)="discountingId = null"></p-button>
+              <p-button type="button" label="Registrar descuento" size="small" severity="success" [loading]="saving"
+                [disabled]="!discountForm.amount || discountForm.amount <= 0 || discountForm.amount > n.pendingRecoveryAmount || !discountForm.appliedOn" (onClick)="confirmDiscount(n)"></p-button>
+            </div>
           </div>
           <div class="void-box" *ngIf="voidingId === n.id">
             <input type="text" maxlength="500" placeholder="Motivo de la anulación (obligatorio)" [(ngModel)]="voidReason" name="voidReason" />
@@ -125,6 +180,14 @@ const MAX_FILE_BYTES = 10 * 1024 * 1024;
               <textarea name="reason" rows="2" maxlength="500" required placeholder="Por qué el proveedor emitió la nota (devolución, descuento, error de facturación...)" [(ngModel)]="form.reason"></textarea>
             </label>
 
+            <div class="field" *ngIf="expensePaid">
+              <span>¿Cómo se recupera el importe? *</span>
+              <label class="radio"><input type="radio" name="recovery" value="Refund" [(ngModel)]="form.recoveryType" (ngModelChange)="onRecoveryChange()" /> El proveedor devuelve el dinero</label>
+              <label class="radio"><input type="radio" name="recovery" value="NextInvoiceDiscount" [(ngModel)]="form.recoveryType" (ngModelChange)="onRecoveryChange()" /> Descuento en su próxima factura</label>
+              <small class="hint">Este gasto ya se pagó al proveedor, así que lo acreditado queda como «por cobrar al proveedor» hasta que devuelva el dinero o se vea el descuento en su próxima factura.</small>
+              <small class="hint" *ngIf="isPublished && form.recoveryType === 'Refund'">Con devolución de dinero, los propietarios reciben su saldo a favor recién cuando marques que el dinero fue devuelto.</small>
+            </div>
+
             <div class="field">
               <span>Documento que envió el proveedor *</span>
               <div class="attach" *ngIf="!documentUrl">
@@ -157,6 +220,7 @@ const MAX_FILE_BYTES = 10 * 1024 * 1024;
                 <tfoot><tr><td colspan="3">Total acreditado</td><td class="num"><strong>{{ gs(preview.amount) }}</strong></td></tr></tfoot>
               </table>
               <div class="notice warn" *ngIf="preview.message"><i class="pi pi-exclamation-triangle"></i><span>{{ preview.message }}</span></div>
+              <div class="notice" *ngIf="preview.ownersCreditedOnRefund"><i class="pi pi-info-circle"></i><span>Este reparto se acredita a los propietarios <strong>cuando marques la devolución</strong>, no ahora.</span></div>
             </div>
 
             <div class="notice error" *ngIf="error"><i class="pi pi-times-circle"></i><span>{{ error }}</span></div>
@@ -165,7 +229,7 @@ const MAX_FILE_BYTES = 10 * 1024 * 1024;
               <p-button type="button" label="Cerrar" severity="secondary" [outlined]="true" (onClick)="close()"></p-button>
               <p-button *ngIf="isPublished && !preview" type="button" label="Ver reparto por unidad" icon="pi pi-list" [loading]="previewing" [disabled]="!canSubmit()" (onClick)="loadPreview()"></p-button>
               <p-button *ngIf="isPublished && preview" type="button" label="Cambiar datos" severity="secondary" [outlined]="true" (onClick)="preview = null"></p-button>
-              <p-button *ngIf="isDraft || preview" type="submit" [label]="isPublished ? 'Confirmar y acreditar saldo a favor' : 'Registrar nota de crédito'" icon="pi pi-check" [loading]="saving" [disabled]="!canSubmit()"></p-button>
+              <p-button *ngIf="isDraft || preview" type="submit" [label]="!isPublished ? 'Registrar nota de crédito' : form.recoveryType === 'Refund' ? 'Confirmar (queda por cobrar al proveedor)' : 'Confirmar y acreditar saldo a favor'" icon="pi pi-check" [loading]="saving" [disabled]="!canSubmit()"></p-button>
             </div>
           </form>
         </ng-container>
@@ -210,7 +274,10 @@ const MAX_FILE_BYTES = 10 * 1024 * 1024;
     .void-reason { color: #991b1b !important; }
     .doc-link, .attached a { color: var(--p-primary-color); font-size: 0.85rem; text-decoration: none; display: inline-flex; align-items: center; gap: 0.35rem; }
     .doc-link:hover, .attached a:hover { text-decoration: underline; }
-    .note-actions { display: flex; justify-content: flex-end; }
+    .note-actions { display: flex; justify-content: flex-end; gap: 0.5rem; flex-wrap: wrap; }
+    .recovery { display: grid; gap: 0.3rem; justify-items: start; margin-top: 0.2rem; }
+    .link-btn { background: none; border: none; color: #b91c1c; cursor: pointer; font-size: 0.78rem; text-decoration: underline; padding: 0 0 0 0.4rem; }
+    .radio { display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem; font-weight: 400; cursor: pointer; }
     .void-box { display: grid; gap: 0.5rem; }
     .void-actions { display: flex; justify-content: flex-end; gap: 0.5rem; }
 
@@ -263,6 +330,10 @@ export class BuildingExpenseCreditNotesDialogComponent implements OnInit {
   documentName = '';
   voidingId: string | null = null;
   voidReason = '';
+  refundingId: string | null = null;
+  discountingId: string | null = null;
+  refundForm = { refundedOn: '', reference: '' };
+  discountForm = { amount: null as number | null, appliedOn: '', note: '' };
   form = this.emptyForm();
 
   previewing = false;
@@ -271,10 +342,23 @@ export class BuildingExpenseCreditNotesDialogComponent implements OnInit {
   get isDraft(): boolean { return this.periodStatus === 'Draft'; }
   get isPublished(): boolean { return this.periodStatus === 'Published'; }
 
-  // Lo ya acreditado como saldo a favor de las unidades por notas de este gasto (período publicado).
+  // Cuánto del gasto ya está tomado por notas de período publicado (incluye las que esperan la devolución del proveedor): tope de nuevas notas.
   get creditedSoFar(): number {
     return this.notes.filter(n => n.status === 'Applied' && n.mode === 'Credited').reduce((sum, n) => sum + n.amount, 0);
   }
+
+  // Lo que efectivamente se acreditó a las unidades como saldo a favor.
+  get creditedToUnits(): number {
+    return this.notes.filter(n => n.status === 'Applied' && n.allocations?.length).reduce((sum, n) => sum + n.allocations.reduce((a, x) => a + x.amount, 0), 0);
+  }
+
+  // Lo que el proveedor todavía debe al edificio por las notas de este gasto.
+  get pendingFromSupplier(): number {
+    return this.notes.filter(n => n.status === 'Applied').reduce((sum, n) => sum + (n.pendingRecoveryAmount ?? 0), 0);
+  }
+
+  // El gasto ya salió de la caja (sin vencimiento) o tiene su pago registrado: lo acreditado hay que recuperarlo del proveedor.
+  get expensePaid(): boolean { return !this.expense.dueDate || !!this.expense.paidAt; }
 
   // Borrador: el gasto tiene que seguir con monto positivo. Publicado: lo que todavía se puede acreditar del gasto.
   get maxAmount(): number {
@@ -300,7 +384,7 @@ export class BuildingExpenseCreditNotesDialogComponent implements OnInit {
   canSubmit(): boolean {
     const f = this.form;
     const complete = !this.saving && !this.previewing && !this.uploading && !!f.numero.trim() && !!f.issueDate && !!f.reason.trim()
-      && !!this.documentUrl && !!f.amount && f.amount > 0 && f.amount <= this.maxAmount;
+      && !!this.documentUrl && !!f.amount && f.amount > 0 && f.amount <= this.maxAmount && (!this.expensePaid || !!f.recoveryType);
     if (!complete) return false;
     return this.isPublished && this.preview ? this.preview.unitsWithoutOwner.length === 0 : true;
   }
@@ -311,11 +395,17 @@ export class BuildingExpenseCreditNotesDialogComponent implements OnInit {
     this.error = '';
   }
 
+  // La elección cambia lo que pasa con los propietarios: hay que volver a ver el reparto.
+  onRecoveryChange(): void {
+    this.preview = null;
+    this.error = '';
+  }
+
   loadPreview(): void {
     if (!this.canSubmit()) return;
     this.error = '';
     this.previewing = true;
-    this.api.previewCreditNote(this.expense.id, Number(this.form.amount)).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+    this.api.previewCreditNote(this.expense.id, Number(this.form.amount), this.expensePaid ? this.recoveryChoice() : null).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: preview => { this.preview = preview; this.previewing = false; this.cdr.markForCheck(); },
       error: err => {
         this.previewing = false;
@@ -376,7 +466,8 @@ export class BuildingExpenseCreditNotesDialogComponent implements OnInit {
       issueDate: this.form.issueDate,
       amount: Number(this.form.amount),
       reason: this.form.reason.trim(),
-      documentUrl: this.documentUrl
+      documentUrl: this.documentUrl,
+      recoveryType: this.expensePaid ? this.recoveryChoice() : null
     }).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: result => {
         this.saving = false;
@@ -386,11 +477,14 @@ export class BuildingExpenseCreditNotesDialogComponent implements OnInit {
         this.form = this.emptyForm();
         this.preview = null;
         this.removeFile();
+        const pendingRefund = result.creditNote.recoveryType === 'Refund';
         const detail = this.isPublished
           ? (result.creditedToOwners > 0
               ? `Se acreditaron ${this.gs(result.creditedToOwners)} como saldo a favor de las unidades.`
-              : 'Registrada sin saldo a favor: el gasto no se cobró a las unidades.')
-          : `El gasto quedó en ${this.gs(result.expense.amount)}.`;
+              : pendingRefund
+                ? 'Queda por cobrar al proveedor: los propietarios reciben su saldo a favor cuando marques la devolución.'
+                : 'Registrada sin saldo a favor: el gasto no se cobró a las unidades.')
+          : `El gasto quedó en ${this.gs(result.expense.amount)}.${result.creditNote.recoveryType !== 'None' ? ' Queda por cobrar al proveedor.' : ''}`;
         this.msg.add({ severity: 'success', summary: 'Nota de crédito registrada', detail, life: 6000 });
         this.cdr.markForCheck();
       },
@@ -403,8 +497,105 @@ export class BuildingExpenseCreditNotesDialogComponent implements OnInit {
     });
   }
 
+  private recoveryChoice(): SupplierRecoveryType | null {
+    return this.form.recoveryType === '' ? null : this.form.recoveryType;
+  }
+
+  startRefund(note: BuildingExpenseCreditNote): void {
+    this.refundingId = note.id;
+    this.discountingId = null;
+    this.voidingId = null;
+    this.refundForm = { refundedOn: this.today, reference: '' };
+    this.error = '';
+  }
+
+  confirmRefund(note: BuildingExpenseCreditNote): void {
+    if (!this.refundForm.refundedOn) return;
+    this.saving = true;
+    this.error = '';
+    this.api.markCreditNoteRefunded(note.id, {
+      refundedOn: this.refundForm.refundedOn,
+      reference: this.refundForm.reference.trim() || null
+    }).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: result => {
+        this.saving = false;
+        this.refundingId = null;
+        this.notes = this.notes.map(n => (n.id === note.id ? result.creditNote : n));
+        this.applyExpense(result.expense);
+        this.msg.add({
+          severity: 'success', summary: 'Devolución registrada', life: 6000,
+          detail: result.creditedToOwners > 0
+            ? `Se acreditaron ${this.gs(result.creditedToOwners)} como saldo a favor de las unidades.`
+            : 'La nota ya no figura por cobrar al proveedor.'
+        });
+        this.cdr.markForCheck();
+      },
+      error: err => {
+        this.saving = false;
+        this.error = extractApiErrorMessage(err, 'No se pudo registrar la devolución.');
+        this.cdr.markForCheck();
+      }
+    });
+  }
+
+  startDiscount(note: BuildingExpenseCreditNote): void {
+    this.discountingId = note.id;
+    this.refundingId = null;
+    this.voidingId = null;
+    this.discountForm = { amount: note.pendingRecoveryAmount, appliedOn: this.today, note: '' };
+    this.error = '';
+  }
+
+  confirmDiscount(note: BuildingExpenseCreditNote): void {
+    if (!this.discountForm.amount || !this.discountForm.appliedOn) return;
+    this.saving = true;
+    this.error = '';
+    this.api.addCreditNoteDiscount(note.id, {
+      amount: Number(this.discountForm.amount),
+      appliedOn: this.discountForm.appliedOn,
+      note: this.discountForm.note.trim() || null
+    }).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: result => {
+        this.saving = false;
+        this.discountingId = null;
+        this.notes = this.notes.map(n => (n.id === note.id ? result.creditNote : n));
+        this.msg.add({
+          severity: 'success', summary: 'Descuento registrado', life: 5000,
+          detail: result.creditNote.pendingRecoveryAmount > 0
+            ? `Todavía falta aplicar ${this.gs(result.creditNote.pendingRecoveryAmount)} de esta nota.`
+            : 'El descuento de esta nota quedó aplicado por completo.'
+        });
+        this.cdr.markForCheck();
+      },
+      error: err => {
+        this.saving = false;
+        this.error = extractApiErrorMessage(err, 'No se pudo registrar el descuento.');
+        this.cdr.markForCheck();
+      }
+    });
+  }
+
+  removeDiscount(note: BuildingExpenseCreditNote, discountId: string): void {
+    this.saving = true;
+    this.error = '';
+    this.api.removeCreditNoteDiscount(note.id, discountId).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: result => {
+        this.saving = false;
+        this.notes = this.notes.map(n => (n.id === note.id ? result.creditNote : n));
+        this.cdr.markForCheck();
+      },
+      error: err => {
+        this.saving = false;
+        this.error = extractApiErrorMessage(err, 'No se pudo quitar el descuento.');
+        this.cdr.markForCheck();
+      }
+    });
+  }
+
   startVoid(note: BuildingExpenseCreditNote): void {
     this.voidingId = note.id;
+    this.refundingId = null;
+    this.discountingId = null;
     this.voidReason = '';
   }
 
@@ -438,6 +629,9 @@ export class BuildingExpenseCreditNotesDialogComponent implements OnInit {
   }
 
   private emptyForm() {
-    return { numero: '', timbrado: '', issueDate: new Date().toISOString().slice(0, 10), amount: null as number | null, reason: '' };
+    return {
+      numero: '', timbrado: '', issueDate: new Date().toISOString().slice(0, 10), amount: null as number | null, reason: '',
+      recoveryType: '' as SupplierRecoveryType | ''
+    };
   }
 }
