@@ -7,9 +7,10 @@ import { ChartModule } from 'primeng/chart';
 import { MessageService } from 'primeng/api';
 import { catchError, forkJoin, of } from 'rxjs';
 import { CollectionsApiService } from '../../api/collections-api.service';
+import { BuildingsApiService } from '../../api/buildings-api.service';
 import { DashboardApiService } from '../../api/dashboard-api.service';
 import { MorosityApiService } from '../../api/morosity-api.service';
-import { CollectionReport, DashboardSummary, MorosityItem, MorosityReport } from '../../api/models';
+import { Building, CollectionReport, DashboardSummary, MorosityItem, MorosityReport } from '../../api/models';
 
 // Paleta del tablero: la de la marca primero y tonos de apoyo para distinguir conceptos.
 const TEAL = '#1AB7AF';
@@ -41,8 +42,15 @@ interface Aging { label: string; units: number; amount: number; color: string; s
       <div class="hero-main">
         <p class="eyebrow">Panel comercial</p>
         <h1>Así va tu negocio</h1>
-        <p class="sub">{{ summary ? summary.totalUnits + ' unidades en ' + summary.totalBuildings + (summary.totalBuildings === 1 ? ' edificio' : ' edificios') + ' · año ' + year : 'Cargando indicadores...' }}</p>
+        <p class="sub">{{ summary ? summary.totalUnits + ' unidades en ' + scopeLabel + ' · año ' + year : 'Cargando indicadores...' }}</p>
         <div class="hero-actions">
+          <label class="year-pick" *ngIf="buildings.length > 1">
+            <span>Edificio</span>
+            <select [ngModel]="buildingId" (ngModelChange)="onBuilding($event)">
+              <option value="">Todos los edificios</option>
+              <option *ngFor="let b of buildings" [value]="b.id">{{ b.name }}</option>
+            </select>
+          </label>
           <label class="year-pick">
             <span>Año</span>
             <select [ngModel]="year" (ngModelChange)="onYear($event)">
@@ -324,6 +332,7 @@ interface Aging { label: string; units: number; amount: number; color: string; s
 })
 export class DashboardPageComponent implements OnInit {
   private readonly dashboardApi = inject(DashboardApiService);
+  private readonly buildingsApi = inject(BuildingsApiService);
   private readonly collectionsApi = inject(CollectionsApiService);
   private readonly morosityApi = inject(MorosityApiService);
   private readonly destroyRef = inject(DestroyRef);
@@ -334,6 +343,9 @@ export class DashboardPageComponent implements OnInit {
   collection: CollectionReport | null = null;
   morosity: MorosityReport | null = null;
   loading = true;
+  // Edificios entre los que se puede elegir y el elegido (vacío = todos los edificios).
+  buildings: Building[] = [];
+  buildingId = '';
 
   readonly years = (() => { const y = new Date().getFullYear(); return [y, y - 1, y - 2, y - 3]; })();
   year = this.years[0];
@@ -354,10 +366,34 @@ export class DashboardPageComponent implements OnInit {
 
   ngOnInit(): void {
     this.buildOptions();
+    this.buildingsApi.getAll().pipe(catchError(() => of([] as Building[])), takeUntilDestroyed(this.destroyRef)).subscribe(list => {
+      this.buildings = list;
+      this.cdr.markForCheck();
+    });
+    this.load();
+  }
+
+  /** «3 edificios», «1 edificio» o el nombre del edificio elegido. */
+  get scopeLabel(): string {
+    const s = this.summary;
+    if (!s) return '';
+    const chosen = this.buildings.find(b => b.id === this.buildingId);
+    if (chosen) return chosen.name;
+    return s.totalBuildings + (s.totalBuildings === 1 ? ' edificio' : ' edificios');
+  }
+
+  onBuilding(value: string): void {
+    this.buildingId = value;
+    this.loading = true;
+    this.load();
+  }
+
+  private load(): void {
+    const building = this.buildingId || undefined;
     forkJoin({
-      summary: this.dashboardApi.getSummary(),
-      collection: this.collectionsApi.getReport({ year: this.year }).pipe(catchError(() => of(null))),
-      morosity: this.morosityApi.getReport({ pageSize: 100 }).pipe(catchError(() => of(null)))
+      summary: this.dashboardApi.getSummary(building),
+      collection: this.collectionsApi.getReport({ year: this.year, buildingId: building }).pipe(catchError(() => of(null))),
+      morosity: this.morosityApi.getReport({ pageSize: 100, buildingId: building }).pipe(catchError(() => of(null)))
     }).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: ({ summary, collection, morosity }) => {
         this.summary = summary;
@@ -377,7 +413,7 @@ export class DashboardPageComponent implements OnInit {
 
   onYear(value: number): void {
     this.year = value;
-    this.collectionsApi.getReport({ year: value }).pipe(catchError(() => of(null)), takeUntilDestroyed(this.destroyRef)).subscribe(report => {
+    this.collectionsApi.getReport({ year: value, buildingId: this.buildingId || undefined }).pipe(catchError(() => of(null)), takeUntilDestroyed(this.destroyRef)).subscribe(report => {
       this.collection = report;
       this.rebuild();
       this.cdr.markForCheck();
@@ -522,6 +558,8 @@ export class DashboardPageComponent implements OnInit {
       row.pending += it.pendingAmount;
       map.set(it.buildingId, row);
     }
+    // El ranking compara edificios: con uno solo elegido no tiene sentido.
+    if (this.buildingId) { this.buildingRanks = []; return; }
     this.buildingRanks = [...map.values()]
       .map(b => ({ ...b, rate: Math.min(this.pct(b.collected, b.charged), 100) }))
       .sort((a, b) => b.rate - a.rate || b.charged - a.charged);

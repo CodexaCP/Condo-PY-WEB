@@ -1,4 +1,4 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { API_BASE_URL } from '../config/api.config';
@@ -8,7 +8,9 @@ import { DashboardSummary } from './models';
 export class DashboardApiService {
   private readonly http = inject(HttpClient);
 
-  getSummary(): Observable<DashboardSummary> {
-    return this.http.get<DashboardSummary>(`${API_BASE_URL}/dashboard/summary`);
+  // Sin edificio suma todos los accesibles; con buildingId, solo ese edificio.
+  getSummary(buildingId?: string): Observable<DashboardSummary> {
+    const params = buildingId ? new HttpParams().set('buildingId', buildingId) : undefined;
+    return this.http.get<DashboardSummary>(`${API_BASE_URL}/dashboard/summary`, { params });
   }
 }
