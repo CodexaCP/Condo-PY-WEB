@@ -37,9 +37,9 @@ $sa-sidebar-width: 16.5rem;
     .sa-brand {
         padding: 1.25rem 1.35rem 1rem;
 
-        svg {
-            width: 2.6rem;
-            height: 2.5rem;
+        img {
+            width: 2.8rem;
+            height: auto;
             flex-shrink: 0;
         }
 
@@ -63,9 +63,9 @@ $sa-sidebar-width: 16.5rem;
         padding: 1rem 1.35rem;
         border-top: 1px solid rgba(255, 255, 255, 0.2);
 
-        svg {
-            width: 2rem;
-            height: 1.9rem;
+        img {
+            width: 2.3rem;
+            height: auto;
             flex-shrink: 0;
         }
 

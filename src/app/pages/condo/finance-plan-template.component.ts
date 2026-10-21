@@ -8,7 +8,7 @@ import { extractApiErrorMessage } from '../../api/api-error.util';
 import { FinanceApiService } from '../../api/finance-api.service';
 import { LedgerPlanApplyMode, LedgerPlanApplyResult, LedgerPlanImpact } from '../../api/models';
 
-// Aplica el plan genérico de CondoPY a un edificio: agrega solo las cuentas que faltan (no borra nada) o reemplaza el plan entero.
+// Aplica el plan genérico de Expenses a un edificio: agrega solo las cuentas que faltan (no borra nada) o reemplaza el plan entero.
 // Reemplazar desvincula el rubro de los gastos e ingresos que ya lo tenían y borra el presupuesto cargado: por eso muestra
 // cuánto se pierde y pide confirmación expresa. Los gastos, ingresos, pagos y liquidaciones no se tocan.
 @Component({
@@ -20,12 +20,12 @@ import { LedgerPlanApplyMode, LedgerPlanApplyResult, LedgerPlanImpact } from '..
     <div class="ov-backdrop" (click)="close()"></div>
     <div class="ov-panel" (click)="$event.stopPropagation()">
       <div class="ov-header">
-        <strong>Plan de cuentas genérico de CondoPY</strong>
+        <strong>Plan de cuentas genérico de Expenses</strong>
         <button class="ov-close" type="button" (click)="close()">✕</button>
       </div>
 
       <p class="confirm-text">
-        Es el plan base de CondoPY: 5 clases (activo, pasivo, patrimonio, ingresos y egresos), 30 grupos y 162 cuentas finales. Solo las 54 cuentas recomendadas
+        Es el plan base de Expenses: 5 clases (activo, pasivo, patrimonio, ingresos y egresos), 30 grupos y 162 cuentas finales. Solo las 54 cuentas recomendadas
         nacen activas; después activás o desactivás las que el edificio usa.
       </p>
 

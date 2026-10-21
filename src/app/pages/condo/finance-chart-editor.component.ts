@@ -26,7 +26,7 @@ interface TreeRow {
   expanded: boolean;
 }
 
-// Plan de cuentas del edificio: clase → grupo → cuenta (hasta 6 niveles) con códigos editables. Nace del plan genérico de CondoPY y el
+// Plan de cuentas del edificio: clase → grupo → cuenta (hasta 6 niveles) con códigos editables. Nace del plan genérico de Expenses y el
 // SuperAdmin lo ajusta: activa las cuentas que el edificio usa, agrega las propias, importa el plan del cliente desde Excel, copia el de otro
 // edificio o vuelve a aplicar el genérico. Solo las cuentas finales de ingresos y egresos reciben gastos e ingresos; el resto (activo,
 // pasivo, patrimonio y los grupos) es de referencia y se exporta al contador. Una cuenta puede tener una función especial: cobranza de
@@ -76,7 +76,7 @@ interface TreeRow {
       <div>
         <strong>Faltan cuentas de cobranza.</strong> Estas funciones no están asignadas a ninguna cuenta:
         <ul><li *ngFor="let m of missingCollection">{{ m }}</li></ul>
-        <span>Mientras tanto los reportes las muestran como líneas sin código. {{ canEdit ? 'Asignalas editando la cuenta que corresponda (campo «Función en el sistema»).' : 'Pedí a tu administrador de CondoPY que las asigne.' }}</span>
+        <span>Mientras tanto los reportes las muestran como líneas sin código. {{ canEdit ? 'Asignalas editando la cuenta que corresponda (campo «Función en el sistema»).' : 'Pedí a tu administrador de Expenses que las asigne.' }}</span>
       </div>
     </p-message>
 

@@ -13,7 +13,7 @@ import { SUPPORT_CONTACT } from '../../config/support.config';
       <div class="app-page-head">
         <div>
           <h1>Soporte</h1>
-          <p>¿Necesitás ayuda con CONDOPY? Estos son nuestros canales de contacto.</p>
+          <p>¿Necesitás ayuda con Expenses? Estos son nuestros canales de contacto.</p>
         </div>
       </div>
 

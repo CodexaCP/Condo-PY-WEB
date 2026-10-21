@@ -38,7 +38,7 @@ import { CONFIG_SECTION_STYLES } from './config-section.styles';
       <div class="notice" *ngIf="!st.isBalanced">
         <strong>El balance NO cuadra</strong> (diferencia Gs. {{ st.difference | num }}).
         <span *ngIf="st.unclassifiedNet">Hay renglones de una clase desconocida por Gs. {{ st.unclassifiedNet | num }}: cuentas que ya no están en el plan.</span>
-        Avisá al soporte de CondoPY.
+        Avisá al soporte de Expenses.
       </div>
 
       <div class="grid">

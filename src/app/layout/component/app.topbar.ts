@@ -17,35 +17,8 @@ import { PushService } from '@/app/core/push.service';
             </button>
             <a class="layout-topbar-logo" routerLink="/dashboard">
                 <!-- Ícono blanco sobre fondo degradado -->
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 188" style="width:2.1rem;height:2rem;flex-shrink:0">
-                  <rect x="8" y="10" width="76" height="138" fill="white"/>
-                  <rect x="16" y="20" width="14" height="21" rx="2" fill="rgba(0,0,0,0.13)"/>
-                  <rect x="36" y="20" width="14" height="21" rx="2" fill="rgba(0,0,0,0.13)"/>
-                  <rect x="56" y="20" width="14" height="21" rx="2" fill="rgba(0,0,0,0.13)"/>
-                  <rect x="16" y="48" width="14" height="21" rx="2" fill="rgba(0,0,0,0.13)"/>
-                  <rect x="36" y="48" width="14" height="21" rx="2" fill="rgba(0,0,0,0.13)"/>
-                  <rect x="56" y="48" width="14" height="21" rx="2" fill="rgba(0,0,0,0.13)"/>
-                  <rect x="16" y="76" width="14" height="21" rx="2" fill="rgba(0,0,0,0.13)"/>
-                  <rect x="36" y="76" width="14" height="21" rx="2" fill="rgba(0,0,0,0.13)"/>
-                  <rect x="56" y="76" width="14" height="21" rx="2" fill="rgba(0,0,0,0.13)"/>
-                  <rect x="16" y="104" width="14" height="21" rx="2" fill="rgba(0,0,0,0.13)"/>
-                  <rect x="36" y="104" width="14" height="21" rx="2" fill="rgba(0,0,0,0.13)"/>
-                  <rect x="56" y="104" width="14" height="21" rx="2" fill="rgba(0,0,0,0.13)"/>
-                  <rect x="4" y="148" width="82" height="8" fill="rgba(255,255,255,0.7)"/>
-                  <rect x="90" y="24" width="60" height="124" fill="white"/>
-                  <rect x="98" y="34" width="12" height="17" rx="2" fill="rgba(0,0,0,0.13)"/>
-                  <rect x="115" y="34" width="12" height="17" rx="2" fill="rgba(0,0,0,0.13)"/>
-                  <rect x="98" y="57" width="12" height="17" rx="2" fill="rgba(0,0,0,0.13)"/>
-                  <rect x="115" y="57" width="12" height="17" rx="2" fill="rgba(0,0,0,0.13)"/>
-                  <rect x="98" y="80" width="12" height="17" rx="2" fill="rgba(0,0,0,0.13)"/>
-                  <rect x="115" y="80" width="12" height="17" rx="2" fill="rgba(0,0,0,0.13)"/>
-                  <rect x="98" y="103" width="12" height="17" rx="2" fill="rgba(0,0,0,0.13)"/>
-                  <rect x="115" y="103" width="12" height="17" rx="2" fill="rgba(0,0,0,0.13)"/>
-                  <rect x="148" y="94" width="44" height="54" fill="white"/>
-                  <rect x="156" y="104" width="12" height="15" rx="2" fill="rgba(0,0,0,0.13)"/>
-                  <rect x="88" y="148" width="106" height="8" fill="rgba(255,255,255,0.7)"/>
-                </svg>
-                <span>CONDOPY</span>
+                <img src="/brand/expenses-icon-white.svg" alt="" aria-hidden="true" style="width:2.6rem;height:auto;flex-shrink:0" />
+                <span>Expenses</span>
             </a>
         </div>
 

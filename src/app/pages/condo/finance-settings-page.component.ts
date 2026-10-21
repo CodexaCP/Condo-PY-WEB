@@ -27,7 +27,7 @@ const MONTHS = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 
 
 // Configuración del módulo «Finanzas del edificio». Hasta completar la configuración inicial el módulo muestra solo este
 // asistente (fecha de arranque, cuentas con su saldo inicial y plan de cuentas); una vez completa, las mismas secciones
-// quedan como pestañas. Solo el SuperAdmin la modifica (servicio de configuración de CondoPY); los demás roles la ven en solo lectura.
+// quedan como pestañas. Solo el SuperAdmin la modifica (servicio de configuración de Expenses); los demás roles la ven en solo lectura.
 @Component({
   standalone: true,
   selector: 'app-finance-settings-page',
@@ -67,9 +67,9 @@ const MONTHS = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 
         </div>
 
         <p-message *ngIf="!s.canEdit && !s.setupCompleted" severity="info"
-                   text="La configuración inicial todavía no está completa. La realiza CondoPY; mientras tanto podés ver lo que ya se cargó."></p-message>
+                   text="La configuración inicial todavía no está completa. La realiza Expenses; mientras tanto podés ver lo que ya se cargó."></p-message>
         <p-message *ngIf="!s.canEdit && s.setupCompleted" severity="secondary"
-                   text="La configuración del edificio (fecha de arranque, cuentas y plan de cuentas) la realiza CondoPY. Acá la podés consultar; si necesitás un cambio, pedíselo a tu administrador de CondoPY."></p-message>
+                   text="La configuración del edificio (fecha de arranque, cuentas y plan de cuentas) la realiza Expenses. Acá la podés consultar; si necesitás un cambio, pedíselo a tu administrador de Expenses."></p-message>
 
         <nav class="steps" *ngIf="wizard" aria-label="Pasos de la configuración">
           <button type="button" *ngFor="let step of steps; let i = index" class="step" [class.active]="section === step.key"

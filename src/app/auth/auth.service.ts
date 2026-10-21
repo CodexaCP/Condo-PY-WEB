@@ -42,7 +42,7 @@ const SESSION_KEY = 'condopy-admin-session';
 // no se les abre sesion en el web (el backend ademas valida el rol en cada endpoint).
 const WEB_ALLOWED_ROLES = ['SuperAdmin', 'CompanyAdmin', 'CompanyOperator', 'BuildingManager'];
 const WEB_ACCESS_DENIED_MESSAGE =
-  'Tu cuenta de propietario o residente no tiene acceso al panel web. Ingresá desde la app CondoPY.';
+  'Tu cuenta de propietario o residente no tiene acceso al panel web. Ingresá desde la app Expenses.';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {

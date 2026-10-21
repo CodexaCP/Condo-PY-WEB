@@ -4,7 +4,7 @@ import { Component } from '@angular/core';
     standalone: true,
     selector: 'app-footer',
     template: `<div class="layout-footer">
-        CONDO BY CODEXA
+        EXPENSES BY CODEXA
     </div>`
 })
 export class AppFooter {}

@@ -37,7 +37,7 @@ const TABS: { key: TabKey; label: string; icon: string }[] = [
   { key: 'config',     label: 'Configuración',        icon: 'pi pi-cog' },
 ];
 
-// Un modelo por concepto; si el edificio no usa los estandar de CONDOPY tiene que adjuntar los tres.
+// Un modelo por concepto; si el edificio no usa los estandar de Expenses tiene que adjuntar los tres.
 const TEMPLATE_KINDS: { kind: TemplateKind; label: string }[] = [
   { kind: 'invoice',    label: 'Factura' },
   { kind: 'creditNote', label: 'Nota de crédito' },
@@ -527,10 +527,10 @@ interface BankAccountForm {
             <div class="field checkbox-field">
               <label class="checkbox-label">
                 <input type="checkbox" [(ngModel)]="form.useStandardTemplates" name="useStandardTemplates" />
-                <span>Usar modelos estándar de CONDOPY</span>
+                <span>Usar modelos estándar de Expenses</span>
               </label>
               <small class="field-hint">
-                Factura, nota de crédito y liquidación se descargan con el diseño estándar de CONDOPY (colores de la marca).
+                Factura, nota de crédito y liquidación se descargan con el diseño estándar de Expenses (colores de la marca).
                 Si lo desmarcás, adjuntá los 3 modelos propios del edificio, uno por concepto.
               </small>
             </div>
@@ -732,7 +732,7 @@ interface BankAccountForm {
               <span class="module-chip" [class.on]="modules.marketplace"><i class="pi" [class.pi-check-circle]="modules.marketplace" [class.pi-minus-circle]="!modules.marketplace"></i> Marketplace</span>
               <span class="module-chip" [class.on]="modules.ads"><i class="pi" [class.pi-check-circle]="modules.ads" [class.pi-minus-circle]="!modules.ads"></i> Publicidad</span>
             </div>
-            <small class="field-hint">Los módulos y el plan los activa el administrador de CONDOPY desde su propia pantalla.</small>
+            <small class="field-hint">Los módulos y el plan los activa el administrador de Expenses desde su propia pantalla.</small>
           </section>
         </ng-container>
 
@@ -1258,7 +1258,7 @@ export class BuildingCreatePageComponent implements OnInit {
     const standard = this.form.useStandardTemplates;
     const { invoice, creditNote, settlement } = this.form.templates;
     if (this.isSuperAdmin && !standard && (!invoice || !creditNote || !settlement)) {
-      this.fail('billing', 'Adjuntá los 3 modelos (factura, nota de crédito y liquidación) o marcá "Usar modelos estándar de CONDOPY".');
+      this.fail('billing', 'Adjuntá los 3 modelos (factura, nota de crédito y liquidación) o marcá "Usar modelos estándar de Expenses".');
       return;
     }
 

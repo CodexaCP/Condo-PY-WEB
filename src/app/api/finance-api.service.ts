@@ -204,7 +204,7 @@ export class FinanceApiService {
     return this.http.get<LedgerPlanImpact>(`${API_BASE_URL}/finance/categories/replace-impact`, { params: this.params(buildingId) });
   }
 
-  // Aplica el plan genérico de CondoPY (reemplazar o agregar lo que falta).
+  // Aplica el plan genérico de Expenses (reemplazar o agregar lo que falta).
   applyTemplate(request: LedgerPlanApplyRequest): Observable<LedgerPlanApplyResult> {
     return this.http.post<LedgerPlanApplyResult>(`${API_BASE_URL}/finance/categories/apply-template`, request);
   }

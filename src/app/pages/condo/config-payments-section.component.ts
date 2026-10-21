@@ -56,7 +56,7 @@ interface ConnectionForm {
     <h2>Pagos online</h2>
     <p class="muted small">
       Conexiones de la empresa con su comercio en el proveedor de pagos y los edificios a los que sirve cada una. El dinero cobrado va directo a la
-      cuenta del comercio: Condo-PY solo guarda las claves y registra los resultados.
+      cuenta del comercio: Expenses solo guarda las claves y registra los resultados.
     </p>
 
     <p-message *ngIf="!companyId" severity="info" text="El edificio no tiene empresa asignada: no hay conexiones para mostrar."></p-message>

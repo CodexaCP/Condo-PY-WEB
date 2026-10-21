@@ -4,7 +4,7 @@ import { Observable } from 'rxjs';
 import { API_BASE_URL } from '../config/api.config';
 import { FakePaymentResult, OnlinePayment } from './online-payments.models';
 
-// Cobros online del personal. El dinero no pasa por Condo-PY: acá solo se ve el registro de cada cobro y, con el proveedor falso encendido,
+// Cobros online del personal. El dinero no pasa por Expenses: acá solo se ve el registro de cada cobro y, con el proveedor falso encendido,
 // se simula la respuesta del proveedor. El flujo del propietario (pagar) vive en la app móvil.
 @Injectable({ providedIn: 'root' })
 export class OnlinePaymentsApiService {

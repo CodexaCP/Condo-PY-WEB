@@ -37,7 +37,7 @@ import { CONFIG_SECTION_STYLES } from './config-section.styles';
       <ng-container *ngIf="b.rows.length">
         <div class="notice info" *ngIf="b.isBalanced">El balance cuadra: las sumas del debe y del haber coinciden y los saldos deudores igualan a los acreedores.</div>
         <div class="notice" *ngIf="!b.isBalanced">
-          <strong>El balance NO cuadra</strong> (diferencia de saldos Gs. {{ b.difference | num }}). Eso indica un asiento descuadrado: avisá al soporte de CondoPY.
+          <strong>El balance NO cuadra</strong> (diferencia de saldos Gs. {{ b.difference | num }}). Eso indica un asiento descuadrado: avisá al soporte de Expenses.
         </div>
 
         <div class="table-wrap">

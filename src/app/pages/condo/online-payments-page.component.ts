@@ -59,7 +59,7 @@ const FILTERS: { label: string; value: string }[] = [
   { label: 'Cerrados', value: 'Closed' }
 ];
 
-// Cobros online de expensas, para el personal: qué se cobró, a quién, con qué proveedor y cómo terminó. El dinero no pasa por Condo-PY: acá solo
+// Cobros online de expensas, para el personal: qué se cobró, a quién, con qué proveedor y cómo terminó. El dinero no pasa por Expenses: acá solo
 // se ve el registro. Con el simulador de cobros encendido en el servidor se puede responder un cobro de prueba como lo haría el proveedor.
 @Component({
   standalone: true,
