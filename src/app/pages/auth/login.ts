@@ -184,6 +184,11 @@ export class Login {
 
     readonly whatsappUrl = salesWhatsAppUrl();
 
+    email = '';
+    password = '';
+    errorMessage = '';
+    isSubmitting = false;
+
     submit(): void {
         if (!this.email || !this.password) {
             this.errorMessage = 'Ingresa tu correo o usuario, y tu contraseña.';
