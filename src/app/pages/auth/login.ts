@@ -255,6 +255,12 @@ interface Tower { cx: number; cy: number; a: number; b: number; h: number; floor
 
                     <div class="lp-form-footer">
                         <i class="pi pi-lock"></i> Conexión segura
+                        <span class="lp-footer-sep"></span>
+                        <a class="lp-linkedin-link" href="https://www.linkedin.com/company/expensespy/home/"
+                           target="_blank" rel="noopener noreferrer"
+                           aria-label="LinkedIn de ExpensesPY" title="Seguinos en LinkedIn">
+                            <i class="pi pi-linkedin"></i> LinkedIn
+                        </a>
                     </div>
                 </div>
             </div>

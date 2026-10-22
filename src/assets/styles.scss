@@ -690,6 +690,12 @@
   gap: 0.4rem;
   padding-top: 0.25rem;
 }
+.lp-form-footer .lp-footer-sep { width: 1px; height: 0.9rem; background: #cbd5e1; margin: 0 0.35rem; }
+.lp-form-footer .lp-linkedin-link {
+  display: inline-flex; align-items: center; gap: 0.3rem;
+  color: #94a3b8; text-decoration: none; transition: color 0.15s;
+}
+.lp-form-footer .lp-linkedin-link:hover { color: #0a66c2; }
 
 /* ── Recuperar / restablecer contraseña ─────────── */
 .auth-logo { display: block; width: 76px; height: auto; margin: 0 auto 0.5rem; }
@@ -701,6 +707,7 @@
   .lp-brand { min-height: 0; }
   /* El video sube junto al logo (no hay nada a su lado ahí) y queda separado de la tarjeta Morosidad. */
   .lp-promo { margin-top: -3.5rem; }
+  .lp-hero { margin-bottom: 3rem; }
 }
 
 /* Ventanas bajas: se quitan tarjetas (y después toda la ilustración) para que nada se corte. */
