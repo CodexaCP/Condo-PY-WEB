@@ -273,8 +273,37 @@ interface Tower { cx: number; cy: number; a: number; b: number; h: number; floor
                 </a>
             }
         </div>
+
+        <!-- Preguntas frecuentes: queda debajo de la pantalla de ingreso (hay que bajar para verla) y sirve para que los buscadores entiendan qué es Expenses. -->
+        <section class="lp-faq" aria-labelledby="lp-faq-title">
+            <h2 id="lp-faq-title">Preguntas frecuentes sobre Expenses</h2>
+            @for (item of faqs; track item.question) {
+                <details class="lp-faq-item">
+                    <summary>{{ item.question }}</summary>
+                    <p>{{ item.answer }}</p>
+                </details>
+            }
+        </section>
     `,
     styles: [`
+        :host { display: block; overflow-x: clip; }
+        .lp-faq { max-width: 860px; margin: 0 auto; padding: 3.5rem 1.5rem 4rem; }
+        .lp-faq h2 {
+            font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+            font-size: 1.5rem; font-weight: 800; color: var(--ex-ink); margin: 0 0 1.25rem;
+        }
+        .lp-faq-item { border-bottom: 1px solid rgba(127, 127, 127, 0.25); }
+        .lp-faq-item summary {
+            cursor: pointer; list-style: none; padding: 1rem 2rem 1rem 0; position: relative;
+            font-weight: 600; font-size: 1rem; color: var(--ex-ink);
+        }
+        .lp-faq-item summary::-webkit-details-marker { display: none; }
+        .lp-faq-item summary::after {
+            content: '+'; position: absolute; right: 0.25rem; top: 50%; transform: translateY(-50%);
+            font-size: 1.4rem; font-weight: 400; color: var(--brand-blue, #1385b6);
+        }
+        .lp-faq-item[open] summary::after { content: '–'; }
+        .lp-faq-item p { margin: 0 0 1.1rem; font-size: 0.95rem; line-height: 1.6; color: var(--ex-muted); }
         .lp-wa-fab {
             position: fixed; right: 1.25rem; bottom: 1.25rem; z-index: 50;
             display: flex; align-items: center; gap: 0.6rem;
@@ -308,6 +337,55 @@ export class Login {
     private readonly pushSvc = inject(PushService);
 
     readonly whatsappUrl = salesWhatsAppUrl();
+
+    // Preguntas frecuentes de Expenses (solo del producto: qué hace, para quién es, qué ofrece y qué ventajas tiene).
+    readonly faqs: { question: string; answer: string }[] = [
+        {
+            question: '¿Qué es Expenses y qué hace?',
+            answer:
+                'Expenses es una plataforma para administrar condominios y edificios en propiedad horizontal en Paraguay. Reúne en un solo lugar el cálculo y cobro de expensas, los gastos y proveedores, la morosidad, la contabilidad y la comunicación con propietarios y residentes, todo en Guaraníes.'
+        },
+        {
+            question: '¿Quiénes pueden usar Expenses?',
+            answer:
+                'Administradores de condominios, empresas administradoras de edificios y consorcios, que gestionan uno o varios edificios. También la usan los encargados de cada edificio, y los propietarios y residentes, que acceden a su información desde el portal web y la app.'
+        },
+        {
+            question: '¿Qué servicios y funciones ofrece?',
+            answer:
+                'Expensas ordinarias y extraordinarias y fondo de reserva; cobros, recibos y facturas; control de morosidad con recargos por mora automáticos; gastos, proveedores y cuentas por pagar; ingresos y presupuesto; conciliación bancaria; libro de compras con IVA; libro diario, libro mayor, balance y cierre de ejercicio; informes para la asamblea; comunicados, reclamos, reservas de espacios comunes y votaciones; e importación de datos desde Excel.'
+        },
+        {
+            question: '¿Qué ventajas tiene para el administrador?',
+            answer:
+                'Centraliza la información financiera de cada edificio, automatiza el cálculo de expensas y la mora, reduce el trabajo manual en planillas, deja la contabilidad ordenada para el contador y mantiene un historial de cada operación. Cada usuario ve solo lo que le corresponde según su rol.'
+        },
+        {
+            question: '¿Los propietarios pueden ver sus estados de cuenta?',
+            answer:
+                'Sí. Cada propietario o residente puede consultar sus expensas, pagos, recibos y deuda, recibir avisos y participar en las votaciones de la asamblea desde el portal web y la app.'
+        },
+        {
+            question: '¿Hay una app para el celular?',
+            answer:
+                'Sí, hay una app para Android que se descarga desde esta misma página, con avisos y notificaciones para propietarios, residentes y encargados.'
+        },
+        {
+            question: '¿Puedo administrar más de un edificio?',
+            answer:
+                'Sí. Una misma cuenta puede administrar varios edificios, cada uno con sus propias unidades, finanzas y usuarios, sin mezclar la información entre ellos.'
+        },
+        {
+            question: '¿Mis datos están protegidos?',
+            answer:
+                'Sí. Cada operación queda registrada con su historial y auditoría, los permisos se asignan por rol y el acceso es por conexión segura. Lo contable que ya fue asentado no se modifica: los errores se corrigen con un contraasiento.'
+        },
+        {
+            question: '¿Cómo puedo pedir una cotización?',
+            answer:
+                'Escribinos por WhatsApp con el botón «Pedí tu cotización» de esta página y te contamos cómo implementar Expenses en tu edificio o en tu cartera de condominios.'
+        }
+    ];
 
     // Ilustración: torres de atrás hacia adelante (el orden de dibujo es el de la lista), árboles [x, y, radio] y nodos de conexión [x, y].
     readonly towers: Tower[] = [
