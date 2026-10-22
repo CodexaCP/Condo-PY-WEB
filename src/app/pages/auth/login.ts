@@ -292,7 +292,7 @@ interface Tower { cx: number; cy: number; a: number; b: number; h: number; floor
     styles: [`
         :host { display: block; overflow-x: clip; }
         .lp-faq-link {
-            position: absolute; top: 1.5rem; right: 6.5rem; z-index: 5;
+            position: absolute; top: 1.7rem; right: 9.5rem; z-index: 5;
             display: inline-flex; align-items: center; gap: 0.45rem; cursor: pointer;
             padding: 0.55rem 1rem; border-radius: 999px;
             border: 1px solid var(--brand-blue, #1385b6); background: transparent; color: var(--brand-blue, #1385b6);
