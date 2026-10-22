@@ -23,6 +23,10 @@ interface Tower { cx: number; cy: number; a: number; b: number; h: number; floor
         <app-floating-configurator />
 
         <div class="lp-root">
+            <button type="button" class="lp-faq-link" (click)="goToFaq()">
+                <i class="pi pi-question-circle"></i> Preguntas frecuentes
+            </button>
+
             <div class="lp-orb lp-orb-a"></div>
             <div class="lp-orb lp-orb-b"></div>
             <div class="lp-orb lp-orb-c"></div>
@@ -275,7 +279,7 @@ interface Tower { cx: number; cy: number; a: number; b: number; h: number; floor
         </div>
 
         <!-- Preguntas frecuentes: queda debajo de la pantalla de ingreso (hay que bajar para verla) y sirve para que los buscadores entiendan qué es Expenses. -->
-        <section class="lp-faq" aria-labelledby="lp-faq-title">
+        <section class="lp-faq" id="lp-faq" aria-labelledby="lp-faq-title">
             <h2 id="lp-faq-title">Preguntas frecuentes sobre Expenses</h2>
             @for (item of faqs; track item.question) {
                 <details class="lp-faq-item">
@@ -287,6 +291,17 @@ interface Tower { cx: number; cy: number; a: number; b: number; h: number; floor
     `,
     styles: [`
         :host { display: block; overflow-x: clip; }
+        .lp-faq-link {
+            position: absolute; top: 1.5rem; right: 6.5rem; z-index: 5;
+            display: inline-flex; align-items: center; gap: 0.45rem; cursor: pointer;
+            padding: 0.55rem 1rem; border-radius: 999px;
+            border: 1px solid var(--brand-blue, #1385b6); background: transparent; color: var(--brand-blue, #1385b6);
+            font: inherit; font-size: 0.85rem; font-weight: 600;
+        }
+        .lp-faq-link:hover { background: rgba(19, 133, 182, 0.08); }
+        @media (max-width: 860px) {
+            .lp-faq-link { position: static; align-self: center; margin: 1rem 0 0; }
+        }
         .lp-faq { max-width: 860px; margin: 0 auto; padding: 3.5rem 1.5rem 4rem; }
         .lp-faq h2 {
             font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
@@ -401,6 +416,11 @@ export class Login {
     password = '';
     errorMessage = '';
     isSubmitting = false;
+
+    // Baja con desplazamiento suave hasta las preguntas frecuentes (están debajo de la pantalla de ingreso).
+    goToFaq(): void {
+        document.getElementById('lp-faq')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
 
     floorList(t: Tower): number[] {
         return Array.from({ length: t.floors }, (_, i) => i);
