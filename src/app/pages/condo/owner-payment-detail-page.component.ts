@@ -157,36 +157,82 @@ const STATUS_SEVERITY: Record<string, 'warn' | 'info' | 'success' | 'danger' | '
           </div>
 
           <div class="pay-invoices" *ngIf="paymentInvoices.length > 0">
-            <div class="inv-card" *ngFor="let inv of paymentInvoices" [id]="'inv-' + inv.id"
-                 [class.inv-issued]="inv.status === 'Issued'"
-                 [class.inv-voided]="inv.status === 'Voided'"
-                 [class.inv-draft]="inv.status === 'Draft'">
+            <!-- Resumen y filtros: con muchas facturas la lista se acota y se busca, en vez de recorrerla entera. -->
+            <div class="inv-summary">
+              <div class="inv-sum-main">
+                <strong>{{ paymentInvoices.length }} {{ paymentInvoices.length === 1 ? 'factura' : 'facturas' }}</strong>
+                <span>Total {{ formatGs(invoicesTotal()) }}</span>
+              </div>
+              <div class="inv-chips">
+                <button type="button" class="inv-chip" [class.active]="invFilter === 'all'" (click)="invFilter = 'all'">
+                  Todas <b>{{ paymentInvoices.length }}</b>
+                </button>
+                <button type="button" class="inv-chip chip-draft" [class.active]="invFilter === 'Draft'" *ngIf="invoiceCount('Draft') > 0" (click)="invFilter = 'Draft'">
+                  Borradores <b>{{ invoiceCount('Draft') }}</b>
+                </button>
+                <button type="button" class="inv-chip chip-issued" [class.active]="invFilter === 'Issued'" *ngIf="invoiceCount('Issued') > 0" (click)="invFilter = 'Issued'">
+                  Emitidas <b>{{ invoiceCount('Issued') }}</b>
+                </button>
+                <button type="button" class="inv-chip chip-voided" [class.active]="invFilter === 'Voided'" *ngIf="invoiceCount('Voided') > 0" (click)="invFilter = 'Voided'">
+                  Anuladas <b>{{ invoiceCount('Voided') }}</b>
+                </button>
+              </div>
+              <label class="inv-search" *ngIf="paymentInvoices.length > 6">
+                <i class="pi pi-search"></i>
+                <input type="search" [(ngModel)]="invSearch" name="invSearch" placeholder="Buscar unidad o número" />
+              </label>
+            </div>
 
-              <div class="inv-top">
-                <div class="inv-id">
-                  <strong class="inv-number">{{ inv.numeroFormateado || 'Borrador sin numerar' }}</strong>
-                  <span class="inv-sub">
-                    <i class="pi pi-building"></i> Unidad {{ inv.unitCode }}
-                    <i class="inv-sep"></i>
-                    <i class="pi pi-calendar"></i> Período {{ inv.periodYear }}-{{ inv.periodMonth < 10 ? '0' : '' }}{{ inv.periodMonth }}
-                  </span>
+            <!-- Lista con scroll propio: la página no crece con la cantidad de facturas. -->
+            <div class="inv-list-scroll">
+              <div class="inv-list-head" aria-hidden="true">
+                <span>Factura</span><span>Unidad</span><span>Período</span><span>Estado</span><span class="right">Monto</span><span></span>
+              </div>
+              <p class="inv-empty" *ngIf="filteredInvoices().length === 0">Ninguna factura coincide con el filtro.</p>
+
+              <div class="inv-card" *ngFor="let inv of filteredInvoices(); trackBy: trackInvoice" [id]="'inv-' + inv.id"
+                   [class.inv-issued]="inv.status === 'Issued'"
+                   [class.inv-voided]="inv.status === 'Voided'"
+                   [class.inv-draft]="inv.status === 'Draft'"
+                   [class.inv-open]="expandedInvoiceId === inv.id">
+
+                <div class="inv-top">
+                  <div class="inv-number-cell">
+                    <strong class="inv-number">{{ inv.numeroFormateado || 'Borrador' }}</strong>
+                    <span class="inv-nc-badge" *ngIf="(creditNotesByInvoice[inv.id]?.length ?? 0) > 0"
+                          [title]="'Tiene ' + creditNotesByInvoice[inv.id].length + ' nota(s) de crédito'">
+                      NC {{ creditNotesByInvoice[inv.id].length }}
+                    </span>
+                  </div>
+                  <span class="inv-unit"><i class="pi pi-building"></i>{{ inv.unitCode }}</span>
+                  <span class="inv-period">{{ inv.periodYear }}-{{ inv.periodMonth < 10 ? '0' : '' }}{{ inv.periodMonth }}</span>
+                  <span class="inv-status"><i class="inv-status-dot"></i>{{ invoiceStatusLabel(inv.status) }}</span>
+                  <strong class="inv-amount-num">{{ formatGs(inv.montoTotal) }}</strong>
+                  <div class="inv-btns">
+                    <a class="inv-btn inv-btn-icon" [href]="invoicePdfUrl(inv.id)" target="_blank" rel="noopener" title="Ver PDF" aria-label="Ver PDF">
+                      <i class="pi pi-file-pdf"></i>
+                    </a>
+                    <button type="button" class="inv-btn" (click)="toggleExpand(inv)" [attr.aria-expanded]="expandedInvoiceId === inv.id">
+                      {{ inv.status === 'Draft' ? 'Emitir' : (inv.status === 'Issued' ? 'Opciones' : 'Detalle') }}
+                      <i class="pi" [class.pi-chevron-down]="expandedInvoiceId !== inv.id" [class.pi-chevron-up]="expandedInvoiceId === inv.id"></i>
+                    </button>
+                  </div>
                 </div>
 
-                <span class="inv-status"><i class="inv-status-dot"></i>{{ invoiceStatusLabel(inv.status) }}</span>
+                <div class="inv-detail" *ngIf="expandedInvoiceId === inv.id">
 
-                <div class="inv-amount">
-                  <small>Monto</small>
-                  <strong>{{ formatGs(inv.montoTotal) }}</strong>
-                </div>
+              <div class="inv-panel inv-info" *ngIf="inv.status === 'Voided'">
+                <p class="inv-note">
+                  <i class="pi pi-info-circle"></i>
+                  Anulada{{ inv.fechaAnulacionUtc ? ' el ' + (inv.fechaAnulacionUtc | date:'dd/MM/yyyy') : '' }}.
+                  {{ inv.motivoAnulacion ? 'Motivo: ' + inv.motivoAnulacion : '' }}
+                </p>
+              </div>
 
-                <div class="inv-btns">
-                  <a class="inv-btn" [href]="invoicePdfUrl(inv.id)" target="_blank">
-                    <i class="pi pi-file-pdf"></i> PDF
-                  </a>
-                  <button type="button" class="inv-btn inv-btn-danger" *ngIf="inv.status === 'Issued'" (click)="askVoid(inv)">
-                    <i class="pi pi-times"></i> Anular
-                  </button>
-                </div>
+              <div class="inv-panel" *ngIf="inv.status === 'Issued'">
+                <button type="button" class="inv-btn inv-btn-danger" (click)="askVoid(inv)">
+                  <i class="pi pi-times"></i> Anular factura
+                </button>
               </div>
 
               <div class="inv-panel" *ngIf="inv.status === 'Draft'">
@@ -194,12 +240,12 @@ const STATUS_SEVERITY: Record<string, 'warn' | 'info' | 'success' | 'danger' | '
                   <i class="pi pi-info-circle"></i> No hay un timbrado activo y vigente para este edificio.
                 </p>
                 <div class="inv-emit" *ngIf="seriesFor(inv).length > 0">
-                  <select [(ngModel)]="emitSeriesByInvoice[inv.id]" [name]="'series-' + inv.id">
-                    <option value="" disabled selected>Seleccionar timbrado</option>
+                  <select [ngModel]="selectedSeriesId(inv)" (ngModelChange)="emitSeriesByInvoice[inv.id] = $event" [name]="'series-' + inv.id">
+                    <option value="" disabled>Seleccionar timbrado</option>
                     <option *ngFor="let sr of seriesFor(inv)" [value]="sr.id">{{ sr.establecimiento }}-{{ sr.puntoExpedicion }}-{{ sr.numeroTimbrado }} ({{ sr.numerosDisponibles }} disponibles)</option>
                   </select>
                   <p-button label="Emitir factura" icon="pi pi-send" size="small" (onClick)="emitInvoice(inv)"
-                            [loading]="emittingId === inv.id" [disabled]="!emitSeriesByInvoice[inv.id]"></p-button>
+                            [loading]="emittingId === inv.id" [disabled]="!selectedSeriesId(inv)"></p-button>
                 </div>
               </div>
 
@@ -330,6 +376,8 @@ const STATUS_SEVERITY: Record<string, 'warn' | 'info' | 'success' | 'danger' | '
                   </div>
                 </div>
               </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -363,18 +411,34 @@ const STATUS_SEVERITY: Record<string, 'warn' | 'info' | 'success' | 'danger' | '
         <!-- Unidades -->
         <div class="form-section">
           <h3>Unidades incluidas</h3>
-          <div class="app-list" *ngIf="payment.units.length">
-            <div class="app-row header grid-units">
-              <span>Unidad</span>
-              <span>Edificio</span>
-              <span class="right">Monto asignado</span>
+          <ng-template #unitsList>
+            <div class="app-list">
+              <div class="app-row header grid-units">
+                <span>Unidad</span>
+                <span>Edificio</span>
+                <span class="right">Monto asignado</span>
+              </div>
+              <div class="app-row grid-units" *ngFor="let u of payment.units">
+                <span class="monospace">{{ u.unitCode }}</span>
+                <span>{{ u.buildingName }}</span>
+                <span class="right amount">{{ u.allocatedAmount | number:'1.0-2' }}</span>
+              </div>
             </div>
-            <div class="app-row grid-units" *ngFor="let u of payment.units">
-              <span class="monospace">{{ u.unitCode }}</span>
-              <span>{{ u.buildingName }}</span>
-              <span class="right amount">{{ u.allocatedAmount | number:'1.0-2' }}</span>
+          </ng-template>
+          <!-- Con muchas unidades la lista queda plegada (resumen) y, al abrirla, con scroll propio. -->
+          <ng-container *ngIf="payment.units.length > 6; else unitsPlain">
+            <button type="button" class="units-toggle" (click)="unitsOpen = !unitsOpen" [attr.aria-expanded]="unitsOpen">
+              <i class="pi" [class.pi-chevron-right]="!unitsOpen" [class.pi-chevron-down]="unitsOpen"></i>
+              {{ payment.units.length }} unidades
+              <span class="units-total">{{ unitsTotal() | number:'1.0-2' }}</span>
+            </button>
+            <div class="units-scroll" *ngIf="unitsOpen">
+              <ng-container *ngTemplateOutlet="unitsList"></ng-container>
             </div>
-          </div>
+          </ng-container>
+          <ng-template #unitsPlain>
+            <ng-container *ngIf="payment.units.length"><ng-container *ngTemplateOutlet="unitsList"></ng-container></ng-container>
+          </ng-template>
           <p *ngIf="!payment.units.length" class="app-state">Sin unidades registradas.</p>
         </div>
 
@@ -582,12 +646,52 @@ const STATUS_SEVERITY: Record<string, 'warn' | 'info' | 'success' | 'danger' | '
       border-left: 3px solid var(--p-red-500); font-size: 0.92rem;
     }
 
-    .pay-invoices { margin-top: 1.1rem; display: grid; gap: 0.75rem; }
-    .inv-card { background: #fff; border: 1px solid rgba(20,54,61,0.12); border-left: 4px solid #f59e0b; border-radius: 14px; padding: 0.9rem 1.1rem; box-shadow: 0 1px 2px rgba(15,40,60,0.04); transition: box-shadow .15s; }
-    .inv-card:hover { box-shadow: 0 6px 18px rgba(15,40,60,0.08); }
+    .pay-invoices { --inv-cols: minmax(0, 1.5fr) 5.5rem 5.5rem 6.5rem 8rem 9.5rem; margin-top: 1.1rem; display: grid; gap: 0.6rem; }
+    .inv-card { background: #fff; border: 1px solid rgba(20,54,61,0.12); border-left: 4px solid #f59e0b; border-radius: 10px; padding: 0.45rem 0.8rem; transition: box-shadow .15s, border-color .15s; }
+    .inv-card:hover { box-shadow: 0 3px 10px rgba(15,40,60,0.07); }
+    .inv-card.inv-open { box-shadow: 0 6px 18px rgba(15,40,60,0.1); border-color: rgba(19,133,182,0.45); border-left-color: #f59e0b; }
+    .inv-card.inv-issued.inv-open { border-left-color: #16a34a; }
+    .inv-card.inv-voided.inv-open { border-left-color: #dc2626; }
+
+    /* Resumen, filtros y buscador de la lista de facturas */
+    .inv-summary { display: flex; align-items: center; flex-wrap: wrap; gap: 0.6rem 1.2rem; }
+    .inv-sum-main { display: flex; align-items: baseline; gap: 0.7rem; font-size: 0.9rem; color: #637b88; }
+    .inv-sum-main strong { font-size: 1.05rem; color: #14363d; }
+    .inv-chips { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+    .inv-chip { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.3rem 0.75rem; border-radius: 999px; border: 1.5px solid rgba(20,54,61,0.16); background: #fff; color: #14363d; font-size: 0.8rem; font-weight: 600; cursor: pointer; }
+    .inv-chip b { font-variant-numeric: tabular-nums; opacity: 0.75; }
+    .inv-chip:hover { border-color: rgba(19,133,182,0.5); }
+    .inv-chip.active { background: #14363d; border-color: #14363d; color: #fff; }
+    .inv-search { margin-left: auto; display: inline-flex; align-items: center; gap: 0.45rem; padding: 0.3rem 0.7rem; border: 1.5px solid rgba(20,54,61,0.16); border-radius: 10px; background: #fff; }
+    .inv-search .pi { font-size: 0.85rem; color: #8a9ba5; }
+    .inv-search input { border: 0; outline: 0; background: transparent; font: inherit; font-size: 0.88rem; width: 11rem; }
+
+    /* Lista con encabezado fijo y scroll propio: no hace crecer la página */
+    .inv-list-head { position: sticky; top: 0; z-index: 2; display: grid; grid-template-columns: var(--inv-cols); gap: 0.75rem; padding: 0.35rem calc(0.8rem + 1px) 0.35rem calc(0.8rem + 4px); background: var(--p-surface-0, #fff); font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #8a9ba5; }
+    .inv-list-scroll { display: grid; gap: 0.4rem; align-content: start; max-height: min(65vh, 34rem); overflow-y: auto; padding: 0 0.35rem 0.15rem 0; scrollbar-gutter: stable; }
+    .inv-empty { margin: 0.5rem 0; color: #637b88; font-size: 0.9rem; text-align: center; }
+    .inv-number-cell { display: flex; align-items: center; gap: 0.5rem; min-width: 0; }
+    .inv-number-cell .inv-number { font-size: 0.92rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .inv-nc-badge { padding: 0.1rem 0.45rem; border-radius: 999px; background: rgba(19,133,182,0.12); color: #0b5f86; font-size: 0.68rem; font-weight: 700; white-space: nowrap; }
+    .inv-unit, .inv-period { font-size: 0.88rem; color: #14363d; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .inv-unit .pi { font-size: 0.75rem; color: #8a9ba5; margin-right: 0.3rem; }
+    .inv-status { justify-self: start; }
+    .inv-amount-num { text-align: right; font-size: 0.95rem; color: #14363d; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .inv-voided .inv-amount-num { text-decoration: line-through; color: #8a9ba5; }
+    .inv-btn-icon { padding: 0.42rem 0.6rem; }
+    .inv-top .inv-btns { justify-content: flex-end; }
+    .inv-detail { margin-top: 0.4rem; padding-top: 0.2rem; border-top: 1px dashed rgba(20,54,61,0.16); display: grid; gap: 0.2rem; }
+    .inv-detail > .inv-panel:first-child { border-top: 0; margin-top: 0.4rem; padding-top: 0; }
+
+    /* Unidades incluidas: resumen que se despliega y lista con scroll propio */
+    .units-toggle { display: flex; align-items: center; gap: 0.6rem; width: 100%; padding: 0.55rem 0.8rem; border: 1px solid rgba(20,54,61,0.14); border-radius: 10px; background: #fff; color: #14363d; font: inherit; font-weight: 600; cursor: pointer; text-align: left; }
+    .units-toggle:hover { border-color: rgba(19,133,182,0.45); }
+    .units-toggle .units-total { margin-left: auto; font-family: monospace; }
+    .units-scroll { margin-top: 0.5rem; max-height: 18rem; overflow-y: auto; border: 1px solid rgba(20,54,61,0.1); border-radius: 10px; }
+    .units-scroll .app-row.header { position: sticky; top: 0; z-index: 1; background: var(--p-surface-0, #fff); }
     .inv-card.inv-issued { border-left-color: #16a34a; }
     .inv-card.inv-voided { border-left-color: #dc2626; background: #fffafa; }
-    .inv-top { display: grid; grid-template-columns: minmax(0, 1fr) auto auto auto; align-items: center; gap: 1.1rem; }
+    .inv-top { display: grid; grid-template-columns: var(--inv-cols); align-items: center; gap: 0.75rem; }
     .inv-id { display: flex; flex-direction: column; gap: 0.2rem; min-width: 0; }
     .inv-number { font-size: 1.05rem; color: #14363d; letter-spacing: 0.01em; font-variant-numeric: tabular-nums; }
     .inv-sub { display: flex; align-items: center; flex-wrap: wrap; gap: 0.35rem; color: #637b88; font-size: 0.82rem; }
@@ -616,11 +720,17 @@ const STATUS_SEVERITY: Record<string, 'warn' | 'info' | 'success' | 'danger' | '
     .inv-void-label em { color: #dc2626; font-style: normal; }
     .inv-panel-danger textarea { width: 100%; padding: 0.55rem 0.75rem; border: 1px solid rgba(220,38,38,0.4); border-radius: 10px; font: inherit; background: rgba(220,38,38,0.03); resize: vertical; }
     .inv-void-actions { display: flex; justify-content: flex-end; gap: 0.5rem; }
-    @media (max-width: 720px) {
-      .inv-top { grid-template-columns: 1fr auto; }
-      .inv-status { justify-self: start; }
-      .inv-amount { align-items: flex-end; }
-      .inv-btns { grid-column: 1 / -1; }
+    @media (max-width: 860px) {
+      .inv-list-head { display: none; }
+      .inv-top { grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: 'num num amt' 'unit per st' 'btns btns btns'; row-gap: 0.3rem; }
+      .inv-number-cell { grid-area: num; }
+      .inv-amount-num { grid-area: amt; }
+      .inv-unit { grid-area: unit; }
+      .inv-period { grid-area: per; }
+      .inv-status { grid-area: st; justify-self: end; }
+      .inv-btns { grid-area: btns; justify-content: flex-end; }
+      .inv-search { margin-left: 0; width: 100%; }
+      .inv-search input { width: 100%; }
     }
 
     @media (max-width: 600px) {
@@ -704,6 +814,13 @@ export class OwnerPaymentDetailPageComponent implements OnInit {
   paymentInvoices: InvoiceLedgerRow[] = [];
   allSeries: InvoiceSeries[] = [];
   emitSeriesByInvoice: Record<string, string> = {};
+  // Último timbrado elegido por edificio: al preparar la siguiente factura del mismo edificio ya viene elegido (se puede cambiar).
+  private lastSeriesByBuilding: Record<string, string> = {};
+  // Lista de facturas: filtro por estado, búsqueda y la única factura con su detalle abierto.
+  unitsOpen = false;
+  invFilter: 'all' | 'Draft' | 'Issued' | 'Voided' = 'all';
+  invSearch = '';
+  expandedInvoiceId = '';
   emittingId = '';
   voidingId = '';
   voidReason = '';
@@ -909,6 +1026,9 @@ export class OwnerPaymentDetailPageComponent implements OnInit {
     const inv = this.paymentInvoices.find(x => x.id === invoiceId);
     if (!inv || inv.status !== 'Issued') return;
 
+    this.invFilter = 'all';
+    this.invSearch = '';
+    this.expandedInvoiceId = inv.id;
     if (action === 'void') {
       this.askVoid(inv);
     } else if (action === 'nc' && this.canCreateCreditNotesRole) {
@@ -925,13 +1045,52 @@ export class OwnerPaymentDetailPageComponent implements OnInit {
       x.vigenciaDesde <= today && x.vigenciaHasta >= today);
   }
 
+  // Timbrado elegido para una factura: el que se eligió a mano o, si no hay, el último usado en el edificio (si sigue vigente).
+  selectedSeriesId(invoice: InvoiceLedgerRow): string {
+    const own = this.emitSeriesByInvoice[invoice.id];
+    if (own) return own;
+    const last = this.lastSeriesByBuilding[invoice.buildingId];
+    return last && this.seriesFor(invoice).some(x => x.id === last) ? last : '';
+  }
+
+  unitsTotal(): number {
+    return (this.payment?.units ?? []).reduce((sum, u) => sum + u.allocatedAmount, 0);
+  }
+
+  invoiceCount(status: string): number {
+    return this.paymentInvoices.filter(x => x.status === status).length;
+  }
+
+  // Suma de las facturas que cuentan (las anuladas no).
+  invoicesTotal(): number {
+    return this.paymentInvoices.filter(x => x.status !== 'Voided').reduce((sum, x) => sum + x.montoTotal, 0);
+  }
+
+  filteredInvoices(): InvoiceLedgerRow[] {
+    const term = this.invSearch.trim().toLowerCase();
+    return this.paymentInvoices.filter(x =>
+      (this.invFilter === 'all' || x.status === this.invFilter) &&
+      (!term || x.unitCode.toLowerCase().includes(term) || (x.numeroFormateado ?? '').toLowerCase().includes(term)));
+  }
+
+  trackInvoice(_: number, invoice: InvoiceLedgerRow): string { return invoice.id; }
+
+  toggleExpand(invoice: InvoiceLedgerRow): void {
+    this.expandedInvoiceId = this.expandedInvoiceId === invoice.id ? '' : invoice.id;
+    // Al cerrar o cambiar de factura se descartan los formularios abiertos de la anterior.
+    this.voidTargetId = '';
+    this.ncTargetInvoiceId = '';
+  }
+
   emitInvoice(invoice: InvoiceLedgerRow): void {
-    const seriesId = this.emitSeriesByInvoice[invoice.id];
+    const seriesId = this.selectedSeriesId(invoice);
     if (!seriesId || this.emittingId) return;
     this.emittingId = invoice.id;
     this.invoicesApi.emit(invoice.id, seriesId).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: updated => {
         this.emittingId = '';
+        this.lastSeriesByBuilding[invoice.buildingId] = seriesId;
+        this.expandedInvoiceId = '';
         this.msgSvc.add({ severity: 'success', summary: 'Emitida', detail: `Factura ${updated.numeroFormateado} emitida.`, life: 5000 });
         this.loadPaymentInvoices();
       },
