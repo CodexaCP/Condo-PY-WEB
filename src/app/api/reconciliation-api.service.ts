@@ -12,7 +12,7 @@ import {
 } from './building-config.models';
 
 // Conciliación bancaria manual (api/finance/reconciliation). La ven los cuatro roles administrativos; la arman, cierran y reabren solo
-// SuperAdmin y Administrador de empresa. Una conciliación de un edificio ajeno responde 404. Con un mes cerrado, desmarcar o descartar
+// SuperAdmin y Administrador de empresa (y el Encargado, si el edificio lo habilitó). Una conciliación de un edificio ajeno responde 404. Con un mes cerrado, desmarcar o descartar
 // movimientos de ese mes responde 409 { error: 'finance_period_closed' }.
 @Injectable({ providedIn: 'root' })
 export class ReconciliationApiService {
@@ -21,6 +21,11 @@ export class ReconciliationApiService {
 
   getOverview(buildingId: string): Observable<ReconciliationOverview> {
     return this.http.get<ReconciliationOverview>(this.base, { params: new HttpParams().set('buildingId', buildingId) });
+  }
+
+  // Enciende o apaga que el Encargado del edificio pueda conciliar desde la app (solo SuperAdmin y Administrador de empresa).
+  setManagerReconcile(buildingId: string, enabled: boolean): Observable<ReconciliationOverview> {
+    return this.http.put<ReconciliationOverview>(`${this.base}/settings`, { buildingId, enabled });
   }
 
   getHistory(buildingId: string, accountId?: string): Observable<ReconciliationSummary[]> {

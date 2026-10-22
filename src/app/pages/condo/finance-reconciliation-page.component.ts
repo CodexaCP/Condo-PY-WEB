@@ -40,7 +40,14 @@ import { FinanceStateComponent } from './finance-state.component';
       <app-finance-state [loading]="loading && !overview" [noBuilding]="noBuilding" [kind]="errorKind" [message]="errorMessage" [buildingId]="buildingId"></app-finance-state>
 
       <ng-container *ngIf="overview as o">
-        <p class="muted small" *ngIf="!o.canEdit">Solo el SuperAdmin y el Administrador de empresa pueden armar, cerrar y reabrir conciliaciones. Acá podés consultarlas.</p>
+        <p class="muted small" *ngIf="!o.canEdit">Solo el SuperAdmin y el Administrador de empresa (y el Encargado, si el edificio lo habilitó) pueden armar, cerrar y reabrir conciliaciones. Acá podés consultarlas.</p>
+        <label class="manager-switch" *ngIf="o.canConfigure">
+          <input type="checkbox" [ngModel]="o.managerCanReconcile" [disabled]="busy" (ngModelChange)="setManager($event)" />
+          <span>
+            <strong>El Encargado de este edificio puede conciliar desde la app</strong>
+            <span class="muted small">Apagado por defecto: quien aprueba los pagos no concilia. Si lo encendés, queda registrado en el historial de configuración.</span>
+          </span>
+        </label>
         <p-message *ngIf="!o.accounts.length" severity="info"
                    text="El edificio no tiene cuentas para conciliar. Los bancos se concilian solos; en la caja o el fondo de reserva activalo en Finanzas → Configuración → Cuentas (casilla «Se concilia con el extracto»)."></p-message>
 
@@ -116,6 +123,9 @@ import { FinanceStateComponent } from './finance-state.component';
     .start-box { display: flex; gap: 1rem; align-items: flex-end; flex-wrap: wrap; padding: 0.4rem 0; }
     .start-box .field { min-width: 14rem; }
     .start-box .actions { margin: 0; }
+    .manager-switch { display: flex; gap: 0.7rem; align-items: flex-start; margin: 0.6rem 0 1rem; cursor: pointer; }
+    .manager-switch input { margin-top: 0.25rem; }
+    .manager-switch span { display: flex; flex-direction: column; }
   `]
 })
 export class FinanceReconciliationPageComponent {
@@ -168,6 +178,26 @@ export class FinanceReconciliationPageComponent {
     this.statementDate = this.today;
     this.statementBalance = null;
     this.notes = '';
+  }
+
+  setManager(enabled: boolean): void {
+    this.busy = true;
+    this.api.setManagerReconcile(this.buildingId, enabled).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: overview => {
+        this.busy = false;
+        this.overview = overview;
+        this.msg.add({
+          severity: 'success', summary: enabled ? 'Encendido' : 'Apagado', life: 4000,
+          detail: enabled ? 'El Encargado de este edificio ya puede conciliar desde la app.' : 'El Encargado ya no puede conciliar.'
+        });
+        this.cdr.markForCheck();
+      },
+      error: err => {
+        this.busy = false;
+        this.msg.add({ severity: 'error', summary: 'No se pudo cambiar', detail: extractApiErrorMessage(err, 'No se pudo cambiar la opción.'), life: 8000 });
+        this.cdr.markForCheck();
+      }
+    });
   }
 
   start(a: ReconciliationAccount): void {

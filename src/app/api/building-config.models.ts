@@ -420,6 +420,9 @@ export interface ReconciliationAccount {
 export interface ReconciliationOverview {
   buildingId: string;
   canEdit: boolean;
+  // El edificio deja que el Encargado concilie desde la app; lo cambian solo quienes tienen canConfigure.
+  managerCanReconcile: boolean;
+  canConfigure: boolean;
   accounts: ReconciliationAccount[];
 }
 
