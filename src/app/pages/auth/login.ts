@@ -269,7 +269,7 @@ interface Tower { cx: number; cy: number; a: number; b: number; h: number; floor
                         <small>Sin configurar un edificio. Datos ficticios. Sin compromiso.</small>
                     </div>
 
-                    <a class="lp-apk-link" href="/downloads/condopy.apk" download="Expenses.apk">
+                    <a class="lp-apk-link" href="/downloads/expenses.apk" download="Expenses.apk">
                         <i class="pi pi-android"></i> Descargar app para Android
                     </a>
 
