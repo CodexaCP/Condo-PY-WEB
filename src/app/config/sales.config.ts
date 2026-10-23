@@ -6,6 +6,12 @@ export const SALES_CONTACT = {
   message: 'Hola, vi la página de Expenses y quiero pedir una cotización para mi edificio. ¿Me pueden contactar?'
 };
 
+// Igual que salesWhatsAppUrl, pero con un mensaje propio (la demostración manda qué módulos exploró el visitante).
+export function salesWhatsAppUrlFor(message: string): string | null {
+  const phone = SALES_CONTACT.whatsapp.replace(/\D/g, '');
+  return phone ? `https://wa.me/${phone}?text=${encodeURIComponent(message)}` : null;
+}
+
 export function salesWhatsAppUrl(): string | null {
   const phone = SALES_CONTACT.whatsapp.replace(/\D/g, '');
   return phone ? `https://wa.me/${phone}?text=${encodeURIComponent(SALES_CONTACT.message)}` : null;

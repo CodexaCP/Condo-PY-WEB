@@ -9,6 +9,22 @@ export const appRoutes: Routes = [
         loadComponent: () => import('./app/pages/auth/login').then(m => m.Login),
         canActivate: [guestGuard]
     },
+    // Demostración pública «Explora Expenses»: sin login, con datos ficticios y sin llamadas al servidor.
+    {
+        path: 'explorar',
+        loadComponent: () => import('./app/pages/demo/demo-shell.component').then(m => m.DemoShell),
+        children: [
+            { path: '', pathMatch: 'full', redirectTo: 'panel' },
+            { path: 'panel', loadComponent: () => import('./app/pages/demo/demo-panel.component').then(m => m.DemoPanelComponent) },
+            { path: 'unidades', loadComponent: () => import('./app/pages/demo/demo-units.component').then(m => m.DemoUnitsComponent) },
+            { path: 'unidades/:code', loadComponent: () => import('./app/pages/demo/demo-units.component').then(m => m.DemoStatementComponent) },
+            { path: 'gastos', loadComponent: () => import('./app/pages/demo/demo-expenses.component').then(m => m.DemoExpensesComponent) },
+            { path: 'informes', loadComponent: () => import('./app/pages/demo/demo-reports.component').then(m => m.DemoReportsComponent) },
+            { path: 'libro-diario', loadComponent: () => import('./app/pages/demo/demo-journal.component').then(m => m.DemoJournalComponent) },
+            { path: 'bloqueado', loadComponent: () => import('./app/pages/demo/demo-locked.component').then(m => m.DemoLockedComponent) },
+            { path: '**', redirectTo: 'panel' }
+        ]
+    },
     {
         path: 'forgot-password',
         loadComponent: () => import('./app/pages/auth/forgot-password').then(m => m.ForgotPassword)

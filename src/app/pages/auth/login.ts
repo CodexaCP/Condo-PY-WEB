@@ -11,6 +11,7 @@ import { AuthService } from '../../auth/auth.service';
 import { homeRoute } from '../../auth/auth.guard';
 import { PushService } from '../../core/push.service';
 import { salesWhatsAppUrl } from '../../config/sales.config';
+import { trackPortalVisitOnce } from '../demo/demo-funnel';
 
 // Torre isométrica de la ilustración: centro de la base, medios ejes de la base (a horizontal, b = a/2 vertical), alto y pisos.
 interface Tower { cx: number; cy: number; a: number; b: number; h: number; floors: number; }
@@ -55,6 +56,7 @@ interface Tower { cx: number; cy: number; a: number; b: number; h: number; floor
                         <p class="lp-slogan-sub">
                             Finanzas, operaciones y comunidad conectadas en una sola plataforma.
                         </p>
+                        <a class="lp-demo-btn" routerLink="/explorar"><i class="pi pi-play-circle"></i> Explorar demostración gratuita <span aria-hidden="true">→</span></a>
                     </div>
 
                     <!-- Video promocional: en bucle, sin sonido y sin controles (no se puede pausar) -->
@@ -253,6 +255,17 @@ interface Tower { cx: number; cy: number; a: number; b: number; h: number; floor
                         Entrar al sistema
                     </button>
 
+                    <!-- Invitación a la demostración: es el paso 2 del embudo (visita → demo → funciones → necesidad → contacto). -->
+                    <div class="lp-demo-card">
+                        <div class="lp-demo-head">
+                            <span class="lp-demo-ico"><i class="pi pi-play"></i></span>
+                            <h3>¿Quieres conocer Expenses antes de contratar?</h3>
+                        </div>
+                        <p>Explora un edificio de demostración, descubre las herramientas y prueba un recorrido guiado sin modificar datos reales.</p>
+                        <a class="lp-demo-cta" routerLink="/explorar">Explorar demostración gratuita →</a>
+                        <small>Sin configurar un edificio. Datos ficticios. Sin compromiso.</small>
+                    </div>
+
                     <a class="lp-apk-link" href="/downloads/condopy.apk" download="Expenses.apk">
                         <i class="pi pi-android"></i> Descargar app para Android
                     </a>
@@ -277,6 +290,29 @@ interface Tower { cx: number; cy: number; a: number; b: number; h: number; floor
                 </a>
             }
         </div>
+
+        <!-- Qué se puede explorar en la demostración: cinco herramientas, cada una enseña algo real del producto. -->
+        <section class="lp-explore" id="lp-explore" aria-labelledby="lp-explore-title">
+            <div class="lp-explore-head">
+                <span class="lp-explore-eyebrow">Demostración gratuita</span>
+                <h2 id="lp-explore-title">Explora Expenses en 5 minutos</h2>
+                <p>Un edificio ficticio con unidades, propietarios, expensas, gastos y pagos. Sin registrarte y sin configurar nada: haz el recorrido como lo haría un administrador.</p>
+            </div>
+            <div class="lp-explore-grid">
+                @for (s of exploreSteps; track s.title; let i = $index) {
+                    <a class="lp-explore-card" routerLink="/explorar">
+                        <span class="lp-explore-no">{{ i + 1 }}</span>
+                        <i class="pi" [class]="'pi ' + s.icon"></i>
+                        <b>{{ s.title }}</b>
+                        <small>{{ s.text }}</small>
+                    </a>
+                }
+            </div>
+            <div class="lp-explore-foot">
+                <a class="lp-demo-cta" routerLink="/explorar">Explorar demostración gratuita →</a>
+                <small>Al terminar, si te interesa, puedes pedir una demostración personalizada o un presupuesto.</small>
+            </div>
+        </section>
 
         <!-- Preguntas frecuentes: queda debajo de la pantalla de ingreso (hay que bajar para verla) y sirve para que los buscadores entiendan qué es Expenses. -->
         <section class="lp-faq" id="lp-faq" aria-labelledby="lp-faq-title">
@@ -344,6 +380,48 @@ interface Tower { cx: number; cy: number; a: number; b: number; h: number; floor
             font-size: 0.9rem; font-weight: 600; text-decoration: none;
         }
         .lp-apk-link:hover { background: rgba(19, 133, 182, 0.08); }
+
+        /* Invitación a la demostración (tarjeta del formulario, botón del panel de marca y sección de abajo) */
+        .lp-demo-btn {
+            display: inline-flex; align-items: center; gap: 0.5rem; margin-top: 1.1rem;
+            padding: 0.75rem 1.3rem; border-radius: 0.8rem; text-decoration: none;
+            background: #1ab7af; color: #fff; font-size: 0.95rem; font-weight: 700;
+            box-shadow: 0 8px 22px rgba(26, 183, 175, 0.35); transition: transform 0.15s ease, background 0.15s ease;
+        }
+        .lp-demo-btn:hover { background: #14a29b; transform: translateY(-2px); }
+        .lp-demo-card {
+            margin-top: 1.1rem; padding: 1.1rem 1.15rem 0.9rem; border-radius: 1rem;
+            border: 1px solid #1ab7af; background: rgba(26, 183, 175, 0.07); text-align: left;
+        }
+        .lp-demo-head { display: flex; align-items: center; gap: 0.6rem; }
+        .lp-demo-head h3 { margin: 0; font-size: 1rem; font-weight: 800; color: var(--ex-ink); line-height: 1.3; }
+        .lp-demo-ico { flex: none; width: 1.7rem; height: 1.7rem; border-radius: 50%; display: grid; place-items: center; background: #1ab7af; color: #fff; font-size: 0.7rem; }
+        .lp-demo-card p { margin: 0.7rem 0 0.9rem; font-size: 0.88rem; line-height: 1.5; color: var(--ex-muted); }
+        .lp-demo-cta {
+            display: block; text-align: center; text-decoration: none; padding: 0.8rem 1rem; border-radius: 0.7rem;
+            background: #1ab7af; color: #fff; font-size: 0.95rem; font-weight: 700; transition: background 0.15s ease;
+        }
+        .lp-demo-cta:hover { background: #14a29b; }
+        .lp-demo-card small { display: block; margin-top: 0.7rem; text-align: center; font-size: 0.74rem; color: var(--ex-muted); }
+        .lp-explore { max-width: 1040px; margin: 0 auto; padding: 3.5rem 1.5rem 0.5rem; }
+        .lp-explore-head { text-align: center; max-width: 640px; margin: 0 auto 1.8rem; }
+        .lp-explore-eyebrow { font-size: 0.78rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: #0f8a84; }
+        .lp-explore-head h2 { margin: 0.4rem 0 0.6rem; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; font-size: 1.8rem; font-weight: 800; color: var(--ex-ink); }
+        .lp-explore-head p { margin: 0; font-size: 1rem; line-height: 1.6; color: var(--ex-muted); }
+        .lp-explore-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 0.9rem; }
+        .lp-explore-card {
+            position: relative; display: grid; gap: 0.4rem; align-content: start; padding: 1.1rem 1rem; border-radius: 1rem;
+            border: 1px solid rgba(127, 127, 127, 0.25); text-decoration: none; background: rgba(255, 255, 255, 0.6);
+            transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+        }
+        .lp-explore-card:hover { transform: translateY(-3px); border-color: #1ab7af; box-shadow: 0 10px 24px rgba(22, 50, 74, 0.1); }
+        .lp-explore-card i { font-size: 1.4rem; color: #1385b6; }
+        .lp-explore-card b { font-size: 0.95rem; color: var(--ex-ink); line-height: 1.3; }
+        .lp-explore-card small { font-size: 0.82rem; line-height: 1.45; color: var(--ex-muted); }
+        .lp-explore-no { position: absolute; top: 0.7rem; right: 0.8rem; font-size: 0.78rem; font-weight: 800; color: #1ab7af; }
+        .lp-explore-foot { display: grid; justify-items: center; gap: 0.7rem; margin-top: 1.8rem; }
+        .lp-explore-foot .lp-demo-cta { padding-left: 2rem; padding-right: 2rem; }
+        .lp-explore-foot small { font-size: 0.82rem; color: var(--ex-muted); text-align: center; }
     `]
 })
 export class Login {
@@ -352,6 +430,20 @@ export class Login {
     private readonly pushSvc = inject(PushService);
 
     readonly whatsappUrl = salesWhatsAppUrl();
+
+    constructor() {
+        // Paso 1 del embudo de la demostración: una visita de portada por pestaña.
+        trackPortalVisitOnce();
+    }
+
+    // Las cinco herramientas del recorrido de la demostración (las mismas misiones que ve el visitante al entrar).
+    readonly exploreSteps: { icon: string; title: string; text: string }[] = [
+        { icon: 'pi-chart-bar', title: 'Conoce la situación del edificio', text: 'Saldo, cobrado, gastos y morosidad. Cada indicador muestra de dónde sale la cifra.' },
+        { icon: 'pi-home', title: 'Revisa una unidad', text: 'Busca un departamento y abre su estado de cuenta con cargos, pagos y saldo.' },
+        { icon: 'pi-wallet', title: 'Registra un gasto simulado', text: 'Cárgalo y mira cómo cambia el panel y el asiento contable.' },
+        { icon: 'pi-file', title: 'Descubre los informes', text: 'Ingresos y gastos, morosidad y gastos por rubro para decidir y rendir cuentas.' },
+        { icon: 'pi-book', title: 'Comprueba el control contable', text: 'Abre un asiento del libro diario y ve de qué movimiento sale.' }
+    ];
 
     // Preguntas frecuentes de Expenses (solo del producto: qué hace, para quién es, qué ofrece y qué ventajas tiene).
     readonly faqs: { question: string; answer: string }[] = [
@@ -394,6 +486,11 @@ export class Login {
             question: '¿Mis datos están protegidos?',
             answer:
                 'Sí. Cada operación queda registrada con su historial y auditoría, los permisos se asignan por rol y el acceso es por conexión segura. Lo contable que ya fue asentado no se modifica: los errores se corrigen con un contraasiento.'
+        },
+        {
+            question: '¿Puedo probar Expenses antes de contratar?',
+            answer:
+                'Sí. Con «Explorar demostración gratuita» entras a un edificio ficticio, sin registrarte y sin tocar datos reales: revisas el panel, abres el estado de cuenta de una unidad, registras un gasto simulado, consultas informes y ves el libro diario.'
         },
         {
             question: '¿Cómo puedo pedir una cotización?',
