@@ -24,9 +24,12 @@ interface Tower { cx: number; cy: number; a: number; b: number; h: number; floor
         <app-floating-configurator />
 
         <div class="lp-root">
-            <button type="button" class="lp-faq-link" (click)="goToFaq()">
-                <i class="pi pi-question-circle"></i> Preguntas frecuentes
-            </button>
+            <div class="lp-top-actions">
+                <a class="lp-demo-top" routerLink="/explorar"><i class="pi pi-play-circle"></i> Explorar demo gratis</a>
+                <button type="button" class="lp-faq-link" (click)="goToFaq()">
+                    <i class="pi pi-question-circle"></i> Preguntas frecuentes
+                </button>
+            </div>
 
             <div class="lp-orb lp-orb-a"></div>
             <div class="lp-orb lp-orb-b"></div>
@@ -327,8 +330,20 @@ interface Tower { cx: number; cy: number; a: number; b: number; h: number; floor
     `,
     styles: [`
         :host { display: block; overflow-x: clip; }
+        .lp-top-actions { position: absolute; top: 1.7rem; right: 9.5rem; z-index: 5; display: flex; align-items: center; gap: 0.6rem; }
+        .lp-demo-top {
+            display: inline-flex; align-items: center; gap: 0.45rem; padding: 0.55rem 1.05rem; border-radius: 999px;
+            background: #1ab7af; color: #fff; text-decoration: none; font-size: 0.85rem; font-weight: 700;
+            animation: lp-demo-pulse 2.4s ease-out infinite; transition: background 0.15s ease, transform 0.15s ease;
+        }
+        .lp-demo-top:hover { background: #14a29b; transform: translateY(-1px); }
+        @keyframes lp-demo-pulse {
+            0% { box-shadow: 0 0 0 0 rgba(26, 183, 175, 0.55); }
+            70% { box-shadow: 0 0 0 10px rgba(26, 183, 175, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(26, 183, 175, 0); }
+        }
+        @media (prefers-reduced-motion: reduce) { .lp-demo-top { animation: none; } }
         .lp-faq-link {
-            position: absolute; top: 1.7rem; right: 9.5rem; z-index: 5;
             display: inline-flex; align-items: center; gap: 0.45rem; cursor: pointer;
             padding: 0.55rem 1rem; border-radius: 999px;
             border: 1px solid var(--brand-blue, #1385b6); background: transparent; color: var(--brand-blue, #1385b6);
@@ -336,7 +351,7 @@ interface Tower { cx: number; cy: number; a: number; b: number; h: number; floor
         }
         .lp-faq-link:hover { background: rgba(19, 133, 182, 0.08); }
         @media (max-width: 860px) {
-            .lp-faq-link { position: static; align-self: center; margin: 1rem 0 0; }
+            .lp-top-actions { position: static; align-self: center; flex-wrap: wrap; justify-content: center; margin: 1rem 0 0; }
         }
         .lp-faq { max-width: 860px; margin: 0 auto; padding: 3.5rem 1.5rem 4rem; }
         .lp-faq h2 {
