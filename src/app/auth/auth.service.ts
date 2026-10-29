@@ -36,7 +36,7 @@ type LoginResponse = {
   mustChangePassword: boolean;
 };
 
-const SESSION_KEY = 'condopy-admin-session';
+export const SESSION_KEY = 'condopy-admin-session';
 
 // El panel web es solo para el personal administrativo. Propietarios, residentes y porteria usan la app movil:
 // no se les abre sesion en el web (el backend ademas valida el rol en cada endpoint).
@@ -157,6 +157,11 @@ export class AuthService {
   }
 
   private restoreSession(): SessionState | null {
+    // Al generar la página de inicio en el servidor (prerenderizado) no hay localStorage ni sesión.
+    if (typeof localStorage === 'undefined') {
+      return null;
+    }
+
     const raw = localStorage.getItem(SESSION_KEY);
     if (!raw) {
       return null;

@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, effect, inject, signal, untracked } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { SeoService } from '../../core/seo.service';
 import { DEMO_DIAGNOSIS } from './demo-funnel';
 import { DemoContactKind, DemoStore } from './demo.store';
 
@@ -196,6 +197,11 @@ export class DemoShell {
   private autoShown = this.store.allDone();
 
   constructor() {
+    inject(SeoService).set({
+      title: 'Demostración gratuita de Expenses | Edificio de ejemplo',
+      description: 'Explora Expenses sin registrarte: un edificio de demostración con unidades, expensas, gastos, informes y libro diario, con datos ficticios.',
+      path: '/explorar'
+    });
     try {
       if (!sessionStorage.getItem('expenses-demo-started')) {
         sessionStorage.setItem('expenses-demo-started', '1');

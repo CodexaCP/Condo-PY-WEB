@@ -4,6 +4,13 @@ import { AppLayout } from './app/layout/component/app.layout';
 import { authGuard, guestGuard, homeRedirectGuard, passwordChangeGuard } from './app/auth/auth.guard';
 
 export const appRoutes: Routes = [
+    // Inicio público: lo ve quien llega por primera vez y Google. Quien ya tiene sesión pasa directo a su panel.
+    {
+        path: '',
+        pathMatch: 'full',
+        canActivate: [guestGuard],
+        loadComponent: () => import('./app/pages/landing/home.component').then(m => m.HomeComponent)
+    },
     {
         path: 'login',
         loadComponent: () => import('./app/pages/auth/login').then(m => m.Login),

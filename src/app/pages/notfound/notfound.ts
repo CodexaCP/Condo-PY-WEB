@@ -1,4 +1,5 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
+import { SeoService } from '../../core/seo.service';
 import { RouterModule } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
 import { AppFloatingConfigurator } from '../../layout/component/app.floatingconfigurator';
@@ -65,4 +66,8 @@ import { AppFloatingConfigurator } from '../../layout/component/app.floatingconf
             </div>
         </div>`
 })
-export class Notfound {}
+export class Notfound {
+    constructor() {
+        inject(SeoService).set({ title: 'Página no encontrada | Expenses', description: 'La página que buscas no existe.', path: '/notfound', noindex: true });
+    }
+}

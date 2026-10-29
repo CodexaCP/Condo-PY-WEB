@@ -12,6 +12,8 @@ import { homeRoute } from '../../auth/auth.guard';
 import { PushService } from '../../core/push.service';
 import { salesWhatsAppUrl } from '../../config/sales.config';
 import { trackPortalVisitOnce } from '../demo/demo-funnel';
+import { FAQS, Faq } from '../../config/faq.data';
+import { SeoService } from '../../core/seo.service';
 
 // Torre isométrica de la ilustración: centro de la base, medios ejes de la base (a horizontal, b = a/2 vertical), alto y pisos.
 interface Tower { cx: number; cy: number; a: number; b: number; h: number; floors: number; }
@@ -449,6 +451,11 @@ export class Login {
     constructor() {
         // Paso 1 del embudo de la demostración: una visita de portada por pestaña.
         trackPortalVisitOnce();
+        inject(SeoService).set({
+            title: 'Ingresar a Expenses | Administración de edificios',
+            description: 'Ingresa a tu cuenta de Expenses o explora la demostración gratuita del software para administrar edificios y condominios en Paraguay.',
+            path: '/login'
+        });
     }
 
     // Las cinco herramientas del recorrido de la demostración (las mismas misiones que ve el visitante al entrar).
@@ -461,58 +468,7 @@ export class Login {
     ];
 
     // Preguntas frecuentes de Expenses (solo del producto: qué hace, para quién es, qué ofrece y qué ventajas tiene).
-    readonly faqs: { question: string; answer: string }[] = [
-        {
-            question: '¿Qué es Expenses y qué hace?',
-            answer:
-                'Expenses es una plataforma para administrar condominios y edificios en propiedad horizontal en Paraguay. Reúne en un solo lugar el cálculo y cobro de expensas, los gastos y proveedores, la morosidad, la contabilidad y la comunicación con propietarios y residentes, todo en Guaraníes.'
-        },
-        {
-            question: '¿Quiénes pueden usar Expenses?',
-            answer:
-                'Administradores de condominios, empresas administradoras de edificios y consorcios, que gestionan uno o varios edificios. También la usan los encargados de cada edificio, y los propietarios y residentes, que acceden a su información desde el portal web y la app.'
-        },
-        {
-            question: '¿Qué servicios y funciones ofrece?',
-            answer:
-                'Expensas ordinarias y extraordinarias y fondo de reserva; cobros, recibos y facturas; control de morosidad con recargos por mora automáticos; gastos, proveedores y cuentas por pagar; ingresos y presupuesto; conciliación bancaria; libro de compras con IVA; libro diario, libro mayor, balance y cierre de ejercicio; informes para la asamblea; comunicados, reclamos, reservas de espacios comunes y votaciones; e importación de datos desde Excel.'
-        },
-        {
-            question: '¿Qué ventajas tiene para el administrador?',
-            answer:
-                'Centraliza la información financiera de cada edificio, automatiza el cálculo de expensas y la mora, reduce el trabajo manual en planillas, deja la contabilidad ordenada para el contador y mantiene un historial de cada operación. Cada usuario ve solo lo que le corresponde según su rol.'
-        },
-        {
-            question: '¿Los propietarios pueden ver sus estados de cuenta?',
-            answer:
-                'Sí. Cada propietario o residente puede consultar sus expensas, pagos, recibos y deuda, recibir avisos y participar en las votaciones de la asamblea desde el portal web y la app.'
-        },
-        {
-            question: '¿Hay una app para el celular?',
-            answer:
-                'Sí, hay una app para Android que se descarga desde esta misma página, con avisos y notificaciones para propietarios, residentes y encargados.'
-        },
-        {
-            question: '¿Puedo administrar más de un edificio?',
-            answer:
-                'Sí. Una misma cuenta puede administrar varios edificios, cada uno con sus propias unidades, finanzas y usuarios, sin mezclar la información entre ellos.'
-        },
-        {
-            question: '¿Mis datos están protegidos?',
-            answer:
-                'Sí. Cada operación queda registrada con su historial y auditoría, los permisos se asignan por rol y el acceso es por conexión segura. Lo contable que ya fue asentado no se modifica: los errores se corrigen con un contraasiento.'
-        },
-        {
-            question: '¿Puedo probar Expenses antes de contratar?',
-            answer:
-                'Sí. Con «Explorar demostración gratuita» entras a un edificio ficticio, sin registrarte y sin tocar datos reales: revisas el panel, abres el estado de cuenta de una unidad, registras un gasto simulado, consultas informes y ves el libro diario.'
-        },
-        {
-            question: '¿Cómo puedo pedir una cotización?',
-            answer:
-                'Escribinos por WhatsApp con el botón «Pedí tu cotización» de esta página y te contamos cómo implementar Expenses en tu edificio o en tu cartera de condominios.'
-        }
-    ];
+    readonly faqs: Faq[] = FAQS;
 
     // Ilustración: torres de atrás hacia adelante (el orden de dibujo es el de la lista), árboles [x, y, radio] y nodos de conexión [x, y].
     readonly towers: Tower[] = [

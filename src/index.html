@@ -25,6 +25,15 @@
             property="og:description"
             content="Software para administrar edificios y condominios en Paraguay. Gestiona expensas, pagos, gastos y estados de cuenta con Expenses."
         />
+        <!-- La página de inicio viene prerenderizada dentro de <app-root>. En cualquier otra ruta se oculta hasta que Angular arranca, para que no parpadee. -->
+        <script>
+            if (location.pathname !== '/') document.documentElement.classList.add('no-prerender');
+        </script>
+        <style>
+            .no-prerender app-root > * {
+                display: none;
+            }
+        </style>
         <base href="/" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
@@ -35,10 +44,7 @@
     </head>
 
     <body>
-        <!-- Texto para buscadores que no ejecutan JavaScript: Angular lo reemplaza al arrancar, así que nadie lo ve en pantalla. -->
-        <app-root>
-            <h1>Plataforma integral de administración financiera y condominios</h1>
-            <p>Expenses es un software para administrar condominios y gestionar expensas, cobros, gastos y contabilidad en Paraguay.</p>
-        </app-root>
+        <!-- La página de inicio (/) se genera ya escrita al compilar (prerenderizado); el resto de las rutas las arma Angular en el navegador. -->
+        <app-root></app-root>
     </body>
 </html>
