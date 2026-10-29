@@ -1,14 +1,12 @@
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
-import { RouterLink } from '@angular/router';
-import { FAQS } from '../../config/faq.data';
-import { salesWhatsAppUrl } from '../../config/sales.config';
+import { DOCUMENT, isPlatformBrowser } from '@angular/common';
+import { ChangeDetectionStrategy, Component, DestroyRef, PLATFORM_ID, inject, signal } from '@angular/core';
+import { ActivatedRoute, RouterLink } from '@angular/router';
+import { salesWhatsAppUrlFor } from '../../config/sales.config';
 import { SITE_URL, SeoService } from '../../core/seo.service';
+import { LandingContent, landingContent } from './landing.content';
 
-const TITLE = 'Expenses | Software para administrar edificios en Paraguay';
-const DESCRIPTION =
-  'Expensas, cobranza, gastos, facturación y contabilidad de tu edificio en un solo sistema, con app para el Encargado y propietarios. Prueba la demo gratis.';
-
-// Página pública de inicio (/). Es lo que ve Google y quien llega por primera vez: qué es Expenses, qué hace y cómo probarlo.
+// Página pública de inicio: español en «/» y portugués en «/pt/» (mismo diseño, textos de landing.content.ts).
+// Es lo que ve Google y quien llega por primera vez: qué es Expenses, qué hace y cómo probarlo.
 // Se prerenderiza al compilar, así el contenido ya viene escrito en el HTML.
 @Component({
   standalone: true,
@@ -16,80 +14,82 @@ const DESCRIPTION =
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [RouterLink],
   template: `
+    @if (offerOtherLang()) {
+      <div class="lang-bar">
+        <a [routerLink]="t.otherPath" [attr.hreflang]="t.otherPath === '/' ? 'es' : 'pt'" [attr.lang]="t.otherPath === '/' ? 'es' : 'pt'">{{ t.otherHint }} →</a>
+        <button type="button" (click)="offerOtherLang.set(false)" aria-label="×">×</button>
+      </div>
+    }
     <header class="hd">
-      <a routerLink="/" class="brand" aria-label="Expenses, inicio">
+      <a [routerLink]="t.path" class="brand" [attr.aria-label]="t.brandAria">
         <img src="/brand/expenses-icon.svg" alt="" width="34" height="34" />
         <b>EXPENSES</b>
       </a>
-      <nav aria-label="Secciones">
-        <a routerLink="/" fragment="funciones">Funciones</a>
-        <a routerLink="/" fragment="perfiles">Para quién</a>
-        <a routerLink="/" fragment="planes">Planes</a>
-        <a routerLink="/" fragment="preguntas">Preguntas</a>
+      <nav [attr.aria-label]="t.navAria">
+        <a [routerLink]="t.path" fragment="funciones">{{ t.nav.features }}</a>
+        <a [routerLink]="t.path" fragment="perfiles">{{ t.nav.profiles }}</a>
+        <a [routerLink]="t.path" fragment="planes">{{ t.nav.plans }}</a>
+        <a [routerLink]="t.path" fragment="preguntas">{{ t.nav.faq }}</a>
       </nav>
       <div class="hd-act">
-        <a routerLink="/login" class="btn ghost">Ingresar</a>
-        <a routerLink="/explorar" class="btn solid">Probar demo</a>
+        <a [routerLink]="t.otherPath" class="btn ghost lang-sw" [attr.hreflang]="t.otherPath === '/' ? 'es' : 'pt'" [attr.lang]="t.otherPath === '/' ? 'es' : 'pt'">{{ t.otherLabel }}</a>
+        <a routerLink="/login" class="btn ghost">{{ t.login }}</a>
+        <a routerLink="/explorar" class="btn solid">{{ t.tryDemo }}</a>
       </div>
     </header>
 
     <main>
       <section class="hero">
         <div class="hero-txt">
-          <span class="eyebrow">Software de administración de edificios · Paraguay</span>
-          <h1>Software para administrar edificios y condominios en Paraguay</h1>
-          <p class="lead">
-            Expensas, cobranza, gastos, facturación y contabilidad de tu edificio en un solo sistema. Panel web para el administrador y app para el Encargado y los propietarios.
-          </p>
+          <span class="eyebrow">{{ t.hero.eyebrow }}</span>
+          <h1>{{ t.hero.h1 }}</h1>
+          <p class="lead">{{ t.hero.lead }}</p>
           <div class="cta">
-            <a routerLink="/explorar" class="btn solid big">Explorar demostración gratuita →</a>
+            <a routerLink="/explorar" class="btn solid big">{{ t.hero.ctaDemo }}</a>
             @if (whatsapp) {
-              <a [href]="whatsapp" class="btn line big" target="_blank" rel="noopener noreferrer">Pedí tu cotización</a>
+              <a [href]="whatsapp" class="btn line big" target="_blank" rel="noopener noreferrer">{{ t.hero.ctaQuote }}</a>
             }
           </div>
           <ul class="chips">
-            <li>Todo en guaraníes</li>
-            <li>IVA y timbrado</li>
-            <li>Propiedad horizontal</li>
-            <li>La demo no pide registro</li>
+            @for (c of t.hero.chips; track c) { <li>{{ c }}</li> }
           </ul>
         </div>
         <div class="mock" aria-hidden="true">
-          <div class="mock-head"><b>Resumen del edificio</b><span>Vista de ejemplo</span></div>
+          <div class="mock-head"><b>{{ t.mock.head }}</b><span>{{ t.mock.sample }}</span></div>
           <div class="mock-kpis">
-            <div><small>Cobrado del mes</small><strong>Gs. 31.134.000</strong><em>82 % de lo emitido</em></div>
-            <div><small>Gastos del mes</small><strong>Gs. 30.730.000</strong><em>8 gastos registrados</em></div>
-            <div><small>Morosidad</small><strong>17,5 %</strong><em>7 de 40 unidades</em></div>
+            @for (k of t.mock.kpis; track k.label) {
+              <div><small>{{ k.label }}</small><strong>{{ k.value }}</strong><em>{{ k.note }}</em></div>
+            }
           </div>
           <div class="mock-bars"><i style="height: 62%"></i><i style="height: 78%"></i><i style="height: 70%"></i><i style="height: 92%"></i><i style="height: 84%"></i><i style="height: 96%"></i></div>
         </div>
       </section>
 
       <section class="sec alt">
-        <h2>Deja las planillas, los cuadernos y el WhatsApp</h2>
-        <p class="sub">Un solo lugar para cobrar, pagar, registrar y rendir cuentas, con historial de cada operación.</p>
+        <h2>{{ t.why.h2 }}</h2>
+        <p class="sub">{{ t.why.sub }}</p>
         <div class="grid3">
-          <article class="card"><h3>Cobra sin perseguir</h3><p>Cálculo automático de expensas, recargo por mora y estado de cuenta de cada unidad, siempre al día.</p></article>
-          <article class="card"><h3>Controla cada guaraní</h3><p>Gastos por rubro, proveedores, presupuesto contra lo real y conciliación bancaria en una sola pantalla.</p></article>
-          <article class="card"><h3>Rinde cuentas con confianza</h3><p>Informe de asamblea, libro diario y balance listos para presentar a los propietarios y entregar al contador.</p></article>
+          @for (c of t.why.cards; track c.title) {
+            <article class="card"><h3>{{ c.title }}</h3><p>{{ c.text }}</p></article>
+          }
         </div>
       </section>
 
       <section class="sec" id="funciones">
-        <h2>Todo lo que necesita la administración de un edificio</h2>
-        <p class="sub">Funciones pensadas para la realidad de Paraguay: guaraníes, IVA, timbrado y asambleas de propietarios.</p>
+        <h2>{{ t.featuresSec.h2 }}</h2>
+        <p class="sub">{{ t.featuresSec.sub }}</p>
         <div class="grid4">
-          @for (f of features; track f.title) {
+          @for (f of t.featuresSec.items; track f.title) {
             <article class="card feat"><h3>{{ f.title }}</h3><p>{{ f.text }}</p></article>
           }
         </div>
       </section>
 
       <section class="sec alt" id="perfiles">
-        <h2>Una plataforma, tres formas de trabajar</h2>
-        <p class="sub">Todos ven la misma información, cada uno con los permisos que le corresponden.</p>
+        <h2>{{ t.profilesSec.h2 }}</h2>
+        <p class="sub">{{ t.profilesSec.sub }}</p>
         <div class="grid3">
-          @for (p of profiles; track p.title) {
+          @for (p of t.profilesSec.items; track p.title) {
             <article class="card">
               <span class="tag">{{ p.where }}</span>
               <h3>{{ p.title }}</h3>
@@ -100,37 +100,37 @@ const DESCRIPTION =
           }
         </div>
         <p class="app-line">
-          <a href="/downloads/expenses.apk" download="Expenses.apk" class="btn line">Descargar app para Android</a>
-          <a routerLink="/explorar" class="btn line">Ver la demo del panel</a>
+          <a href="/downloads/expenses.apk" download="Expenses.apk" class="btn line">{{ t.profilesSec.downloadApp }}</a>
+          <a routerLink="/explorar" class="btn line">{{ t.profilesSec.seeDemo }}</a>
         </p>
       </section>
 
       <section class="sec">
-        <h2>Empezar es simple</h2>
+        <h2>{{ t.start.h2 }}</h2>
         <ol class="steps">
-          <li><b>Prueba la demostración</b><span>Recorre un edificio de ejemplo en 5 minutos, sin registrarte.</span></li>
-          <li><b>Cuéntanos de tu edificio</b><span>Te ayudamos a evaluar cómo adaptar Expenses a tu administración.</span></li>
-          <li><b>Importamos tus datos</b><span>Propietarios, residentes y plan de cuentas desde Excel, para arrancar rápido.</span></li>
+          @for (s of t.start.steps; track s.title) {
+            <li><b>{{ s.title }}</b><span>{{ s.text }}</span></li>
+          }
         </ol>
       </section>
 
       <section class="sec alt" id="planes">
-        <h2>Planes por edificio</h2>
-        <p class="sub">Comienzas con lo esencial y sumas módulos cuando los necesitas, sin cambiar de sistema.</p>
+        <h2>{{ t.plans.h2 }}</h2>
+        <p class="sub">{{ t.plans.sub }}</p>
         <div class="grid3">
-          <article class="card"><h3>Por edificio</h3><p>Pagas según los edificios que administras, con ciclo mensual, trimestral, semestral o anual.</p></article>
-          <article class="card"><h3>Módulos opcionales</h3><p>Finanzas del edificio, Marketplace de espacios y publicidad se activan por edificio, según tu plan.</p></article>
-          <article class="card"><h3>Período de prueba</h3><p>Todo edificio nuevo comienza con un período de prueba para que lo uses con tus datos reales.</p></article>
+          @for (c of t.plans.cards; track c.title) {
+            <article class="card"><h3>{{ c.title }}</h3><p>{{ c.text }}</p></article>
+          }
         </div>
         <p class="app-line">
-          @if (whatsapp) { <a [href]="whatsapp" class="btn solid big" target="_blank" rel="noopener noreferrer">Pedí tu cotización</a> }
+          @if (whatsapp) { <a [href]="whatsapp" class="btn solid big" target="_blank" rel="noopener noreferrer">{{ t.plans.quote }}</a> }
         </p>
       </section>
 
       <section class="sec" id="preguntas">
-        <h2>Preguntas frecuentes sobre Expenses</h2>
+        <h2>{{ t.faqH2 }}</h2>
         <div class="faq">
-          @for (q of faqs; track q.question) {
+          @for (q of t.faqs; track q.question) {
             <details>
               <summary>{{ q.question }}</summary>
               <p>{{ q.answer }}</p>
@@ -140,11 +140,11 @@ const DESCRIPTION =
       </section>
 
       <section class="final">
-        <h2>¿Listo para administrar tu edificio con claridad?</h2>
-        <p>Prueba la demostración gratuita o escríbenos y te contamos cómo implementar Expenses en tu edificio o en tu cartera de condominios.</p>
+        <h2>{{ t.final.h2 }}</h2>
+        <p>{{ t.final.text }}</p>
         <div class="cta center">
-          <a routerLink="/explorar" class="btn white big">Explorar demostración gratuita →</a>
-          @if (whatsapp) { <a [href]="whatsapp" class="btn outw big" target="_blank" rel="noopener noreferrer">Hablar por WhatsApp</a> }
+          <a routerLink="/explorar" class="btn white big">{{ t.final.ctaDemo }}</a>
+          @if (whatsapp) { <a [href]="whatsapp" class="btn outw big" target="_blank" rel="noopener noreferrer">{{ t.final.ctaWhatsapp }}</a> }
         </div>
       </section>
     </main>
@@ -152,13 +152,14 @@ const DESCRIPTION =
     <footer class="ft">
       <div>
         <b>EXPENSES</b>
-        <p>Plataforma de administración de edificios y condominios en Paraguay.</p>
+        <p>{{ t.footer.tagline }}</p>
       </div>
-      <nav aria-label="Enlaces del pie">
-        <a routerLink="/explorar">Demostración gratuita</a>
-        <a routerLink="/login">Ingresar al sistema</a>
-        <a href="/downloads/expenses.apk" download="Expenses.apk">App para Android</a>
+      <nav [attr.aria-label]="t.navAria">
+        <a routerLink="/explorar">{{ t.footer.demo }}</a>
+        <a routerLink="/login">{{ t.footer.login }}</a>
+        <a href="/downloads/expenses.apk" download="Expenses.apk">{{ t.footer.app }}</a>
         <a href="https://www.linkedin.com/company/expensespy/home/" target="_blank" rel="noopener noreferrer">LinkedIn</a>
+        <a [routerLink]="t.otherPath" [attr.hreflang]="t.otherPath === '/' ? 'es' : 'pt'" [attr.lang]="t.otherPath === '/' ? 'es' : 'pt'">{{ t.otherLabel }}</a>
       </nav>
       <small>© {{ year }} Expenses · expenses.com.py</small>
     </footer>
@@ -168,6 +169,8 @@ const DESCRIPTION =
       :host { display: block; color: var(--ex-ink, #16324a); font-family: 'Plus Jakarta Sans', system-ui, sans-serif; background: #fff; line-height: 1.55; }
       a { text-decoration: none; color: inherit; }
       h1, h2, h3 { color: #11364a; line-height: 1.2; margin: 0; }
+      .lang-bar { display: flex; justify-content: center; align-items: center; gap: 0.8rem; padding: 0.45rem 1rem; background: #11364a; color: #fff; font-size: 0.85rem; font-weight: 600; }
+      .lang-bar button { background: none; border: 0; color: #cfe3ee; font-size: 1.1rem; cursor: pointer; line-height: 1; }
       .hd { display: flex; align-items: center; gap: 1.5rem; padding: 0.9rem 1.5rem; max-width: 1180px; margin: 0 auto; }
       .brand { display: flex; align-items: center; gap: 0.5rem; letter-spacing: 0.08em; }
       .hd nav { display: flex; gap: 1.4rem; margin-left: 1rem; font-size: 0.92rem; font-weight: 600; color: #4a6270; }
@@ -234,53 +237,49 @@ const DESCRIPTION =
       @media (max-width: 860px) {
         .hero { grid-template-columns: 1fr; padding-top: 1.5rem; }
         .hd nav { display: none; }
-        .hd-act .ghost { display: none; }
+        .hd-act .ghost:not(.lang-sw) { display: none; }
         .ft { grid-template-columns: 1fr; }
       }
     `
   ]
 })
+
 export class HomeComponent {
   private readonly seo = inject(SeoService);
+  private readonly doc = inject(DOCUMENT);
 
-  readonly whatsapp = salesWhatsAppUrl();
-  readonly faqs = FAQS;
+  // El idioma viene de la ruta: «/» es español y «/pt/» es portugués (data: { lang: 'pt' }).
+  readonly t: LandingContent = landingContent(inject(ActivatedRoute).snapshot.data['lang']);
+  readonly whatsapp = salesWhatsAppUrlFor(this.t.whatsappMessage);
   readonly year = new Date().getFullYear();
-
-  readonly features = [
-    { title: 'Expensas y cobranza', text: 'Expensas ordinarias y extraordinarias, fondo de reserva, recargo por mora automático, estados de cuenta y morosidad.' },
-    { title: 'Pagos con comprobante', text: 'El propietario informa su pago desde la app; el Encargado lo aprueba y se aplica al cargo más antiguo, con recibo.' },
-    { title: 'Gastos y proveedores', text: 'Gastos por rubro, proveedores, cuentas por pagar, notas de crédito de proveedor y gastos recurrentes.' },
-    { title: 'Facturación', text: 'Timbrados, facturas, recibos y notas de crédito, más el libro de compras con IVA crédito fiscal.' },
-    { title: 'Finanzas del edificio', text: 'Flujo de caja, presupuesto contra lo real, fondo de reserva, conciliación bancaria e informe de asamblea.' },
-    { title: 'Contabilidad', text: 'Plan de cuentas configurable, libro diario, libro mayor, balance y cierre de ejercicio, con exportación a Excel.' },
-    { title: 'Comunidad', text: 'Comunicados, reclamos, reservas de espacios comunes, votaciones de asamblea y avisos en el celular.' },
-    { title: 'App del Encargado', text: 'Pagos, reclamos, reservas, morosidad y caja desde el celular, con los permisos que define el administrador.' }
-  ];
-
-  readonly profiles = [
-    {
-      where: 'Panel web',
-      title: 'Administrador',
-      items: ['Gestiona uno o muchos edificios', 'Expensas, cobranza y facturación', 'Finanzas, contabilidad y reportes', 'Configuración y permisos por edificio']
-    },
-    {
-      where: 'App Android',
-      title: 'Encargado del edificio',
-      items: ['Aprueba pagos con comprobante', 'Atiende reclamos y reservas', 'Ve morosidad y estado de caja', 'Concilia el banco si el administrador lo habilita']
-    },
-    {
-      where: 'App Android',
-      title: 'Propietario',
-      items: ['Consulta su estado de cuenta y saldo', 'Informa pagos con foto del comprobante', 'Reserva espacios y presenta reclamos', 'Recibe comunicados y avisos']
-    }
-  ];
+  // Aviso discreto (no una redirección automática, que perjudica al buscador) para quien navega con el celular o el
+  // navegador en portugués y llegó a la versión en español.
+  readonly offerOtherLang = signal(false);
 
   constructor() {
+    const t = this.t;
+
+    if (isPlatformBrowser(inject(PLATFORM_ID)) && t.lang === 'es') {
+      const preferred = (navigator.languages?.length ? navigator.languages : [navigator.language]).find((l) => /^(es|pt)/i.test(l ?? ''));
+      this.offerOtherLang.set(!!preferred && preferred.toLowerCase().startsWith('pt'));
+    }
+
+    // Al salir de la versión en portugués hacia el resto del sistema, el idioma del documento vuelve a español.
+    if (t.lang === 'pt') {
+      inject(DestroyRef).onDestroy(() => this.doc.documentElement.setAttribute('lang', 'es'));
+    }
+
     this.seo.set({
-      title: TITLE,
-      description: DESCRIPTION,
-      path: '/',
+      title: t.seoTitle,
+      description: t.seoDescription,
+      path: t.path,
+      lang: t.htmlLang,
+      ogLocale: t.ogLocale,
+      alternates: [
+        { hreflang: 'es', path: '/' },
+        { hreflang: 'pt', path: '/pt/' },
+        { hreflang: 'x-default', path: '/' }
+      ],
       jsonLd: [
         {
           '@context': 'https://schema.org',
@@ -289,31 +288,32 @@ export class HomeComponent {
           url: SITE_URL + '/',
           logo: SITE_URL + '/favicon.svg',
           sameAs: ['https://www.linkedin.com/company/expensespy/home/'],
-          contactPoint: { '@type': 'ContactPoint', telephone: '+595986645450', contactType: 'sales', areaServed: 'PY', availableLanguage: 'es' }
+          contactPoint: { '@type': 'ContactPoint', telephone: '+595986645450', contactType: 'sales', areaServed: 'PY', availableLanguage: ['es', 'pt'] }
         },
         {
           '@context': 'https://schema.org',
           '@type': 'WebSite',
           name: 'Expenses',
-          url: SITE_URL + '/',
-          inLanguage: 'es-PY'
+          url: SITE_URL + t.path,
+          inLanguage: t.lang === 'pt' ? 'pt' : 'es-PY'
         },
         {
           '@context': 'https://schema.org',
           '@type': 'SoftwareApplication',
           name: 'Expenses',
-          description: DESCRIPTION,
+          description: t.jsonLdDescription,
           applicationCategory: 'BusinessApplication',
           operatingSystem: 'Web, Android',
-          inLanguage: 'es-PY',
-          url: SITE_URL + '/',
-          areaServed: { '@type': 'Country', name: 'Paraguay' },
-          featureList: this.features.map((f) => f.title)
+          inLanguage: t.lang === 'pt' ? 'pt' : 'es-PY',
+          url: SITE_URL + t.path,
+          areaServed: { '@type': 'Country', name: t.areaServed },
+          featureList: t.featuresSec.items.map((f) => f.title)
         },
         {
           '@context': 'https://schema.org',
           '@type': 'FAQPage',
-          mainEntity: FAQS.map((q) => ({ '@type': 'Question', name: q.question, acceptedAnswer: { '@type': 'Answer', text: q.answer } }))
+          inLanguage: t.lang === 'pt' ? 'pt' : 'es-PY',
+          mainEntity: t.faqs.map((q) => ({ '@type': 'Question', name: q.question, acceptedAnswer: { '@type': 'Answer', text: q.answer } }))
         }
       ]
     });

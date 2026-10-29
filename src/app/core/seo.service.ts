@@ -13,6 +13,11 @@ export interface SeoConfig {
   noindex?: boolean;
   // Datos estructurados (JSON-LD) de la página.
   jsonLd?: object[];
+  // Idioma de la página (atributo lang del <html> y og:locale). Por defecto español de Paraguay.
+  lang?: string;
+  ogLocale?: string;
+  // Versiones de esta misma página en otros idiomas (etiquetas hreflang). Debe incluir también la propia.
+  alternates?: { hreflang: string; path: string }[];
 }
 
 // Título, descripción, dirección canónica, redes sociales y datos estructurados por página. Funciona igual en el navegador
@@ -32,7 +37,7 @@ export class SeoService {
 
     this.meta.updateTag({ property: 'og:type', content: 'website' });
     this.meta.updateTag({ property: 'og:site_name', content: 'Expenses' });
-    this.meta.updateTag({ property: 'og:locale', content: 'es_PY' });
+    this.meta.updateTag({ property: 'og:locale', content: config.ogLocale ?? 'es_PY' });
     this.meta.updateTag({ property: 'og:title', content: config.title });
     this.meta.updateTag({ property: 'og:description', content: config.description });
     this.meta.updateTag({ property: 'og:url', content: url });
@@ -40,8 +45,21 @@ export class SeoService {
     this.meta.updateTag({ name: 'twitter:title', content: config.title });
     this.meta.updateTag({ name: 'twitter:description', content: config.description });
 
+    this.doc.documentElement.setAttribute('lang', config.lang ?? 'es');
     this.setCanonical(url);
+    this.setAlternates(config.alternates ?? []);
     this.setJsonLd(config.jsonLd ?? []);
+  }
+
+  private setAlternates(items: { hreflang: string; path: string }[]): void {
+    this.doc.head.querySelectorAll('link[rel="alternate"][hreflang]').forEach((el) => el.remove());
+    for (const item of items) {
+      const link = this.doc.createElement('link');
+      link.setAttribute('rel', 'alternate');
+      link.setAttribute('hreflang', item.hreflang);
+      link.setAttribute('href', SITE_URL + item.path);
+      this.doc.head.appendChild(link);
+    }
   }
 
   private setCanonical(url: string): void {

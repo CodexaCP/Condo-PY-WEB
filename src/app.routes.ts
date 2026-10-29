@@ -11,6 +11,14 @@ export const appRoutes: Routes = [
         canActivate: [guestGuard],
         loadComponent: () => import('./app/pages/landing/home.component').then(m => m.HomeComponent)
     },
+    // Misma portada en portugués (URL propia para que Google la indexe por separado, con hreflang hacia la versión en español).
+    {
+        path: 'pt',
+        pathMatch: 'full',
+        canActivate: [guestGuard],
+        data: { lang: 'pt' },
+        loadComponent: () => import('./app/pages/landing/home.component').then(m => m.HomeComponent)
+    },
     {
         path: 'login',
         loadComponent: () => import('./app/pages/auth/login').then(m => m.Login),

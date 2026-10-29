@@ -27,7 +27,7 @@
         />
         <!-- La página de inicio viene prerenderizada dentro de <app-root>. En cualquier otra ruta se oculta hasta que Angular arranca, para que no parpadee. -->
         <script>
-            if (location.pathname !== '/') document.documentElement.classList.add('no-prerender');
+            if (location.pathname !== '/' && !/^\/pt\/?$/.test(location.pathname)) document.documentElement.classList.add('no-prerender');
         </script>
         <style>
             .no-prerender app-root > * {
