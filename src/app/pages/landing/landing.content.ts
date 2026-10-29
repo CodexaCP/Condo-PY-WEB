@@ -70,7 +70,7 @@ export const LANDING_ES: LandingContent = {
   tryDemo: 'Probar demo',
   hero: {
     eyebrow: 'Software de administración de edificios · Paraguay',
-    h1: 'Software para administrar edificios y condominios en Paraguay',
+    h1: 'Software para administrar edificios y condominios',
     lead: 'Expensas, cobranza, gastos, facturación y contabilidad de tu edificio en un solo sistema. Panel web para el administrador y app para el Encargado y los propietarios.',
     ctaDemo: 'Explorar demostración gratuita →',
     ctaQuote: 'Pedí tu cotización',
@@ -158,7 +158,7 @@ export const LANDING_ES: LandingContent = {
     ctaWhatsapp: 'Hablar por WhatsApp'
   },
   footer: {
-    tagline: 'Plataforma de administración de edificios y condominios en Paraguay.',
+    tagline: 'Plataforma de administración de edificios y condominios.',
     demo: 'Demostración gratuita',
     login: 'Ingresar al sistema',
     app: 'App para Android'

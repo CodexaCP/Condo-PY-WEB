@@ -453,7 +453,7 @@ export class Login {
         trackPortalVisitOnce();
         inject(SeoService).set({
             title: 'Ingresar a Expenses | Administración de edificios',
-            description: 'Ingresa a tu cuenta de Expenses o explora la demostración gratuita del software para administrar edificios y condominios en Paraguay.',
+            description: 'Ingresa a tu cuenta de Expenses o explora la demostración gratuita del software para administrar edificios y condominios.',
             path: '/login'
         });
     }
