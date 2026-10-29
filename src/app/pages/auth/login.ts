@@ -13,6 +13,7 @@ import { PushService } from '../../core/push.service';
 import { salesWhatsAppUrl } from '../../config/sales.config';
 import { trackPortalVisitOnce } from '../demo/demo-funnel';
 import { FAQS, Faq } from '../../config/faq.data';
+import { gaEvent } from '../../core/analytics';
 import { SeoService } from '../../core/seo.service';
 
 // Torre isométrica de la ilustración: centro de la base, medios ejes de la base (a horizontal, b = a/2 vertical), alto y pisos.
@@ -288,7 +289,7 @@ interface Tower { cx: number; cy: number; a: number; b: number; h: number; floor
             </div>
 
             @if (whatsappUrl) {
-                <a class="lp-wa-fab" [href]="whatsappUrl" target="_blank" rel="noopener noreferrer"
+                <a class="lp-wa-fab" [href]="whatsappUrl" target="_blank" rel="noopener noreferrer" (click)="trackWhatsApp()"
                    aria-label="Pedir una cotización por WhatsApp" title="Pedir una cotización por WhatsApp">
                     <i class="pi pi-whatsapp"></i>
                     <span class="lp-wa-label">Pedí tu cotización</span>
@@ -447,6 +448,10 @@ export class Login {
     private readonly pushSvc = inject(PushService);
 
     readonly whatsappUrl = salesWhatsAppUrl();
+
+    trackWhatsApp(): void {
+        gaEvent('generate_lead', { method: 'whatsapp_login' });
+    }
 
     constructor() {
         // Paso 1 del embudo de la demostración: una visita de portada por pestaña.

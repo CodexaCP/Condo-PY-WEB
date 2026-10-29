@@ -2,6 +2,7 @@ import { DOCUMENT, isPlatformBrowser } from '@angular/common';
 import { ChangeDetectionStrategy, Component, DestroyRef, PLATFORM_ID, inject, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { salesWhatsAppUrlFor } from '../../config/sales.config';
+import { gaEvent } from '../../core/analytics';
 import { SITE_URL, SeoService } from '../../core/seo.service';
 import { LandingContent, landingContent } from './landing.content';
 
@@ -13,6 +14,7 @@ import { LandingContent, landingContent } from './landing.content';
   selector: 'app-home-landing',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [RouterLink],
+  host: { '(click)': 'trackClick($event)' },
   template: `
     @if (offerOtherLang()) {
       <div class="lang-bar">
@@ -255,6 +257,14 @@ export class HomeComponent {
   // Aviso discreto (no una redirección automática, que perjudica al buscador) para quien navega con el celular o el
   // navegador en portugués y llegó a la versión en español.
   readonly offerOtherLang = signal(false);
+
+  // Mide los clics que importan para ventas: WhatsApp (contacto) y entrada a la demostración.
+  trackClick(event: Event): void {
+    const link = (event.target as HTMLElement | null)?.closest?.('a');
+    const href = link?.getAttribute('href') ?? '';
+    if (href.includes('wa.me')) gaEvent('generate_lead', { method: 'whatsapp_landing', language: this.t.lang });
+    else if (href.startsWith('/explorar')) gaEvent('demo_click', { language: this.t.lang });
+  }
 
   constructor() {
     const t = this.t;
