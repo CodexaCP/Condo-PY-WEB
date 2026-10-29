@@ -56,7 +56,7 @@ export const LANDING_ES: LandingContent = {
   otherPath: '/pt/',
   otherLabel: 'Português',
   otherHint: 'Ver esta página em português',
-  seoTitle: 'Expenses | Software para administrar edificios en Paraguay',
+  seoTitle: 'Expenses | Software para administrar edificios y condominios',
   seoDescription:
     'Expensas, cobranza, gastos, facturación y contabilidad de tu edificio en un solo sistema, con app para el Encargado y propietarios. Prueba la demo gratis.',
   jsonLdDescription:
@@ -69,7 +69,7 @@ export const LANDING_ES: LandingContent = {
   login: 'Ingresar',
   tryDemo: 'Probar demo',
   hero: {
-    eyebrow: 'Software de administración de edificios · Paraguay',
+    eyebrow: 'Software de administración de edificios y condominios',
     h1: 'Software para administrar edificios y condominios',
     lead: 'Expensas, cobranza, gastos, facturación y contabilidad de tu edificio en un solo sistema. Panel web para el administrador y app para el Encargado y los propietarios.',
     ctaDemo: 'Explorar demostración gratuita →',
