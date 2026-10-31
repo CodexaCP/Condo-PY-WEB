@@ -3,7 +3,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { map } from 'rxjs';
 import { DEMO_PAGE_STYLES } from './demo.styles';
-import { DEMO_LOCKED, DemoContactKind, DemoStore } from './demo.store';
+import { DemoContactKind, DemoStore } from './demo.store';
 
 // Función que la demostración no incluye: se explica qué hace y se invita a contactar (el interés aparece justo aquí).
 @Component({
@@ -14,12 +14,12 @@ import { DEMO_LOCKED, DemoContactKind, DemoStore } from './demo.store';
   template: `
     <div class="card lock">
       <span class="ico"><i [class]="'pi ' + info().icon"></i></span>
-      <span class="badge info"><i class="pi pi-lock"></i> Disponible en la versión completa</span>
+      <span class="badge info"><i class="pi pi-lock"></i> {{ t().lockedPage.badge }}</span>
       <h1>{{ info().title }}</h1>
       <p class="sub">{{ info().text }}</p>
       <div class="row ctas">
-        <a class="btn" [href]="store.whatsappUrl('demostracion')" target="_blank" rel="noopener noreferrer" (click)="contact('demostracion')"><i class="pi pi-video"></i> Ver esta función en una demostración</a>
-        <a class="btn line" routerLink="/explorar/panel"><i class="pi pi-arrow-left"></i> Seguir explorando</a>
+        <a class="btn" [href]="store.whatsappUrl('demostracion')" target="_blank" rel="noopener noreferrer" (click)="contact('demostracion')"><i class="pi pi-video"></i> {{ t().lockedPage.cta }}</a>
+        <a class="btn line" routerLink="/explorar/panel"><i class="pi pi-arrow-left"></i> {{ t().lockedPage.back }}</a>
       </div>
     </div>
   `,
@@ -36,8 +36,9 @@ import { DEMO_LOCKED, DemoContactKind, DemoStore } from './demo.store';
 })
 export class DemoLockedComponent {
   readonly store = inject(DemoStore);
+  readonly t = this.store.t;
   private readonly feature = toSignal(inject(ActivatedRoute).queryParamMap.pipe(map((p) => p.get('f') ?? 'mas')), { initialValue: 'mas' });
-  readonly info = computed(() => DEMO_LOCKED[this.feature()] ?? DEMO_LOCKED['mas']);
+  readonly info = computed(() => this.store.lockedInfo(this.feature()));
 
   constructor() {
     effect(() => this.store.track('locked_click', this.feature()));

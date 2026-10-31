@@ -4,6 +4,7 @@
     <loc>https://expenses.com.py/</loc>
     <xhtml:link rel="alternate" hreflang="es" href="https://expenses.com.py/" />
     <xhtml:link rel="alternate" hreflang="pt" href="https://expenses.com.py/pt/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://expenses.com.py/en/" />
     <xhtml:link rel="alternate" hreflang="x-default" href="https://expenses.com.py/" />
     <lastmod>2026-10-29</lastmod>
     <changefreq>weekly</changefreq>
@@ -13,8 +14,19 @@
     <loc>https://expenses.com.py/pt/</loc>
     <xhtml:link rel="alternate" hreflang="es" href="https://expenses.com.py/" />
     <xhtml:link rel="alternate" hreflang="pt" href="https://expenses.com.py/pt/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://expenses.com.py/en/" />
     <xhtml:link rel="alternate" hreflang="x-default" href="https://expenses.com.py/" />
     <lastmod>2026-10-29</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://expenses.com.py/en/</loc>
+    <xhtml:link rel="alternate" hreflang="es" href="https://expenses.com.py/" />
+    <xhtml:link rel="alternate" hreflang="pt" href="https://expenses.com.py/pt/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://expenses.com.py/en/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://expenses.com.py/" />
+    <lastmod>2026-10-31</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>

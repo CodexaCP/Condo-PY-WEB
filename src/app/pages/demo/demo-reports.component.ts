@@ -13,29 +13,29 @@ type Tab = 'ingresos' | 'morosidad' | 'rubros';
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [RouterLink],
   template: `
-    <h1>Informes</h1>
-    <p class="sub">Lo que necesitas para decidir y para rendir cuentas en la asamblea. Cambia de informe con las pestañas.</p>
+    <h1>{{ t().reports.title }}</h1>
+    <p class="sub">{{ t().reports.sub }}</p>
 
     <div class="tabs" role="tablist">
-      <button type="button" role="tab" [class.on]="tab() === 'ingresos'" (click)="open('ingresos')">Ingresos y gastos</button>
-      <button type="button" role="tab" [class.on]="tab() === 'morosidad'" (click)="open('morosidad')">Morosidad</button>
-      <button type="button" role="tab" [class.on]="tab() === 'rubros'" (click)="open('rubros')">Gastos por rubro</button>
+      <button type="button" role="tab" [class.on]="tab() === 'ingresos'" (click)="open('ingresos')">{{ t().reports.tabs.ingresos }}</button>
+      <button type="button" role="tab" [class.on]="tab() === 'morosidad'" (click)="open('morosidad')">{{ t().reports.tabs.morosidad }}</button>
+      <button type="button" role="tab" [class.on]="tab() === 'rubros'" (click)="open('rubros')">{{ t().reports.tabs.rubros }}</button>
     </div>
 
     @switch (tab()) {
       @case ('ingresos') {
         <div class="card">
-          <h2>Resultado mensual · últimos 6 meses</h2>
+          <h2>{{ t().reports.monthlyTitle }}</h2>
           <div class="tbl-wrap">
             <table class="tb">
-              <thead><tr><th>Mes</th><th class="num">Emitido</th><th class="num">Cobrado</th><th class="num">Cobranza</th><th class="num">Gastos</th><th class="num">Resultado</th></tr></thead>
+              <thead><tr><th>{{ t().reports.monthlyCols.month }}</th><th class="num">{{ t().reports.monthlyCols.issued }}</th><th class="num">{{ t().reports.monthlyCols.collected }}</th><th class="num">{{ t().reports.monthlyCols.rate }}</th><th class="num">{{ t().reports.monthlyCols.expenses }}</th><th class="num">{{ t().reports.monthlyCols.result }}</th></tr></thead>
               <tbody>
                 @for (r of monthly(); track r.label) {
                   <tr>
                     <td><b>{{ r.label }}</b></td>
                     <td class="num">{{ gs(r.charged) }}</td>
                     <td class="num">{{ gs(r.collected) }}</td>
-                    <td class="num">{{ r.rate }} %</td>
+                    <td class="num">{{ t().percent(r.rate) }}</td>
                     <td class="num">{{ gs(r.expense) }}</td>
                     <td class="num" [class.pos]="r.result >= 0" [class.neg]="r.result < 0"><b>{{ gs(r.result) }}</b></td>
                   </tr>
@@ -43,20 +43,20 @@ type Tab = 'ingresos' | 'morosidad' | 'rubros';
               </tbody>
             </table>
           </div>
-          <p class="muted note">El resultado del mes actual cambia si registras gastos simulados en la sección Gastos.</p>
+          <p class="muted note">{{ t().reports.monthlyNote }}</p>
         </div>
       }
       @case ('morosidad') {
         <div class="aging">
-          @for (b of store.aging; track b.label) {
-            <div class="card"><span class="muted">{{ b.label }}</span><strong>{{ gs(b.amount) }}</strong><small>{{ b.units }} {{ b.units === 1 ? 'unidad' : 'unidades' }}</small></div>
+          @for (b of store.aging(); track b.label) {
+            <div class="card"><span class="muted">{{ b.label }}</span><strong>{{ gs(b.amount) }}</strong><small>{{ t().reports.unitCount(b.units) }}</small></div>
           }
         </div>
         <div class="card">
-          <h2>Unidades con deuda vencida</h2>
+          <h2>{{ t().reports.overdueTitle }}</h2>
           <div class="tbl-wrap">
             <table class="tb">
-              <thead><tr><th>Unidad</th><th>Propietario</th><th class="num">Meses vencidos</th><th class="num">Deuda vencida</th><th></th></tr></thead>
+              <thead><tr><th>{{ t().reports.overdueCols.unit }}</th><th>{{ t().reports.overdueCols.owner }}</th><th class="num">{{ t().reports.overdueCols.months }}</th><th class="num">{{ t().reports.overdueCols.debt }}</th><th></th></tr></thead>
               <tbody>
                 @for (x of store.overdueUnits; track x.unit.code) {
                   <tr>
@@ -64,7 +64,7 @@ type Tab = 'ingresos' | 'morosidad' | 'rubros';
                     <td>{{ x.unit.owner }}</td>
                     <td class="num">{{ x.months }}</td>
                     <td class="num neg"><b>{{ gs(x.amount) }}</b></td>
-                    <td><a [routerLink]="['/explorar/unidades', x.unit.code]">Estado de cuenta →</a></td>
+                    <td><a [routerLink]="['/explorar/unidades', x.unit.code]">{{ t().reports.statementLink }}</a></td>
                   </tr>
                 }
               </tbody>
@@ -74,10 +74,10 @@ type Tab = 'ingresos' | 'morosidad' | 'rubros';
       }
       @case ('rubros') {
         <div class="card">
-          <h2>Gastos de {{ store.currentPeriod.label }} por rubro</h2>
+          <h2>{{ t().reports.byCategory(store.currentPeriodLabel()) }}</h2>
           <ul class="cats">
             @for (c of store.expensesByCategory(); track c.category) {
-              <li><span>{{ c.category }}</span><div class="meter"><i [style.width.%]="c.share"></i></div><b>{{ c.share }} %</b><em>{{ gs(c.amount) }}</em></li>
+              <li><span>{{ c.label }}</span><div class="meter"><i [style.width.%]="c.share"></i></div><b>{{ t().percent(c.share) }}</b><em>{{ gs(c.amount) }}</em></li>
             }
           </ul>
         </div>
@@ -86,8 +86,8 @@ type Tab = 'ingresos' | 'morosidad' | 'rubros';
 
     <div class="card more">
       <i class="pi pi-lock"></i>
-      <span>En la versión completa también tienes el <b>informe de asamblea</b>, presupuesto contra lo real, flujo de caja y exportación a Excel.</span>
-      <a routerLink="/explorar/bloqueado" [queryParams]="{ f: 'mas' }">Conocer más →</a>
+      <span>{{ t().reports.more }}<b>{{ t().reports.moreBold }}</b>{{ t().reports.moreRest }}</span>
+      <a routerLink="/explorar/bloqueado" [queryParams]="{ f: 'mas' }">{{ t().reports.learnMore }}</a>
     </div>
   `,
   styles: [
@@ -115,6 +115,7 @@ type Tab = 'ingresos' | 'morosidad' | 'rubros';
 })
 export class DemoReportsComponent {
   readonly store = inject(DemoStore);
+  readonly t = this.store.t;
   readonly gs = formatGs;
   readonly tab = signal<Tab>('ingresos');
   private readonly visited = signal<Tab[]>(['ingresos']);
@@ -122,7 +123,7 @@ export class DemoReportsComponent {
   readonly monthly = computed(() => {
     const chart = this.store.chart();
     return this.store.months.map((m, i) => ({
-      label: `${m.period.label}`,
+      label: this.store.periodLabel(m.period),
       charged: m.charged,
       collected: m.collected,
       rate: m.charged ? Math.round((m.collected / m.charged) * 100) : 0,

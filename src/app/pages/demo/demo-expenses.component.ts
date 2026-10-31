@@ -3,6 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { formatGs } from '../condo/finance-format';
 import { EXPENSE_CATEGORIES, hasVat, vatOf } from './demo.data';
+import { CategoryId } from './demo.i18n';
 import { DEMO_PAGE_STYLES } from './demo.styles';
 import { DemoStore } from './demo.store';
 
@@ -13,71 +14,71 @@ import { DemoStore } from './demo.store';
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [FormsModule, RouterLink],
   template: `
-    <h1>Gastos del edificio</h1>
-    <p class="sub">Registra un gasto de prueba y mira cómo cambia el panel y el libro diario. No se guarda: es solo una simulación.</p>
+    <h1>{{ t().expenses.title }}</h1>
+    <p class="sub">{{ t().expenses.sub }}</p>
 
     <div class="grid2">
       <div class="card">
-        <h2><i class="pi pi-plus-circle"></i> Registrar un gasto simulado</h2>
+        <h2><i class="pi pi-plus-circle"></i> {{ t().expenses.formTitle }}</h2>
         <form class="form" (ngSubmit)="submit()">
-          <label class="fld">Concepto
-            <input name="concept" [ngModel]="concept()" (ngModelChange)="concept.set($event)" placeholder="Ej.: Reparación del portón del garaje" maxlength="80" />
+          <label class="fld">{{ t().expenses.concept }}
+            <input name="concept" [ngModel]="concept()" (ngModelChange)="concept.set($event)" [placeholder]="t().expenses.conceptPlaceholder" maxlength="80" />
           </label>
-          <label class="fld">Proveedor (opcional)
-            <input name="supplier" [ngModel]="supplier()" (ngModelChange)="supplier.set($event)" placeholder="Ej.: Taller Central" maxlength="60" />
+          <label class="fld">{{ t().expenses.supplier }}
+            <input name="supplier" [ngModel]="supplier()" (ngModelChange)="supplier.set($event)" [placeholder]="t().expenses.supplierPlaceholder" maxlength="60" />
           </label>
           <div class="two">
-            <label class="fld">Rubro
+            <label class="fld">{{ t().expenses.category }}
               <select name="category" [ngModel]="category()" (ngModelChange)="category.set($event)">
-                @for (c of categories; track c) { <option [value]="c">{{ c }}</option> }
+                @for (c of categories; track c) { <option [value]="c">{{ t().categories[c] }}</option> }
               </select>
             </label>
-            <label class="fld">Importe en guaraníes (con IVA)
-              <input name="amount" type="number" min="0" step="1000" [ngModel]="amount()" (ngModelChange)="amount.set($event)" placeholder="Ej.: 850000" />
+            <label class="fld">{{ t().expenses.amount }}
+              <input name="amount" type="number" min="0" step="1000" [ngModel]="amount()" (ngModelChange)="amount.set($event)" [placeholder]="t().expenses.amountPlaceholder" />
             </label>
           </div>
           @if (amount() > 0) {
-            <p class="preview">Estás por registrar <b>{{ gs(amount()) }}</b>@if (vat() > 0) { · incluye IVA 10 % de {{ gs(vat()) }} }</p>
+            <p class="preview">{{ t().expenses.preview }}<b>{{ gs(amount()) }}</b>@if (vat() > 0) { {{ t().expenses.vatIncluded(gs(vat())) }} }</p>
           }
           @if (error()) { <p class="err">{{ error() }}</p> }
-          <button class="btn" type="submit"><i class="pi pi-check"></i> Registrar gasto simulado</button>
+          <button class="btn" type="submit"><i class="pi pi-check"></i> {{ t().expenses.submit }}</button>
         </form>
 
         @if (added(); as a) {
           <div class="ok">
             <i class="pi pi-check-circle"></i>
             <div>
-              <b>¡Gasto registrado!</b> «{{ a.concept }}» por {{ gs(a.amount) }}. El saldo de caja bajó y el asiento contable ya se generó.<br />
-              <a routerLink="/explorar/libro-diario" [queryParams]="{ focus: a.id }">Ver el asiento en el libro diario →</a>
-              · <a routerLink="/explorar/panel">Ver el panel →</a>
+              <b>{{ t().expenses.addedTitle }}</b>{{ t().expenses.added(a.concept, gs(a.amount)) }}<br />
+              <a routerLink="/explorar/libro-diario" [queryParams]="{ focus: a.id }">{{ t().expenses.seeEntry }}</a>
+              · <a routerLink="/explorar/panel">{{ t().expenses.seePanel }}</a>
             </div>
           </div>
         }
       </div>
 
       <div class="card">
-        <h2>Resumen del mes</h2>
+        <h2>{{ t().expenses.summary }}</h2>
         <p class="tot">{{ gs(store.expensesTotal()) }}</p>
         <ul class="cats">
           @for (c of store.expensesByCategory(); track c.category) {
-            <li><span>{{ c.category }}</span><div class="meter"><i [style.width.%]="c.share"></i></div><b>{{ c.share }} %</b></li>
+            <li><span>{{ c.label }}</span><div class="meter"><i [style.width.%]="c.share"></i></div><b>{{ t().percent(c.share) }}</b></li>
           }
         </ul>
       </div>
     </div>
 
     <div class="card list">
-      <h2>Gastos de {{ store.currentPeriod.label }}</h2>
+      <h2>{{ t().expenses.listTitle(store.currentPeriodLabel()) }}</h2>
       <div class="tbl-wrap">
         <table class="tb">
-          <thead><tr><th>Fecha</th><th>Concepto</th><th>Proveedor</th><th>Rubro</th><th class="num">Importe</th></tr></thead>
+          <thead><tr><th>{{ t().expenses.cols.date }}</th><th>{{ t().expenses.cols.concept }}</th><th>{{ t().expenses.cols.supplier }}</th><th>{{ t().expenses.cols.category }}</th><th class="num">{{ t().expenses.cols.amount }}</th></tr></thead>
           <tbody>
             @for (e of store.expenses(); track e.id) {
               <tr>
                 <td>{{ store.dateLabel(e.date) }}</td>
-                <td>{{ e.concept }} @if (e.simulated) { <span class="badge sim">Simulado</span> }</td>
+                <td>{{ e.concept }} @if (e.simulated) { <span class="badge sim">{{ t().expenses.simulated }}</span> }</td>
                 <td class="muted">{{ e.supplier }}</td>
-                <td><span class="badge info">{{ e.category }}</span></td>
+                <td><span class="badge info">{{ t().categories[e.category] }}</span></td>
                 <td class="num">{{ gs(e.amount) }}</td>
               </tr>
             }
@@ -109,12 +110,13 @@ import { DemoStore } from './demo.store';
 })
 export class DemoExpensesComponent {
   readonly store = inject(DemoStore);
+  readonly t = this.store.t;
   readonly gs = formatGs;
   readonly categories = EXPENSE_CATEGORIES;
 
   readonly concept = signal('');
   readonly supplier = signal('');
-  readonly category = signal('Mantenimiento');
+  readonly category = signal<CategoryId>('maintenance');
   readonly amount = signal(0);
   readonly error = signal('');
   readonly added = signal<{ id: string; concept: string; amount: number } | null>(null);
@@ -125,11 +127,11 @@ export class DemoExpensesComponent {
     this.error.set('');
     const amount = Number(this.amount());
     if (!this.concept().trim()) {
-      this.error.set('Escribe un concepto para el gasto.');
+      this.error.set(this.t().expenses.errConcept);
       return;
     }
     if (!(amount > 0)) {
-      this.error.set('Ingresa un importe mayor que cero.');
+      this.error.set(this.t().expenses.errAmount);
       return;
     }
     const e = this.store.addExpense({ concept: this.concept(), supplier: this.supplier(), category: this.category(), amount });

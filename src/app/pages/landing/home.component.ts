@@ -1,12 +1,13 @@
-import { DOCUMENT, isPlatformBrowser } from '@angular/common';
-import { ChangeDetectionStrategy, Component, DestroyRef, PLATFORM_ID, inject, signal } from '@angular/core';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { isPlatformBrowser } from '@angular/common';
+import { ChangeDetectionStrategy, Component, PLATFORM_ID, inject, signal } from '@angular/core';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { salesWhatsAppUrlFor } from '../../config/sales.config';
 import { gaEvent } from '../../core/analytics';
+import { LangService } from '../../core/i18n/lang.service';
 import { SITE_URL, SeoService } from '../../core/seo.service';
-import { LandingContent, landingContent } from './landing.content';
+import { LANDING_LANGS, LandingContent, landingContent } from './landing.content';
 
-// Página pública de inicio: español en «/» y portugués en «/pt/» (mismo diseño, textos de landing.content.ts).
+// Página pública de inicio: español en «/», portugués en «/pt/» e inglés en «/en/» (mismo diseño, textos de landing.content.ts).
 // Es lo que ve Google y quien llega por primera vez: qué es Expenses, qué hace y cómo probarlo.
 // Se prerenderiza al compilar, así el contenido ya viene escrito en el HTML.
 @Component({
@@ -16,10 +17,10 @@ import { LandingContent, landingContent } from './landing.content';
   imports: [RouterLink],
   host: { '(click)': 'trackClick($event)' },
   template: `
-    @if (offerOtherLang()) {
+    @if (offer(); as o) {
       <div class="lang-bar">
-        <a [routerLink]="t.otherPath" [attr.hreflang]="t.otherPath === '/' ? 'es' : 'pt'" [attr.lang]="t.otherPath === '/' ? 'es' : 'pt'">{{ t.otherHint }} →</a>
-        <button type="button" (click)="offerOtherLang.set(false)" aria-label="×">×</button>
+        <a [routerLink]="o.path" [attr.hreflang]="o.code" [attr.lang]="o.code" (click)="pick(o.code)">{{ o.hint }} →</a>
+        <button type="button" (click)="offer.set(null)" aria-label="×">×</button>
       </div>
     }
     <header class="hd">
@@ -34,7 +35,11 @@ import { LandingContent, landingContent } from './landing.content';
         <a [routerLink]="t.path" fragment="preguntas">{{ t.nav.faq }}</a>
       </nav>
       <div class="hd-act">
-        <a [routerLink]="t.otherPath" class="btn ghost lang-sw" [attr.hreflang]="t.otherPath === '/' ? 'es' : 'pt'" [attr.lang]="t.otherPath === '/' ? 'es' : 'pt'">{{ t.otherLabel }}</a>
+        <div class="lang-sw" role="group" aria-label="Idioma / Language">
+          @for (l of langs; track l.code) {
+            <a [routerLink]="l.path" [class.on]="l.code === t.lang" [attr.hreflang]="l.code" [attr.lang]="l.code" [attr.aria-current]="l.code === t.lang ? 'true' : null" [title]="l.label" (click)="pick(l.code)">{{ l.code.toUpperCase() }}</a>
+          }
+        </div>
         <a routerLink="/login" class="btn ghost">{{ t.login }}</a>
         <a routerLink="/explorar" class="btn solid">{{ t.tryDemo }}</a>
       </div>
@@ -161,7 +166,11 @@ import { LandingContent, landingContent } from './landing.content';
         <a routerLink="/login">{{ t.footer.login }}</a>
         <a href="/downloads/expenses.apk" download="Expenses.apk">{{ t.footer.app }}</a>
         <a href="https://www.linkedin.com/company/expensespy/home/" target="_blank" rel="noopener noreferrer">LinkedIn</a>
-        <a [routerLink]="t.otherPath" [attr.hreflang]="t.otherPath === '/' ? 'es' : 'pt'" [attr.lang]="t.otherPath === '/' ? 'es' : 'pt'">{{ t.otherLabel }}</a>
+        @for (l of langs; track l.code) {
+          @if (l.code !== t.lang) {
+            <a [routerLink]="l.path" [attr.hreflang]="l.code" [attr.lang]="l.code" (click)="pick(l.code)">{{ l.label }}</a>
+          }
+        }
       </nav>
       <small>© {{ year }} Expenses · expenses.com.py</small>
     </footer>
@@ -177,7 +186,11 @@ import { LandingContent, landingContent } from './landing.content';
       .brand { display: flex; align-items: center; gap: 0.5rem; letter-spacing: 0.08em; }
       .hd nav { display: flex; gap: 1.4rem; margin-left: 1rem; font-size: 0.92rem; font-weight: 600; color: #4a6270; }
       .hd nav a:hover { color: #1385b6; }
-      .hd-act { margin-left: auto; display: flex; gap: 0.5rem; }
+      .hd-act { margin-left: auto; display: flex; gap: 0.5rem; align-items: center; }
+      .lang-sw { display: inline-flex; border: 1.5px solid #cfe3ee; border-radius: 0.7rem; overflow: hidden; }
+      .lang-sw a { padding: 0.5rem 0.65rem; font-size: 0.8rem; font-weight: 800; letter-spacing: 0.04em; color: #4a6270; }
+      .lang-sw a:hover { background: #eef6fb; }
+      .lang-sw a.on { background: #1385b6; color: #fff; }
       .btn { display: inline-flex; align-items: center; justify-content: center; padding: 0.55rem 1.1rem; border-radius: 0.7rem; font-weight: 700; font-size: 0.9rem; border: 1.5px solid transparent; cursor: pointer; transition: background 0.15s, transform 0.15s; }
       .btn:hover { transform: translateY(-1px); }
       .btn.solid { background: #1ab7af; color: #fff; }
@@ -239,7 +252,7 @@ import { LandingContent, landingContent } from './landing.content';
       @media (max-width: 860px) {
         .hero { grid-template-columns: 1fr; padding-top: 1.5rem; }
         .hd nav { display: none; }
-        .hd-act .ghost:not(.lang-sw) { display: none; }
+        .hd-act .ghost { display: none; }
         .ft { grid-template-columns: 1fr; }
       }
     `
@@ -248,15 +261,22 @@ import { LandingContent, landingContent } from './landing.content';
 
 export class HomeComponent {
   private readonly seo = inject(SeoService);
-  private readonly doc = inject(DOCUMENT);
+  private readonly lang = inject(LangService);
+  private readonly router = inject(Router);
+  readonly langs = LANDING_LANGS;
 
   // El idioma viene de la ruta: «/» es español y «/pt/» es portugués (data: { lang: 'pt' }).
   readonly t: LandingContent = landingContent(inject(ActivatedRoute).snapshot.data['lang']);
   readonly whatsapp = salesWhatsAppUrlFor(this.t.whatsappMessage);
   readonly year = new Date().getFullYear();
   // Aviso discreto (no una redirección automática, que perjudica al buscador) para quien navega con el celular o el
-  // navegador en portugués y llegó a la versión en español.
-  readonly offerOtherLang = signal(false);
+  // navegador en otro de los tres idiomas y llegó a una versión distinta.
+  readonly offer = signal<(typeof LANDING_LANGS)[number] | null>(null);
+
+  // Quien elige un idioma con el selector lo conserva en el resto del sitio (login, demostración).
+  pick(code: LandingContent['lang']): void {
+    this.lang.choose(code);
+  }
 
   // Mide los clics que importan para ventas: WhatsApp (contacto) y entrada a la demostración.
   trackClick(event: Event): void {
@@ -269,15 +289,20 @@ export class HomeComponent {
   constructor() {
     const t = this.t;
 
-    if (isPlatformBrowser(inject(PLATFORM_ID)) && t.lang === 'es') {
-      const preferred = (navigator.languages?.length ? navigator.languages : [navigator.language]).find((l) => /^(es|pt)/i.test(l ?? ''));
-      this.offerOtherLang.set(!!preferred && preferred.toLowerCase().startsWith('pt'));
+    if (isPlatformBrowser(inject(PLATFORM_ID))) {
+      const chosen = this.lang.chosen();
+      if (chosen && chosen !== t.lang && t.lang === 'es') {
+        // Quien ya eligió otro idioma y vuelve a la raíz «/» pasa a su versión (el buscador no tiene elección guardada, así que ve la de siempre).
+        const target = LANDING_LANGS.find((l) => l.code === chosen)?.path ?? '/';
+        void this.router.navigateByUrl(target.length > 1 ? target.replace(/\/$/, '') : target, { replaceUrl: true });
+      } else if (!chosen) {
+        const wanted = this.lang.browserLang();
+        this.offer.set(wanted && wanted !== t.lang ? (LANDING_LANGS.find((l) => l.code === wanted) ?? null) : null);
+      }
     }
 
-    // Al salir de la versión en portugués hacia el resto del sistema, el idioma del documento vuelve a español.
-    if (t.lang === 'pt') {
-      inject(DestroyRef).onDestroy(() => this.doc.documentElement.setAttribute('lang', 'es'));
-    }
+    // El resto de la visita (login, demostración) sigue en el idioma de esta portada.
+    this.lang.follow(t.lang);
 
     this.seo.set({
       title: t.seoTitle,
@@ -285,11 +310,7 @@ export class HomeComponent {
       path: t.path,
       lang: t.htmlLang,
       ogLocale: t.ogLocale,
-      alternates: [
-        { hreflang: 'es', path: '/' },
-        { hreflang: 'pt', path: '/pt/' },
-        { hreflang: 'x-default', path: '/' }
-      ],
+      alternates: [...LANDING_LANGS.map((l) => ({ hreflang: l.code as string, path: l.path })), { hreflang: 'x-default', path: '/' }],
       jsonLd: [
         {
           '@context': 'https://schema.org',
@@ -298,14 +319,14 @@ export class HomeComponent {
           url: SITE_URL + '/',
           logo: SITE_URL + '/favicon.svg',
           sameAs: ['https://www.linkedin.com/company/expensespy/home/'],
-          contactPoint: { '@type': 'ContactPoint', telephone: '+595986645450', contactType: 'sales', areaServed: 'PY', availableLanguage: ['es', 'pt'] }
+          contactPoint: { '@type': 'ContactPoint', telephone: '+595986645450', contactType: 'sales', areaServed: 'PY', availableLanguage: ['es', 'pt', 'en'] }
         },
         {
           '@context': 'https://schema.org',
           '@type': 'WebSite',
           name: 'Expenses',
           url: SITE_URL + t.path,
-          inLanguage: t.lang === 'pt' ? 'pt' : 'es-PY'
+          inLanguage: t.lang === 'es' ? 'es-PY' : t.lang
         },
         {
           '@context': 'https://schema.org',
@@ -314,7 +335,7 @@ export class HomeComponent {
           description: t.jsonLdDescription,
           applicationCategory: 'BusinessApplication',
           operatingSystem: 'Web, Android',
-          inLanguage: t.lang === 'pt' ? 'pt' : 'es-PY',
+          inLanguage: t.lang === 'es' ? 'es-PY' : t.lang,
           url: SITE_URL + t.path,
           areaServed: { '@type': 'Country', name: t.areaServed },
           featureList: t.featuresSec.items.map((f) => f.title)
@@ -322,7 +343,7 @@ export class HomeComponent {
         {
           '@context': 'https://schema.org',
           '@type': 'FAQPage',
-          inLanguage: t.lang === 'pt' ? 'pt' : 'es-PY',
+          inLanguage: t.lang === 'es' ? 'es-PY' : t.lang,
           mainEntity: t.faqs.map((q) => ({ '@type': 'Question', name: q.question, acceptedAnswer: { '@type': 'Answer', text: q.answer } }))
         }
       ]

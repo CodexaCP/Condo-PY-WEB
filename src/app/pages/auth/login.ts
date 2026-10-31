@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, computed, effect, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
 import { finalize } from 'rxjs';
@@ -12,7 +12,10 @@ import { homeRoute } from '../../auth/auth.guard';
 import { PushService } from '../../core/push.service';
 import { salesWhatsAppUrl } from '../../config/sales.config';
 import { trackPortalVisitOnce } from '../demo/demo-funnel';
-import { FAQS, Faq } from '../../config/faq.data';
+import { faqsFor } from '../../config/faq.data';
+import { LANGS, LangService } from '../../core/i18n/lang.service';
+import { LangSwitcherComponent } from '../../core/i18n/lang-switcher.component';
+import { LOGIN_TX } from './login.i18n';
 import { gaEvent } from '../../core/analytics';
 import { SeoService } from '../../core/seo.service';
 
@@ -22,15 +25,16 @@ interface Tower { cx: number; cy: number; a: number; b: number; h: number; floor
 @Component({
     selector: 'app-login',
     standalone: true,
-    imports: [CheckboxModule, InputTextModule, PasswordModule, FormsModule, RouterModule, MessageModule, AppFloatingConfigurator],
+    imports: [CheckboxModule, InputTextModule, PasswordModule, FormsModule, RouterModule, MessageModule, AppFloatingConfigurator, LangSwitcherComponent],
     template: `
         <app-floating-configurator />
 
         <div class="lp-root">
             <div class="lp-top-actions">
-                <a class="lp-demo-top" routerLink="/explorar"><i class="pi pi-play-circle"></i> Explorar demo gratis</a>
+                <a class="lp-demo-top" routerLink="/explorar"><i class="pi pi-play-circle"></i> {{ t().demoTop }}</a>
+                <app-lang-switcher />
                 <button type="button" class="lp-faq-link" (click)="goToFaq()">
-                    <i class="pi pi-question-circle"></i> Preguntas frecuentes
+                    <i class="pi pi-question-circle"></i> {{ t().faqLink }}
                 </button>
             </div>
 
@@ -46,30 +50,30 @@ interface Tower { cx: number; cy: number; a: number; b: number; h: number; floor
                     <img src="/brand/expenses-icon.svg" alt="Expenses" class="lp-logo-img" />
                     <div class="lp-brand-id">
                         <span class="lp-brand-name">EXPENSES</span>
-                        <span class="lp-brand-tagline">Cuando todo está claro, everyone trusts.</span>
+                        <span class="lp-brand-tagline">{{ t().tagline }}</span>
                     </div>
                 </div>
 
                 <!-- Mensaje principal + video promocional -->
                 <div class="lp-hero">
                     <div class="lp-slogan-block">
-                        <div class="lp-slogan-eyebrow">Control condominial · en tiempo real</div>
+                        <div class="lp-slogan-eyebrow">{{ t().eyebrow }}</div>
                         <h1 class="lp-slogan">
-                            Cada edificio.<br>
-                            Cada movimiento.<br>
-                            <span class="lp-slogan-accent">Todo bajo control.</span>
+                            {{ t().slogan1 }}<br>
+                            {{ t().slogan2 }}<br>
+                            <span class="lp-slogan-accent">{{ t().sloganAccent }}</span>
                         </h1>
                         <p class="lp-slogan-sub">
-                            Finanzas, operaciones y comunidad conectadas en una sola plataforma.
+                            {{ t().sloganSub }}
                         </p>
-                        <a class="lp-demo-btn" routerLink="/explorar"><i class="pi pi-play-circle"></i> Explorar demostración gratuita <span aria-hidden="true">→</span></a>
+                        <a class="lp-demo-btn" routerLink="/explorar"><i class="pi pi-play-circle"></i> {{ t().demoBtn }} <span aria-hidden="true">→</span></a>
                     </div>
 
                     <!-- Video promocional: en bucle, sin sonido y sin controles (no se puede pausar) -->
                     <div class="lp-promo">
                         <video src="/brand/expenses-promo.mp4" [muted]="true" autoplay loop playsinline
                                disablepictureinpicture disableremoteplayback preload="auto" tabindex="-1"></video>
-                        <span class="lp-vc-tag"><i class="pi pi-play-circle"></i> Conocé Expenses</span>
+                        <span class="lp-vc-tag"><i class="pi pi-play-circle"></i> {{ t().promoTag }}</span>
                     </div>
                 </div>
 
@@ -137,70 +141,70 @@ interface Tower { cx: number; cy: number; a: number; b: number; h: number; floor
 
                     <!-- Finanzas -->
                     <div class="lp-vc lp-vc-fin">
-                        <div class="lp-vc-head"><span class="lp-vc-ico"><i class="pi pi-chart-bar"></i></span><b>FINANZAS</b><em>En línea</em></div>
-                        <small>Total recaudado</small>
+                        <div class="lp-vc-head"><span class="lp-vc-ico"><i class="pi pi-chart-bar"></i></span><b>{{ t().fin.title }}</b><em>{{ t().online }}</em></div>
+                        <small>{{ t().fin.collected }}</small>
                         <div class="lp-vc-big">Gs. 48.230.750</div>
-                        <div class="lp-vc-up">↑ 12% vs. mes anterior</div>
+                        <div class="lp-vc-up">{{ t().fin.trend }}</div>
                         <svg class="lp-spark" viewBox="0 0 100 30" preserveAspectRatio="none"><polyline points="0,26 14,20 28,23 42,14 56,17 70,8 84,10 100,2" fill="none" stroke="#2fb67c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></svg>
-                        <small class="lp-vc-sub">Últimos movimientos</small>
+                        <small class="lp-vc-sub">{{ t().fin.latest }}</small>
                         <ul class="lp-vc-rows">
-                            <li><span>18/04</span><span>Expensas ordinarias</span><b>1.250.000</b></li>
-                            <li><span>18/04</span><span>Expensas extraordinarias</span><b>320.000</b></li>
-                            <li><span>17/04</span><span>Comisión administración</span><b>600.000</b></li>
-                            <li><span>16/04</span><span>Pago proveedor (mant.)</span><b>450.000</b></li>
+                            <li><span>18/04</span><span>{{ t().fin.rows[0] }}</span><b>1.250.000</b></li>
+                            <li><span>18/04</span><span>{{ t().fin.rows[1] }}</span><b>320.000</b></li>
+                            <li><span>17/04</span><span>{{ t().fin.rows[2] }}</span><b>600.000</b></li>
+                            <li><span>16/04</span><span>{{ t().fin.rows[3] }}</span><b>450.000</b></li>
                         </ul>
                     </div>
 
                     <!-- Morosidad -->
                     <div class="lp-vc lp-vc-mor">
-                        <div class="lp-vc-head"><span class="lp-vc-ico"><i class="pi pi-percentage"></i></span><b>MOROSIDAD</b><em>En línea</em></div>
-                        <div class="lp-vc-big">8,4% <span class="lp-vc-down">↓ 2,1% vs. mes anterior</span></div>
+                        <div class="lp-vc-head"><span class="lp-vc-ico"><i class="pi pi-percentage"></i></span><b>{{ t().mor.title }}</b><em>{{ t().online }}</em></div>
+                        <div class="lp-vc-big">{{ t().mor.big }} <span class="lp-vc-down">{{ t().mor.trend }}</span></div>
                         <div class="lp-vc-bar"><i style="width: 38%"></i></div>
                         <div class="lp-vc-two">
-                            <div><small>Deudores</small><strong>18</strong><small>(8,4%)</small></div>
-                            <div><small>Total de unidades</small><strong>214</strong><small>(100%)</small></div>
+                            <div><small>{{ t().mor.debtors }}</small><strong>18</strong><small>(8,4%)</small></div>
+                            <div><small>{{ t().mor.totalUnits }}</small><strong>214</strong><small>(100%)</small></div>
                         </div>
                     </div>
 
                     <!-- Proveedores -->
                     <div class="lp-vc lp-vc-pro">
-                        <div class="lp-vc-head"><span class="lp-vc-ico"><i class="pi pi-truck"></i></span><b>PROVEEDORES</b><em>En línea</em></div>
+                        <div class="lp-vc-head"><span class="lp-vc-ico"><i class="pi pi-truck"></i></span><b>{{ t().pro.title }}</b><em>{{ t().online }}</em></div>
                         <ul class="lp-vc-kv">
-                            <li><span>Pendientes de pago</span><b>3</b></li>
-                            <li><span>Vencidos</span><b>1</b></li>
-                            <li><span>Monto total</span><b>Gs. 4.820.000</b></li>
+                            <li><span>{{ t().pro.pending }}</span><b>3</b></li>
+                            <li><span>{{ t().pro.overdue }}</span><b>1</b></li>
+                            <li><span>{{ t().pro.total }}</span><b>Gs. 4.820.000</b></li>
                         </ul>
                     </div>
 
                     <!-- Votaciones -->
                     <div class="lp-vc lp-vc-vot">
-                        <div class="lp-vc-head"><span class="lp-vc-ico"><i class="pi pi-users"></i></span><b>VOTACIONES</b><em>En línea</em></div>
-                        <div class="lp-vc-title">Asamblea Ordinaria 2025</div>
-                        <small>Resultados disponibles</small>
+                        <div class="lp-vc-head"><span class="lp-vc-ico"><i class="pi pi-users"></i></span><b>{{ t().vot.title }}</b><em>{{ t().online }}</em></div>
+                        <div class="lp-vc-title">{{ t().vot.name }}</div>
+                        <small>{{ t().vot.available }}</small>
                         <div class="lp-vc-bar lp-vc-bar-green"><i style="width: 68%"></i><span>68%</span></div>
-                        <small>145 de 214 propietarios</small>
+                        <small>{{ t().vot.of }}</small>
                     </div>
 
-                    <div class="lp-vc lp-vc-pill"><i class="pi pi-building"></i><span>Condominios administrados</span><b>4</b></div>
+                    <div class="lp-vc lp-vc-pill"><i class="pi pi-building"></i><span>{{ t().managed }}</span><b>4</b></div>
 
-                    <span class="lp-visual-note">Vista de ejemplo</span>
+                    <span class="lp-visual-note">{{ t().sample }}</span>
                 </div>
 
                 <!-- Indicadores de confianza -->
                 <div class="lp-trust-row">
                     <div class="lp-trust-item">
                         <span class="lp-trust-ico"><i class="pi pi-shield"></i></span>
-                        <div><strong>Trazabilidad completa</strong><small>Historial y auditoría en cada operación.</small></div>
+                        <div><strong>{{ t().trust[0].title }}</strong><small>{{ t().trust[0].text }}</small></div>
                     </div>
                     <div class="lp-trust-sep"></div>
                     <div class="lp-trust-item">
                         <span class="lp-trust-ico"><i class="pi pi-users"></i></span>
-                        <div><strong>Permisos por rol</strong><small>Cada usuario, el acceso correcto.</small></div>
+                        <div><strong>{{ t().trust[1].title }}</strong><small>{{ t().trust[1].text }}</small></div>
                     </div>
                     <div class="lp-trust-sep"></div>
                     <div class="lp-trust-item">
                         <span class="lp-trust-ico"><i class="pi pi-lock"></i></span>
-                        <div><strong>Datos protegidos</strong><small>Tu información, siempre segura.</small></div>
+                        <div><strong>{{ t().trust[2].title }}</strong><small>{{ t().trust[2].text }}</small></div>
                     </div>
                 </div>
             </div>
@@ -216,27 +220,27 @@ interface Tower { cx: number; cy: number; a: number; b: number; h: number; floor
                     </div>
 
                     <div class="lp-form-head">
-                        <h2>Tu espacio de gestión.</h2>
-                        <p>Accede a tu cuenta de Expenses.</p>
+                        <h2>{{ t().formTitle }}</h2>
+                        <p>{{ t().formSub }}</p>
                     </div>
 
                     <div class="lp-field">
-                        <label class="lp-label" for="lp-email">Correo o usuario</label>
+                        <label class="lp-label" for="lp-email">{{ t().userLabel }}</label>
                         <div class="lp-input-wrap">
                             <i class="pi pi-envelope"></i>
                             <input pInputText id="lp-email" type="text"
-                                   placeholder="usuario@ejemplo.com"
+                                   [placeholder]="t().userPlaceholder"
                                    class="lp-input"
                                    [(ngModel)]="email" (keyup.enter)="submit()" />
                         </div>
                     </div>
 
                     <div class="lp-field">
-                        <label class="lp-label" for="lp-pass">Contraseña</label>
+                        <label class="lp-label" for="lp-pass">{{ t().passLabel }}</label>
                         <div class="lp-input-wrap">
                             <i class="pi pi-lock"></i>
                             <p-password id="lp-pass" [(ngModel)]="password"
-                                        placeholder="Ingresa tu contraseña"
+                                        [placeholder]="t().passPlaceholder"
                                         [toggleMask]="true" [fluid]="true" [feedback]="false"
                                         styleClass="lp-password"
                                         (keyup.enter)="submit()">
@@ -245,7 +249,7 @@ interface Tower { cx: number; cy: number; a: number; b: number; h: number; floor
                     </div>
 
                     <div class="lp-forgot-row">
-                        <a routerLink="/forgot-password">¿Olvidaste tu contraseña?</a>
+                        <a routerLink="/forgot-password">{{ t().forgot }}</a>
                     </div>
 
                     @if (errorMessage) {
@@ -258,41 +262,41 @@ interface Tower { cx: number; cy: number; a: number; b: number; h: number; floor
                         } @else {
                             <i class="pi pi-sign-in"></i>
                         }
-                        Entrar al sistema
+                        {{ t().submit }}
                     </button>
 
                     <!-- Invitación a la demostración: es el paso 2 del embudo (visita → demo → funciones → necesidad → contacto). -->
                     <div class="lp-demo-card">
                         <div class="lp-demo-head">
                             <span class="lp-demo-ico"><i class="pi pi-play"></i></span>
-                            <h3>¿Quieres conocer Expenses antes de contratar?</h3>
+                            <h3>{{ t().demoCardTitle }}</h3>
                         </div>
-                        <p>Explora un edificio de demostración, descubre las herramientas y prueba un recorrido guiado sin modificar datos reales.</p>
-                        <a class="lp-demo-cta" routerLink="/explorar">Explorar demostración gratuita →</a>
-                        <small>Sin configurar un edificio. Datos ficticios. Sin compromiso.</small>
+                        <p>{{ t().demoCardText }}</p>
+                        <a class="lp-demo-cta" routerLink="/explorar">{{ t().demoCardCta }}</a>
+                        <small>{{ t().demoCardNote }}</small>
                     </div>
 
                     <a class="lp-apk-link" href="/downloads/expenses.apk" download="Expenses.apk">
-                        <i class="pi pi-android"></i> Descargar app para Android
+                        <i class="pi pi-android"></i> {{ t().apk }}
                     </a>
 
                     <div class="lp-form-footer">
-                        <i class="pi pi-lock"></i> Conexión segura
+                        <i class="pi pi-lock"></i> {{ t().secure }}
                         <span class="lp-footer-sep"></span>
                         <a class="lp-linkedin-link" href="https://www.linkedin.com/company/expensespy/home/"
                            target="_blank" rel="noopener noreferrer"
-                           aria-label="LinkedIn de ExpensesPY" title="Seguinos en LinkedIn">
+                           [attr.aria-label]="t().linkedinAria" [title]="t().linkedinTitle">
                             <i class="pi pi-linkedin"></i> LinkedIn
                         </a>
                     </div>
                 </div>
             </div>
 
-            @if (whatsappUrl) {
-                <a class="lp-wa-fab" [href]="whatsappUrl" target="_blank" rel="noopener noreferrer" (click)="trackWhatsApp()"
-                   aria-label="Pedir una cotización por WhatsApp" title="Pedir una cotización por WhatsApp">
+            @if (whatsappUrl(); as wa) {
+                <a class="lp-wa-fab" [href]="wa" target="_blank" rel="noopener noreferrer" (click)="trackWhatsApp()"
+                   [attr.aria-label]="t().waAria" [title]="t().waAria">
                     <i class="pi pi-whatsapp"></i>
-                    <span class="lp-wa-label">Pedí tu cotización</span>
+                    <span class="lp-wa-label">{{ t().waLabel }}</span>
                 </a>
             }
         </div>
@@ -300,12 +304,12 @@ interface Tower { cx: number; cy: number; a: number; b: number; h: number; floor
         <!-- Qué se puede explorar en la demostración: cinco herramientas, cada una enseña algo real del producto. -->
         <section class="lp-explore" id="lp-explore" aria-labelledby="lp-explore-title">
             <div class="lp-explore-head">
-                <span class="lp-explore-eyebrow">Demostración gratuita</span>
-                <h2 id="lp-explore-title">Explora Expenses en 5 minutos</h2>
-                <p>Un edificio ficticio con unidades, propietarios, expensas, gastos y pagos. Sin registrarte y sin configurar nada: haz el recorrido como lo haría un administrador.</p>
+                <span class="lp-explore-eyebrow">{{ t().exploreEyebrow }}</span>
+                <h2 id="lp-explore-title">{{ t().exploreTitle }}</h2>
+                <p>{{ t().exploreText }}</p>
             </div>
             <div class="lp-explore-grid">
-                @for (s of exploreSteps; track s.title; let i = $index) {
+                @for (s of t().steps; track s.title; let i = $index) {
                     <a class="lp-explore-card" routerLink="/explorar">
                         <span class="lp-explore-no">{{ i + 1 }}</span>
                         <i class="pi" [class]="'pi ' + s.icon"></i>
@@ -315,15 +319,15 @@ interface Tower { cx: number; cy: number; a: number; b: number; h: number; floor
                 }
             </div>
             <div class="lp-explore-foot">
-                <a class="lp-demo-cta" routerLink="/explorar">Explorar demostración gratuita →</a>
-                <small>Al terminar, si te interesa, puedes pedir una demostración personalizada o un presupuesto.</small>
+                <a class="lp-demo-cta" routerLink="/explorar">{{ t().demoCardCta }}</a>
+                <small>{{ t().exploreFoot }}</small>
             </div>
         </section>
 
         <!-- Preguntas frecuentes: queda debajo de la pantalla de ingreso (hay que bajar para verla) y sirve para que los buscadores entiendan qué es Expenses. -->
         <section class="lp-faq" id="lp-faq" aria-labelledby="lp-faq-title">
-            <h2 id="lp-faq-title">Preguntas frecuentes sobre Expenses</h2>
-            @for (item of faqs; track item.question) {
+            <h2 id="lp-faq-title">{{ t().faqTitle }}</h2>
+            @for (item of faqs(); track item.question) {
                 <details class="lp-faq-item">
                     <summary>{{ item.question }}</summary>
                     <p>{{ item.answer }}</p>
@@ -447,7 +451,10 @@ export class Login {
     private readonly router = inject(Router);
     private readonly pushSvc = inject(PushService);
 
-    readonly whatsappUrl = salesWhatsAppUrl();
+    private readonly lang = inject(LangService);
+    readonly t = computed(() => LOGIN_TX[this.lang.lang()]);
+    readonly faqs = computed(() => faqsFor(this.lang.lang()));
+    readonly whatsappUrl = computed(() => salesWhatsAppUrl(this.lang.lang()));
 
     trackWhatsApp(): void {
         gaEvent('generate_lead', { method: 'whatsapp_login' });
@@ -456,24 +463,12 @@ export class Login {
     constructor() {
         // Paso 1 del embudo de la demostración: una visita de portada por pestaña.
         trackPortalVisitOnce();
-        inject(SeoService).set({
-            title: 'Ingresar a Expenses | Administración de edificios',
-            description: 'Ingresa a tu cuenta de Expenses o explora la demostración gratuita del software para administrar edificios y condominios.',
-            path: '/login'
+        const seo = inject(SeoService);
+        effect(() => {
+            const info = LANGS.find((l) => l.code === this.lang.lang());
+            seo.set({ title: this.t().seoTitle, description: this.t().seoDescription, path: '/login', lang: info?.htmlLang, ogLocale: info?.ogLocale });
         });
     }
-
-    // Las cinco herramientas del recorrido de la demostración (las mismas misiones que ve el visitante al entrar).
-    readonly exploreSteps: { icon: string; title: string; text: string }[] = [
-        { icon: 'pi-chart-bar', title: 'Conoce la situación del edificio', text: 'Saldo, cobrado, gastos y morosidad. Cada indicador muestra de dónde sale la cifra.' },
-        { icon: 'pi-home', title: 'Revisa una unidad', text: 'Busca un departamento y abre su estado de cuenta con cargos, pagos y saldo.' },
-        { icon: 'pi-wallet', title: 'Registra un gasto simulado', text: 'Cárgalo y mira cómo cambia el panel y el asiento contable.' },
-        { icon: 'pi-file', title: 'Descubre los informes', text: 'Ingresos y gastos, morosidad y gastos por rubro para decidir y rendir cuentas.' },
-        { icon: 'pi-book', title: 'Comprueba el control contable', text: 'Abre un asiento del libro diario y ve de qué movimiento sale.' }
-    ];
-
-    // Preguntas frecuentes de Expenses (solo del producto: qué hace, para quién es, qué ofrece y qué ventajas tiene).
-    readonly faqs: Faq[] = FAQS;
 
     // Ilustración: torres de atrás hacia adelante (el orden de dibujo es el de la lista), árboles [x, y, radio] y nodos de conexión [x, y].
     readonly towers: Tower[] = [
@@ -523,7 +518,7 @@ export class Login {
 
     submit(): void {
         if (!this.email || !this.password) {
-            this.errorMessage = 'Ingresa tu correo o usuario, y tu contraseña.';
+            this.errorMessage = this.t().errEmpty;
             return;
         }
 
@@ -543,11 +538,11 @@ export class Login {
                 error: (error) => {
                     const body = error?.error;
                     if (body?.error === 'duplicate_username') {
-                        this.errorMessage = body.message ?? 'El usuario tiene cuentas en varias empresas. Usa el formato usuario@empresa para iniciar sesión.';
+                        this.errorMessage = body.message ?? this.t().errMultiCompany;
                     } else if (body?.error === 'web_access_denied') {
                         this.errorMessage = body.message;
                     } else {
-                        this.errorMessage = 'No se pudo iniciar sesión. Verifica credenciales y backend.';
+                        this.errorMessage = this.t().errGeneric;
                     }
                 }
             });

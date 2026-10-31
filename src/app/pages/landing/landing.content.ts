@@ -1,6 +1,14 @@
-import { FAQS, FAQS_PT, Faq } from '../../config/faq.data';
+import { FAQS, FAQS_EN, FAQS_PT, Faq } from '../../config/faq.data';
+import { Lang } from '../../core/i18n/lang.service';
 
-export type LandingLang = 'es' | 'pt';
+export type LandingLang = Lang;
+
+// Las tres versiones de la portada: cada una es una URL propia que Google indexa por separado (hreflang entre ellas).
+export const LANDING_LANGS: { code: LandingLang; path: string; label: string; hint: string }[] = [
+  { code: 'es', path: '/', label: 'Español', hint: 'Ver esta página en español' },
+  { code: 'pt', path: '/pt/', label: 'Português', hint: 'Ver esta página em português' },
+  { code: 'en', path: '/en/', label: 'English', hint: 'View this page in English' }
+];
 
 interface TitledText {
   title: string;
@@ -20,11 +28,8 @@ export interface LandingContent {
   // Valor del atributo lang del <html> y de og:locale.
   htmlLang: string;
   ogLocale: string;
-  // Ruta de esta versión y de la otra, para el selector de idioma y las etiquetas hreflang.
+  // Ruta de esta versión (las demás están en LANDING_LANGS), para el selector de idioma y las etiquetas hreflang.
   path: string;
-  otherPath: string;
-  otherLabel: string;
-  otherHint: string;
   seoTitle: string;
   seoDescription: string;
   jsonLdDescription: string;
@@ -53,9 +58,6 @@ export const LANDING_ES: LandingContent = {
   htmlLang: 'es',
   ogLocale: 'es_PY',
   path: '/',
-  otherPath: '/pt/',
-  otherLabel: 'Português',
-  otherHint: 'Ver esta página em português',
   seoTitle: 'Expenses | Software para administrar edificios y condominios',
   seoDescription:
     'Expensas, cobranza, gastos, facturación y contabilidad de tu edificio en un solo sistema, con app para el Encargado y propietarios. Prueba la demo gratis.',
@@ -172,9 +174,6 @@ export const LANDING_PT: LandingContent = {
   htmlLang: 'pt',
   ogLocale: 'pt_BR',
   path: '/pt/',
-  otherPath: '/',
-  otherLabel: 'Español',
-  otherHint: 'Ver esta página en español',
   seoTitle: 'Expenses | Software para administrar condomínios no Paraguai',
   seoDescription:
     'Taxas condominiais, cobrança, despesas, faturamento e contabilidade do seu condomínio em um só sistema, com app para o encarregado e os proprietários. Teste a demo grátis.',
@@ -193,7 +192,7 @@ export const LANDING_PT: LandingContent = {
     lead: 'Taxas condominiais, cobrança, despesas, faturamento e contabilidade do seu condomínio em um só sistema. Painel web para o administrador e app para o encarregado e os proprietários.',
     ctaDemo: 'Explorar demonstração gratuita →',
     ctaQuote: 'Peça seu orçamento',
-    chips: ['Tudo em guaranis', 'IVA e timbrado', 'Propriedade horizontal', 'Demo sem cadastro, em espanhol']
+    chips: ['Tudo em guaranis', 'IVA e timbrado', 'Propriedade horizontal', 'Demo sem cadastro']
   },
   mock: {
     head: 'Resumo do condomínio',
@@ -253,7 +252,7 @@ export const LANDING_PT: LandingContent = {
   start: {
     h2: 'Começar é simples',
     steps: [
-      { title: 'Teste a demonstração', text: 'Percorra um condomínio de exemplo em 5 minutos, sem cadastro. A demo está em espanhol.' },
+      { title: 'Teste a demonstração', text: 'Percorra um condomínio de exemplo em 5 minutos, sem cadastro.' },
       { title: 'Conte-nos sobre o seu condomínio', text: 'Ajudamos você a avaliar como adaptar a Expenses à sua administração.' },
       { title: 'Importamos seus dados', text: 'Proprietários, moradores e plano de contas a partir do Excel, para começar rápido.' }
     ]
@@ -284,6 +283,122 @@ export const LANDING_PT: LandingContent = {
   }
 };
 
+// English version for people who manage or own property in Paraguay (or invest there) and search in English.
+// Paraguayan tax terms are kept as they are (timbrado, VAT/IVA, Guaraníes).
+export const LANDING_EN: LandingContent = {
+  lang: 'en',
+  htmlLang: 'en',
+  ogLocale: 'en_US',
+  path: '/en/',
+  seoTitle: 'Expenses | Condominium and building management software in Paraguay',
+  seoDescription:
+    'Maintenance fees, collections, expenses, invoicing and accounting for your building in one system, with an app for the on-site manager and owners. Try the free demo.',
+  jsonLdDescription:
+    'Maintenance fees, collections, expenses, invoicing and accounting for your building in one system, with an app for the on-site manager and owners.',
+  areaServed: 'Paraguay',
+  whatsappMessage: 'Hello, I saw the Expenses page in English and I would like to request a quote for my building. Could you contact me?',
+  brandAria: 'Expenses, home',
+  navAria: 'Sections',
+  nav: { features: 'Features', profiles: 'Who it is for', plans: 'Plans', faq: 'Questions' },
+  login: 'Log in',
+  tryDemo: 'Try the demo',
+  hero: {
+    eyebrow: 'Condominium and building management software · Paraguay',
+    h1: 'Software to manage condominiums and buildings in Paraguay',
+    lead: 'Maintenance fees, collections, expenses, invoicing and accounting for your building in one system. A web dashboard for the administrator and an app for the on-site manager and owners.',
+    ctaDemo: 'Explore the free demo →',
+    ctaQuote: 'Request your quote',
+    chips: ['Everything in Guaraníes', 'VAT and timbrado', 'Horizontal property', 'The demo needs no sign-up']
+  },
+  mock: {
+    head: 'Building summary',
+    sample: 'Sample view',
+    kpis: [
+      { label: 'Collected this month', value: 'Gs. 31,134,000', note: '82% of the amount billed' },
+      { label: 'Expenses this month', value: 'Gs. 30,730,000', note: '8 expenses recorded' },
+      { label: 'Arrears', value: '17.5%', note: '7 of 40 units' }
+    ]
+  },
+  why: {
+    h2: 'Leave the spreadsheets, notebooks and WhatsApp behind',
+    sub: 'One place to collect, pay, record and report, with a history of every operation.',
+    cards: [
+      { title: 'Collect without chasing', text: 'Automatic calculation of fees, late charges and an account statement for each unit, always up to date.' },
+      { title: 'Control every guaraní', text: 'Expenses by category, suppliers, budget versus actual and bank reconciliation on a single screen.' },
+      { title: 'Report with confidence', text: "Owners' meeting report, general journal and balance sheet ready to present to owners and hand to the accountant." }
+    ]
+  },
+  featuresSec: {
+    h2: 'Everything a building administration needs',
+    sub: "Features designed for the reality of Paraguay: Guaraníes, VAT, timbrado and owners' meetings.",
+    items: [
+      { title: 'Fees and collections', text: 'Ordinary and extraordinary fees, reserve fund, automatic late charges, account statements and arrears.' },
+      { title: 'Payments with proof', text: 'The owner reports a payment from the app; the on-site manager approves it and it is applied to the oldest charge, with a receipt.' },
+      { title: 'Expenses and suppliers', text: 'Expenses by category, suppliers, accounts payable, supplier credit notes and recurring expenses.' },
+      { title: 'Invoicing', text: 'Timbrados, invoices, receipts and credit notes, plus the purchases ledger with VAT input credit.' },
+      { title: 'Building finances', text: "Cash flow, budget versus actual, reserve fund, bank reconciliation and owners' meeting report." },
+      { title: 'Accounting', text: 'Configurable chart of accounts, general journal, general ledger, balance sheet and year-end closing, with Excel export.' },
+      { title: 'Community', text: 'Announcements, complaints, common-area bookings, meeting votes and alerts on the phone.' },
+      { title: 'On-site manager app', text: 'Payments, complaints, bookings, arrears and cash from the phone, with the permissions the administrator defines.' }
+    ]
+  },
+  profilesSec: {
+    h2: 'One platform, three ways to work',
+    sub: 'Everyone sees the same information, each with the permissions that apply to them.',
+    items: [
+      {
+        where: 'Web dashboard',
+        title: 'Administrator',
+        items: ['Manages one or many buildings', 'Fees, collections and invoicing', 'Finances, accounting and reports', 'Settings and permissions per building']
+      },
+      {
+        where: 'Android app',
+        title: 'On-site building manager',
+        items: ['Approves payments with proof', 'Handles complaints and bookings', 'Sees arrears and cash status', 'Reconciles the bank if the administrator enables it']
+      },
+      {
+        where: 'Android app',
+        title: 'Owner',
+        items: ['Checks their account statement and balance', 'Reports payments with a photo of the proof', 'Books common areas and submits complaints', 'Receives announcements and notices']
+      }
+    ],
+    downloadApp: 'Download the Android app',
+    seeDemo: 'See the dashboard demo'
+  },
+  start: {
+    h2: 'Getting started is simple',
+    steps: [
+      { title: 'Try the demo', text: 'Walk through a sample building in 5 minutes, without signing up.' },
+      { title: 'Tell us about your building', text: 'We help you evaluate how to adapt Expenses to your administration.' },
+      { title: 'We import your data', text: 'Owners, residents and chart of accounts from Excel, so you can start quickly.' }
+    ]
+  },
+  plans: {
+    h2: 'Plans per building',
+    sub: 'You start with the essentials and add modules when you need them, without changing systems.',
+    cards: [
+      { title: 'Per building', text: 'You pay according to the buildings you manage, on a monthly, quarterly, semi-annual or annual cycle.' },
+      { title: 'Optional modules', text: 'Building finances, the spaces Marketplace and advertising are enabled per building, according to your plan.' },
+      { title: 'Trial period', text: 'Every new building starts with a trial period so you can use it with your real data.' }
+    ],
+    quote: 'Request your quote'
+  },
+  faqH2: 'Frequently asked questions about Expenses',
+  faqs: FAQS_EN,
+  final: {
+    h2: 'Ready to manage your building with clarity?',
+    text: 'Try the free demo or write to us and we will tell you how to implement Expenses in your building or in your portfolio of condominiums.',
+    ctaDemo: 'Explore the free demo →',
+    ctaWhatsapp: 'Talk on WhatsApp'
+  },
+  footer: {
+    tagline: 'Condominium and building management platform in Paraguay.',
+    demo: 'Free demo',
+    login: 'Log in to the system',
+    app: 'Android app'
+  }
+};
+
 export function landingContent(lang: string | undefined): LandingContent {
-  return lang === 'pt' ? LANDING_PT : LANDING_ES;
+  return lang === 'pt' ? LANDING_PT : lang === 'en' ? LANDING_EN : LANDING_ES;
 }

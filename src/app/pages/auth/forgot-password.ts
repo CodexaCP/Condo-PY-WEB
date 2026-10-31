@@ -1,47 +1,51 @@
 import { CommonModule } from '@angular/common';
-import { Component, inject } from '@angular/core';
+import { Component, computed, effect, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import { finalize } from 'rxjs';
 import { Card } from 'primeng/card';
 import { Message } from 'primeng/message';
 import { AuthService } from '../../auth/auth.service';
+import { LangService } from '../../core/i18n/lang.service';
+import { LangSwitcherComponent } from '../../core/i18n/lang-switcher.component';
+import { PASSWORD_TX } from './password.i18n';
 
 @Component({
   selector: 'app-forgot-password',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, Card, Message],
+  imports: [CommonModule, FormsModule, RouterModule, Card, Message, LangSwitcherComponent],
   template: `
     <div class="auth-page">
+      <div class="auth-lang"><app-lang-switcher /></div>
       <p-card styleClass="auth-card">
         <div class="auth-head">
           <img src="/brand/expenses-icon.svg" alt="Expenses" class="auth-logo" />
           <span class="auth-brand">EXPENSES</span>
-          <h1>¿Olvidaste tu contraseña?</h1>
-          <p>Ingresá tu correo o usuario y te mandamos instrucciones para restablecerla.</p>
+          <h1>{{ t().forgot.title }}</h1>
+          <p>{{ t().forgot.lead }}</p>
         </div>
 
         <div *ngIf="!sent">
           <div class="auth-field">
-            <label for="fp-id">Correo o nombre de usuario</label>
+            <label for="fp-id">{{ t().forgot.label }}</label>
             <input id="fp-id" type="text" [(ngModel)]="identifier" (keyup.enter)="submit()"
-                   placeholder="correo@empresa.com" autocomplete="username" />
+                   [placeholder]="t().forgot.placeholder" autocomplete="username" />
           </div>
 
           <p-message *ngIf="errorMessage" severity="error" [text]="errorMessage" styleClass="w-full"></p-message>
 
           <button class="auth-submit-btn" [disabled]="isSubmitting" (click)="submit()">
             <i class="pi" [class.pi-spin]="isSubmitting" [class.pi-spinner]="isSubmitting" [class.pi-send]="!isSubmitting"></i>
-            Enviar instrucciones
+            {{ t().forgot.send }}
           </button>
         </div>
 
         <div class="auth-success" *ngIf="sent">
           <i class="pi pi-check-circle"></i>
-          <p>Si el dato ingresado corresponde a una cuenta activa, te llegó un correo con el link para restablecer tu contraseña. Revisá también spam.</p>
+          <p>{{ t().forgot.sent }}</p>
         </div>
 
-        <a class="auth-back-link" routerLink="/login"><i class="pi pi-arrow-left"></i> Volver al inicio de sesión</a>
+        <a class="auth-back-link" routerLink="/login"><i class="pi pi-arrow-left"></i> {{ t().forgot.back }}</a>
       </p-card>
     </div>
   `,
@@ -51,6 +55,7 @@ import { AuthService } from '../../auth/auth.service';
       padding: 1.5rem; background: var(--ex-bg);
     }
     :host ::ng-deep .auth-card { width: 100%; max-width: 420px; border-radius: 20px; }
+    .auth-lang { position: absolute; top: 1rem; right: 1rem; }
     .auth-head { text-align: center; margin-bottom: 1.5rem; }
     .auth-brand { font-weight: 800; letter-spacing: 0.08em; color: var(--brand-blue); font-size: 0.85rem; }
     .auth-head h1 { margin: 0.5rem 0 0.5rem; font-size: 1.3rem; }
@@ -85,6 +90,15 @@ import { AuthService } from '../../auth/auth.service';
 })
 export class ForgotPassword {
   private readonly auth = inject(AuthService);
+  private readonly lang = inject(LangService);
+  readonly t = computed(() => PASSWORD_TX[this.lang.lang()]);
+
+  constructor() {
+    effect(() => {
+      this.lang.lang();
+      this.lang.applyHtmlLang();
+    });
+  }
 
   identifier = '';
   errorMessage = '';
@@ -96,7 +110,7 @@ export class ForgotPassword {
     if (this.isSubmitting || this.sent) return;
 
     if (!this.identifier.trim()) {
-      this.errorMessage = 'Ingresá tu correo o nombre de usuario.';
+      this.errorMessage = this.t().forgot.errEmpty;
       return;
     }
 

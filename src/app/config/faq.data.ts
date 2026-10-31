@@ -103,7 +103,7 @@ export const FAQS_PT: Faq[] = [
     {
         question: 'Posso testar a Expenses antes de contratar?',
         answer:
-            'Sim. Com «Explorar demonstração gratuita» você entra em um edifício fictício, sem cadastro e sem tocar em dados reais: vê o painel, abre o extrato de uma unidade, registra uma despesa simulada, consulta relatórios e vê o livro diário. A demonstração está em espanhol.'
+            'Sim. Com «Explorar demonstração gratuita» você entra em um edifício fictício, sem cadastro e sem tocar em dados reais: vê o painel, abre o extrato de uma unidade, registra uma despesa simulada, consulta relatórios e vê o livro diário.'
     },
     {
         question: 'Como posso pedir um orçamento?',
@@ -111,3 +111,63 @@ export const FAQS_PT: Faq[] = [
             'Escreva para nós pelo WhatsApp com o botão «Peça seu orçamento» desta página e contamos como implementar a Expenses no seu edifício ou na sua carteira de condomínios.'
     }
 ];
+
+// English version of the same questions (page /en/).
+export const FAQS_EN: Faq[] = [
+    {
+        question: 'What is Expenses and what does it do?',
+        answer:
+            'Expenses is a platform for managing condominiums and buildings under horizontal property regimes in Paraguay. It brings together in one place the calculation and collection of maintenance fees, expenses and suppliers, arrears, accounting and communication with owners and residents, all in Guaraníes.'
+    },
+    {
+        question: 'Who can use Expenses?',
+        answer:
+            "Condominium administrators, building management companies and consortiums that manage one or several buildings. It is also used by each building's on-site manager, and by owners and residents, who check their information from the Android app."
+    },
+    {
+        question: 'What services and features does it offer?',
+        answer:
+            "Ordinary and extraordinary maintenance fees and reserve fund; collections, receipts and invoices; arrears control with automatic late charges; expenses, suppliers and accounts payable; income and budget; bank reconciliation; purchases ledger with VAT; general journal, general ledger, balance sheet and year-end closing; reports for the owners' meeting; announcements, complaints, common-area bookings and votes; and data import from Excel."
+    },
+    {
+        question: 'What are the advantages for the administrator?',
+        answer:
+            'It centralizes the financial information of each building, automates the calculation of fees and late charges, cuts manual work in spreadsheets, leaves the accounting organized for the accountant and keeps a history of every operation. Each user sees only what corresponds to their role.'
+    },
+    {
+        question: 'Can owners see their account statements?',
+        answer:
+            'Yes. From the Android app, each owner checks their fees, payments, receipts and balance due, reports payments with proof of payment, receives notices, books common areas and submits complaints.'
+    },
+    {
+        question: 'Is there a mobile app?',
+        answer:
+            'Yes, there is an Android app that you can download from this same page, with alerts and notifications for owners, residents and on-site managers.'
+    },
+    {
+        question: 'Can I manage more than one building?',
+        answer:
+            'Yes. A single account can manage several buildings, each with its own units, finances and users, without mixing information between them.'
+    },
+    {
+        question: 'Is my data protected?',
+        answer:
+            'Yes. Every operation is recorded with its history and audit trail, permissions are assigned by role and access is over a secure connection. Accounting entries that have already been posted are not edited: errors are corrected with a reversing entry.'
+    },
+    {
+        question: 'Can I try Expenses before signing up?',
+        answer:
+            "Yes. With \"Explore the free demo\" you enter a fictitious building, without registering and without touching real data: you review the dashboard, open a unit's account statement, record a simulated expense, check reports and see the general journal."
+    },
+    {
+        question: 'How can I request a quote?',
+        answer:
+            'Message us on WhatsApp with the "Request your quote" button on this page and we will tell you how to implement Expenses in your building or in your portfolio of condominiums.'
+    }
+];
+
+export type FaqLang = 'es' | 'pt' | 'en';
+
+export function faqsFor(lang: FaqLang): Faq[] {
+    return lang === 'pt' ? FAQS_PT : lang === 'en' ? FAQS_EN : FAQS;
+}

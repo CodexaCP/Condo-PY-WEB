@@ -1,7 +1,8 @@
-import { ChangeDetectionStrategy, Component, effect, inject, signal, untracked } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, signal, untracked } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { LANGS, LangService } from '../../core/i18n/lang.service';
+import { LangSwitcherComponent } from '../../core/i18n/lang-switcher.component';
 import { SeoService } from '../../core/seo.service';
-import { DEMO_DIAGNOSIS } from './demo-funnel';
 import { DemoContactKind, DemoStore } from './demo.store';
 
 // Marco de la demostración pública: encabezado, navegación, misiones con progreso y el cierre comercial
@@ -10,50 +11,51 @@ import { DemoContactKind, DemoStore } from './demo.store';
   standalone: true,
   selector: 'app-demo-shell',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterOutlet, RouterLink, RouterLinkActive],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, LangSwitcherComponent],
   template: `
     <div class="dm">
       <header class="dm-top">
-        <a routerLink="/login" class="dm-brand" aria-label="Volver al inicio">
+        <a routerLink="/login" class="dm-brand" [attr.aria-label]="t().shell.backHome">
           <img src="/brand/expenses-icon.svg" alt="" />
           <b>EXPENSES</b>
         </a>
-        <span class="dm-badge"><i class="pi pi-eye"></i> Demostración · datos ficticios</span>
+        <span class="dm-badge"><i class="pi pi-eye"></i> {{ t().shell.badge }}</span>
         <div class="dm-actions">
-          <button type="button" class="dm-ghost" (click)="reset()" title="Borra lo que hiciste en la demostración y empieza de nuevo"><i class="pi pi-refresh"></i> <span>Reiniciar</span></button>
-          <button type="button" class="dm-solid" (click)="showFinish.set(true)"><i class="pi pi-comments"></i> <span>Hablar con Expenses</span></button>
-          <a routerLink="/login" class="dm-ghost"><i class="pi pi-sign-out"></i> <span>Salir</span></a>
+          <app-lang-switcher />
+          <button type="button" class="dm-ghost" (click)="reset()" [title]="t().shell.resetTitle"><i class="pi pi-refresh"></i> <span>{{ t().shell.reset }}</span></button>
+          <button type="button" class="dm-solid" (click)="showFinish.set(true)"><i class="pi pi-comments"></i> <span>{{ t().shell.talk }}</span></button>
+          <a routerLink="/login" class="dm-ghost"><i class="pi pi-sign-out"></i> <span>{{ t().shell.exit }}</span></a>
         </div>
       </header>
 
       <section class="dm-context">
         <div>
-          <strong>{{ store.building.name }}</strong>
-          <span>{{ store.building.city }} · {{ store.units.length }} unidades · {{ store.currentPeriod.label }}</span>
+          <strong>{{ store.buildingName() }}</strong>
+          <span>{{ t().shell.contextLine(store.buildingCity(), store.units.length, store.currentPeriodLabel()) }}</span>
         </div>
-        <span class="dm-note">Nada de lo que hagas aquí se guarda ni afecta datos reales.</span>
+        <span class="dm-note">{{ t().shell.note }}</span>
       </section>
 
-      <nav class="dm-nav" aria-label="Módulos de la demostración">
-        <a routerLink="/explorar/panel" routerLinkActive="on"><i class="pi pi-chart-bar"></i> Panel</a>
-        <a routerLink="/explorar/unidades" routerLinkActive="on"><i class="pi pi-home"></i> Unidades</a>
-        <a routerLink="/explorar/gastos" routerLinkActive="on"><i class="pi pi-wallet"></i> Gastos</a>
-        <a routerLink="/explorar/informes" routerLinkActive="on"><i class="pi pi-file"></i> Informes</a>
-        <a routerLink="/explorar/libro-diario" routerLinkActive="on"><i class="pi pi-book"></i> Libro diario</a>
+      <nav class="dm-nav" [attr.aria-label]="t().shell.navAria">
+        <a routerLink="/explorar/panel" routerLinkActive="on"><i class="pi pi-chart-bar"></i> {{ t().shell.nav.panel }}</a>
+        <a routerLink="/explorar/unidades" routerLinkActive="on"><i class="pi pi-home"></i> {{ t().shell.nav.units }}</a>
+        <a routerLink="/explorar/gastos" routerLinkActive="on"><i class="pi pi-wallet"></i> {{ t().shell.nav.expenses }}</a>
+        <a routerLink="/explorar/informes" routerLinkActive="on"><i class="pi pi-file"></i> {{ t().shell.nav.reports }}</a>
+        <a routerLink="/explorar/libro-diario" routerLinkActive="on"><i class="pi pi-book"></i> {{ t().shell.nav.journal }}</a>
         <span class="dm-nav-sep"></span>
-        @for (l of locked; track l.key) {
-          <a routerLink="/explorar/bloqueado" [queryParams]="{ f: l.key }" class="lock"><i class="pi pi-lock"></i> {{ l.label }}</a>
+        @for (key of locked; track key) {
+          <a routerLink="/explorar/bloqueado" [queryParams]="{ f: key }" class="lock"><i class="pi pi-lock"></i> {{ t().lockedNav[key] }}</a>
         }
       </nav>
 
-      <section class="dm-missions" aria-label="Recorrido guiado">
+      <section class="dm-missions" [attr.aria-label]="t().shell.missionsAria">
         <div class="dm-mhead">
-          <b>Recorrido guiado</b>
-          <span>{{ store.completedCount() }} de {{ store.missions.length }} herramientas descubiertas</span>
-          <div class="dm-bar"><i [style.width.%]="(store.completedCount() / store.missions.length) * 100"></i></div>
+          <b>{{ t().shell.missionsTitle }}</b>
+          <span>{{ t().shell.missionsProgress(store.completedCount(), store.missions().length) }}</span>
+          <div class="dm-bar"><i [style.width.%]="(store.completedCount() / store.missions().length) * 100"></i></div>
         </div>
         <div class="dm-chips">
-          @for (m of store.missions; track m.id) {
+          @for (m of store.missions(); track m.id) {
             <a [routerLink]="m.route" class="dm-chip" [class.done]="isDone(m.id)">
               <i [class]="'pi ' + (isDone(m.id) ? 'pi-check-circle' : m.icon)"></i>
               {{ m.title }}
@@ -61,48 +63,48 @@ import { DemoContactKind, DemoStore } from './demo.store';
           }
         </div>
         @if (store.nextMission(); as next) {
-          <p class="dm-hint"><i class="pi pi-compass"></i> <span><b>Siguiente:</b> {{ next.hint }}</span> <a [routerLink]="next.route">Ir ahora →</a></p>
+          <p class="dm-hint"><i class="pi pi-compass"></i> <span><b>{{ t().shell.next }}</b> {{ next.hint }}</span> <a [routerLink]="next.route">{{ t().shell.goNow }}</a></p>
         } @else {
-          <p class="dm-hint ok"><i class="pi pi-star"></i> <span>¡Recorrido completo! Ya viste cómo Expenses ayuda a controlar un edificio.</span> <button type="button" (click)="showFinish.set(true)">Siguiente paso →</button></p>
+          <p class="dm-hint ok"><i class="pi pi-star"></i> <span>{{ t().shell.allDone }}</span> <button type="button" (click)="showFinish.set(true)">{{ t().shell.nextStep }}</button></p>
         }
       </section>
 
       <main class="dm-main"><router-outlet /></main>
 
       <footer class="dm-foot">
-        <span>¿Te gustó lo que viste? Podemos adaptar Expenses a tu administración.</span>
-        <button type="button" class="dm-solid" (click)="showFinish.set(true)">Quiero esto para mi edificio</button>
+        <span>{{ t().shell.footText }}</span>
+        <button type="button" class="dm-solid" (click)="showFinish.set(true)">{{ t().shell.footCta }}</button>
       </footer>
 
       @if (showFinish()) {
         <div class="dm-overlay" (click)="showFinish.set(false)">
           <div class="dm-modal" role="dialog" aria-modal="true" aria-labelledby="dm-fin-title" (click)="$event.stopPropagation()">
-            <button type="button" class="dm-x" (click)="showFinish.set(false)" aria-label="Seguir explorando"><i class="pi pi-times"></i></button>
-            <h2 id="dm-fin-title">{{ store.allDone() ? '¡Completaste el recorrido!' : '¿Listo para administrar tu propio edificio?' }}</h2>
-            <p class="dm-lead">Ya viste cómo funciona Expenses en un entorno de prueba. Cuéntanos tu caso y te ayudamos a evaluar cómo adaptarlo a tu administración.</p>
+            <button type="button" class="dm-x" (click)="showFinish.set(false)" [attr.aria-label]="t().shell.keepExploring"><i class="pi pi-times"></i></button>
+            <h2 id="dm-fin-title">{{ store.allDone() ? t().shell.finishDone : t().shell.finishTodo }}</h2>
+            <p class="dm-lead">{{ t().shell.finishLead }}</p>
 
             <div class="dm-diag">
-              @for (q of questions; track q.key) {
+              @for (q of questions(); track q.key) {
                 <div class="dm-q">
                   <span>{{ q.title }}</span>
                   <div class="dm-opts">
-                    @for (o of q.options; track o) {
-                      <button type="button" [class.on]="store.diagnosis()[q.key] === o" (click)="store.answer(q.key, o)">{{ o }}</button>
+                    @for (o of q.options; track o[0]) {
+                      <button type="button" [class.on]="store.diagnosis()[q.key] === o[0]" (click)="store.answer(q.key, o[0])">{{ o[1] }}</button>
                     }
                   </div>
                 </div>
               }
               @if (store.recommendation()) {
-                <p class="dm-reco"><i class="pi pi-lightbulb"></i> <span><b>Para ti, Expenses ofrece:</b> {{ store.recommendation() }}</span></p>
+                <p class="dm-reco"><i class="pi pi-lightbulb"></i> <span><b>{{ t().shell.forYou }}</b> {{ store.recommendation() }}</span></p>
               }
             </div>
 
             <div class="dm-cta">
-              <a class="dm-solid big" [href]="store.whatsappUrl('demostracion')" target="_blank" rel="noopener noreferrer" (click)="contact('demostracion')"><i class="pi pi-video"></i> Solicitar una demostración personalizada</a>
-              <a class="dm-line big" [href]="store.whatsappUrl('planes')" target="_blank" rel="noopener noreferrer" (click)="contact('planes')"><i class="pi pi-tag"></i> Consultar planes y condiciones</a>
-              <a class="dm-wa big" [href]="store.whatsappUrl('presupuesto')" target="_blank" rel="noopener noreferrer" (click)="contact('presupuesto')"><i class="pi pi-whatsapp"></i> Pedir presupuesto por WhatsApp</a>
+              <a class="dm-solid big" [href]="store.whatsappUrl('demostracion')" target="_blank" rel="noopener noreferrer" (click)="contact('demostracion')"><i class="pi pi-video"></i> {{ t().shell.ctaDemo }}</a>
+              <a class="dm-line big" [href]="store.whatsappUrl('planes')" target="_blank" rel="noopener noreferrer" (click)="contact('planes')"><i class="pi pi-tag"></i> {{ t().shell.ctaPlans }}</a>
+              <a class="dm-wa big" [href]="store.whatsappUrl('presupuesto')" target="_blank" rel="noopener noreferrer" (click)="contact('presupuesto')"><i class="pi pi-whatsapp"></i> {{ t().shell.ctaQuote }}</a>
             </div>
-            <button type="button" class="dm-back" (click)="showFinish.set(false)">Seguir explorando</button>
+            <button type="button" class="dm-back" (click)="showFinish.set(false)">{{ t().shell.keepExploring }}</button>
           </div>
         </div>
       }
@@ -182,25 +184,23 @@ import { DemoContactKind, DemoStore } from './demo.store';
 })
 export class DemoShell {
   readonly store = inject(DemoStore);
+  readonly t = this.store.t;
   private readonly router = inject(Router);
+  private readonly lang = inject(LangService);
 
-  readonly questions = DEMO_DIAGNOSIS;
-  readonly locked = [
-    { key: 'conciliacion', label: 'Conciliación bancaria' },
-    { key: 'facturacion', label: 'Facturación' },
-    { key: 'votaciones', label: 'Votaciones' },
-    { key: 'app', label: 'App' }
-  ];
+  // Las tres preguntas del diagnóstico, en el idioma actual.
+  readonly questions = computed(() => (['units', 'method', 'pain'] as const).map((key) => ({ key, ...this.t().diagnosis[key] })));
+  readonly locked = ['conciliacion', 'facturacion', 'votaciones', 'app'];
   readonly showFinish = signal(false);
 
   // El cierre se abre solo al completar la quinta misión (no al cargar con el recorrido ya terminado).
   private autoShown = this.store.allDone();
 
   constructor() {
-    inject(SeoService).set({
-      title: 'Demostración gratuita de Expenses | Edificio de ejemplo',
-      description: 'Explora Expenses sin registrarte: un edificio de demostración con unidades, expensas, gastos, informes y libro diario, con datos ficticios.',
-      path: '/explorar'
+    const seo = inject(SeoService);
+    effect(() => {
+      const info = LANGS.find((l) => l.code === this.lang.lang());
+      seo.set({ title: this.t().shell.seoTitle, description: this.t().shell.seoDescription, path: '/explorar', lang: info?.htmlLang, ogLocale: info?.ogLocale });
     });
     try {
       if (!sessionStorage.getItem('expenses-demo-started')) {

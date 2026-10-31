@@ -19,6 +19,14 @@ export const appRoutes: Routes = [
         data: { lang: 'pt' },
         loadComponent: () => import('./app/pages/landing/home.component').then(m => m.HomeComponent)
     },
+    // Y en inglés.
+    {
+        path: 'en',
+        pathMatch: 'full',
+        canActivate: [guestGuard],
+        data: { lang: 'en' },
+        loadComponent: () => import('./app/pages/landing/home.component').then(m => m.HomeComponent)
+    },
     {
         path: 'login',
         loadComponent: () => import('./app/pages/auth/login').then(m => m.Login),

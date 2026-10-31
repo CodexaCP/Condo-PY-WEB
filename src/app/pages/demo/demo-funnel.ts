@@ -46,26 +46,6 @@ export function trackPortalVisitOnce(): void {
   trackDemoEvent('portal_visit');
 }
 
-export interface DemoDiagnosisQuestion {
-  key: 'units' | 'method' | 'pain';
-  title: string;
-  options: string[];
-}
-
-// Paso 4 del embudo: tres preguntas para entender qué necesita la persona.
-export const DEMO_DIAGNOSIS: DemoDiagnosisQuestion[] = [
-  { key: 'units', title: '¿Cuántas unidades administras?', options: ['Hasta 30', '31 a 100', '101 a 300', 'Más de 300'] },
-  { key: 'method', title: '¿Cómo llevas hoy las expensas?', options: ['Planillas de Excel', 'Otro software', 'Cuaderno o papel', 'Lo lleva mi contador'] },
-  { key: 'pain', title: '¿Qué te quita más tiempo o te preocupa más?', options: ['Cobrar y la morosidad', 'Controlar gastos y proveedores', 'La contabilidad', 'Rendir cuentas en la asamblea', 'Comunicarme con propietarios'] }
-];
-
+// Paso 4 del embudo: tres preguntas para entender qué necesita la persona. Los textos de las preguntas y sus opciones
+// están en demo.i18n.ts; aquí solo se guardan los identificadores de lo que eligió.
 export type DemoDiagnosisAnswers = Partial<Record<'units' | 'method' | 'pain', string>>;
-
-// Qué le mostraría Expenses a cada perfil según su mayor preocupación.
-export const DEMO_PAIN_RECOMMENDATION: Record<string, string> = {
-  'Cobrar y la morosidad': 'Expensas con recargo por mora automático, estados de cuenta por unidad y el informe de morosidad que viste en la demo.',
-  'Controlar gastos y proveedores': 'Gastos por rubro, proveedores, cuentas por pagar y la nota de crédito de proveedor, con el impacto contable al instante.',
-  'La contabilidad': 'Libro diario, libro mayor, balance y libro de compras con IVA, listos para tu contador.',
-  'Rendir cuentas en la asamblea': 'Informe de asamblea, presupuesto contra lo real y fondo de reserva, para presentar cuentas claras.',
-  'Comunicarme con propietarios': 'Comunicados, reclamos, avisos en la app y votaciones, para que todos estén informados.'
-};

@@ -6,8 +6,6 @@ import { DemoStore, JournalEntry } from './demo.store';
 
 type Filter = 'todos' | JournalEntry['kind'];
 
-const KIND_LABEL: Record<JournalEntry['kind'], string> = { liquidacion: 'Liquidación', cobro: 'Cobro', gasto: 'Gasto' };
-
 // Misión 5: libro diario. Cada asiento muestra de qué movimiento sale; abrir uno cumple la misión.
 @Component({
   standalone: true,
@@ -15,21 +13,21 @@ const KIND_LABEL: Record<JournalEntry['kind'], string> = { liquidacion: 'Liquida
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [RouterLink],
   template: `
-    <h1>Libro diario</h1>
-    <p class="sub">Cada cobro, gasto y liquidación genera su asiento contable. Abre uno para ver las cuentas y el movimiento de origen.</p>
+    <h1>{{ t().journal.title }}</h1>
+    <p class="sub">{{ t().journal.sub }}</p>
 
     <div class="row filters">
-      @for (f of filters; track f.key) {
-        <button type="button" class="chip" [class.on]="filter() === f.key" (click)="filter.set(f.key)">{{ f.label }}</button>
+      @for (key of filters; track key) {
+        <button type="button" class="chip" [class.on]="filter() === key" (click)="filter.set(key)">{{ t().journal.filters[key] }}</button>
       }
-      <span class="muted count">{{ entries().length }} asientos</span>
+      <span class="muted count">{{ t().journal.count(entries().length) }}</span>
     </div>
 
     <div class="list">
       @for (e of entries(); track e.id) {
         <div class="entry card" [id]="'je-' + e.id" [class.open]="openId() === e.id">
           <button type="button" class="head" (click)="toggle(e.id)" [attr.aria-expanded]="openId() === e.id">
-            <span class="no">N.º {{ pad(e.number) }}</span>
+            <span class="no">{{ t().journal.number }} {{ pad(e.number) }}</span>
             <span class="dt">{{ store.dateLabel(e.date) }}</span>
             <span class="ds">{{ e.description }}</span>
             <span class="badge" [class]="'badge ' + tone(e.kind)">{{ label(e.kind) }}</span>
@@ -40,16 +38,16 @@ const KIND_LABEL: Record<JournalEntry['kind'], string> = { liquidacion: 'Liquida
             <div class="body">
               <div class="tbl-wrap">
                 <table class="tb">
-                  <thead><tr><th>Cuenta</th><th>Nombre</th><th class="num">Debe</th><th class="num">Haber</th></tr></thead>
+                  <thead><tr><th>{{ t().journal.cols.account }}</th><th>{{ t().journal.cols.name }}</th><th class="num">{{ t().journal.cols.debit }}</th><th class="num">{{ t().journal.cols.credit }}</th></tr></thead>
                   <tbody>
                     @for (l of e.lines; track $index) {
                       <tr><td>{{ l.account }}</td><td>{{ l.name }}</td><td class="num">{{ l.debit ? gs(l.debit) : '' }}</td><td class="num">{{ l.credit ? gs(l.credit) : '' }}</td></tr>
                     }
-                    <tr class="tot"><td colspan="2"><b>Totales</b> <span class="badge ok">Asiento balanceado</span></td><td class="num"><b>{{ gs(total(e)) }}</b></td><td class="num"><b>{{ gs(total(e)) }}</b></td></tr>
+                    <tr class="tot"><td colspan="2"><b>{{ t().journal.totals }}</b> <span class="badge ok">{{ t().journal.balanced }}</span></td><td class="num"><b>{{ gs(total(e)) }}</b></td><td class="num"><b>{{ gs(total(e)) }}</b></td></tr>
                   </tbody>
                 </table>
               </div>
-              <p class="origin"><i class="pi pi-link"></i> <b>Origen:</b> {{ e.origin }} · <a [routerLink]="e.link">Ver el movimiento →</a></p>
+              <p class="origin"><i class="pi pi-link"></i> <b>{{ t().journal.origin }}</b> {{ e.origin }} · <a [routerLink]="e.link">{{ t().journal.seeMovement }}</a></p>
             </div>
           }
         </div>
@@ -58,8 +56,8 @@ const KIND_LABEL: Record<JournalEntry['kind'], string> = { liquidacion: 'Liquida
 
     <div class="card more">
       <i class="pi pi-lock"></i>
-      <span>La versión completa suma <b>libro mayor, balance, libro de compras con IVA y cierre de ejercicio</b>. Lo ya asentado no se modifica: los errores se corrigen con un contraasiento.</span>
-      <a routerLink="/explorar/bloqueado" [queryParams]="{ f: 'mas' }">Conocer más →</a>
+      <span>{{ t().journal.more }}<b>{{ t().journal.moreBold }}</b>{{ t().journal.moreRest }}</span>
+      <a routerLink="/explorar/bloqueado" [queryParams]="{ f: 'mas' }">{{ t().journal.learnMore }}</a>
     </div>
   `,
   styles: [
@@ -91,16 +89,12 @@ const KIND_LABEL: Record<JournalEntry['kind'], string> = { liquidacion: 'Liquida
 })
 export class DemoJournalComponent {
   readonly store = inject(DemoStore);
+  readonly t = this.store.t;
   readonly gs = formatGs;
   readonly filter = signal<Filter>('todos');
   readonly openId = signal<string | null>(null);
 
-  readonly filters: { key: Filter; label: string }[] = [
-    { key: 'todos', label: 'Todos' },
-    { key: 'gasto', label: 'Gastos' },
-    { key: 'cobro', label: 'Cobros' },
-    { key: 'liquidacion', label: 'Liquidación' }
-  ];
+  readonly filters: Filter[] = ['todos', 'gasto', 'cobro', 'liquidacion'];
 
   readonly entries = computed(() => this.store.journal().filter((e) => this.filter() === 'todos' || e.kind === this.filter()));
 
@@ -129,7 +123,7 @@ export class DemoJournalComponent {
   }
 
   label(k: JournalEntry['kind']): string {
-    return KIND_LABEL[k];
+    return this.t().journal.kinds[k];
   }
 
   tone(k: JournalEntry['kind']): string {

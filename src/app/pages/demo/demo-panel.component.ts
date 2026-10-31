@@ -23,8 +23,8 @@ interface Kpi {
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [RouterLink],
   template: `
-    <h1>Así está el edificio hoy</h1>
-    <p class="sub">Haz clic en un indicador para descubrir de dónde sale la cifra.</p>
+    <h1>{{ t().panel.title }}</h1>
+    <p class="sub">{{ t().panel.sub }}</p>
 
     <div class="kpis">
       @for (k of kpis(); track k.id) {
@@ -39,7 +39,7 @@ interface Kpi {
 
     @if (selected(); as s) {
       <div class="card explain">
-        <h2><i class="pi pi-search"></i> ¿De dónde sale «{{ s.label }}»?</h2>
+        <h2><i class="pi pi-search"></i> {{ t().panel.whereFrom(s.label) }}</h2>
         <p class="muted">{{ s.text }}</p>
         <ul>
           @for (r of s.rows; track r.label) {
@@ -54,23 +54,23 @@ interface Kpi {
 
     <div class="grid2">
       <div class="card">
-        <h2>Ingresos y gastos · últimos 6 meses</h2>
+        <h2>{{ t().panel.chartTitle }}</h2>
         <div class="chart">
           @for (c of store.chart(); track c.label) {
             <div class="col">
               <div class="bars">
-                <i class="b inc" [style.height.%]="pct(c.income)" [title]="'Cobrado: ' + gs(c.income)"></i>
-                <i class="b exp" [style.height.%]="pct(c.expense)" [title]="'Gastos: ' + gs(c.expense)"></i>
+                <i class="b inc" [style.height.%]="pct(c.income)" [title]="t().panel.collectedTip + ': ' + gs(c.income)"></i>
+                <i class="b exp" [style.height.%]="pct(c.expense)" [title]="t().panel.expensesTip + ': ' + gs(c.expense)"></i>
               </div>
               <span>{{ c.label }}</span>
             </div>
           }
         </div>
-        <div class="legend"><span><i class="inc"></i> Cobrado</span><span><i class="exp"></i> Gastos</span></div>
+        <div class="legend"><span><i class="inc"></i> {{ t().panel.collectedTip }}</span><span><i class="exp"></i> {{ t().panel.expensesTip }}</span></div>
       </div>
 
       <div class="card">
-        <h2>Últimos movimientos</h2>
+        <h2>{{ t().panel.lastMovements }}</h2>
         <ul class="mov">
           @for (m of store.lastMovements(); track m.id) {
             <li>
@@ -80,14 +80,14 @@ interface Kpi {
             </li>
           }
         </ul>
-        <a routerLink="/explorar/libro-diario" class="muted-link">Ver todos en el libro diario →</a>
+        <a routerLink="/explorar/libro-diario" class="muted-link">{{ t().panel.seeAll }}</a>
       </div>
     </div>
 
     <div class="card alert">
       <i class="pi pi-exclamation-triangle"></i>
-      <span><b>{{ store.overdueUnits.length }} unidades</b> tienen deuda vencida por {{ gs(store.overdueTotal) }}. </span>
-      <a routerLink="/explorar/unidades" [queryParams]="{ deuda: 1 }">Ver quiénes son →</a>
+      <span><b>{{ alert().bold }}</b>{{ alert().rest }}</span>
+      <a routerLink="/explorar/unidades" [queryParams]="{ deuda: 1 }">{{ t().panel.alertLink }}</a>
     </div>
   `,
   styles: [
@@ -128,49 +128,53 @@ interface Kpi {
 })
 export class DemoPanelComponent {
   readonly store = inject(DemoStore);
+  readonly t = this.store.t;
   readonly gs = formatGs;
+  readonly alert = computed(() => this.t().panel.alert(this.store.overdueUnits.length, formatGs(this.store.overdueTotal)));
   readonly selectedId = signal<string | null>(null);
 
   readonly kpis = computed<Kpi[]>(() => {
     const s = this.store;
+    const tx = this.t();
+    const k = tx.panel.kpi;
     const collected = s.collectedMonth;
     const expenses = s.expensesTotal();
-    const rate = s.chargedMonth ? Math.round((collected / s.chargedMonth) * 100) : 0;
-    const top = s.expensesByCategory().slice(0, 4).map((c) => ({ label: `${c.category} (${c.share} %)`, value: formatGs(c.amount) }));
+    const rate = tx.percent(s.chargedMonth ? Math.round((collected / s.chargedMonth) * 100) : 0);
+    const top = s.expensesByCategory().slice(0, 4).map((c) => ({ label: `${c.label} (${tx.percent(c.share)})`, value: formatGs(c.amount) }));
     return [
       {
-        id: 'cash', icon: 'pi-building-columns', label: 'Caja y bancos', value: formatGs(s.cashBalance()), note: 'Saldo disponible hoy', tone: 'teal',
-        text: 'Es el saldo de apertura del mes, más lo cobrado a los propietarios, menos los gastos pagados.',
-        rows: [{ label: 'Saldo de apertura del mes', value: formatGs(s.openingCash) }, { label: '+ Cobrado en el mes', value: formatGs(collected) }, { label: '− Gastos pagados en el mes', value: formatGs(expenses) }, { label: '= Saldo de hoy', value: formatGs(s.cashBalance()) }],
-        link: { label: 'Ver los asientos en el libro diario', route: '/explorar/libro-diario' }
+        id: 'cash', icon: 'pi-building-columns', label: k.cash.label, value: formatGs(s.cashBalance()), note: k.cash.note, tone: 'teal',
+        text: k.cash.text,
+        rows: [{ label: k.cash.opening, value: formatGs(s.openingCash) }, { label: k.cash.plus, value: formatGs(collected) }, { label: k.cash.minus, value: formatGs(expenses) }, { label: k.cash.equals, value: formatGs(s.cashBalance()) }],
+        link: { label: k.cash.link, route: '/explorar/libro-diario' }
       },
       {
-        id: 'collected', icon: 'pi-money-bill', label: 'Cobrado del mes', value: formatGs(collected), note: `${rate} % de lo emitido`, tone: 'blue',
-        text: 'Suma de los pagos registrados este mes contra lo emitido en la liquidación de expensas.',
-        rows: [{ label: 'Emitido en la liquidación', value: formatGs(s.chargedMonth) }, { label: `Cobrado (${s.paymentsMonth.length} pagos)`, value: formatGs(collected) }, { label: 'Porcentaje de cobranza', value: `${rate} %` }],
-        link: { label: 'Revisar las unidades', route: '/explorar/unidades' }
+        id: 'collected', icon: 'pi-money-bill', label: k.collected.label, value: formatGs(collected), note: k.collected.note(rate), tone: 'blue',
+        text: k.collected.text,
+        rows: [{ label: k.collected.issued, value: formatGs(s.chargedMonth) }, { label: k.collected.collectedWith(s.paymentsMonth.length), value: formatGs(collected) }, { label: k.collected.rate, value: rate }],
+        link: { label: k.collected.link, route: '/explorar/unidades' }
       },
       {
-        id: 'expenses', icon: 'pi-wallet', label: 'Gastos del mes', value: formatGs(expenses), note: `${s.expenses().length} gastos registrados`, tone: 'amber',
-        text: 'Todos los gastos cargados este mes, agrupados por rubro. Si registras un gasto simulado, esta cifra cambia.',
+        id: 'expenses', icon: 'pi-wallet', label: k.expenses.label, value: formatGs(expenses), note: k.expenses.note(s.expenses().length), tone: 'amber',
+        text: k.expenses.text,
         rows: top,
-        link: { label: 'Ir a Gastos', route: '/explorar/gastos' }
+        link: { label: k.expenses.link, route: '/explorar/gastos' }
       },
       {
-        id: 'morosity', icon: 'pi-percentage', label: 'Morosidad', value: `${s.morosityPct.toString().replace('.', ',')} %`, note: `${s.overdueUnits.length} de ${s.units.length} unidades`, tone: 'coral',
-        text: 'Unidades con al menos una expensa vencida y sin pagar, sobre el total de unidades del edificio.',
-        rows: [{ label: 'Unidades con deuda vencida', value: `${s.overdueUnits.length}` }, { label: 'Total de unidades', value: `${s.units.length}` }, { label: 'Deuda vencida total', value: formatGs(s.overdueTotal) }],
-        link: { label: 'Ver las unidades con deuda', route: '/explorar/unidades', query: { deuda: 1 } }
+        id: 'morosity', icon: 'pi-percentage', label: k.morosity.label, value: tx.percent(tx.decimal(s.morosityPct)), note: k.morosity.note(s.overdueUnits.length, s.units.length), tone: 'coral',
+        text: k.morosity.text,
+        rows: [{ label: k.morosity.withDebt, value: `${s.overdueUnits.length}` }, { label: k.morosity.totalUnits, value: `${s.units.length}` }, { label: k.morosity.totalDebt, value: formatGs(s.overdueTotal) }],
+        link: { label: k.morosity.link, route: '/explorar/unidades', query: { deuda: 1 } }
       },
       {
-        id: 'pending', icon: 'pi-clock', label: 'Pendiente de cobro', value: formatGs(s.pendingTotal), note: 'Vencido y por vencer', tone: 'violet',
-        text: 'Todo lo emitido que todavía no se cobró: la deuda vencida más las expensas del mes que aún no vencen.',
-        rows: [{ label: 'Deuda vencida', value: formatGs(s.overdueTotal) }, { label: 'Por vencer', value: formatGs(Math.max(s.pendingTotal - s.overdueTotal, 0)) }]
+        id: 'pending', icon: 'pi-clock', label: k.pending.label, value: formatGs(s.pendingTotal), note: k.pending.note, tone: 'violet',
+        text: k.pending.text,
+        rows: [{ label: k.pending.overdue, value: formatGs(s.overdueTotal) }, { label: k.pending.upcoming, value: formatGs(Math.max(s.pendingTotal - s.overdueTotal, 0)) }]
       },
       {
-        id: 'reserve', icon: 'pi-shield', label: 'Fondo de reserva', value: formatGs(s.reserveFund), note: 'Ahorro del edificio', tone: 'teal',
-        text: 'Dinero apartado para imprevistos y obras mayores, separado del saldo operativo.',
-        rows: [{ label: 'Saldo del fondo de reserva', value: formatGs(s.reserveFund) }]
+        id: 'reserve', icon: 'pi-shield', label: k.reserve.label, value: formatGs(s.reserveFund), note: k.reserve.note, tone: 'teal',
+        text: k.reserve.text,
+        rows: [{ label: k.reserve.balance, value: formatGs(s.reserveFund) }]
       }
     ];
   });
