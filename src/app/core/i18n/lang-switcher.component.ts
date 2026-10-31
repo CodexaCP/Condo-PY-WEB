@@ -1,26 +1,29 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
-import { LANGS, Lang, LangService } from './lang.service';
+import { LANGS, Lang, LangService, isLang } from './lang.service';
 
-// Selector de idioma de las pantallas públicas (login, demostración, recuperar contraseña): ES · PT · EN.
+// Selector de idioma de las pantallas públicas (login, demostración, recuperar contraseña): lista desplegable.
 // La portada tiene el suyo propio porque cada idioma es una URL distinta.
 @Component({
   standalone: true,
   selector: 'app-lang-switcher',
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <div class="ls" role="group" aria-label="Idioma / Language">
-      @for (l of langs; track l.code) {
-        <button type="button" [class.on]="l.code === current()" [attr.lang]="l.htmlLang" [attr.aria-pressed]="l.code === current()" [title]="l.label" (click)="pick(l.code)">{{ l.short }}</button>
-      }
-    </div>
+    <label class="ls">
+      <span class="globe" aria-hidden="true">🌐</span>
+      <select aria-label="Idioma / Language" [value]="current()" (change)="pick($any($event.target).value)">
+        @for (l of langs; track l.code) {
+          <option [value]="l.code" [selected]="l.code === current()" [attr.lang]="l.htmlLang">{{ l.label }}</option>
+        }
+      </select>
+    </label>
   `,
   styles: [
     `
       :host { display: inline-block; }
-      .ls { display: inline-flex; border: 1px solid var(--ex-line, #dbe6ef); border-radius: 999px; overflow: hidden; background: #fff; }
-      .ls button { cursor: pointer; font: inherit; font-size: 0.78rem; font-weight: 700; letter-spacing: 0.04em; padding: 0.38rem 0.7rem; border: 0; background: transparent; color: var(--ex-muted, #5f7b88); }
-      .ls button:hover { background: #eef6fb; }
-      .ls button.on { background: #1385b6; color: #fff; }
+      .ls { display: inline-flex; align-items: center; gap: 0.35rem; padding: 0 0.4rem 0 0.65rem; border: 1px solid var(--ex-line, #dbe6ef); border-radius: 999px; background: #fff; }
+      .globe { font-size: 0.85rem; }
+      select { cursor: pointer; font: inherit; font-size: 0.82rem; font-weight: 700; padding: 0.42rem 0.3rem; border: 0; background: transparent; color: var(--ex-ink, #16324a); outline: none; }
+      .ls:hover, .ls:focus-within { background: #eef6fb; }
     `
   ]
 })
@@ -29,7 +32,7 @@ export class LangSwitcherComponent {
   readonly langs = LANGS;
   readonly current = this.service.lang;
 
-  pick(lang: Lang): void {
-    this.service.choose(lang);
+  pick(code: string): void {
+    if (isLang(code)) this.service.choose(code as Lang);
   }
 }

@@ -1,5 +1,5 @@
 import { isPlatformBrowser } from '@angular/common';
-import { ChangeDetectionStrategy, Component, PLATFORM_ID, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, PLATFORM_ID, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { salesWhatsAppUrlFor } from '../../config/sales.config';
 import { gaEvent } from '../../core/analytics';
@@ -15,7 +15,7 @@ import { LANDING_LANGS, LandingContent, landingContent } from './landing.content
   selector: 'app-home-landing',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [RouterLink],
-  host: { '(click)': 'trackClick($event)' },
+  host: { '(click)': 'trackClick($event)', '(document:click)': 'closeLangMenu($event)' },
   template: `
     @if (offer(); as o) {
       <div class="lang-bar">
@@ -35,11 +35,14 @@ import { LANDING_LANGS, LandingContent, landingContent } from './landing.content
         <a [routerLink]="t.path" fragment="preguntas">{{ t.nav.faq }}</a>
       </nav>
       <div class="hd-act">
-        <div class="lang-sw" role="group" aria-label="Idioma / Language">
-          @for (l of langs; track l.code) {
-            <a [routerLink]="l.path" [class.on]="l.code === t.lang" [attr.hreflang]="l.code" [attr.lang]="l.code" [attr.aria-current]="l.code === t.lang ? 'true' : null" [title]="l.label" (click)="pick(l.code)">{{ l.code.toUpperCase() }}</a>
-          }
-        </div>
+        <details class="lang-dd">
+          <summary aria-label="Idioma / Language"><span class="globe" aria-hidden="true">🌐</span> {{ t.lang.toUpperCase() }} <span class="caret" aria-hidden="true">▾</span></summary>
+          <div class="lang-menu">
+            @for (l of langs; track l.code) {
+              <a [routerLink]="l.path" [class.on]="l.code === t.lang" [attr.hreflang]="l.code" [attr.lang]="l.code" [attr.aria-current]="l.code === t.lang ? 'true' : null" (click)="pick(l.code)">{{ l.label }}</a>
+            }
+          </div>
+        </details>
         <a routerLink="/login" class="btn ghost">{{ t.login }}</a>
         <a routerLink="/explorar" class="btn solid">{{ t.tryDemo }}</a>
       </div>
@@ -187,10 +190,15 @@ import { LANDING_LANGS, LandingContent, landingContent } from './landing.content
       .hd nav { display: flex; gap: 1.4rem; margin-left: 1rem; font-size: 0.92rem; font-weight: 600; color: #4a6270; }
       .hd nav a:hover { color: #1385b6; }
       .hd-act { margin-left: auto; display: flex; gap: 0.5rem; align-items: center; }
-      .lang-sw { display: inline-flex; border: 1.5px solid #cfe3ee; border-radius: 0.7rem; overflow: hidden; }
-      .lang-sw a { padding: 0.5rem 0.65rem; font-size: 0.8rem; font-weight: 800; letter-spacing: 0.04em; color: #4a6270; }
-      .lang-sw a:hover { background: #eef6fb; }
-      .lang-sw a.on { background: #1385b6; color: #fff; }
+      .lang-dd { position: relative; }
+      .lang-dd summary { list-style: none; cursor: pointer; display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.5rem 0.75rem; border: 1.5px solid #cfe3ee; border-radius: 0.7rem; font-size: 0.82rem; font-weight: 800; letter-spacing: 0.04em; color: #4a6270; user-select: none; }
+      .lang-dd summary::-webkit-details-marker { display: none; }
+      .lang-dd summary:hover, .lang-dd[open] summary { background: #eef6fb; }
+      .lang-dd .caret { font-size: 0.7rem; }
+      .lang-menu { position: absolute; right: 0; top: calc(100% + 0.35rem); z-index: 30; min-width: 9.5rem; display: grid; padding: 0.3rem; background: #fff; border: 1px solid #dbe6ef; border-radius: 0.7rem; box-shadow: 0 12px 28px rgba(17, 54, 74, 0.16); }
+      .lang-menu a { padding: 0.5rem 0.7rem; border-radius: 0.5rem; font-size: 0.9rem; font-weight: 600; color: #16324a; }
+      .lang-menu a:hover { background: #eef6fb; }
+      .lang-menu a.on { background: #1385b6; color: #fff; }
       .btn { display: inline-flex; align-items: center; justify-content: center; padding: 0.55rem 1.1rem; border-radius: 0.7rem; font-weight: 700; font-size: 0.9rem; border: 1.5px solid transparent; cursor: pointer; transition: background 0.15s, transform 0.15s; }
       .btn:hover { transform: translateY(-1px); }
       .btn.solid { background: #1ab7af; color: #fff; }
@@ -263,6 +271,7 @@ export class HomeComponent {
   private readonly seo = inject(SeoService);
   private readonly lang = inject(LangService);
   private readonly router = inject(Router);
+  private readonly host = inject(ElementRef<HTMLElement>);
   readonly langs = LANDING_LANGS;
 
   // El idioma viene de la ruta: «/» es español y «/pt/» es portugués (data: { lang: 'pt' }).
@@ -272,6 +281,12 @@ export class HomeComponent {
   // Aviso discreto (no una redirección automática, que perjudica al buscador) para quien navega con el celular o el
   // navegador en otro de los tres idiomas y llegó a una versión distinta.
   readonly offer = signal<(typeof LANDING_LANGS)[number] | null>(null);
+
+  // El desplegable de idioma se cierra al tocar fuera de él.
+  closeLangMenu(event: Event): void {
+    const menu = (this.host.nativeElement as HTMLElement).querySelector('details.lang-dd');
+    if (menu && !menu.contains(event.target as Node)) menu.removeAttribute('open');
+  }
 
   // Quien elige un idioma con el selector lo conserva en el resto del sitio (login, demostración).
   pick(code: LandingContent['lang']): void {
