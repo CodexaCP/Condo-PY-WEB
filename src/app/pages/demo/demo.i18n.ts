@@ -1173,5 +1173,5 @@ const AR_EN: DeepPartial<DemoTx> = {
 };
 
 // Textos de la versión Argentina en los tres idiomas (ver el bloque de arriba).
-export const DEMO_TX_AR: Dict<DemoTx> = { es: mergeTx(ES, AR_ES), pt: mergeTx(PT, AR_PT), en: mergeTx(EN, AR_EN) };
+export const DEMO_TX_AR: Dict<DemoTx> = { es: mergeTx<DemoTx>(ES, AR_ES), pt: mergeTx<DemoTx>(PT, AR_PT), en: mergeTx<DemoTx>(EN, AR_EN) };
 
