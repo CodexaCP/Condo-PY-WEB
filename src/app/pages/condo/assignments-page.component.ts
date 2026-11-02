@@ -16,6 +16,7 @@ import { ResidentsApiService } from '../../api/residents-api.service';
 import { AssignmentsApiService } from '../../api/assignments-api.service';
 import { extractApiErrorMessage } from '../../api/api-error.util';
 import { Assignment, Owner, Resident, Unit, UnitOwnerAssignment } from '../../api/models';
+import { formatMoney } from '../../core/locale/locale.state';
 
 type UnitOption = Unit & { display: string };
 type StatusFilter = 'all' | 'noOwner' | 'noResident' | 'complete';
@@ -752,7 +753,7 @@ export class AssignmentsPageComponent implements OnInit {
   }
 
   gs(value: number): string {
-    return '₲ ' + new Intl.NumberFormat('es-PY', { maximumFractionDigits: 0 }).format(value ?? 0);
+    return formatMoney(value ?? 0);
   }
 
   // Cambio de propietario: antes de quitar al propietario principal se ve si la unidad tiene deuda (en ese caso no se puede) y qué pasa

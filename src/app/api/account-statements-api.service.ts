@@ -29,6 +29,11 @@ export class AccountStatementsApiService {
     return `${API_BASE_URL}/account-statements/units/${unitId}/periods/${expensePeriodId}/receipt-pdf?access_token=${token}`;
   }
 
+  // Certificado de deudas y creditos de la unidad (solo personal de la administracion): PDF como blob para abrirlo con la sesion iniciada.
+  getDebtCertificatePdf(unitId: string): Observable<Blob> {
+    return this.http.get(`${API_BASE_URL}/account-statements/units/${unitId}/debt-certificate-pdf`, { responseType: 'blob' });
+  }
+
   getStatementPdfUrl(unitId: string, token: string): string {
     return `${API_BASE_URL}/account-statements/units/${unitId}/statement-pdf?access_token=${encodeURIComponent(token)}`;
   }

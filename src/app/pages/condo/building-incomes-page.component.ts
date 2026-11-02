@@ -25,6 +25,8 @@ import {
   LedgerCategory,
   RolloverIncomeResult
 } from '../../api/models';
+import { formatMoney } from '../../core/locale/locale.state';
+import { moneyDecimals, moneyPrefix } from '../../core/locale/locale.state';
 
 // Rubros que se pueden elegir al cargar un ingreso, agrupados por su rubro principal (Finanzas del edificio).
 interface RubroGroup {
@@ -201,7 +203,7 @@ interface RubroGroup {
             </label>
             <label class="field-block">
               <span>Monto *</span>
-              <p-inputnumber [(ngModel)]="form.amount" name="amount" [useGrouping]="true" prefix="₲ " [min]="1" [minFractionDigits]="0" [maxFractionDigits]="0" [required]="true" styleClass="w-full"></p-inputnumber>
+              <p-inputnumber [(ngModel)]="form.amount" name="amount" [useGrouping]="true" [prefix]="moneyPrefix()" [min]="1" [minFractionDigits]="moneyDecimals()" [maxFractionDigits]="moneyDecimals()" [required]="true" styleClass="w-full"></p-inputnumber>
             </label>
           </div>
           <div class="form-row">
@@ -349,6 +351,10 @@ interface RubroGroup {
   `]
 })
 export class BuildingIncomesPageComponent implements OnInit, OnChanges {
+  // Prefijo y decimales de los campos de importe: salen de la moneda de la empresa.
+  readonly moneyPrefix = moneyPrefix;
+  readonly moneyDecimals = moneyDecimals;
+
   // Embebido en "Gastos y cargos": el edificio y el periodo los fija la pantalla que lo contiene.
   @Input() embedded = false;
   @Input() scopeBuildingId = '';
@@ -678,7 +684,7 @@ export class BuildingIncomesPageComponent implements OnInit, OnChanges {
   }
 
   formatCurrency(value: number): string {
-    return '₲ ' + new Intl.NumberFormat('es-PY', { maximumFractionDigits: 0 }).format(value ?? 0);
+    return formatMoney(value ?? 0);
   }
 
   private loadData(): void {

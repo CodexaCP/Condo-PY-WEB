@@ -12,6 +12,7 @@ import { BuildingsApiService } from '../../api/buildings-api.service';
 import { InvoicesApiService } from '../../api/invoices-api.service';
 import { Building, InvoiceFunnel } from '../../api/models';
 import { MessageService } from 'primeng/api';
+import { formatMoney } from '../../core/locale/locale.state';
 
 const PAGE_SIZE = 25;
 
@@ -254,6 +255,6 @@ export class UnbilledPaymentsPageComponent implements OnInit {
   }
 
   formatCurrency(value: number): string {
-    return '₲ ' + new Intl.NumberFormat('es-PY', { maximumFractionDigits: 0 }).format(value ?? 0);
+    return formatMoney(value ?? 0);
   }
 }

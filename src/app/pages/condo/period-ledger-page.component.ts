@@ -14,6 +14,7 @@ import { BuildingExpensesPageComponent } from './building-expenses-page.componen
 import { PeriodCreditNotesSectionComponent } from './period-credit-notes-section.component';
 import { BuildingIncomesPageComponent } from './building-incomes-page.component';
 import { PeriodChargesSectionComponent } from './period-charges-section.component';
+import { formatMoney } from '../../core/locale/locale.state';
 
 type LedgerTab = 'expenses' | 'incomes' | 'charges';
 
@@ -231,7 +232,7 @@ export class PeriodLedgerPageComponent implements OnInit {
   statusLabel(status: string): string { return STATUS_LABELS[status] ?? status; }
 
   money(value: number): string {
-    return '₲ ' + new Intl.NumberFormat('es-PY', { maximumFractionDigits: 0 }).format(value ?? 0);
+    return formatMoney(value ?? 0);
   }
 
   // El periodo abierto de trabajo: el borrador mas reciente; si no hay, el ultimo del edificio.

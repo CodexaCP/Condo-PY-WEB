@@ -9,6 +9,7 @@ import { extractApiErrorMessage } from '../../api/api-error.util';
 import { BuildingComparisonReport } from '../../api/models';
 import { BuildingComparisonApiService, BuildingComparisonFilters } from '../../api/building-comparison-api.service';
 import { AuthService } from '../../auth/auth.service';
+import { formatMoney } from '../../core/locale/locale.state';
 
 function firstDayOfMonth(): string {
   const d = new Date();
@@ -148,6 +149,6 @@ export class ReportesComparativoEdificiosPageComponent implements OnInit {
   }
 
   formatCurrency(value: number): string {
-    return '₲ ' + new Intl.NumberFormat('es-PY', { maximumFractionDigits: 0 }).format(value ?? 0);
+    return formatMoney(value ?? 0);
   }
 }

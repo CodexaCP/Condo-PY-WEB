@@ -12,6 +12,7 @@ import { extractApiErrorMessage } from '../../api/api-error.util';
 import { AccountStatementDetail, AccountStatementPeriod, ExpenseChargeType, ExpenseReceipt, PaymentMethod, Unit } from '../../api/models';
 import { UnitsApiService } from '../../api/units-api.service';
 import { AuthService } from '../../auth/auth.service';
+import { formatMoney } from '../../core/locale/locale.state';
 
 @Component({
   standalone: true,
@@ -62,6 +63,8 @@ import { AuthService } from '../../auth/auth.service';
           <a [href]="statementPdfUrl" target="_blank" style="display:contents">
             <p-button label="Exportar PDF" icon="pi pi-file-pdf" severity="secondary" [outlined]="true"></p-button>
           </a>
+          <p-button label="Certificado de deudas" icon="pi pi-verified" severity="secondary" [outlined]="true"
+                    [loading]="certificateLoading" (onClick)="downloadDebtCertificate()"></p-button>
         </div>
       </section>
 
@@ -601,6 +604,26 @@ export class AccountStatementsPageComponent implements OnInit {
     });
   }
 
+  // Certificado de deudas y créditos de la unidad: se pide con la sesión y se abre en una pestaña nueva.
+  certificateLoading = false;
+
+  downloadDebtCertificate(): void {
+    if (!this.selectedUnitId || this.certificateLoading) return;
+    this.certificateLoading = true;
+    this.accountStatementsApi.getDebtCertificatePdf(this.selectedUnitId).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: blob => {
+        window.open(URL.createObjectURL(blob), '_blank');
+        this.certificateLoading = false;
+        this.cdr.markForCheck();
+      },
+      error: error => {
+        this.msg.add({ severity: 'error', summary: 'Error', detail: extractApiErrorMessage(error, 'No se pudo generar el certificado de deudas.'), life: 5000 });
+        this.certificateLoading = false;
+        this.cdr.markForCheck();
+      }
+    });
+  }
+
   get statementPdfUrl(): string {
     if (!this.selectedUnitId) return '';
     return this.accountStatementsApi.getStatementPdfUrl(
@@ -644,7 +667,7 @@ export class AccountStatementsPageComponent implements OnInit {
   }
 
   formatCurrency(value: number): string {
-    return '₲ ' + new Intl.NumberFormat('es-PY', { maximumFractionDigits: 0 }).format(value ?? 0);
+    return formatMoney(value ?? 0);
   }
 
   isGuidNote(note: string): boolean {

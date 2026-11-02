@@ -28,6 +28,8 @@ import {
 } from '../../api/models';
 import { isPdfUrl, resolveUploadUrl } from '../../api/file-url.util';
 import { JournalImpactNoticeComponent } from './journal-impact-notice.component';
+import { formatMoney } from '../../core/locale/locale.state';
+import { MoneyPipe } from '../../core/locale/money.pipe';
 
 const CREDIT_NOTE_STATUS_LABELS: Record<string, string> = {
   Draft: 'Borrador',
@@ -53,7 +55,7 @@ const STATUS_SEVERITY: Record<string, 'warn' | 'info' | 'success' | 'danger' | '
 @Component({
   standalone: true,
   selector: 'app-owner-payment-detail-page',
-  imports: [CommonModule, FormsModule, Button, Card, InputNumber, Message, Tag, JournalImpactNoticeComponent],
+  imports: [CommonModule, FormsModule, Button, Card, InputNumber, Message, Tag, JournalImpactNoticeComponent, MoneyPipe],
   template: `
     <p-card styleClass="app-page-card">
       <!-- Header -->
@@ -389,7 +391,7 @@ const STATUS_SEVERITY: Record<string, 'warn' | 'info' | 'success' | 'danger' | '
           <div class="credit-box" [class.credit-positive]="ownerCredit > 0" [class.credit-zero]="ownerCredit === 0">
             <i class="pi" [class]="ownerCredit > 0 ? 'pi-check-circle' : 'pi-minus-circle'"></i>
             <div class="credit-text">
-              <span class="credit-amount">{{ ownerCredit | number:'1.0-2' }} Gs.</span>
+              <span class="credit-amount">{{ ownerCredit | money }}</span>
               <span class="credit-hint">{{ ownerCredit > 0 ? 'Se descuenta automáticamente en el próximo pago que se apruebe.' : 'Sin saldo a favor.' }}</span>
             </div>
           </div>
@@ -1143,7 +1145,7 @@ export class OwnerPaymentDetailPageComponent implements OnInit {
   }
 
   formatGs(value: number): string {
-    return '₲ ' + new Intl.NumberFormat('es-PY', { maximumFractionDigits: 0 }).format(value ?? 0);
+    return formatMoney(value ?? 0);
   }
 
   createInvoiceDrafts(): void {

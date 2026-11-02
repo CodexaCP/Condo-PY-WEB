@@ -10,6 +10,7 @@ import { SupplierAccountsSummary, SupplierReceivable } from '../../api/models';
 import { SupplierAccountsApiService } from '../../api/supplier-accounts-api.service';
 import { GsPipe, todayParaguay } from './finance-format';
 import { CONFIG_SECTION_STYLES } from './config-section.styles';
+import { CurrencySymbolPipe } from '../../core/locale/money.pipe';
 
 type ReceivableFilter = 'pending' | 'recovered' | 'all';
 
@@ -21,7 +22,7 @@ type ReceivableFilter = 'pending' | 'recovered' | 'all';
   standalone: true,
   selector: 'app-supplier-accounts-panel',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, FormsModule, Tag, GsPipe],
+  imports: [CommonModule, FormsModule, Tag, GsPipe, CurrencySymbolPipe],
   template: `
     <!-- Resumen por proveedor -->
     <ng-container *ngIf="view === 'summary'">
@@ -98,7 +99,7 @@ type ReceivableFilter = 'pending' | 'recovered' | 'all';
                     </div>
                   </div>
                   <div class="act-box" *ngIf="acting?.kind === 'discount'">
-                    <label class="field"><span>Monto descontado (₲)</span><input type="number" min="1" [max]="r.pendingAmount" step="1" [(ngModel)]="actAmount" /></label>
+                    <label class="field"><span>Monto descontado ({{ null | currencySymbol }})</span><input type="number" min="1" [max]="r.pendingAmount" step="1" [(ngModel)]="actAmount" /></label>
                     <label class="field"><span>Fecha de la factura</span><input type="date" [(ngModel)]="actDate" [min]="r.issueDate" [max]="today" /></label>
                     <label class="field"><span>Factura donde vino (opcional)</span><input type="text" maxlength="500" [(ngModel)]="actText" placeholder="N° de factura" /></label>
                     <div class="actions">

@@ -10,6 +10,7 @@ import { Building, EstadoResultadosReport } from '../../api/models';
 import { BuildingsApiService } from '../../api/buildings-api.service';
 import { EstadoResultadosApiService, EstadoResultadosFilters } from '../../api/estado-resultados-api.service';
 import { AuthService } from '../../auth/auth.service';
+import { formatMoney } from '../../core/locale/locale.state';
 
 function firstDayOfMonth(): string {
   const d = new Date();
@@ -220,6 +221,6 @@ export class ReportesEstadoResultadosPageComponent implements OnInit {
   }
 
   formatCurrency(value: number): string {
-    return '₲ ' + new Intl.NumberFormat('es-PY', { maximumFractionDigits: 0 }).format(value ?? 0);
+    return formatMoney(value ?? 0);
   }
 }

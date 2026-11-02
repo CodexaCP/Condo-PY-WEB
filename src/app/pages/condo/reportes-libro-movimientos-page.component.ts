@@ -11,6 +11,7 @@ import { BuildingsApiService } from '../../api/buildings-api.service';
 import { LibroMovimientosApiService, LibroMovimientosFilters } from '../../api/libro-movimientos-api.service';
 import { LibroMovimientosReport, LibroMovimientoType } from '../../api/models';
 import { AuthService } from '../../auth/auth.service';
+import { formatMoney } from '../../core/locale/locale.state';
 
 function firstDayOfMonth(): string {
   const d = new Date();
@@ -245,6 +246,6 @@ export class ReportesLibroMovimientosPageComponent implements OnInit {
   }
 
   formatCurrency(value: number): string {
-    return '₲ ' + new Intl.NumberFormat('es-PY', { maximumFractionDigits: 0 }).format(value ?? 0);
+    return formatMoney(value ?? 0);
   }
 }

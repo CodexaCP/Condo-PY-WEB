@@ -12,6 +12,7 @@ import { AmenitiesApiService } from '../../api/amenities-api.service';
 import { BuildingsApiService } from '../../api/buildings-api.service';
 import { Amenity, AmenityReservation, AmenityReservationStatus, Building } from '../../api/models';
 import { resolveUploadUrl } from '../../api/file-url.util';
+import { formatMoney } from '../../core/locale/locale.state';
 
 @Component({
   standalone: true,
@@ -721,7 +722,7 @@ export class AmenitiesPageComponent implements OnInit {
               Rejected: 'danger', Cancelled: 'secondary' } as const)[status] ?? 'secondary';
   }
 
-  formatCurrency(value: number): string { return `Gs. ${Math.round(value).toLocaleString('es-PY')}`; }
+  formatCurrency(value: number): string { return formatMoney(Math.round(value), true); }
 
   formatDateTime(iso: string): string {
     return new Date(iso).toLocaleString('es-PY', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });

@@ -11,6 +11,8 @@ import { BuildingsApiService } from '../../api/buildings-api.service';
 import { DashboardApiService } from '../../api/dashboard-api.service';
 import { MorosityApiService } from '../../api/morosity-api.service';
 import { Building, CollectionReport, DashboardSummary, MorosityItem, MorosityReport } from '../../api/models';
+import { formatMoney } from '../../core/locale/locale.state';
+import { moneySymbol } from '../../core/locale/locale.state';
 
 // Paleta del tablero: la de la marca primero y tonos de apoyo para distinguir conceptos.
 const TEAL = '#1AB7AF';
@@ -431,11 +433,11 @@ export class DashboardPageComponent implements OnInit {
     return 314.16 * (1 - Math.min(Math.max(pct, 0), 100) / 100);
   }
 
-  fmt(v: number): string { return '₲ ' + new Intl.NumberFormat('es-PY', { maximumFractionDigits: 0 }).format(v ?? 0); }
+  fmt(v: number): string { return formatMoney(v ?? 0); }
 
   fmtCompact(v: number): string {
     const n = Number(v ?? 0);
-    return '₲ ' + new Intl.NumberFormat('es-PY', { notation: 'compact', maximumFractionDigits: 1 }).format(n);
+    return moneySymbol() + ' ' + new Intl.NumberFormat('es-PY', { notation: 'compact', maximumFractionDigits: 1 }).format(n);
   }
 
   private pct(v: number, t: number): number { return t ? Math.round((v / t) * 100) : 0; }
@@ -594,7 +596,7 @@ export class DashboardPageComponent implements OnInit {
     const textColor = style.getPropertyValue('--text-color') || '#334155';
     const gridColor = style.getPropertyValue('--surface-border') || 'rgba(0,0,0,0.08)';
     const compact = (v: number | string) => new Intl.NumberFormat('es-PY', { notation: 'compact', maximumFractionDigits: 1 }).format(Number(v));
-    const gs = (v: number) => '₲ ' + Number(v).toLocaleString('es-PY', { maximumFractionDigits: 0 });
+    const gs = (v: number) => formatMoney(Number(v));
 
     this.monthlyOptions = {
       maintainAspectRatio: false,

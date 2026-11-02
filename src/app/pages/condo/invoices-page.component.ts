@@ -19,6 +19,7 @@ import { AuthService } from '../../auth/auth.service';
 import {
   Building, Invoice, InvoiceLedger, InvoiceLedgerQuery, InvoiceLedgerRow, InvoiceStatus, Unit
 } from '../../api/models';
+import { formatMoney } from '../../core/locale/locale.state';
 
 const STATUS_LABEL: Record<InvoiceStatus, string> = { Draft: 'Borrador', Issued: 'Emitida', Voided: 'Anulada' };
 const STATUS_SEV: Record<InvoiceStatus, 'warn' | 'success' | 'danger'> = { Draft: 'warn', Issued: 'success', Voided: 'danger' };
@@ -726,6 +727,6 @@ Queda registrado en la auditoría y no se puede repetir. ¿Continuar?`;
   }
 
   formatCurrency(value: number): string {
-    return '₲ ' + new Intl.NumberFormat('es-PY', { maximumFractionDigits: 0 }).format(value ?? 0);
+    return formatMoney(value ?? 0);
   }
 }

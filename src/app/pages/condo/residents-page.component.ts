@@ -15,6 +15,8 @@ import { resolveUploadUrl } from '../../api/file-url.util';
 import { ResidentsApiService } from '../../api/residents-api.service';
 import { AuthService } from '../../auth/auth.service';
 import { PeopleImportPanelComponent } from './people-import-panel.component';
+import { documentTypesFor } from '../../core/locale/locale.state';
+import { pluralTerm, term } from '../../core/locale/locale.state';
 
 @Component({
   standalone: true,
@@ -25,7 +27,7 @@ import { PeopleImportPanelComponent } from './people-import-panel.component';
       <div class="app-toolbar">
         <div class="app-page-head">
           <div>
-            <h1>Residentes</h1>
+            <h1>{{ pluralTerm('residente', 'Residente') }}</h1>
             <p>
               Propietarios e inquilinos registrados para la operacion inicial.
               Para asignarlos a una unidad o finalizar su residencia, andá a
@@ -78,10 +80,7 @@ import { PeopleImportPanelComponent } from './people-import-panel.component';
               <label for="documentType">Tipo de documento</label>
               <select id="documentType" [(ngModel)]="form.documentType" name="documentType">
                 <option value="">— Sin especificar —</option>
-                <option value="CedulaParaguaya">Cédula paraguaya</option>
-                <option value="RUC">RUC</option>
-                <option value="Pasaporte">Pasaporte</option>
-                <option value="DocumentoExtranjero">Documento extranjero</option>
+                <option *ngFor="let t of docTypes(form.documentType)" [value]="t.code">{{ t.label }}</option>
               </select>
             </div>
             <div class="field">
@@ -312,6 +311,13 @@ import { PeopleImportPanelComponent } from './people-import-panel.component';
   `]
 })
 export class ResidentsPageComponent implements OnInit {
+  // Vocabulario del país de la empresa (glosario): «Unidad funcional», «Porcentual», etc.
+  readonly term = term;
+  readonly pluralTerm = pluralTerm;
+
+  // Tipos de documento del país de la empresa (más «Documento extranjero» y el valor ya guardado).
+  readonly docTypes = documentTypesFor;
+
   private readonly residentsApi = inject(ResidentsApiService);
   private readonly companiesApi = inject(CompaniesApiService);
   private readonly auth = inject(AuthService);

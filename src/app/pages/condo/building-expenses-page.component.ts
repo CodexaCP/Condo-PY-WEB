@@ -39,6 +39,9 @@ import {
 } from '../../api/models';
 import { API_BASE_URL } from '../../config/api.config';
 import { BuildingExpenseCreditNotesDialogComponent } from './building-expense-credit-notes-dialog.component';
+import { formatMoney } from '../../core/locale/locale.state';
+import { MoneyPipe } from '../../core/locale/money.pipe';
+import { moneyDecimals, moneyPrefix } from '../../core/locale/locale.state';
 
 interface BuildingExpensesGroup {
   periodId: string;
@@ -57,7 +60,7 @@ interface RubroGroup {
 @Component({
   standalone: true,
   selector: 'app-building-expenses-page',
-  imports: [CommonModule, FormsModule, Button, Card, Tag, Tooltip, InputNumber, BuildingExpenseCreditNotesDialogComponent],
+  imports: [CommonModule, FormsModule, Button, Card, Tag, Tooltip, InputNumber, BuildingExpenseCreditNotesDialogComponent, MoneyPipe],
   template: `
     <p-card styleClass="app-page-card">
       <div class="app-toolbar">
@@ -152,7 +155,7 @@ interface RubroGroup {
               </label>
               <label class="field-block">
                 <span>Monto *</span>
-                <p-inputnumber [(ngModel)]="recurringForm.amount" name="recAmount" [useGrouping]="true" prefix="₲ " [min]="1" [minFractionDigits]="0" [maxFractionDigits]="0" [required]="true" styleClass="w-full"></p-inputnumber>
+                <p-inputnumber [(ngModel)]="recurringForm.amount" name="recAmount" [useGrouping]="true" [prefix]="moneyPrefix()" [min]="1" [minFractionDigits]="moneyDecimals()" [maxFractionDigits]="moneyDecimals()" [required]="true" styleClass="w-full"></p-inputnumber>
               </label>
             </div>
             <div class="form-actions">
@@ -364,14 +367,14 @@ interface RubroGroup {
               <small class="field-hint" *ngIf="form.supplierId">El nombre sale del proveedor de la lista. Los proveedores se administran en el Centro de configuración.</small>
               <small class="discount-alert" *ngIf="pendingDiscount && pendingDiscount.pendingTotal > 0">
                 <i class="pi pi-percentage"></i>
-                {{ pendingDiscount.supplierName }} tiene un descuento acordado pendiente de ₲ {{ pendingDiscount.pendingTotal | number: '1.0-0' }} (
+                {{ pendingDiscount.supplierName }} tiene un descuento acordado pendiente de {{ pendingDiscount.pendingTotal | money }} (
                 <ng-container *ngFor="let n of pendingDiscount.notes; let last = last">NC {{ n.numero }}{{ last ? '' : ', ' }}</ng-container>).
                 Revisá que esta factura lo traiga aplicado y después registralo en Finanzas → Cuentas por pagar y cobrar.
               </small>
             </label>
             <label class="field-block">
               <span>Monto *</span>
-              <p-inputnumber [(ngModel)]="form.amount" name="amount" [useGrouping]="true" prefix="₲ " [min]="1" [minFractionDigits]="0" [maxFractionDigits]="0" [required]="true" styleClass="w-full"></p-inputnumber>
+              <p-inputnumber [(ngModel)]="form.amount" name="amount" [useGrouping]="true" [prefix]="moneyPrefix()" [min]="1" [minFractionDigits]="moneyDecimals()" [maxFractionDigits]="moneyDecimals()" [required]="true" styleClass="w-full"></p-inputnumber>
             </label>
           </div>
           <div class="form-row">
@@ -618,6 +621,10 @@ interface RubroGroup {
   `]
 })
 export class BuildingExpensesPageComponent implements OnInit, OnChanges {
+  // Prefijo y decimales de los campos de importe: salen de la moneda de la empresa.
+  readonly moneyPrefix = moneyPrefix;
+  readonly moneyDecimals = moneyDecimals;
+
   // Embebido en "Gastos y cargos": el edificio y el periodo los fija la pantalla que lo contiene.
   @Input() embedded = false;
   @Input() scopeBuildingId = '';
@@ -1519,7 +1526,7 @@ export class BuildingExpensesPageComponent implements OnInit, OnChanges {
   }
 
   formatCurrency(value: number): string {
-    return '₲ ' + new Intl.NumberFormat('es-PY', { maximumFractionDigits: 0 }).format(value ?? 0);
+    return formatMoney(value ?? 0);
   }
 
   private reloadExpenses(): void {

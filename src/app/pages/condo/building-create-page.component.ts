@@ -17,11 +17,14 @@ import { CompaniesApiService } from '../../api/companies-api.service';
 import { CondominiumsApiService } from '../../api/condominiums-api.service';
 import {
   BankAccountType, BuildingPropertyType, Company, Condominium, IncomeTreatment, InvoicingMode, LateFeeFrequency,
-  TaxpayerType, VatRegime
+  SettlementApprovalMode, TaxpayerType, VatRegime
 } from '../../api/models';
 import { isPdfFile, pdfFirstPageToPngFile } from '../../api/pdf-to-image.util';
 import { UploadsApiService } from '../../api/uploads-api.service';
 import { AuthService } from '../../auth/auth.service';
+import { CountryProfile } from '../../core/locale/locale.models';
+import { LocaleService } from '../../core/locale/locale.service';
+import { currentLocale } from '../../core/locale/locale.state';
 import { resolveUploadUrl } from '../../api/file-url.util';
 
 type TemplateKind = 'invoice' | 'creditNote' | 'settlement';
@@ -74,6 +77,15 @@ function phoneProblem(p: PhoneInput, label: string): string {
   if (!number) return '';
   const prefix = PHONE_PREFIXES.find(x => x.value === p.prefix);
   return prefix && !prefix.pattern.test(number) ? `${label}: formato inválido para ${prefix.label} (${prefix.hint}).` : '';
+}
+
+// Identificador fiscal del edificio según el país de su empresa. Paraguay conserva la validación con dígito verificador; Argentina
+// (CUIT) se valida por formato (11 dígitos) y los demás países solo por caracteres permitidos (igual que el backend).
+function isValidTaxId(value: string, countryCode: string): boolean {
+  const v = value.trim();
+  if (countryCode === 'PY') return isValidRuc(v);
+  if (countryCode === 'AR') return (v.match(/\d/g) ?? []).length === 11 && /^[\d-]+$/.test(v);
+  return /^[A-Za-z0-9.\-]{3,20}$/.test(v);
 }
 
 // Dígito verificador del RUC (SET): módulo 11, pesos 2 a 11 de derecha a izquierda. Formato 80012345-0.
@@ -250,12 +262,20 @@ interface BankAccountForm {
                      placeholder="Dirección del edificio" maxlength="200" autocomplete="off" />
             </div>
             <div class="field-row-3">
-              <div class="field">
-                <label for="department">Departamento</label>
+              <div class="field" *ngIf="regional.jurisdictions.length === 0">
+                <label for="department">{{ regional.regionLabel }}</label>
                 <input id="department" type="text" [(ngModel)]="form.department" name="department" list="py-departments"
-                       placeholder="Ej: Central" maxlength="100" autocomplete="off" />
-                <datalist id="py-departments">
+                       [placeholder]="regional.countryCode === 'PY' ? 'Ej: Central' : ''" maxlength="100" autocomplete="off" />
+                <datalist id="py-departments" *ngIf="regional.countryCode === 'PY'">
                   <option *ngFor="let d of departments" [value]="d"></option>
+                </datalist>
+              </div>
+              <div class="field" *ngIf="regional.jurisdictions.length > 0">
+                <label for="jurisdiction">{{ regional.regionLabel }}</label>
+                <input id="jurisdiction" type="text" [(ngModel)]="form.jurisdiction" name="jurisdiction" list="jurisdictions-list"
+                       maxlength="100" autocomplete="off" />
+                <datalist id="jurisdictions-list">
+                  <option *ngFor="let j of regional.jurisdictions" [value]="j"></option>
                 </datalist>
               </div>
               <div class="field">
@@ -378,15 +398,15 @@ interface BankAccountForm {
             <h2 class="section-title">Datos registrales del inmueble</h2>
             <div class="field-row-3">
               <div class="field">
-                <label for="fincaNumber">Finca / matrícula</label>
+                <label for="fincaNumber">{{ regional.buildingFieldLabels['finca'] }}</label>
                 <input id="fincaNumber" type="text" [(ngModel)]="form.fincaNumber" name="fincaNumber" maxlength="50" autocomplete="off" />
               </div>
               <div class="field">
-                <label for="padronNumber">Padrón</label>
+                <label for="padronNumber">{{ regional.buildingFieldLabels['padron'] }}</label>
                 <input id="padronNumber" type="text" [(ngModel)]="form.padronNumber" name="padronNumber" maxlength="50" autocomplete="off" />
               </div>
               <div class="field">
-                <label for="cadastralAccount">Cuenta corriente catastral</label>
+                <label for="cadastralAccount">{{ regional.buildingFieldLabels['cadastral'] }}</label>
                 <input id="cadastralAccount" type="text" [(ngModel)]="form.cadastralAccount" name="cadastralAccount" maxlength="50" autocomplete="off" />
               </div>
             </div>
@@ -396,7 +416,7 @@ interface BankAccountForm {
             <h2 class="section-title">Personería jurídica y reglamento</h2>
             <div class="field-row">
               <div class="field">
-                <label for="legalEntityNumber">Número de personería jurídica</label>
+                <label for="legalEntityNumber">{{ regional.buildingFieldLabels['legalEntity'] }}</label>
                 <input id="legalEntityNumber" type="text" [(ngModel)]="form.legalEntityNumber" name="legalEntityNumber" maxlength="50" autocomplete="off" />
               </div>
               <div class="field">
@@ -441,6 +461,14 @@ interface BankAccountForm {
             </div>
             <div class="field-row">
               <div class="field">
+                <label for="administratorRegistryNumber">Registro del administrador (N.º)</label>
+                <input id="administratorRegistryNumber" type="text" [(ngModel)]="form.administratorRegistryNumber" name="administratorRegistryNumber"
+                       maxlength="50" autocomplete="off" />
+                <small class="field-hint">Si la jurisdicción exige un número de registro de administradores, figura en la liquidación y en el certificado de deudas.</small>
+              </div>
+            </div>
+            <div class="field-row">
+              <div class="field">
                 <label for="emergencyContactName">Contacto de emergencia</label>
                 <input id="emergencyContactName" type="text" [(ngModel)]="form.emergencyContactName" name="emergencyContactName" maxlength="200" autocomplete="off" />
               </div>
@@ -460,11 +488,11 @@ interface BankAccountForm {
             <p-message *ngIf="isBuildingManager" severity="info" text="Los datos fiscales los define la administración."></p-message>
             <div class="field-row">
               <div class="field">
-                <label for="ruc">RUC</label>
-                <input id="ruc" type="text" [(ngModel)]="form.ruc" name="ruc" placeholder="Ej: 80012345-0" maxlength="20"
+                <label for="ruc">{{ regional.taxIdLabel }}</label>
+                <input id="ruc" type="text" [(ngModel)]="form.ruc" name="ruc" [placeholder]="regional.countryCode === 'PY' ? 'Ej: 80012345-0' : ''" maxlength="20"
                        autocomplete="off" [disabled]="isBuildingManager" (input)="rucError = ''" />
                 <small class="field-error" *ngIf="rucError">{{ rucError }}</small>
-                <small class="field-hint" *ngIf="!rucError">Con guion y dígito verificador. Se valida al guardar.</small>
+                <small class="field-hint" *ngIf="!rucError">{{ regional.countryCode === 'PY' ? 'Con guion y dígito verificador. Se valida al guardar.' : 'Se valida el formato al guardar.' }}</small>
               </div>
               <div class="field">
                 <label for="legalName">Razón social</label>
@@ -725,6 +753,24 @@ interface BankAccountForm {
             </div>
           </section>
 
+          <section class="form-section">
+            <h2 class="section-title">Liquidación y ejercicio</h2>
+            <div class="field">
+              <label for="settlementApprovalMode">Quién aprueba la liquidación</label>
+              <p-select id="settlementApprovalMode" [options]="approvalModeOptions" [(ngModel)]="form.settlementApprovalMode"
+                        name="settlementApprovalMode" optionLabel="label" optionValue="value" styleClass="full-select">
+              </p-select>
+              <small class="field-hint">Con la revisión del presidente, la liquidación pasa por él antes de publicarse. Sin ella, la publica directamente la administración después del encargado.</small>
+            </div>
+            <div class="field">
+              <label for="fiscalYearEndMonth">Mes de cierre del ejercicio</label>
+              <p-select id="fiscalYearEndMonth" [options]="monthOptions" [(ngModel)]="form.fiscalYearEndMonth" name="fiscalYearEndMonth"
+                        optionLabel="label" optionValue="value" [showClear]="true" placeholder="Sin definir" styleClass="full-select">
+              </p-select>
+              <small class="field-hint">Lo fija el reglamento. La rendición de cuentas se cuenta desde este cierre.</small>
+            </div>
+          </section>
+
           <section class="form-section" *ngIf="isEditing">
             <h2 class="section-title">Módulos contratados</h2>
             <div class="module-chips">
@@ -833,6 +879,7 @@ export class BuildingCreatePageComponent implements OnInit {
   private readonly cdr             = inject(ChangeDetectorRef);
   private readonly msg             = inject(MessageService);
   private readonly uploadsApi      = inject(UploadsApiService);
+  private readonly localeService    = inject(LocaleService);
 
   readonly tabs = TABS;
   activeTab: TabKey = 'general';
@@ -840,6 +887,9 @@ export class BuildingCreatePageComponent implements OnInit {
 
   prefixOptions = PHONE_PREFIXES;
   companyOptions: { label: string; value: string }[] = [];
+  // Pais de cada empresa y catalogo de paises (solo el superadmin los necesita para etiquetar la ficha).
+  companyCountries: Record<string, string> = {};
+  countryProfiles: CountryProfile[] = [];
   allCondominiums: Condominium[] = [];
   filteredCondominiumOptions: { label: string; value: string }[] = [];
 
@@ -876,7 +926,7 @@ export class BuildingCreatePageComponent implements OnInit {
 
     // Datos generales
     propertyType: null as BuildingPropertyType | null,
-    department: '', city: '', neighborhood: '', locationReference: '',
+    department: '', jurisdiction: '', city: '', neighborhood: '', locationReference: '',
     latitude: null as number | null, longitude: null as number | null,
     yearBuilt: null as number | null, towersCount: null as number | null,
     floorsCount: null as number | null, unitsCount: null as number | null,
@@ -887,6 +937,7 @@ export class BuildingCreatePageComponent implements OnInit {
     legalEntityNumber: '', legalEntityDate: '',
     bylaws: null as TemplateFile | null,
     administratorName: '', administratorPhone: emptyPhone(),
+    administratorRegistryNumber: '',
     emergencyContactName: '', emergencyContactPhone: emptyPhone(),
 
     // Facturación (datos fiscales)
@@ -899,14 +950,25 @@ export class BuildingCreatePageComponent implements OnInit {
     bankAccounts: [] as BankAccountForm[],
 
     // Configuración
-    timeZoneId: 'America/Asuncion'
+    timeZoneId: currentLocale().timeZoneId,
+    settlementApprovalMode: 'ManagerPresidentAdmin' as SettlementApprovalMode,
+    fiscalYearEndMonth: null as number | null
   };
 
   readonly lateFeeFrequencyOptions = [
     { label: 'Diario', value: 'Daily' },
     { label: 'Semanal', value: 'Weekly' },
-    { label: 'Quincenal', value: 'Biweekly' }
+    { label: 'Quincenal', value: 'Biweekly' },
+    { label: 'Mensual', value: 'Monthly' }
   ];
+
+  readonly approvalModeOptions: { label: string; value: SettlementApprovalMode }[] = [
+    { label: 'Encargado → presidente del consorcio → administración', value: 'ManagerPresidentAdmin' },
+    { label: 'Encargado → administración (sin revisión del presidente)', value: 'ManagerAdmin' }
+  ];
+
+  readonly monthOptions = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
+    .map((label, i) => ({ label, value: i + 1 }));
 
   readonly incomeTreatmentOptions: { label: string; value: IncomeTreatment }[] = [
     { label: 'Acreditar a los propietarios (descuento en la expensa)', value: 'CreditToOwners' },
@@ -947,7 +1009,8 @@ export class BuildingCreatePageComponent implements OnInit {
     { label: 'Paraguay (Asunción)', value: 'America/Asuncion' },
     { label: 'Argentina (Buenos Aires)', value: 'America/Argentina/Buenos_Aires' },
     { label: 'Brasil (São Paulo)', value: 'America/Sao_Paulo' },
-    { label: 'Uruguay (Montevideo)', value: 'America/Montevideo' }
+    { label: 'Uruguay (Montevideo)', value: 'America/Montevideo' },
+    { label: 'Venezuela (Caracas)', value: 'America/Caracas' }
   ];
 
   readonly departments = [
@@ -957,6 +1020,17 @@ export class BuildingCreatePageComponent implements OnInit {
   ];
 
   get isSuperAdmin()       { return this.auth.hasRole('SuperAdmin'); }
+
+  // Datos regionales del formulario: los del país de la empresa del edificio. El superadmin no tiene empresa propia, así que se toman
+  // de la empresa elegida (o del edificio que edita); el resto de los usuarios usa la configuración de su sesión.
+  get regional(): { countryCode: string; regionLabel: string; jurisdictions: string[]; buildingFieldLabels: Record<string, string>; taxIdLabel: string; timeZoneId: string } {
+    if (this.isSuperAdmin) {
+      const profile = this.countryProfiles.find(c => c.code === this.companyCountries[this.form.companyId]);
+      if (profile) return { countryCode: profile.code, ...profile };
+    }
+    const l = currentLocale();
+    return { countryCode: l.countryCode, regionLabel: l.regionLabel, jurisdictions: l.jurisdictions, buildingFieldLabels: l.buildingFieldLabels, taxIdLabel: l.taxIdLabel, timeZoneId: l.timeZoneId };
+  }
   get isBuildingManager()  { return this.auth.hasRole('BuildingManager'); }
   get isCompanyAdmin()     { return this.auth.hasRole('CompanyAdmin'); }
   get condominiumLocked()  { return this.isCompanyAdmin && !!this.auth.currentUser()?.condominiumId; }
@@ -981,6 +1055,10 @@ export class BuildingCreatePageComponent implements OnInit {
     }).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: ({ companies, condominiums, entity }) => {
         this.companyOptions = companies.sort((a, b) => a.name.localeCompare(b.name)).map(c => ({ label: c.name, value: c.id }));
+        this.companyCountries = Object.fromEntries(companies.map(c => [c.id, c.countryCode ?? 'PY']));
+        if (this.isSuperAdmin) {
+          this.localeService.countries().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({ next: list => { this.countryProfiles = list; this.cdr.markForCheck(); }, error: () => undefined });
+        }
         this.allCondominiums = condominiums;
 
         if (id && entity) {
@@ -1018,7 +1096,7 @@ export class BuildingCreatePageComponent implements OnInit {
             },
 
             propertyType: entity.propertyType ?? null,
-            department: entity.department ?? '', city: entity.city ?? '', neighborhood: entity.neighborhood ?? '',
+            department: entity.department ?? '', jurisdiction: entity.jurisdiction ?? '', city: entity.city ?? '', neighborhood: entity.neighborhood ?? '',
             locationReference: entity.locationReference ?? '',
             latitude: entity.latitude ?? null, longitude: entity.longitude ?? null,
             yearBuilt: entity.yearBuilt ?? null, towersCount: entity.towersCount ?? null,
@@ -1030,6 +1108,7 @@ export class BuildingCreatePageComponent implements OnInit {
             legalEntityNumber: entity.legalEntityNumber ?? '', legalEntityDate: entity.legalEntityDate ?? '',
             bylaws: templateFile(entity.bylawsUrl, entity.bylawsFileName),
             administratorName: entity.administratorName ?? '', administratorPhone: splitPhone(entity.administratorPhone),
+            administratorRegistryNumber: entity.administratorRegistryNumber ?? '',
             emergencyContactName: entity.emergencyContactName ?? '', emergencyContactPhone: splitPhone(entity.emergencyContactPhone),
 
             ruc: entity.ruc ?? '', legalName: entity.legalName ?? '',
@@ -1045,7 +1124,9 @@ export class BuildingCreatePageComponent implements OnInit {
               holderDocument: a.holderDocument ?? '', alias: a.alias ?? '', isActive: a.isActive
             })),
 
-            timeZoneId: entity.timeZoneId ?? 'America/Asuncion'
+            timeZoneId: entity.timeZoneId ?? 'America/Asuncion',
+            settlementApprovalMode: entity.settlementApprovalMode ?? 'ManagerPresidentAdmin',
+            fiscalYearEndMonth: entity.fiscalYearEndMonth ?? null
           };
         }
         this.refreshCondominiumOptions();
@@ -1222,8 +1303,12 @@ export class BuildingCreatePageComponent implements OnInit {
     // Datos fiscales: solo los edita quien administra. El RUC se valida solo si lo cambiaron (igual que el backend).
     const ruc = this.form.ruc.trim();
     if (!this.isBuildingManager) {
-      if (ruc && ruc !== this.originalRuc.trim() && !isValidRuc(ruc)) {
-        this.rucError = 'RUC no válido: usá el formato 80012345-0 con su dígito verificador correcto.';
+      if (ruc && ruc !== this.originalRuc.trim() && !isValidTaxId(ruc, this.regional.countryCode)) {
+        this.rucError = this.regional.countryCode === 'PY'
+          ? 'RUC no válido: usá el formato 80012345-0 con su dígito verificador correcto.'
+          : this.regional.countryCode === 'AR'
+            ? `${this.regional.taxIdLabel} no válido: debe tener 11 dígitos (por ejemplo 30-12345678-9).`
+            : `${this.regional.taxIdLabel} no válido: solo letras, números, puntos y guiones.`;
         this.fail('billing', '');
         return;
       }
@@ -1271,7 +1356,7 @@ export class BuildingCreatePageComponent implements OnInit {
 
                   // Ficha de registro
                   propertyType: this.form.propertyType,
-                  department: nullIfBlank(this.form.department), city: nullIfBlank(this.form.city),
+                  department: nullIfBlank(this.form.department), jurisdiction: nullIfBlank(this.form.jurisdiction), city: nullIfBlank(this.form.city),
                   neighborhood: nullIfBlank(this.form.neighborhood), locationReference: nullIfBlank(this.form.locationReference),
                   latitude: lat, longitude: lng,
                   yearBuilt: numOrNull(this.form.yearBuilt), towersCount: numOrNull(this.form.towersCount),
@@ -1285,6 +1370,9 @@ export class BuildingCreatePageComponent implements OnInit {
                   administratorName: nullIfBlank(this.form.administratorName), administratorPhone: joinPhone(this.form.administratorPhone),
                   emergencyContactName: nullIfBlank(this.form.emergencyContactName), emergencyContactPhone: joinPhone(this.form.emergencyContactPhone),
                   timeZoneId: nullIfBlank(this.form.timeZoneId),
+                  administratorRegistryNumber: nullIfBlank(this.form.administratorRegistryNumber),
+                  fiscalYearEndMonth: numOrNull(this.form.fiscalYearEndMonth),
+                  settlementApprovalMode: this.form.settlementApprovalMode,
                   ...(!this.isBuildingManager ? {
                     ruc: nullIfBlank(ruc), legalName: nullIfBlank(this.form.legalName),
                     taxpayerType: this.form.taxpayerType, vatRegime: this.form.vatRegime,

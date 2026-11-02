@@ -12,6 +12,7 @@ import { ExpenseChargesApiService } from '../../api/expense-charges-api.service'
 import { ExpensePeriodsApiService } from '../../api/expense-periods-api.service';
 import { AuthService } from '../../auth/auth.service';
 import { ExpenseCharge, ExpenseChargeType, ExpenseSettlementChargePreview } from '../../api/models';
+import { formatMoney } from '../../core/locale/locale.state';
 
 interface ChargeLine {
   id: string | null;
@@ -252,7 +253,7 @@ export class PeriodChargesSectionComponent implements OnChanges {
   }
 
   formatCurrency(value: number): string {
-    return '₲ ' + new Intl.NumberFormat('es-PY', { maximumFractionDigits: 0 }).format(value ?? 0);
+    return formatMoney(value ?? 0);
   }
 
   private afterClean(detail: string): void {

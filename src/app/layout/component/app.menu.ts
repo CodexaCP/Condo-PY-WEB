@@ -7,6 +7,7 @@ import { AuthService } from '@/app/auth/auth.service';
 import { FinanceAccessService } from '@/app/api/finance-access.service';
 import { MarketplaceAccessService } from '@/app/api/marketplace-access.service';
 import { LayoutService } from '@/app/layout/service/layout.service';
+import { hasCapability, pluralTerm } from '@/app/core/locale/locale.state';
 
 // Los grupos del menú son plegables (acordeón): cada uno lleva un `path` propio, que usa AppMenuitem para saber cuál está abierto.
 // El prefijo evita que un grupo se confunda con la URL de una pantalla (el sidebar guarda la URL como ruta activa).
@@ -96,6 +97,9 @@ export class AppMenu {
         // Timbrados: el operador de empresa no puede administrarlos (lo bloquea el backend);
         // se oculta el ítem en vez de mostrarlo y dejar que falle con un error 403.
         const canManageInvoicing = this.auth.hasRole('CompanyAdmin', 'BuildingManager');
+        // Lo que el país de la empresa no usa no se muestra: facturación y notas de crédito, cobros online y libro de compras con IVA.
+        const emitsInvoices = hasCapability('emitsInvoices');
+        const onlinePayments = hasCapability('onlinePayments');
 
         // Pantallas del módulo de los edificios habilitados (la configuración se abre también desde «Finanzas por edificio» del SuperAdmin).
         const financeModuleGroup = group('Finanzas (módulo)', 'pi pi-fw pi-calculator', 'finanzas', [
@@ -106,7 +110,7 @@ export class AppMenu {
             { label: 'Presupuesto vs. real', icon: 'pi pi-fw pi-chart-bar', routerLink: ['/finance/budget-vs-actual'] },
             { label: 'Fondo de reserva', icon: 'pi pi-fw pi-shield', routerLink: ['/finance/reserve-fund'] },
             { label: 'Cuentas por pagar y cobrar', icon: 'pi pi-fw pi-credit-card', routerLink: ['/finance/payables'] },
-            { label: 'Libro de compras (IVA)', icon: 'pi pi-fw pi-book', routerLink: ['/finance/vat-purchases'] },
+            ...(hasCapability('purchaseTaxBook') ? [{ label: 'Libro de compras (IVA)', icon: 'pi pi-fw pi-book', routerLink: ['/finance/vat-purchases'] }] : []),
             { label: 'Operaciones', icon: 'pi pi-fw pi-arrow-right-arrow-left', routerLink: ['/finance/operations'] },
             { label: 'Conciliación bancaria', icon: 'pi pi-fw pi-check-square', routerLink: ['/finance/reconciliation'] },
             { label: 'Asientos contables', icon: 'pi pi-fw pi-sort-alt', routerLink: ['/finance/accounting'] },
@@ -174,10 +178,10 @@ export class AppMenu {
                             { label: 'Edificios', icon: 'pi pi-fw pi-home', routerLink: ['/buildings'] },
                             { label: 'Centro de configuración', icon: 'pi pi-fw pi-sliders-h', routerLink: ['/building-config'] },
                             ...(isCompanyAdmin ? [{ label: 'Condominios', icon: 'pi pi-fw pi-map', routerLink: ['/condominiums'] }] : []),
-                            { label: 'Unidades', icon: 'pi pi-fw pi-th-large', routerLink: ['/units'] },
+                            { label: pluralTerm('unidad', 'Unidad'), icon: 'pi pi-fw pi-th-large', routerLink: ['/units'] },
                             { label: 'Asignaciones', icon: 'pi pi-fw pi-link', routerLink: ['/assignments'] },
-                            { label: 'Propietarios', icon: 'pi pi-fw pi-id-card', routerLink: ['/propietarios'] },
-                            { label: 'Residentes', icon: 'pi pi-fw pi-user', routerLink: ['/residents'] },
+                            { label: pluralTerm('propietario', 'Propietario'), icon: 'pi pi-fw pi-id-card', routerLink: ['/propietarios'] },
+                            { label: pluralTerm('residente', 'Residente'), icon: 'pi pi-fw pi-user', routerLink: ['/residents'] },
                             ...(isCompanyAdmin ? [{ label: 'Usuarios', icon: 'pi pi-fw pi-users', routerLink: ['/users'] }] : [])
                         ]),
                         group('Períodos y cobros', 'pi pi-fw pi-calendar', 'cobros', [
@@ -186,14 +190,14 @@ export class AppMenu {
                             { label: 'Estado de cuenta', icon: 'pi pi-fw pi-file-pdf', routerLink: ['/account-statements'] },
                             { label: 'Morosidad', icon: 'pi pi-fw pi-exclamation-triangle', routerLink: ['/morosity'] },
                             { label: 'Cobranza', icon: 'pi pi-fw pi-dollar', routerLink: ['/collections'] },
-                            { label: 'Cobros online', icon: 'pi pi-fw pi-credit-card', routerLink: ['/online-payments'] }
+                            ...(onlinePayments ? [{ label: 'Cobros online', icon: 'pi pi-fw pi-credit-card', routerLink: ['/online-payments'] }] : [])
                         ]),
-                        group('Facturación', 'pi pi-fw pi-receipt', 'facturacion', [
+                        ...(emitsInvoices ? [group('Facturación', 'pi pi-fw pi-receipt', 'facturacion', [
                             ...(canManageInvoicing ? [{ label: 'Timbrados', icon: 'pi pi-fw pi-receipt', routerLink: ['/invoice-series'] }] : []),
                             { label: 'Facturas', icon: 'pi pi-fw pi-file-edit', routerLink: ['/invoices'] },
                             { label: 'Notas de Crédito', icon: 'pi pi-fw pi-file-excel', routerLink: ['/credit-notes'] },
                             { label: 'Pagos sin facturar', icon: 'pi pi-fw pi-inbox', routerLink: ['/unbilled-payments'] }
-                        ]),
+                        ])] : []),
                         ...(hasFinanceModule ? [financeModuleGroup] : []),
                         group('Reportes', 'pi pi-fw pi-chart-bar', 'reportes', [
                             { label: 'Libro de movimientos', icon: 'pi pi-fw pi-book', routerLink: ['/reportes/libro-movimientos'] },

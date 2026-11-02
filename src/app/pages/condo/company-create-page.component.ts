@@ -12,6 +12,8 @@ import { Textarea } from 'primeng/textarea';
 import { Tooltip } from 'primeng/tooltip';
 import { extractApiErrorMessage } from '../../api/api-error.util';
 import { CompaniesApiService } from '../../api/companies-api.service';
+import { CountryProfile } from '../../core/locale/locale.models';
+import { LocaleService } from '../../core/locale/locale.service';
 
 interface PhonePrefix { label: string; value: string; flag: string; pattern: RegExp; hint: string; }
 
@@ -20,6 +22,7 @@ const PHONE_PREFIXES: PhonePrefix[] = [
   { label: 'USA +1',  value: '+1',   flag: '🇺🇸', pattern: /^\d{10}$/,    hint: '10 dígitos' },
   { label: 'BR +55',  value: '+55',  flag: '🇧🇷', pattern: /^\d{10,11}$/, hint: '10-11 dígitos' },
   { label: 'ARG +54', value: '+54',  flag: '🇦🇷', pattern: /^\d{10}$/,    hint: '10 dígitos' },
+  { label: 'VE +58',  value: '+58',  flag: '🇻🇪', pattern: /^\d{10}$/,    hint: '10 dígitos' },
 ];
 
 @Component({
@@ -69,6 +72,41 @@ const PHONE_PREFIXES: PhonePrefix[] = [
               <span>Empresa activa</span>
             </label>
           </div>
+        </section>
+
+        <section class="form-section">
+          <h2 class="section-title">País, moneda e impuesto</h2>
+          <div class="field">
+            <label for="countryCode">País de la empresa</label>
+            <p-select inputId="countryCode" [options]="countries" [(ngModel)]="form.countryCode" name="countryCode"
+                      optionLabel="name" optionValue="code" placeholder="Elegí el país" styleClass="w-full"
+                      (onChange)="onCountryChange()"></p-select>
+            <small class="field-hint">De acá salen la moneda de todos sus documentos, el impuesto y los tipos de documento. La moneda no se puede cambiar cuando la empresa ya tiene cargos o gastos.</small>
+          </div>
+          <p-message *ngIf="selectedCountry?.isDraft" severity="warn"
+                     text="Este país está en borrador: sus reglas legales y fiscales todavía no están validadas con fuentes oficiales. No lo actives en producción sin revisión de un contador y un abogado locales."></p-message>
+          <div class="field">
+            <label>Moneda</label>
+            <input type="text" [value]="currencyLabel" disabled />
+          </div>
+          <div class="field">
+            <label for="taxName">Nombre del impuesto</label>
+            <input id="taxName" type="text" [(ngModel)]="form.taxName" name="taxName" maxlength="30"
+                   placeholder="IVA" autocomplete="off" (input)="taxTouched = true" />
+          </div>
+          <div class="tax-row">
+            <div class="field">
+              <label for="taxGeneralRate">Tasa general (%)</label>
+              <input id="taxGeneralRate" type="number" min="0" max="100" step="0.01" [(ngModel)]="form.taxGeneralRate"
+                     name="taxGeneralRate" (input)="taxTouched = true" />
+            </div>
+            <div class="field">
+              <label for="taxReducedRate">Tasa reducida (%) <em>(opcional)</em></label>
+              <input id="taxReducedRate" type="number" min="0" max="100" step="0.01" [(ngModel)]="form.taxReducedRate"
+                     name="taxReducedRate" (input)="taxTouched = true" />
+            </div>
+          </div>
+          <small class="field-hint">Exento es siempre 0 %. Vacío en la tasa general significa que el país todavía no tiene tasa validada.</small>
         </section>
 
         <section class="form-section">
@@ -136,6 +174,8 @@ const PHONE_PREFIXES: PhonePrefix[] = [
     .checkbox-field input[type=checkbox] { width:16px; height:16px; cursor:pointer; }
     .field-hint  { color:var(--brand-muted); font-size:0.8rem; }
     .field-error { color:#e74c3c; font-size:0.82rem; }
+    .tax-row { display:grid; grid-template-columns:1fr 1fr; gap:1rem; }
+    .field input:disabled { background:#f3f7f9; color:var(--brand-muted); }
     .phone-row { display:flex; gap:0.6rem; align-items:stretch; }
     .phone-input { flex:1; }
     :host ::ng-deep .phone-prefix-select { width:140px; flex-shrink:0; }
@@ -150,8 +190,12 @@ export class CompanyCreatePageComponent implements OnInit {
   private readonly destroyRef = inject(DestroyRef);
   private readonly cdr    = inject(ChangeDetectorRef);
   private readonly msg    = inject(MessageService);
+  private readonly localeService = inject(LocaleService);
 
   prefixOptions = PHONE_PREFIXES;
+  countries: CountryProfile[] = [];
+  // true cuando el superadmin tocó el impuesto: el backend lo toma tal cual y no lo completa desde el país.
+  taxTouched = false;
   isEditing  = false;
   editingId  = '';
   editingName = '';
@@ -161,11 +205,22 @@ export class CompanyCreatePageComponent implements OnInit {
   phoneError = '';
   emailError = '';
 
-  form = { name:'', slug:'', description:'', phonePrefix:'+595', phoneNumber:'', email:'', isActive:true };
+  form = {
+    name:'', slug:'', description:'', phonePrefix:'+595', phoneNumber:'', email:'', isActive:true,
+    countryCode:'PY', taxName:'IVA', taxGeneralRate: 10 as number | null, taxReducedRate: 5 as number | null
+  };
+
+  get selectedCountry(): CountryProfile | undefined { return this.countries.find(c => c.code === this.form.countryCode); }
+  get currencyLabel(): string { return this.selectedCountry ? this.selectedCountry.currencyCode : (this.form.countryCode === 'PY' ? 'PYG' : ''); }
 
   get selectedPrefix() { return PHONE_PREFIXES.find(p => p.value === this.form.phonePrefix); }
 
   ngOnInit(): void {
+    this.localeService.countries().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: list => { this.countries = list; this.cdr.markForCheck(); },
+      error: () => { this.msg.add({ severity: 'warn', summary: 'Países', detail: 'No se pudo cargar la lista de países.', life: 5000 }); }
+    });
+
     const id = this.route.snapshot.paramMap.get('id');
     if (id) {
       this.isEditing = true;
@@ -180,13 +235,28 @@ export class CompanyCreatePageComponent implements OnInit {
             phonePrefix: c.contactPhonePrefix ?? '+595',
             phoneNumber: c.contactPhone ?? '',
             email: c.contactEmail ?? '',
-            isActive: c.isActive
+            isActive: c.isActive,
+            countryCode: c.countryCode ?? 'PY',
+            taxName: c.taxName ?? 'IVA',
+            taxGeneralRate: c.taxGeneralRate ?? null,
+            taxReducedRate: c.taxReducedRate ?? null
           };
           this.loading = false; this.cdr.markForCheck();
         },
         error: () => { this.loadError = 'No se pudo cargar la empresa.'; this.loading = false; this.cdr.markForCheck(); }
       });
     }
+  }
+
+  // Al cambiar el país se completan el impuesto y el prefijo telefónico con los valores iniciales de ese país.
+  onCountryChange(): void {
+    const country = this.selectedCountry;
+    if (!country) return;
+    this.form.taxName = country.taxName;
+    this.form.taxGeneralRate = country.taxGeneralRate;
+    this.form.taxReducedRate = country.taxReducedRate;
+    this.taxTouched = true;
+    if (PHONE_PREFIXES.some(p => p.value === country.phonePrefix)) this.form.phonePrefix = country.phonePrefix;
   }
 
   onSlugInput() { this.form.slug = this.form.slug.toLowerCase().replace(/[^a-z0-9-]/g, ''); }
@@ -212,11 +282,28 @@ export class CompanyCreatePageComponent implements OnInit {
     }
     if (email && !/^[^\s@]+@gmail\.com$/i.test(email)) { this.emailError = 'Por ahora solo se aceptan correos @gmail.com.'; return; }
 
-    const req = { name, slug, isActive: this.form.isActive, description, contactPhonePrefix: phonePrefix, contactPhone: phoneNumber, contactEmail: email };
+    if (this.form.taxGeneralRate !== null && this.form.taxReducedRate !== null && this.form.taxReducedRate >= this.form.taxGeneralRate) {
+      this.msg.add({ severity: 'error', summary: 'Error', detail: 'La tasa reducida debe ser menor que la tasa general.', life: 5000 }); return;
+    }
+
+    const req = {
+      name, slug, isActive: this.form.isActive, description, contactPhonePrefix: phonePrefix, contactPhone: phoneNumber, contactEmail: email,
+      countryCode: this.form.countryCode,
+      currencyCode: this.selectedCountry?.currencyCode ?? null,
+      taxName: this.form.taxName.trim() || null,
+      taxGeneralRate: this.form.taxGeneralRate,
+      taxReducedRate: this.form.taxReducedRate,
+      taxConfigured: this.taxTouched
+    };
     this.isSaving = true;
     const op = this.isEditing ? this.api.update(this.editingId, req) : this.api.create(req);
     op.pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-      next: () => { this.isSaving = false; this.router.navigate(['/companies']); },
+      next: () => {
+        this.isSaving = false;
+        // La empresa del propio usuario puede haber cambiado de país o impuesto: se refresca su configuración regional.
+        this.localeService.refresh().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({ error: () => undefined });
+        this.router.navigate(['/companies']);
+      },
       error: err => { this.msg.add({ severity: 'error', summary: 'Error', detail: extractApiErrorMessage(err, 'No se pudo guardar.'), life: 5000 }); this.isSaving = false; this.cdr.markForCheck(); }
     });
   }

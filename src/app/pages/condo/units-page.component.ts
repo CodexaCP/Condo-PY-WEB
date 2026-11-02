@@ -17,6 +17,7 @@ import { AuthService } from '../../auth/auth.service';
 import { LIST_FILTERS_STYLES } from './list-filters.styles';
 import { ListPagerComponent } from './list-pager.component';
 import { loadListState, saveListState } from './list-state.util';
+import { pluralTerm, term } from '../../core/locale/locale.state';
 
 const STATE_KEY = 'units';
 
@@ -37,8 +38,8 @@ interface UnitFilters {
       <div class="app-toolbar">
         <div class="app-page-head">
           <div>
-            <h1>Unidades</h1>
-            <p>Unidades y locales de cada edificio, con piso y coeficiente para expensas.</p>
+            <h1>{{ pluralTerm('unidad', 'Unidad') }}</h1>
+            <p>{{ pluralTerm('unidad', 'Unidad') }} y locales de cada edificio, con piso y {{ term('coeficiente', 'Coeficiente').toLowerCase() }} para {{ term('expensas', 'Expensas').toLowerCase() }}.</p>
           </div>
         </div>
         <div class="toolbar-actions">
@@ -165,7 +166,7 @@ interface UnitFilters {
           <span>Código</span>
           <span *ngIf="!filters.buildingId">Edificio</span>
           <span>Piso</span>
-          <span>Coeficiente</span>
+          <span>{{ term('coeficiente', 'Coeficiente') }}</span>
           <span>Estado</span>
         </div>
         <div class="app-row" [ngClass]="gridClass" *ngFor="let u of page.items; trackBy: trackUnit">
@@ -233,6 +234,10 @@ interface UnitFilters {
   `]
 })
 export class UnitsPageComponent implements OnInit {
+  // Vocabulario del país de la empresa (glosario): «Unidad funcional», «Porcentual», etc.
+  readonly term = term;
+  readonly pluralTerm = pluralTerm;
+
   private readonly unitsApi     = inject(UnitsApiService);
   private readonly buildingsApi = inject(BuildingsApiService);
   private readonly auth         = inject(AuthService);

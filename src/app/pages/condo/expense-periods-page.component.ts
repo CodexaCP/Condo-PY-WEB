@@ -26,6 +26,9 @@ import {
   ExpenseSettlementSummary,
   VoidSettlementResult
 } from '../../api/models';
+import { formatMoney } from '../../core/locale/locale.state';
+import { formatMoneyNumber } from '../../core/locale/locale.state';
+import { pluralTerm, term } from '../../core/locale/locale.state';
 
 @Component({
   standalone: true,
@@ -36,7 +39,7 @@ import {
       <div class="app-toolbar">
         <div class="app-page-head">
           <div>
-            <h1>Periodos de expensas</h1>
+            <h1>Periodos de {{ term('expensas', 'Expensas').toLowerCase() }}</h1>
             <p>Apertura, cierre y control de ciclos mensuales por edificio.</p>
           </div>
         </div>
@@ -584,6 +587,10 @@ import {
   `]
 })
 export class ExpensePeriodsPageComponent implements OnInit {
+  // Vocabulario del país de la empresa (glosario): «Unidad funcional», «Porcentual», etc.
+  readonly term = term;
+  readonly pluralTerm = pluralTerm;
+
   private readonly periodsApi = inject(ExpensePeriodsApiService);
   private readonly buildingsApi = inject(BuildingsApiService);
   private readonly auth = inject(AuthService);
@@ -721,7 +728,7 @@ export class ExpensePeriodsPageComponent implements OnInit {
         this.isCloning = false;
         const expMsg = result.copiedExpenses > 0 ? ` Se copiaron ${result.copiedExpenses} gasto(s) como base.` : '';
         const incMsg = result.copiedIncomes > 0 ? ` Se copiaron ${result.copiedIncomes} ingreso(s).` : '';
-        const balMsg = result.accumulatedBalance > 0 ? ` Saldo acumulado: ${new Intl.NumberFormat('es-PY', { maximumFractionDigits: 0 }).format(result.accumulatedBalance)}.` : '';
+        const balMsg = result.accumulatedBalance > 0 ? ` Saldo acumulado: ${formatMoneyNumber(result.accumulatedBalance)}.` : '';
         this.msg.add({ severity: 'success', summary: 'Éxito', detail: `Período ${result.period.name} creado.${expMsg}${incMsg}${balMsg}`, life: 5000 });
         this.cdr.markForCheck();
       },
@@ -1035,6 +1042,8 @@ export class ExpensePeriodsPageComponent implements OnInit {
     }
 
     if (status === 'Approved' && this.settlementSummary) {
+      // Edificio sin revisión del presidente: tras el encargado queda lista para que la administración la publique.
+      if (this.settlementSummary.requiresPresidentReview === false) return 'Aprobada por el encargado';
       if (this.settlementSummary.presidentApprovedByUserId) return 'Aprobada por el presidente';
       if (this.settlementSummary.presidentRejectedByUserId) return 'Rechazada por el presidente';
       return 'Pendiente de revisión del presidente';
@@ -1089,7 +1098,7 @@ export class ExpensePeriodsPageComponent implements OnInit {
     if (!this.approvedByManager) {
       return 'No se puede publicar: la liquidación debe ser aprobada primero por el Encargado de edificio (Building Manager).';
     }
-    if (summary.status === 'Approved' && !summary.presidentApprovedByUserId) {
+    if (summary.status === 'Approved' && summary.requiresPresidentReview !== false && !summary.presidentApprovedByUserId) {
       return 'No se puede publicar: la liquidación todavía no fue aprobada por el presidente del consorcio.';
     }
     return '';
@@ -1098,7 +1107,7 @@ export class ExpensePeriodsPageComponent implements OnInit {
   canPublishSettlement(): boolean {
     return !!this.settlementSummary &&
       this.approvedByManager &&
-      !!this.settlementSummary.presidentApprovedByUserId &&
+      (this.settlementSummary.requiresPresidentReview === false || !!this.settlementSummary.presidentApprovedByUserId) &&
       (this.settlementSummary.status === 'Approved' || this.settlementSummary.status === 'Applied') &&
       this.settlementSummary.periodStatus !== 'Published' &&
       this.settlementSummary.generatedChargeCount > 0;
@@ -1155,7 +1164,7 @@ export class ExpensePeriodsPageComponent implements OnInit {
   }
 
   formatCurrency(value: number): string {
-    return '₲ ' + new Intl.NumberFormat('es-PY', { maximumFractionDigits: 0 }).format(value ?? 0);
+    return formatMoney(value ?? 0);
   }
 
   private loadData(): void {

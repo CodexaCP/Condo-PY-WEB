@@ -15,6 +15,7 @@ import { UnitsApiService } from '../../api/units-api.service';
 import { Building } from '../../api/models';
 import { AuthService } from '../../auth/auth.service';
 import { UnitLateFeeExemptionComponent } from './unit-late-fee-exemption.component';
+import { pluralTerm, term } from '../../core/locale/locale.state';
 
 @Component({
   standalone: true,
@@ -117,7 +118,7 @@ import { UnitLateFeeExemptionComponent } from './unit-late-fee-exemption.compone
 
         <!-- ══ COEFICIENTE ═══════════════════════════════════════════ -->
         <section class="form-section">
-          <h2 class="section-title">Coeficiente</h2>
+          <h2 class="section-title">{{ term('coeficiente', 'Coeficiente') }}</h2>
 
           <div class="coef-info-box">
             <i class="pi pi-info-circle"></i>
@@ -281,6 +282,10 @@ import { UnitLateFeeExemptionComponent } from './unit-late-fee-exemption.compone
   `]
 })
 export class UnitCreatePageComponent implements OnInit {
+  // Vocabulario del país de la empresa (glosario): «Unidad funcional», «Porcentual», etc.
+  readonly term = term;
+  readonly pluralTerm = pluralTerm;
+
   private readonly unitsApi     = inject(UnitsApiService);
   private readonly buildingsApi = inject(BuildingsApiService);
   private readonly auth         = inject(AuthService);

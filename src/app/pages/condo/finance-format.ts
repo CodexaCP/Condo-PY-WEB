@@ -1,15 +1,16 @@
 import { Pipe, PipeTransform } from '@angular/core';
 import { extractApiErrorMessage } from '../../api/api-error.util';
+import { formatMoney, formatMoneyNumber } from '../../core/locale/locale.state';
 import { BuildingExpenseCategory, BuildingIncomeCategory, LedgerCategoryType } from '../../api/models';
 
-const GS = new Intl.NumberFormat('es-PY', { style: 'currency', currency: 'PYG', minimumFractionDigits: 0, maximumFractionDigits: 0 });
-const NUM = new Intl.NumberFormat('es-PY', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+
+
 
 const MONTHS = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
 const MONTHS_SHORT = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
 
-export const formatGs = (v: number | null | undefined): string => (v === null || v === undefined ? '—' : GS.format(v));
-export const formatNum = (v: number | null | undefined): string => (v === null || v === undefined ? '—' : NUM.format(v));
+export const formatGs = (v: number | null | undefined): string => (v === null || v === undefined ? '—' : formatMoney(v, true));
+export const formatNum = (v: number | null | undefined): string => (v === null || v === undefined ? '—' : formatMoneyNumber(v));
 
 // Hoy según el reloj del libro de Finanzas (Paraguay, UTC-3), como «aaaa-mm-dd»: un movimiento o un corte no puede ser de una fecha futura.
 export const todayParaguay = (): string => new Date(Date.now() - 3 * 3600 * 1000).toISOString().slice(0, 10);

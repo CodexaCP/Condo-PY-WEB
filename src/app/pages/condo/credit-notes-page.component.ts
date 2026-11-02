@@ -16,6 +16,7 @@ import { BuildingsApiService } from '../../api/buildings-api.service';
 import { CreditNotesApiService } from '../../api/credit-notes-api.service';
 import { Building, CreditNote, CreditNoteStatus } from '../../api/models';
 import { resolveUploadUrl } from '../../api/file-url.util';
+import { formatMoneyNumber } from '../../core/locale/locale.state';
 
 const STATUS_LABEL: Record<CreditNoteStatus, string> = {
   Draft: 'Borrador', Approved: 'Aprobada', Rejected: 'Rechazada', Voided: 'Anulada'
@@ -533,6 +534,6 @@ export class CreditNotesPageComponent implements OnInit {
   }
 
   formatGs(value: number): string {
-    return new Intl.NumberFormat('es-PY', { maximumFractionDigits: 0 }).format(value ?? 0);
+    return formatMoneyNumber(value);
   }
 }

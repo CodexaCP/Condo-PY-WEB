@@ -11,8 +11,9 @@ import { Select } from 'primeng/select';
 import { MessageService } from 'primeng/api';
 import { VotesApiService } from '../../api/votes-api.service';
 import { BuildingsApiService } from '../../api/buildings-api.service';
-import { Building, Vote, VoteStatus, VoteWeightType, VoteUpsertRequest, VoteCastRequest, VoteUnitSummary, VoteOptionDto } from '../../api/models';
+import { Building, Vote, VoteMajorityRule, VoteStatus, VoteWeightType, VoteUpsertRequest, VoteCastRequest, VoteUnitSummary, VoteOptionDto } from '../../api/models';
 import { extractApiErrorMessage } from '../../api/api-error.util';
+import { currentLocale } from '../../core/locale/locale.state';
 
 type TagSeverity = 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contrast';
 type PanelMode = 'form' | 'results';
@@ -163,6 +164,29 @@ const STATUS_SEVERITY: Record<VoteStatus, TagSeverity> = { Draft: 'secondary', O
                ? 'El peso del voto es proporcional al coeficiente de la unidad.'
                : 'Cada unidad vale 1 voto, sin importar su coeficiente.' }}
           </p>
+          <div class="field field-grow">
+            <label class="field-label">Regla de mayoría</label>
+            <div class="weight-toggle">
+              <button type="button" class="weight-btn" [class.active]="form.majorityRule === 'Simple'"
+                      (click)="form.majorityRule = 'Simple'">
+                <span class="pi pi-percentage"></span> Quórum simple
+              </button>
+              <button type="button" class="weight-btn" [class.active]="form.majorityRule === 'DoubleAbsolute'"
+                      (click)="form.majorityRule = 'DoubleAbsolute'">
+                <span class="pi pi-check-square"></span> Doble mayoría absoluta
+              </button>
+            </div>
+          </div>
+          <p class="config-hint">
+            <span class="pi pi-info-circle"></span>
+            {{ form.majorityRule === 'DoubleAbsolute'
+               ? 'Una opción se aprueba si supera el 50 % de todas las unidades y el 50 % de todo el coeficiente del edificio, hayan votado o no.'
+               : 'Se mide el quórum y gana la opción con más votos.' }}
+          </p>
+          <label class="informative-check">
+            <input type="checkbox" [(ngModel)]="form.isInformative" name="isInformative" />
+            <span>Consulta informativa: el voto en la app no reemplaza el voto de la asamblea</span>
+          </label>
         </div>
 
         <!-- Opciones -->
@@ -217,6 +241,9 @@ const STATUS_SEVERITY: Record<VoteStatus, TagSeverity> = { Draft: 'secondary', O
         <div class="panel-header-text">
           <h2>{{ detail?.title ?? 'Cargando...' }}</h2>
           <p *ngIf="detail">{{ detail.buildingName }} · Quórum {{ detail.quorumPercentage }}% · {{ weightLabel(detail.weightType) }}</p>
+          <p *ngIf="detail?.isInformative" class="informative-note">
+            <span class="pi pi-info-circle"></span> Consulta informativa: no reemplaza el voto de la asamblea.
+          </p>
         </div>
         <button class="ov-close" type="button" (click)="closePanel()">
           <span class="pi pi-times"></span>
@@ -272,10 +299,17 @@ const STATUS_SEVERITY: Record<VoteStatus, TagSeverity> = { Draft: 'secondary', O
         <div class="results-section">
           <div class="results-title"><span class="pi pi-chart-bar"></span> Resultados</div>
           <div *ngIf="detail.options.length === 0" class="empty-hint">Aún no hay opciones definidas.</div>
+          <div *ngIf="detail.majorityRule === 'DoubleAbsolute'" class="absolute-summary">
+            {{ approvedLabel(detail) }}
+          </div>
           <div class="option-result" *ngFor="let opt of detail.options">
             <div class="opt-header">
               <span class="opt-label">{{ opt.label }}</span>
               <span class="opt-stats">{{ opt.castCount }} voto(s) · {{ opt.percentage | number:'1.1-1' }}%</span>
+            </div>
+            <div class="opt-absolute" *ngIf="detail.majorityRule === 'DoubleAbsolute'">
+              {{ opt.percentOfTotalUnits | number:'1.1-1' }}% de las unidades · {{ opt.percentOfTotalCoefficient | number:'1.1-1' }}% del coeficiente
+              <span class="opt-majority" *ngIf="opt.hasAbsoluteMajority"><span class="pi pi-check-circle"></span> Mayoría absoluta</span>
             </div>
             <div class="opt-bar-track">
               <div class="opt-bar-fill" [style.width.%]="opt.percentage"
@@ -554,6 +588,12 @@ const STATUS_SEVERITY: Record<VoteStatus, TagSeverity> = { Draft: 'secondary', O
     .status-bar { display: flex; align-items: center; gap: .75rem; flex-wrap: wrap; }
     .status-actions { display: flex; gap: .6rem; margin-left: auto; flex-wrap: wrap; }
 
+    .informative-check { display:flex; align-items:flex-start; gap:0.5rem; margin-top:0.75rem; font-size:0.88rem; cursor:pointer; }
+    .informative-check input { margin-top:0.2rem; }
+    .informative-note { color:#b45309; font-size:0.85rem; margin:0.25rem 0 0; }
+    .opt-absolute { font-size:0.8rem; color:var(--brand-muted); margin:0.2rem 0 0.35rem; }
+    .opt-majority { margin-left:0.5rem; color:#2f8f3a; font-weight:600; }
+    .absolute-summary { font-size:0.88rem; font-weight:600; margin-bottom:0.5rem; }
     /* Quórum summary */
     .quorum-summary {
       display: flex; align-items: stretch;
@@ -656,8 +696,9 @@ export class VotacionesPageComponent implements OnInit {
   selectedVote: Vote | null = null;
   detail: Vote | null = null;
 
-  form: { buildingId: string; title: string; description: string; quorumPercentage: number; weightType: VoteWeightType } = {
-    buildingId: '', title: '', description: '', quorumPercentage: 50, weightType: 'ByUnit'
+  form: { buildingId: string; title: string; description: string; quorumPercentage: number; weightType: VoteWeightType; majorityRule: VoteMajorityRule; isInformative: boolean } = {
+    buildingId: '', title: '', description: '', quorumPercentage: 50, weightType: 'ByUnit',
+    majorityRule: 'Simple', isInformative: currentLocale().countryCode !== 'PY'
   };
   optionLabels: string[] = ['A favor', 'En contra'];
 
@@ -702,7 +743,9 @@ export class VotacionesPageComponent implements OnInit {
     this.panelMode = 'form';
     this.form = {
       buildingId: this.buildings.length === 1 ? this.buildings[0].id : '',
-      title: '', description: '', quorumPercentage: 50, weightType: 'ByUnit'
+      title: '', description: '', quorumPercentage: 50, weightType: 'ByUnit',
+      // Fuera de Paraguay el voto en la app es una consulta informativa hasta que un abogado confirme su validez.
+      majorityRule: 'Simple', isInformative: currentLocale().countryCode !== 'PY'
     };
     this.optionLabels = ['A favor', 'En contra'];
     this.formError = '';
@@ -728,7 +771,9 @@ export class VotacionesPageComponent implements OnInit {
       title: this.detail.title,
       description: this.detail.description ?? '',
       quorumPercentage: this.detail.quorumPercentage,
-      weightType: this.detail.weightType
+      weightType: this.detail.weightType,
+      majorityRule: this.detail.majorityRule ?? 'Simple',
+      isInformative: this.detail.isInformative ?? false
     };
     this.optionLabels = this.detail.options.length >= 2
       ? this.detail.options.map(o => o.label)
@@ -736,6 +781,14 @@ export class VotacionesPageComponent implements OnInit {
     this.formError = '';
     this.panelMode = 'form';
     this.cdr.markForCheck();
+  }
+
+  // Resultado de la doble mayoría absoluta: la opción aprobada, o que ninguna alcanza todavía el 50 % de unidades y de coeficiente.
+  approvedLabel(vote: Vote): string {
+    const approved = vote.options.find(o => o.id === vote.approvedOptionId);
+    return approved
+      ? `Aprobada por mayoría absoluta: ${approved.label}`
+      : 'Ninguna opción alcanza todavía la mayoría absoluta (más del 50 % de las unidades y del coeficiente totales).';
   }
 
   closePanel() { this.panelVisible = false; this.selectedVote = null; this.detail = null; }
@@ -752,6 +805,8 @@ export class VotacionesPageComponent implements OnInit {
       description: this.form.description.trim() || null,
       quorumPercentage: this.form.quorumPercentage,
       weightType: this.form.weightType,
+      majorityRule: this.form.majorityRule,
+      isInformative: this.form.isInformative,
       optionLabels: labels
     };
 

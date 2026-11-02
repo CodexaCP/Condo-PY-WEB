@@ -9,6 +9,7 @@ import { BuildingExpensesApiService } from '../../api/building-expenses-api.serv
 import { resolveUploadUrl } from '../../api/file-url.util';
 import { PeriodSupplierCreditNote } from '../../api/models';
 import { AuthService } from '../../auth/auth.service';
+import { formatMoney } from '../../core/locale/locale.state';
 
 // Anexo de la liquidación: notas de crédito que los proveedores emitieron sobre los gastos del período, con qué se hizo con cada una
 // (descontada del gasto, acreditada como saldo a favor de las unidades, devuelta al fondo de reserva). Se descarga en Excel para el contador.
@@ -114,7 +115,7 @@ export class PeriodCreditNotesSectionComponent implements OnChanges {
   }
 
   gs(value: number | null | undefined): string {
-    return '₲ ' + new Intl.NumberFormat('es-PY', { maximumFractionDigits: 0 }).format(value ?? 0);
+    return formatMoney(value ?? 0);
   }
 
   private load(): void {

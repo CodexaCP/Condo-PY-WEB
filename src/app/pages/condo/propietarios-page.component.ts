@@ -10,6 +10,7 @@ import { OwnersApiService } from '../../api/owners-api.service';
 import { Owner } from '../../api/models';
 import { AuthService } from '../../auth/auth.service';
 import { PeopleImportPanelComponent } from './people-import-panel.component';
+import { pluralTerm, term } from '../../core/locale/locale.state';
 
 @Component({
   standalone: true,
@@ -20,7 +21,7 @@ import { PeopleImportPanelComponent } from './people-import-panel.component';
       <div class="app-toolbar">
         <div class="app-page-head">
           <div>
-            <h1>Propietarios</h1>
+            <h1>{{ pluralTerm('propietario', 'Propietario') }}</h1>
             <p>Fichas de propietarios para asignación a unidades.</p>
           </div>
         </div>
@@ -74,6 +75,10 @@ import { PeopleImportPanelComponent } from './people-import-panel.component';
   `]
 })
 export class PropietariosPageComponent implements OnInit {
+  // Vocabulario del país de la empresa (glosario): «Unidad funcional», «Porcentual», etc.
+  readonly term = term;
+  readonly pluralTerm = pluralTerm;
+
   private readonly api        = inject(OwnersApiService);
   private readonly router     = inject(Router);
   private readonly destroyRef = inject(DestroyRef);

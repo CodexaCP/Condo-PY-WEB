@@ -16,6 +16,8 @@ import { OwnerPaymentsApiService } from '../../api/owner-payments-api.service';
 import { OwnersApiService } from '../../api/owners-api.service';
 import { UploadsApiService } from '../../api/uploads-api.service';
 import { resolveUploadUrl } from '../../api/file-url.util';
+import { MoneyPipe } from '../../core/locale/money.pipe';
+import { documentTypesFor } from '../../core/locale/locale.state';
 
 interface PhonePrefix { label: string; value: string; flag: string; }
 const PHONE_PREFIXES: PhonePrefix[] = [
@@ -29,7 +31,7 @@ const PHONE_PREFIXES: PhonePrefix[] = [
 @Component({
   standalone: true,
   selector: 'app-propietario-create-page',
-  imports: [CommonModule, FormsModule, Button, Card, Message, Select, Tooltip],
+  imports: [CommonModule, FormsModule, Button, Card, Message, Select, Tooltip, MoneyPipe],
   template: `
     <p-card styleClass="app-page-card">
 
@@ -88,10 +90,7 @@ const PHONE_PREFIXES: PhonePrefix[] = [
               <label for="documentType">Tipo de documento</label>
               <select id="documentType" [(ngModel)]="form.documentType" name="documentType">
                 <option value="">— Sin especificar —</option>
-                <option value="CedulaParaguaya">Cédula paraguaya</option>
-                <option value="RUC">RUC</option>
-                <option value="Pasaporte">Pasaporte</option>
-                <option value="DocumentoExtranjero">Documento extranjero</option>
+                <option *ngFor="let t of docTypes(form.documentType)" [value]="t.code">{{ t.label }}</option>
               </select>
             </div>
             <div class="field">
@@ -246,10 +245,7 @@ const PHONE_PREFIXES: PhonePrefix[] = [
               <label for="invoiceDocumentType">Tipo de documento</label>
               <select id="invoiceDocumentType" [(ngModel)]="form.invoiceDocumentType" name="invoiceDocumentType">
                 <option value="">— Sin especificar —</option>
-                <option value="RUC">RUC</option>
-                <option value="CedulaParaguaya">Cédula paraguaya</option>
-                <option value="Pasaporte">Pasaporte</option>
-                <option value="DocumentoExtranjero">Documento extranjero</option>
+                <option *ngFor="let t of docTypes(form.invoiceDocumentType)" [value]="t.code">{{ t.label }}</option>
               </select>
             </div>
             <div class="field">
@@ -272,12 +268,12 @@ const PHONE_PREFIXES: PhonePrefix[] = [
           <div class="credit-line">
             <button type="button" class="credit-link" *ngIf="credit.amount > 0 || credit.heldAmount > 0 || credit.uses.length"
                     (click)="creditVisible = true" pTooltip="Ver de dónde viene cada parte" tooltipPosition="top">
-              {{ credit.amount | number:'1.0-0' }} Gs. <i class="pi pi-external-link"></i>
+              {{ credit.amount | money }} <i class="pi pi-external-link"></i>
             </button>
             <span class="credit-none" *ngIf="!(credit.amount > 0 || credit.heldAmount > 0 || credit.uses.length)">Sin saldo a favor.</span>
             <small class="field-hint" *ngIf="credit.amount > 0">Toque el monto para ver el origen de cada parte.</small>
             <small class="field-hint" *ngIf="credit.heldAmount > 0">
-              Además hay {{ credit.heldAmount | number:'1.0-0' }} Gs. retenidos (no cuentan en el saldo).
+              Además hay {{ credit.heldAmount | money }} retenidos (no cuentan en el saldo).
             </small>
           </div>
         </section>
@@ -379,7 +375,7 @@ const PHONE_PREFIXES: PhonePrefix[] = [
 
       <div class="credit-total">
         <span>Saldo actual</span>
-        <strong>{{ credit.amount | number:'1.0-0' }} Gs.</strong>
+        <strong>{{ credit.amount | money }}</strong>
       </div>
 
       <h3 class="credit-sub">De dónde viene</h3>
@@ -622,6 +618,9 @@ const PHONE_PREFIXES: PhonePrefix[] = [
   `]
 })
 export class PropietarioCreatePageComponent implements OnInit {
+  // Tipos de documento del país de la empresa (más «Documento extranjero» y el valor ya guardado).
+  readonly docTypes = documentTypesFor;
+
   // El backend guarda los archivos subidos como ruta relativa (/uploads/x.jpg): hay que anteponer el origen de la API.
   readonly fileUrl = resolveUploadUrl;
   private readonly api        = inject(OwnersApiService);

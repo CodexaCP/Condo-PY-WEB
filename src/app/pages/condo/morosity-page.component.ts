@@ -15,6 +15,7 @@ import { ExpensePeriodsApiService } from '../../api/expense-periods-api.service'
 import { MorosityApiService } from '../../api/morosity-api.service';
 import { UnitsApiService } from '../../api/units-api.service';
 import { Building, ExpensePeriod, MorosityReport, Unit } from '../../api/models';
+import { formatMoney } from '../../core/locale/locale.state';
 
 const AGING_BUCKETS = [
   { value: '0-30', label: '0-30 días', severity: 'info' as const },
@@ -484,7 +485,7 @@ export class MorosityPageComponent implements OnInit {
   }
 
   formatCurrency(value: number): string {
-    return '₲ ' + new Intl.NumberFormat('es-PY', { maximumFractionDigits: 0 }).format(value ?? 0);
+    return formatMoney(value ?? 0);
   }
 
   chargeBreakdownLabel(item: MorosityReport['items'][number]): string {

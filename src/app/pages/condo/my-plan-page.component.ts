@@ -11,6 +11,7 @@ import { BuildingPlansApiService } from '../../api/building-plans-api.service';
 import { BuildingPlanPaymentsApiService } from '../../api/building-plan-payments-api.service';
 import { UploadsApiService } from '../../api/uploads-api.service';
 import { BuildingPlanPaymentCreateRequest, BuildingPlanStatus, BuildingPlanSummary } from '../../api/models';
+import { CurrencySymbolPipe } from '../../core/locale/money.pipe';
 
 const STATUS_LABEL: Record<BuildingPlanStatus, string> = {
   Active: 'Activo', ExpiringSoon: 'Por vencer', Expired: 'Vencido',
@@ -25,7 +26,7 @@ const STATUS_SEV: Record<BuildingPlanStatus, 'success' | 'warn' | 'danger' | 'se
   standalone: true,
   selector: 'app-my-plan-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, FormsModule, Button, Card, Tag],
+  imports: [CommonModule, FormsModule, Button, Card, Tag, CurrencySymbolPipe],
   template: `
     <p-card styleClass="app-page-card">
       <div class="app-page-head">
@@ -142,7 +143,7 @@ const STATUS_SEV: Record<BuildingPlanStatus, 'success' | 'warn' | 'danger' | 'se
       </p>
       <form class="ficha-form" (ngSubmit)="submitPayment()">
         <label>
-          <span>Monto declarado (Gs.) <span class="req">*</span></span>
+          <span>Monto declarado ({{ null | currencySymbol }}) <span class="req">*</span></span>
           <input [(ngModel)]="payForm.declaredAmount" name="amount" type="number" min="1" step="1000" required />
         </label>
         <label>

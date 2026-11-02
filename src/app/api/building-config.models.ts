@@ -118,7 +118,7 @@ export interface PeriodClosing {
 
 // ── Política de mora ──────────────────────────────────────────────────────────
 
-export type LateFeeFrequencyValue = 'Daily' | 'Weekly' | 'Biweekly';
+export type LateFeeFrequencyValue = 'Daily' | 'Weekly' | 'Biweekly' | 'Monthly';
 
 export interface LateFeePolicy {
   buildingId: string;

@@ -10,6 +10,8 @@ import { MessageService } from 'primeng/api';
 import { extractApiErrorMessage } from '../../api/api-error.util';
 import { PlansApiService } from '../../api/plans-api.service';
 import { BillingCycle, Plan, PlanCreateRequest, PlanUpdateRequest } from '../../api/models';
+import { formatMoney } from '../../core/locale/locale.state';
+import { CurrencySymbolPipe } from '../../core/locale/money.pipe';
 
 const BILLING_LABELS: Record<BillingCycle, string> = {
   Monthly: 'Mensual',
@@ -22,7 +24,7 @@ const BILLING_LABELS: Record<BillingCycle, string> = {
   standalone: true,
   selector: 'app-plans-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, FormsModule, Button, Card, Message, Tag],
+  imports: [CommonModule, FormsModule, Button, Card, Message, Tag, CurrencySymbolPipe],
   template: `
     <p-card styleClass="app-page-card">
       <div class="app-toolbar">
@@ -85,7 +87,7 @@ const BILLING_LABELS: Record<BillingCycle, string> = {
           <textarea [(ngModel)]="form.description" name="description" rows="3" maxlength="500"></textarea>
         </label>
         <label>
-          <span>Precio (₲)</span>
+          <span>Precio ({{ null | currencySymbol }})</span>
           <input [(ngModel)]="form.price" name="price" type="number" min="0" step="1000" />
         </label>
         <label>
@@ -385,7 +387,7 @@ export class PlansPageComponent implements OnInit {
   }
 
   billingLabel(cycle: BillingCycle): string { return BILLING_LABELS[cycle] ?? cycle; }
-  formatCurrency(v: number): string { return new Intl.NumberFormat('es-PY', { style: 'currency', currency: 'PYG', minimumFractionDigits: 0 }).format(v); }
+  formatCurrency(v: number): string { return formatMoney(v, true); }
 
   private sort(items: Plan[]): Plan[] {
     return [...items].sort((a, b) => {

@@ -10,6 +10,8 @@ import { MessageService } from 'primeng/api';
 import { extractApiErrorMessage } from '../../api/api-error.util';
 import { FinanceApiService } from '../../api/finance-api.service';
 import { FinancialAccount, FinancialAccountType } from '../../api/models';
+import { formatMoney } from '../../core/locale/locale.state';
+import { moneyDecimals, moneyPrefix } from '../../core/locale/locale.state';
 
 const TYPE_LABELS: Record<FinancialAccountType, string> = {
   Cash: 'Caja',
@@ -108,7 +110,7 @@ const TYPE_LABELS: Record<FinancialAccountType, string> = {
         </label>
         <label>
           <span>Saldo inicial (₲)</span>
-          <p-inputnumber [(ngModel)]="form.openingBalance" name="openingBalance" [useGrouping]="true" prefix="₲ " [min]="0" [minFractionDigits]="0" [maxFractionDigits]="0" styleClass="w-full"></p-inputnumber>
+          <p-inputnumber [(ngModel)]="form.openingBalance" name="openingBalance" [useGrouping]="true" [prefix]="moneyPrefix()" [min]="0" [minFractionDigits]="moneyDecimals()" [maxFractionDigits]="moneyDecimals()" styleClass="w-full"></p-inputnumber>
         </label>
         <label class="checkbox">
           <input [(ngModel)]="form.isActive" name="isActive" type="checkbox" />
@@ -188,6 +190,10 @@ const TYPE_LABELS: Record<FinancialAccountType, string> = {
   `]
 })
 export class FinanceAccountsEditorComponent implements OnChanges {
+  // Prefijo y decimales de los campos de importe: salen de la moneda de la empresa.
+  readonly moneyPrefix = moneyPrefix;
+  readonly moneyDecimals = moneyDecimals;
+
   private readonly api = inject(FinanceApiService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly cdr = inject(ChangeDetectorRef);
@@ -264,7 +270,7 @@ export class FinanceAccountsEditorComponent implements OnChanges {
   }
 
   formatCurrency(v: number): string {
-    return new Intl.NumberFormat('es-PY', { style: 'currency', currency: 'PYG', minimumFractionDigits: 0 }).format(v);
+    return formatMoney(v, true);
   }
 
   load(): void {

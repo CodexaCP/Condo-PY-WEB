@@ -11,6 +11,7 @@ import { Building, CollectionReport } from '../../api/models';
 import { BuildingsApiService } from '../../api/buildings-api.service';
 import { CollectionsApiService } from '../../api/collections-api.service';
 import { AuthService } from '../../auth/auth.service';
+import { formatMoney } from '../../core/locale/locale.state';
 
 type CollectionItem = CollectionReport['items'][number];
 type StatusFilter = 'all' | 'Published' | 'Closed';
@@ -538,7 +539,7 @@ export class CollectionsPageComponent implements OnInit {
   }
 
   money(value: number): string {
-    return '₲ ' + new Intl.NumberFormat('es-PY', { maximumFractionDigits: 0 }).format(value ?? 0);
+    return formatMoney(value ?? 0);
   }
 
   delta(current: number, previous: number): string {

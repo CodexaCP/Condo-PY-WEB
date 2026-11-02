@@ -9,6 +9,7 @@ import { extractApiErrorMessage } from '../../api/api-error.util';
 import { BuildingConfigApiService } from '../../api/building-config-api.service';
 import { LateFeeFrequencyValue, LateFeePolicy } from '../../api/building-config.models';
 import { CONFIG_SECTION_STYLES } from './config-section.styles';
+import { CurrencySymbolPipe } from '../../core/locale/money.pipe';
 
 // Política de mora completa: tasa y cada cuánto se suma, días de gracia, tope, mínimo, qué cargos entran en la base y cuántas unidades
 // están exoneradas. Guardarla es revisarla: con la tasa vacía queda como decisión explícita de «este edificio no cobra mora».
@@ -16,7 +17,7 @@ import { CONFIG_SECTION_STYLES } from './config-section.styles';
   standalone: true,
   selector: 'app-config-late-fee-section',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, FormsModule, RouterLink, Message],
+  imports: [CommonModule, FormsModule, RouterLink, Message, CurrencySymbolPipe],
   template: `
     <h2>Política de mora</h2>
     <p class="muted small">Cómo se calcula el interés de los pagos atrasados. Los cambios rigen para el cálculo siguiente; lo ya cobrado no se recalcula.</p>
@@ -53,7 +54,7 @@ import { CONFIG_SECTION_STYLES } from './config-section.styles';
           <span class="hint">Por unidad y período. Vacío: sin tope.</span>
         </label>
         <label class="field">
-          <span>Mora mínima por intervalo (Gs.)</span>
+          <span>Mora mínima por intervalo ({{ null | currencySymbol }})</span>
           <input type="number" name="min" min="0" step="1" [(ngModel)]="form.minAmount" [disabled]="!p.canEdit" />
           <span class="hint">Vacío: sin mínimo.</span>
         </label>
@@ -93,7 +94,8 @@ export class ConfigLateFeeSectionComponent implements OnChanges {
   readonly frequencies: { value: LateFeeFrequencyValue; label: string }[] = [
     { value: 'Daily', label: 'Día' },
     { value: 'Weekly', label: 'Semana' },
-    { value: 'Biweekly', label: 'Quincena' }
+    { value: 'Biweekly', label: 'Quincena' },
+    { value: 'Monthly', label: 'Mes' }
   ];
 
   policy: LateFeePolicy | null = null;
@@ -117,7 +119,7 @@ export class ConfigLateFeeSectionComponent implements OnChanges {
   save(): void {
     const f = this.form;
     if (f.ratePercentage !== null && (f.ratePercentage < 0 || f.ratePercentage > 100)) return this.warn('La tasa de interés debe estar entre 0 y 100.');
-    if (f.ratePercentage && !f.frequency) return this.warn('Elegí cada cuánto se suma la mora (día, semana o quincena).');
+    if (f.ratePercentage && !f.frequency) return this.warn('Elegí cada cuánto se suma la mora (día, semana, quincena o mes).');
     if (f.graceDays !== null && (f.graceDays < 0 || f.graceDays > 365)) return this.warn('Los días de gracia deben estar entre 0 y 365.');
     if (f.capPercentage !== null && f.capPercentage < 0) return this.warn('El tope no puede ser negativo.');
     if (f.minAmount !== null && f.minAmount < 0) return this.warn('La mora mínima no puede ser negativa.');

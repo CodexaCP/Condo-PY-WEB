@@ -1,4 +1,6 @@
-export type LateFeeFrequency = 'Daily' | 'Weekly' | 'Biweekly';
+export type LateFeeFrequency = 'Daily' | 'Weekly' | 'Biweekly' | 'Monthly';
+// Cadena de aprobacion de la liquidacion: con el presidente (la de siempre) o sin su revision.
+export type SettlementApprovalMode = 'ManagerPresidentAdmin' | 'ManagerAdmin';
 export type InvoicingMode = 'Preimpresa' | 'Autoimpresa' | 'Electronica';
 export type IncomeTreatment = 'CreditToOwners' | 'ToReserveFund';
 
@@ -49,6 +51,12 @@ export interface BuildingProfileData {
   paymentInstructions?: string | null;
 
   timeZoneId?: string | null;
+
+  // Multipais: jurisdiccion (provincia o ciudad autonoma), registro del administrador, mes de cierre del ejercicio y cadena de aprobacion.
+  jurisdiction?: string | null;
+  administratorRegistryNumber?: string | null;
+  fiscalYearEndMonth?: number | null;
+  settlementApprovalMode?: SettlementApprovalMode | null;
 }
 
 export interface BuildingBankAccount {
@@ -134,6 +142,14 @@ export interface Company {
   contactPhonePrefix?: string | null;
   contactPhone?: string | null;
   contactEmail?: string | null;
+  countryCode: string;
+  countryName: string;
+  isDraftCountry: boolean;
+  currencyCode: string;
+  localeCode: string;
+  taxName: string;
+  taxGeneralRate?: number | null;
+  taxReducedRate?: number | null;
 }
 
 export interface CreateCompanyRequest {
@@ -144,6 +160,14 @@ export interface CreateCompanyRequest {
   contactPhonePrefix?: string | null;
   contactPhone?: string | null;
   contactEmail?: string | null;
+  // Pais de la empresa: de aqui salen la moneda y el impuesto. Vacio = Paraguay.
+  countryCode?: string | null;
+  currencyCode?: string | null;
+  taxName?: string | null;
+  taxGeneralRate?: number | null;
+  taxReducedRate?: number | null;
+  // true = el superadmin fijo el impuesto a mano; false = completarlo desde el pais.
+  taxConfigured?: boolean;
 }
 
 export interface Condominium {
@@ -816,6 +840,8 @@ export interface CloneExpensePeriodResult {
 
 export interface ExpenseSettlementSummary {
   id: string | null;
+  // false = el edificio publica sin revision del presidente.
+  requiresPresidentReview?: boolean;
   expensePeriodId: string;
   buildingId: string;
   expensePeriodName: string;
@@ -1713,6 +1739,8 @@ export interface CreateUserRequest {
 
 export type VoteStatus = 'Draft' | 'Open' | 'Closed';
 export type VoteWeightType = 'ByUnit' | 'ByCoefficient';
+// "Simple" (porcentaje de quorum) o "DoubleAbsolute" (mayoria absoluta sobre la totalidad, por unidades y por coeficiente a la vez).
+export type VoteMajorityRule = 'Simple' | 'DoubleAbsolute';
 
 export interface VoteOptionDto {
   id: string;
@@ -1721,6 +1749,10 @@ export interface VoteOptionDto {
   castCount: number;
   castWeight: number;
   percentage: number;
+  // Porcentaje sobre la totalidad de unidades y de coeficiente del edificio, no solo sobre quienes votaron.
+  percentOfTotalUnits: number;
+  percentOfTotalCoefficient: number;
+  hasAbsoluteMajority: boolean;
 }
 
 export interface VoteUnitSummary {
@@ -1741,6 +1773,10 @@ export interface Vote {
   description: string | null;
   quorumPercentage: number;
   weightType: VoteWeightType;
+  majorityRule: VoteMajorityRule;
+  // Consulta informativa: el voto en la app no reemplaza al voto formal de la asamblea.
+  isInformative: boolean;
+  approvedOptionId: string | null;
   status: VoteStatus;
   openedAtUtc: string | null;
   closedAtUtc: string | null;
@@ -1759,6 +1795,8 @@ export interface VoteUpsertRequest {
   description: string | null;
   quorumPercentage: number;
   weightType: VoteWeightType;
+  majorityRule?: VoteMajorityRule | null;
+  isInformative?: boolean | null;
   optionLabels: string[];
 }
 

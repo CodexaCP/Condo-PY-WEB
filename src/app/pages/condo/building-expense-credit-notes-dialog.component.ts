@@ -10,6 +10,8 @@ import { BuildingExpensesApiService } from '../../api/building-expenses-api.serv
 import { isPdfUrl, resolveUploadUrl } from '../../api/file-url.util';
 import { BuildingExpense, BuildingExpenseCreditNote, BuildingExpenseCreditNotePreview, SupplierRecoveryType } from '../../api/models';
 import { UploadsApiService } from '../../api/uploads-api.service';
+import { formatMoney } from '../../core/locale/locale.state';
+import { CurrencySymbolPipe } from '../../core/locale/money.pipe';
 
 const ALLOWED_EXTENSIONS = ['.pdf', '.jpg', '.jpeg', '.png', '.webp', '.xml'];
 const MAX_FILE_BYTES = 10 * 1024 * 1024;
@@ -19,7 +21,7 @@ const MAX_FILE_BYTES = 10 * 1024 * 1024;
 @Component({
   standalone: true,
   selector: 'app-expense-credit-notes-dialog',
-  imports: [CommonModule, FormsModule, Button, Tag],
+  imports: [CommonModule, FormsModule, Button, Tag, CurrencySymbolPipe],
   template: `
     <div class="ov-backdrop" (click)="close()">
       <div class="ov-panel" role="dialog" aria-modal="true" aria-label="Notas de crédito del proveedor" (click)="$event.stopPropagation()">
@@ -116,7 +118,7 @@ const MAX_FILE_BYTES = 10 * 1024 * 1024;
           </div>
           <div class="void-box" *ngIf="discountingId === n.id">
             <label class="field">
-              <span>Monto descontado por el proveedor (₲) * — falta aplicar {{ gs(n.pendingRecoveryAmount) }}</span>
+              <span>Monto descontado por el proveedor ({{ null | currencySymbol }}) * — falta aplicar {{ gs(n.pendingRecoveryAmount) }}</span>
               <input type="number" min="1" [max]="n.pendingRecoveryAmount" step="1" [(ngModel)]="discountForm.amount" name="discountAmount" />
             </label>
             <label class="field">
@@ -169,7 +171,7 @@ const MAX_FILE_BYTES = 10 * 1024 * 1024;
                 <input type="date" name="issueDate" required [max]="today" [(ngModel)]="form.issueDate" />
               </label>
               <label class="field">
-                <span>Monto de la nota (₲) *</span>
+                <span>Monto de la nota ({{ null | currencySymbol }}) *</span>
                 <input type="number" name="amount" required min="1" [max]="maxAmount" step="1" [(ngModel)]="form.amount" (ngModelChange)="onAmountChange()" />
                 <small class="hint" *ngIf="isDraft">Máximo {{ gs(maxAmount) }} (el gasto debe quedar con monto).</small>
                 <small class="hint" *ngIf="isPublished">Máximo {{ gs(maxAmount) }} (lo que todavía se puede acreditar de este gasto).</small>
@@ -377,7 +379,7 @@ export class BuildingExpenseCreditNotesDialogComponent implements OnInit {
   close(): void { this.closed.emit(); }
 
   gs(value: number | null | undefined): string {
-    return '₲ ' + new Intl.NumberFormat('es-PY', { maximumFractionDigits: 0 }).format(value ?? 0);
+    return formatMoney(value ?? 0);
   }
 
   // Datos completos. En un período publicado, además, si ya se vio el reparto, todas las unidades deben tener propietario.

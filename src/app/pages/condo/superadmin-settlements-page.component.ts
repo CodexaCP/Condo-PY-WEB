@@ -14,11 +14,12 @@ import { BuildingsApiService } from '../../api/buildings-api.service';
 import { ExpensePeriodsApiService } from '../../api/expense-periods-api.service';
 import { Building, Company, ExpensePeriod, ExpenseSettlementSummary } from '../../api/models';
 import { JournalImpactNoticeComponent } from './journal-impact-notice.component';
+import { MoneyPipe } from '../../core/locale/money.pipe';
 
 @Component({
   standalone: true,
   selector: 'app-superadmin-settlements-page',
-  imports: [CommonModule, FormsModule, Button, Card, Tag, Message, JournalImpactNoticeComponent],
+  imports: [CommonModule, FormsModule, Button, Card, Tag, Message, JournalImpactNoticeComponent, MoneyPipe],
   template: `
     <p-card styleClass="app-page-card">
       <div class="app-page-head">
@@ -74,7 +75,7 @@ import { JournalImpactNoticeComponent } from './journal-impact-notice.component'
           </div>
           <div class="detail-row">
             <span class="detail-lbl">Monto neto</span>
-            <span class="detail-val">{{ settlement.netCommonAmount | number:'1.0-0' }} Gs.</span>
+            <span class="detail-val">{{ settlement.netCommonAmount | money }}</span>
           </div>
         </div>
 

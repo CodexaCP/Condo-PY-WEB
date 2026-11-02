@@ -2,6 +2,8 @@ import { HttpClient } from '@angular/common/http';
 import { computed, inject, Injectable, signal } from '@angular/core';
 import { Observable, map, tap } from 'rxjs';
 import { API_BASE_URL } from '../config/api.config';
+import { CompanyLocale } from '../core/locale/locale.models';
+import { setCurrentLocale } from '../core/locale/locale.state';
 
 export type SessionUser = {
   userId: string;
@@ -20,6 +22,8 @@ type SessionState = {
   token: string;
   expiresAtUtc: string;
   user: SessionUser;
+  // Pais, moneda, impuesto, vocabulario y capacidades de la empresa del usuario. Sesiones viejas no lo traen: se usa Paraguay.
+  locale?: CompanyLocale;
 };
 
 type LoginResponse = {
@@ -34,6 +38,7 @@ type LoginResponse = {
   role: string;
   scopeLabel: string;
   mustChangePassword: boolean;
+  locale?: CompanyLocale;
 };
 
 export const SESSION_KEY = 'condopy-admin-session';
@@ -80,11 +85,13 @@ export class AuthService {
               scopeLabel: response.scopeLabel,
               mustChangePassword: response.mustChangePassword,
               avatar: this.buildAvatar(response.fullName)
-            }
+            },
+            locale: response.locale
           };
 
           localStorage.setItem(SESSION_KEY, JSON.stringify(session));
           this.session.set(session);
+          setCurrentLocale(session.locale);
         }),
         map((response) => response.mustChangePassword)
       );
@@ -124,9 +131,23 @@ export class AuthService {
     return this.http.post<void>(`${API_BASE_URL}/auth/reset-password`, { token, newPassword });
   }
 
+  // Guarda la configuracion regional refrescada (GET /api/locale/me) en la sesion.
+  setLocale(locale: CompanyLocale): void {
+    const session = this.session();
+    if (!session) {
+      return;
+    }
+
+    const next: SessionState = { ...session, locale };
+    this.session.set(next);
+    localStorage.setItem(SESSION_KEY, JSON.stringify(next));
+    setCurrentLocale(locale);
+  }
+
   logout(): void {
     localStorage.removeItem(SESSION_KEY);
     this.session.set(null);
+    setCurrentLocale(null);
   }
 
   isAuthenticated(): boolean {
@@ -185,6 +206,7 @@ export class AuthService {
         return null;
       }
 
+      setCurrentLocale(session.locale);
       return session;
     } catch {
       localStorage.removeItem(SESSION_KEY);

@@ -8,6 +8,7 @@ import { extractApiErrorMessage } from '../../api/api-error.util';
 import { BuildingConfigApiService } from '../../api/building-config-api.service';
 import { FundPolicy, IncomeTreatmentValue, ReserveUsePolicy } from '../../api/building-config.models';
 import { CONFIG_SECTION_STYLES } from './config-section.styles';
+import { CurrencySymbolPipe } from '../../core/locale/money.pipe';
 
 // Política de fondos: qué porcentaje de las expensas va al fondo de reserva y a aportes extraordinarios, qué se hace con los ingresos propios
 // del edificio y quién tiene que aprobar el uso del fondo. Guardarla es revisarla: sin aportes queda como «este edificio no tiene fondos».
@@ -15,7 +16,7 @@ import { CONFIG_SECTION_STYLES } from './config-section.styles';
   standalone: true,
   selector: 'app-config-funds-section',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, FormsModule, Message],
+  imports: [CommonModule, FormsModule, Message, CurrencySymbolPipe],
   template: `
     <h2>Fondos</h2>
     <p class="muted small">Aportes al fondo de reserva y extraordinarios, destino de los ingresos propios del edificio y política de uso del fondo.</p>
@@ -52,7 +53,7 @@ import { CONFIG_SECTION_STYLES } from './config-section.styles';
           </select>
         </label>
         <label class="field" *ngIf="form.reserveUsePolicy !== 'FreeUse'">
-          <span>Aprobación desde (Gs.)</span>
+          <span>Aprobación desde ({{ null | currencySymbol }})</span>
           <input type="number" name="threshold" min="0" step="1" [(ngModel)]="form.reserveUseThreshold" [disabled]="!p.canEdit" />
           <span class="hint">Vacío: la aprobación rige para cualquier monto.</span>
         </label>

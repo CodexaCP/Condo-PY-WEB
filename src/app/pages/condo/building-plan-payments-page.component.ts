@@ -11,6 +11,7 @@ import { extractApiErrorMessage } from '../../api/api-error.util';
 import { BuildingPlanPaymentsApiService } from '../../api/building-plan-payments-api.service';
 import { BuildingPlanPayment, BuildingPlanPaymentStatus } from '../../api/models';
 import { resolveUploadUrl } from '../../api/file-url.util';
+import { formatMoney } from '../../core/locale/locale.state';
 
 const STATUS_LABEL: Record<BuildingPlanPaymentStatus, string> = {
   Pending: 'Pendiente', Approved: 'Aprobado', Rejected: 'Rechazado',
@@ -329,7 +330,7 @@ export class BuildingPlanPaymentsPageComponent implements OnInit {
   }
 
   fmtCurrency(v: number): string {
-    return new Intl.NumberFormat('es-PY', { style: 'currency', currency: 'PYG', minimumFractionDigits: 0 }).format(v);
+    return formatMoney(v, true);
   }
 
   private updateItem(updated: BuildingPlanPayment): void {

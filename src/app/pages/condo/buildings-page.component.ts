@@ -114,6 +114,7 @@ import { AuthService } from '../../auth/auth.service';
             <option value="Daily">Diario</option>
             <option value="Weekly">Semanal</option>
             <option value="Biweekly">Quincenal</option>
+            <option value="Monthly">Mensual</option>
           </select>
           <small>Cada intervalo suma la tasa sobre el monto original adeudado. Al cambiar la config se notifica a todos los miembros del edificio.</small>
         </label>

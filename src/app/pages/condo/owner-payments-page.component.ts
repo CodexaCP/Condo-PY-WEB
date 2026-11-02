@@ -15,6 +15,7 @@ import { OwnersApiService } from '../../api/owners-api.service';
 import { PaymentsApiService } from '../../api/payments-api.service';
 import { AuthService } from '../../auth/auth.service';
 import { Owner, OwnerPayment, Payment, PaymentMethod, RegisterComprobante, RegisterPreview } from '../../api/models';
+import { formatMoney } from '../../core/locale/locale.state';
 
 const STATUS_LABELS: Record<string, string> = {
   Pending:     'Pendiente',
@@ -487,7 +488,7 @@ export class OwnerPaymentsPageComponent implements OnInit {
   methodLabel(method: string): string { return METHOD_LABELS[method] ?? method; }
 
   formatCurrency(value: number): string {
-    return '₲ ' + new Intl.NumberFormat('es-PY', { maximumFractionDigits: 0 }).format(value ?? 0);
+    return formatMoney(value ?? 0);
   }
 
   applyFilter(): void {
