@@ -16,7 +16,7 @@ import { faqsFor } from '../../config/faq.data';
 import { LANGS, LangService } from '../../core/i18n/lang.service';
 import { LangSwitcherComponent } from '../../core/i18n/lang-switcher.component';
 import { LOGIN_TX } from './login.i18n';
-import { gaEvent } from '../../core/analytics';
+import { trackWhatsAppClick } from '../../core/analytics';
 import { SeoService } from '../../core/seo.service';
 
 // Torre isométrica de la ilustración: centro de la base, medios ejes de la base (a horizontal, b = a/2 vertical), alto y pisos.
@@ -457,7 +457,7 @@ export class Login {
     readonly whatsappUrl = computed(() => salesWhatsAppUrl(this.lang.lang()));
 
     trackWhatsApp(): void {
-        gaEvent('generate_lead', { method: 'whatsapp_login' });
+        trackWhatsAppClick({ placement: 'login', language: this.lang.lang() });
     }
 
     constructor() {

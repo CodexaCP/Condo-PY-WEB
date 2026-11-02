@@ -2,7 +2,7 @@ import { isPlatformBrowser } from '@angular/common';
 import { ChangeDetectionStrategy, Component, ElementRef, PLATFORM_ID, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { salesWhatsAppUrlFor } from '../../config/sales.config';
-import { gaEvent } from '../../core/analytics';
+import { gaEvent, trackWhatsAppClick } from '../../core/analytics';
 import { LangService } from '../../core/i18n/lang.service';
 import { SITE_URL, SeoService } from '../../core/seo.service';
 import { LANDING_LANGS, LandingContent, landingContent } from './landing.content';
@@ -297,7 +297,7 @@ export class HomeComponent {
   trackClick(event: Event): void {
     const link = (event.target as HTMLElement | null)?.closest?.('a');
     const href = link?.getAttribute('href') ?? '';
-    if (href.includes('wa.me')) gaEvent('generate_lead', { method: 'whatsapp_landing', language: this.t.lang });
+    if (href.includes('wa.me')) trackWhatsAppClick({ placement: 'landing', language: this.t.lang });
     else if (href.startsWith('/explorar')) gaEvent('demo_click', { language: this.t.lang });
   }
 

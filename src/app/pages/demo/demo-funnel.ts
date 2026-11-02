@@ -1,4 +1,4 @@
-import { gaEvent } from '../../core/analytics';
+import { gaEvent, trackWhatsAppClick } from '../../core/analytics';
 
 // Embudo de la demostración (medición simple en el navegador, sin enviar nada a un servidor):
 // 1 visita la web → 2 inicia la demo → 3 descubre funciones → 4 identifica su necesidad → 5 pide contacto.
@@ -21,9 +21,18 @@ function anonId(): string {
   }
 }
 
+// El detalle que arma DemoStore.track es «<dato> · <país>» (o solo «<país>»). En el contacto el dato es el botón que se tocó.
+function splitContactDetail(detail?: string): { contactType?: string; country?: string } {
+  const parts = (detail ?? '').split(' · ').map((p) => p.trim()).filter(Boolean);
+  if (parts.length === 0) return {};
+  if (parts.length === 1) return { contactType: parts[0] };
+  return { contactType: parts[0], country: parts[parts.length - 1] };
+}
+
 export function trackDemoEvent(event: DemoFunnelEvent, detail?: string): void {
   // Además del registro local, el contacto y los pasos del embudo van a Google Analytics (la visita de portada ya la cuenta page_view).
-  if (event === 'contact_click') gaEvent('generate_lead', { method: 'whatsapp_demo', contact_type: detail ?? '' });
+  // El contacto por WhatsApp es un clic: va como whatsapp_click (no como generate_lead) y «contact_click» queda solo en el registro local.
+  if (event === 'contact_click') trackWhatsAppClick({ placement: 'demo', ...splitContactDetail(detail) });
   else if (event !== 'portal_visit') gaEvent(event, detail ? { detail } : undefined);
   try {
     const raw = localStorage.getItem(EVENTS_KEY);
