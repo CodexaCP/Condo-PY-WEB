@@ -2,13 +2,16 @@
 // se genera en el navegador, es el mismo para todos los visitantes y se reinicia al recargar.
 // No lleva textos en ningún idioma: guarda identificadores (rubro, medio de pago, gasto fijo) y demo.i18n.ts los nombra.
 
+import { DemoCountry } from './demo.country';
 import { CategoryId, ExpenseItemId, MethodId } from './demo.i18n';
 
 export const DEMO_BUILDING = { floors: 8 };
 
-// Saldos de apertura del mes (ficticios).
+// Saldos de apertura del mes (ficticios). Paraguay en guaraníes; Argentina en pesos.
 export const DEMO_OPENING_CASH = 62_400_000;
 export const DEMO_RESERVE_FUND = 24_300_000;
+const AR_OPENING_CASH = 3_900_000;
+const AR_RESERVE_FUND = 5_600_000;
 
 export interface DemoPeriod {
   key: string; // aaaa-mm
@@ -22,8 +25,11 @@ export interface DemoUnit {
   floor: number;
   owner: string;
   area: number;
-  fee: number; // cuota ordinaria mensual
+  fee: number; // cuota ordinaria mensual (expensa ordinaria en Argentina)
   profile: number; // cantidad de períodos anteriores sin pagar (0 = al día)
+  // Solo Argentina: el porcentual de la unidad funcional sobre el total (suman 100) y el saldo a favor que tiene en la administración.
+  share?: number;
+  credit?: number;
 }
 
 export type DemoChargeKind = 'ordinaria' | 'extra' | 'recargo';
@@ -81,6 +87,9 @@ export interface DemoMonthStat {
 }
 
 export interface DemoData {
+  country: DemoCountry;
+  openingCash: number;
+  reserveFund: number;
   today: string;
   periods: DemoPeriod[];
   units: DemoUnit[];
@@ -121,6 +130,31 @@ const PAST_EXPENSE_FACTORS = [0.96, 1.02, 0.99, 1.05, 0.97];
 // Unidades con deuda: índice de la unidad → períodos anteriores vencidos.
 const DEBT_PROFILES: Record<number, number> = { 12: 3, 5: 2, 27: 2, 3: 1, 19: 1, 31: 1, 36: 1 };
 
+// Argentina: un consorcio de la Ciudad Autónoma de Buenos Aires con 12 unidades funcionales. Los porcentuales suman 100 y cada
+// expensa ordinaria es el porcentual por el total a prorratear ($ 2.020.000). Todo ficticio.
+const AR_FIRST_NAMES = ['Lucía', 'Martín', 'Camila', 'Federico', 'Valentina', 'Matías', 'Julieta', 'Nicolás', 'Agustina', 'Pablo', 'Florencia', 'Santiago'];
+const AR_LAST_NAMES = ['Fernández', 'Rodríguez', 'López', 'Martínez', 'Pérez', 'Gómez', 'Romero', 'Díaz', 'Álvarez', 'Torres', 'Ruiz', 'Sánchez'];
+const AR_SHARES = [4.7, 4.7, 5.2, 5.2, 6.8, 6.8, 8.4, 8.4, 10.4, 12.0, 12.0, 15.4];
+const AR_TOTAL_TO_SPLIT = 2_020_000;
+const AR_MONTHLY_INTEREST = 0.03;
+
+// Gastos comunes del mes (algunos con centavos), rubro y día de pago.
+const AR_EXPENSE_TEMPLATES: { day: number; itemId: ExpenseItemId; category: CategoryId; amount: number }[] = [
+  { day: 2, itemId: 'staff', category: 'payroll', amount: 880_000 },
+  { day: 5, itemId: 'power', category: 'utilities', amount: 138_200.5 },
+  { day: 6, itemId: 'water', category: 'utilities', amount: 102_350 },
+  { day: 8, itemId: 'elevator', category: 'maintenance', amount: 214_500 },
+  { day: 9, itemId: 'supplies', category: 'cleaning', amount: 96_800 },
+  { day: 10, itemId: 'insurance', category: 'insurance', amount: 168_900 },
+  { day: 11, itemId: 'adminFee', category: 'admin', amount: 240_000 },
+  { day: 12, itemId: 'pump', category: 'maintenance', amount: 119_700 }
+];
+
+// Unidades con deuda (índice → períodos sin pagar): tres unidades morosas, una de ellas con tres meses.
+const AR_DEBT_PROFILES: Record<number, number> = { 4: 2, 8: 1, 10: 3 };
+
+const round2 = (n: number): number => Math.round(n * 100) / 100;
+
 function rng(seed: number): () => number {
   let s = seed;
   return () => {
@@ -131,8 +165,88 @@ function rng(seed: number): () => number {
 
 const iso = (y: number, m: number, d: number): string => `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
 
-export function buildDemoData(now: Date): DemoData {
-  const rand = rng(20261023);
+// Lo que cambia de un país a otro en la generación de los datos; el resto del armado (períodos, cargos, pagos, recibos y resumen) es común.
+interface CountrySpec {
+  seed: number;
+  openingCash: number;
+  reserveFund: number;
+  units: () => DemoUnit[];
+  expenseTemplates: { day: number; itemId: ExpenseItemId; category: CategoryId; amount: number }[];
+  extraAmount: (fee: number) => number;
+  // Recargo (Paraguay) o intereses por mora (Argentina) de una expensa ordinaria vencida y sin pagar; null si todavía no corresponde.
+  surcharge: (fee: number, due: string, today: string) => { date: string; amount: number } | null;
+}
+
+const PY_SPEC: CountrySpec = {
+  seed: 20261023,
+  openingCash: DEMO_OPENING_CASH,
+  reserveFund: DEMO_RESERVE_FUND,
+  units: () => {
+    // Unidades: 8 pisos × 5 departamentos.
+    const units: DemoUnit[] = [];
+    let n = 0;
+    for (let floor = 1; floor <= 8; floor++) {
+      for (let l = 0; l < LETTERS.length; l++) {
+        const area = BASE_AREAS[l] + (floor >= 7 ? 6 : 0);
+        units.push({
+          code: `${floor}${LETTERS[l]}`,
+          floor,
+          owner: `${FIRST_NAMES[n % 20]} ${LAST_NAMES[(n * 7 + 3) % 20]}`,
+          area,
+          fee: Math.round((area * FEE_PER_M2) / 1000) * 1000,
+          profile: DEBT_PROFILES[n] ?? 0
+        });
+        n++;
+      }
+    }
+    return units;
+  },
+  expenseTemplates: EXPENSE_TEMPLATES,
+  extraAmount: (fee) => Math.round((fee * 0.15) / 1000) * 1000,
+  // Recargo por mora (2 %) el día siguiente al vencimiento, una sola vez por expensa ordinaria.
+  surcharge: (fee, due, today) => {
+    const [dy, dm, dd] = due.split('-').map(Number);
+    const date = iso(dy, dm - 1, dd + 1);
+    return date <= today ? { date, amount: Math.round((fee * 0.02) / 10) * 10 } : null;
+  }
+};
+
+const AR_SPEC: CountrySpec = {
+  seed: 20261102,
+  openingCash: AR_OPENING_CASH,
+  reserveFund: AR_RESERVE_FUND,
+  // 6 pisos × 2 unidades funcionales (1A … 6B).
+  units: () =>
+    AR_SHARES.map((share, n) => {
+      const floor = Math.floor(n / 2) + 1;
+      return {
+        code: `${floor}${n % 2 === 0 ? 'A' : 'B'}`,
+        floor,
+        owner: `${AR_FIRST_NAMES[n]} ${AR_LAST_NAMES[(n * 5 + 2) % 12]}`,
+        area: Math.round(share * 7),
+        fee: round2((share * AR_TOTAL_TO_SPLIT) / 100),
+        profile: AR_DEBT_PROFILES[n] ?? 0,
+        share,
+        credit: n === 2 ? 18_400 : undefined
+      };
+    }),
+  expenseTemplates: AR_EXPENSE_TEMPLATES,
+  extraAmount: (fee) => Math.round((fee * 0.15) / 100) * 100,
+  // Intereses por mora mensuales, simples (sin capitalizar): cada 30 días vencidos suman el 3 % de la expensa ordinaria.
+  surcharge: (fee, due, today) => {
+    const [dy, dm, dd] = due.split('-').map(Number);
+    const [ty, tm, td] = today.split('-').map(Number);
+    const dueTime = Date.UTC(dy, dm - 1, dd);
+    const months = Math.floor((Date.UTC(ty, tm - 1, td) - dueTime) / (30 * 86_400_000));
+    if (months < 1) return null;
+    const d = new Date(dueTime + months * 30 * 86_400_000);
+    return { date: iso(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()), amount: round2(fee * AR_MONTHLY_INTEREST * months) };
+  }
+};
+
+export function buildDemoData(now: Date, country: DemoCountry = 'py'): DemoData {
+  const spec = country === 'ar' ? AR_SPEC : PY_SPEC;
+  const rand = rng(spec.seed);
   const ty = now.getFullYear();
   const tm = now.getMonth();
   const td = now.getDate();
@@ -146,23 +260,7 @@ export function buildDemoData(now: Date): DemoData {
   }
   const current = periods[5];
 
-  // Unidades: 8 pisos × 5 departamentos.
-  const units: DemoUnit[] = [];
-  let n = 0;
-  for (let floor = 1; floor <= 8; floor++) {
-    for (let l = 0; l < LETTERS.length; l++) {
-      const area = BASE_AREAS[l] + (floor >= 7 ? 6 : 0);
-      units.push({
-        code: `${floor}${LETTERS[l]}`,
-        floor,
-        owner: `${FIRST_NAMES[n % 20]} ${LAST_NAMES[(n * 7 + 3) % 20]}`,
-        area,
-        fee: Math.round((area * FEE_PER_M2) / 1000) * 1000,
-        profile: DEBT_PROFILES[n] ?? 0
-      });
-      n++;
-    }
-  }
+  const units = spec.units();
 
   // Cargos y pagos de los seis períodos.
   const charges: DemoCharge[] = [];
@@ -181,16 +279,13 @@ export function buildDemoData(now: Date): DemoData {
       }
       const method = paidOn ? METHODS[Math.floor(rand() * METHODS.length)] : null;
       const lines: { kind: DemoChargeKind; amount: number }[] = [{ kind: 'ordinaria', amount: unit.fee }];
-      if (p.index === 3) lines.push({ kind: 'extra', amount: Math.round((unit.fee * 0.15) / 1000) * 1000 });
+      if (p.index === 3) lines.push({ kind: 'extra', amount: spec.extraAmount(unit.fee) });
       for (const line of lines) {
         charges.push({ unitCode: unit.code, period: p.key, kind: line.kind, date, due, amount: line.amount, paidOn, method, receipt: null });
-        // Recargo por mora (2 %) por cada expensa ordinaria vencida y sin pagar.
+        // Recargo o intereses por mora de cada expensa ordinaria vencida y sin pagar.
         if (line.kind === 'ordinaria' && paidOn === null && due < today) {
-          const [dy, dm, dd] = due.split('-').map(Number);
-          const surchargeDate = iso(dy, dm - 1, dd + 1);
-          if (surchargeDate <= today) {
-            charges.push({ unitCode: unit.code, period: p.key, kind: 'recargo', date: surchargeDate, due: surchargeDate, amount: Math.round((line.amount * 0.02) / 10) * 10, paidOn: null, method: null, receipt: null });
-          }
+          const extra = spec.surcharge(line.amount, due, today);
+          if (extra) charges.push({ unitCode: unit.code, period: p.key, kind: 'recargo', date: extra.date, due: extra.date, amount: extra.amount, paidOn: null, method: null, receipt: null });
         }
       }
     }
@@ -229,7 +324,7 @@ export function buildDemoData(now: Date): DemoData {
   payments.sort((a, b) => a.date.localeCompare(b.date) || a.receipt.localeCompare(b.receipt));
 
   // Gastos del mes actual (nunca con fecha futura).
-  const expenses: DemoExpense[] = EXPENSE_TEMPLATES.map((t, i) => ({
+  const expenses: DemoExpense[] = spec.expenseTemplates.map((t, i) => ({
     id: `exp-${i + 1}`,
     date: iso(ty, tm, Math.min(t.day, td)),
     supplier: '',
@@ -249,5 +344,5 @@ export function buildDemoData(now: Date): DemoData {
     expenses: p.index === current.index ? monthlyExpenses : Math.round((monthlyExpenses * PAST_EXPENSE_FACTORS[p.index]) / 1000) * 1000
   }));
 
-  return { today, periods, units, charges, payments, expenses, months };
+  return { country, openingCash: spec.openingCash, reserveFund: spec.reserveFund, today, periods, units, charges, payments, expenses, months };
 }
