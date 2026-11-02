@@ -46,9 +46,21 @@ export class SeoService {
     this.meta.updateTag({ name: 'twitter:description', content: config.description });
 
     this.doc.documentElement.setAttribute('lang', config.lang ?? 'es');
-    this.setCanonical(url);
+    // Una página que no debe indexarse no declara dirección canónica (apuntarla a otra URL contradice el noindex).
+    if (config.noindex) this.removeCanonical();
+    else this.setCanonical(url);
     this.setAlternates(config.alternates ?? []);
     this.setJsonLd(config.jsonLd ?? []);
+  }
+
+  // Solo marca la pantalla como no indexable (acceso, recuperación de contraseña, área privada): no toca título, descripción ni idioma.
+  markNoindex(): void {
+    this.meta.updateTag({ name: 'robots', content: 'noindex, follow' });
+    this.removeCanonical();
+  }
+
+  private removeCanonical(): void {
+    this.doc.head.querySelector('link[rel="canonical"]')?.remove();
   }
 
   private setAlternates(items: { hreflang: string; path: string }[]): void {

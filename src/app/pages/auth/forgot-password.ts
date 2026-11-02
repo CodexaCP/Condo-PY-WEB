@@ -8,6 +8,7 @@ import { Message } from 'primeng/message';
 import { AuthService } from '../../auth/auth.service';
 import { LangService } from '../../core/i18n/lang.service';
 import { LangSwitcherComponent } from '../../core/i18n/lang-switcher.component';
+import { SeoService } from '../../core/seo.service';
 import { PASSWORD_TX } from './password.i18n';
 
 @Component({
@@ -94,6 +95,7 @@ export class ForgotPassword {
   readonly t = computed(() => PASSWORD_TX[this.lang.lang()]);
 
   constructor() {
+    inject(SeoService).markNoindex();
     effect(() => {
       this.lang.lang();
       this.lang.applyHtmlLang();

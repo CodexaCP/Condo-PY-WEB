@@ -466,7 +466,7 @@ export class Login {
         const seo = inject(SeoService);
         effect(() => {
             const info = LANGS.find((l) => l.code === this.lang.lang());
-            seo.set({ title: this.t().seoTitle, description: this.t().seoDescription, path: '/login', lang: info?.htmlLang, ogLocale: info?.ogLocale });
+            seo.set({ title: this.t().seoTitle, description: this.t().seoDescription, path: '/login', noindex: true, lang: info?.htmlLang, ogLocale: info?.ogLocale });
         });
     }
 

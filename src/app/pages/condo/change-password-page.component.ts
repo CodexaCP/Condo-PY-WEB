@@ -9,6 +9,7 @@ import { FloatLabel } from 'primeng/floatlabel';
 import { InputText } from 'primeng/inputtext';
 import { MessageService } from 'primeng/api';
 import { AuthService } from '../../auth/auth.service';
+import { SeoService } from '../../core/seo.service';
 
 @Component({
   standalone: true,
@@ -61,6 +62,10 @@ export class ChangePasswordPageComponent {
   private readonly router = inject(Router);
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly msg = inject(MessageService);
+
+  constructor() {
+    inject(SeoService).markNoindex();
+  }
 
   currentPassword = '';
   newPassword = '';

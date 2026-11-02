@@ -213,7 +213,7 @@ export class DemoShell {
     const seo = inject(SeoService);
     effect(() => {
       const info = LANGS.find((l) => l.code === this.lang.lang());
-      seo.set({ title: this.t().shell.seoTitle, description: this.t().shell.seoDescription, path: '/explorar', lang: info?.htmlLang, ogLocale: info?.ogLocale });
+      seo.set({ title: this.t().shell.seoTitle, description: this.t().shell.seoDescription, path: '/explorar', noindex: true, lang: info?.htmlLang, ogLocale: info?.ogLocale });
     });
     try {
       if (!sessionStorage.getItem('expenses-demo-started')) {

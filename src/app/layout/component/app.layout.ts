@@ -9,6 +9,7 @@ import { AppSidebar } from './app.sidebar';
 import { AppFooter } from './app.footer';
 import { LayoutService } from '@/app/layout/service/layout.service';
 import { AuthService } from '@/app/auth/auth.service';
+import { SeoService } from '@/app/core/seo.service';
 
 @Component({
     selector: 'app-layout',
@@ -62,6 +63,8 @@ export class AppLayout {
     }
 
     constructor() {
+        // Todo el área privada queda fuera de Google.
+        inject(SeoService).markNoindex();
         effect(() => {
             const state = this.layoutService.layoutState();
             if (state.mobileMenuActive) {
