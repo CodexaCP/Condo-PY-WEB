@@ -1,6 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
-import { ActivatedRoute, RouterLink } from '@angular/router';
-import { formatGs } from '../condo/finance-format';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { DEMO_PAGE_STYLES } from './demo.styles';
 import { DemoStore, JournalEntry } from './demo.store';
 
@@ -90,7 +89,7 @@ type Filter = 'todos' | JournalEntry['kind'];
 export class DemoJournalComponent {
   readonly store = inject(DemoStore);
   readonly t = this.store.t;
-  readonly gs = formatGs;
+  readonly gs = (v: number): string => this.store.money(v);
   readonly filter = signal<Filter>('todos');
   readonly openId = signal<string | null>(null);
 
@@ -99,6 +98,11 @@ export class DemoJournalComponent {
   readonly entries = computed(() => this.store.journal().filter((e) => this.filter() === 'todos' || e.kind === this.filter()));
 
   constructor() {
+    // El libro diario es de Finanzas y solo se muestra en la demo de Paraguay: en Argentina esta dirección vuelve al panel.
+    if (!this.store.hasJournal()) {
+      void inject(Router).navigateByUrl('/explorar/panel');
+      return;
+    }
     // Viene del aviso «Ver el asiento» de la pantalla de Gastos: abre ese asiento y se desplaza hasta él.
     const focus = inject(ActivatedRoute).snapshot.queryParamMap.get('focus');
     if (focus && this.store.journal().some((e) => e.id === focus)) {

@@ -3,7 +3,6 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { map } from 'rxjs';
-import { formatGs } from '../condo/finance-format';
 import { DEMO_PAGE_STYLES } from './demo.styles';
 import { DemoStore } from './demo.store';
 
@@ -33,7 +32,7 @@ import { DemoStore } from './demo.store';
               <tr class="click" [routerLink]="['/explorar/unidades', r.unit.code]">
                 <td><b>{{ r.unit.code }}</b> <span class="muted">· {{ t().units.floor(r.unit.floor) }}</span></td>
                 <td>{{ r.unit.owner }}</td>
-                <td class="num">{{ r.unit.area }} m²</td>
+                <td class="num">{{ store.unitMetric(r.unit) }}</td>
                 <td class="num">{{ gs(r.unit.fee) }}</td>
                 <td class="num">{{ r.debt ? gs(r.debt) : '—' }}</td>
                 <td>@if (r.debt) { <span class="badge bad">{{ t().units.owes(r.months) }}</span> } @else { <span class="badge ok">{{ t().units.upToDate }}</span> }</td>
@@ -52,11 +51,11 @@ import { DemoStore } from './demo.store';
 export class DemoUnitsComponent {
   readonly store = inject(DemoStore);
   readonly t = this.store.t;
-  readonly gs = formatGs;
+  readonly gs = (v: number): string => this.store.money(v);
   readonly search = signal('');
   readonly onlyDebt = signal(false);
 
-  private readonly debtMap = new Map(this.store.overdueUnits.map((x) => [x.unit.code, x]));
+  private readonly debtMap = computed(() => new Map(this.store.overdueUnits.map((x) => [x.unit.code, x])));
 
   constructor() {
     const route = inject(ActivatedRoute);
@@ -66,7 +65,7 @@ export class DemoUnitsComponent {
   readonly rows = computed(() => {
     const q = this.search().trim().toLowerCase();
     return this.store.units
-      .map((unit) => ({ unit, debt: this.debtMap.get(unit.code)?.amount ?? 0, months: this.debtMap.get(unit.code)?.months ?? 0 }))
+      .map((unit) => ({ unit, debt: this.debtMap().get(unit.code)?.amount ?? 0, months: this.debtMap().get(unit.code)?.months ?? 0 }))
       .filter((r) => (!this.onlyDebt() || r.debt > 0) && (!q || r.unit.code.toLowerCase().includes(q) || r.unit.owner.toLowerCase().includes(q)));
   });
 }
@@ -81,7 +80,7 @@ export class DemoUnitsComponent {
     @if (st(); as s) {
       <p class="back"><a routerLink="/explorar/unidades">{{ t().statement.back }}</a></p>
       <h1>{{ t().statement.title(s.unit.code) }}</h1>
-      <p class="sub">{{ t().statement.sub(s.unit.owner, s.unit.floor, s.unit.area, gs(s.unit.fee)) }}</p>
+      <p class="sub">{{ t().statement.sub(s.unit.owner, s.unit.floor, store.unitMetric(s.unit), gs(s.unit.fee)) }}</p>
 
       <div class="sum">
         <div class="card"><span class="muted">{{ t().statement.pending }}</span><strong [class.neg]="s.pending > 0" [class.pos]="s.pending === 0">{{ gs(s.pending) }}</strong></div>
@@ -93,6 +92,9 @@ export class DemoUnitsComponent {
       <div class="row acts">
         <a class="btn line" routerLink="/explorar/bloqueado" [queryParams]="{ f: 'estado-pdf' }"><i class="pi pi-file-pdf"></i> {{ t().statement.pdf }}</a>
         <a class="btn line" routerLink="/explorar/bloqueado" [queryParams]="{ f: 'estado-pdf' }"><i class="pi pi-send"></i> {{ t().statement.send }}</a>
+        @if (store.country() === 'ar') {
+          <a class="btn" [routerLink]="['/explorar/certificado', s.unit.code]"><i class="pi pi-verified"></i> {{ t().certificate.title }}</a>
+        }
       </div>
 
       <div class="card">
@@ -125,7 +127,7 @@ export class DemoUnitsComponent {
 export class DemoStatementComponent {
   readonly store = inject(DemoStore);
   readonly t = this.store.t;
-  readonly gs = formatGs;
+  readonly gs = (v: number): string => this.store.money(v);
   private readonly code = toSignal(inject(ActivatedRoute).paramMap.pipe(map((p) => p.get('code') ?? '')), { initialValue: '' });
   readonly st = computed(() => this.store.statement(this.code()));
 

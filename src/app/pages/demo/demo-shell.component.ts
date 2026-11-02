@@ -3,6 +3,7 @@ import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/rou
 import { LANGS, LangService } from '../../core/i18n/lang.service';
 import { LangSwitcherComponent } from '../../core/i18n/lang-switcher.component';
 import { SeoService } from '../../core/seo.service';
+import { DemoCountry } from './demo.country';
 import { DemoContactKind, DemoStore } from './demo.store';
 
 // Marco de la demostración pública: encabezado, navegación, misiones con progreso y el cierre comercial
@@ -21,6 +22,11 @@ import { DemoContactKind, DemoStore } from './demo.store';
         </a>
         <span class="dm-badge"><i class="pi pi-eye"></i> {{ t().shell.badge }}</span>
         <div class="dm-actions">
+          <div class="dm-country" role="group" [attr.aria-label]="t().shell.countryAria">
+            @for (c of store.countryOptions(); track c.code) {
+              <button type="button" [class.on]="store.country() === c.code" [attr.aria-pressed]="store.country() === c.code" (click)="chooseCountry(c.code)">{{ c.label }}</button>
+            }
+          </div>
           <app-lang-switcher />
           <button type="button" class="dm-ghost" (click)="reset()" [title]="t().shell.resetTitle"><i class="pi pi-refresh"></i> <span>{{ t().shell.reset }}</span></button>
           <button type="button" class="dm-solid" (click)="showFinish.set(true)"><i class="pi pi-comments"></i> <span>{{ t().shell.talk }}</span></button>
@@ -41,9 +47,13 @@ import { DemoContactKind, DemoStore } from './demo.store';
         <a routerLink="/explorar/unidades" routerLinkActive="on"><i class="pi pi-home"></i> {{ t().shell.nav.units }}</a>
         <a routerLink="/explorar/gastos" routerLinkActive="on"><i class="pi pi-wallet"></i> {{ t().shell.nav.expenses }}</a>
         <a routerLink="/explorar/informes" routerLinkActive="on"><i class="pi pi-file"></i> {{ t().shell.nav.reports }}</a>
-        <a routerLink="/explorar/libro-diario" routerLinkActive="on"><i class="pi pi-book"></i> {{ t().shell.nav.journal }}</a>
+        @if (store.hasJournal()) {
+          <a routerLink="/explorar/libro-diario" routerLinkActive="on"><i class="pi pi-book"></i> {{ t().shell.nav.journal }}</a>
+        } @else {
+          <a routerLink="/explorar/certificado" routerLinkActive="on"><i class="pi pi-verified"></i> {{ t().shell.nav.certificate }}</a>
+        }
         <span class="dm-nav-sep"></span>
-        @for (key of locked; track key) {
+        @for (key of store.lockedKeys(); track key) {
           <a routerLink="/explorar/bloqueado" [queryParams]="{ f: key }" class="lock"><i class="pi pi-lock"></i> {{ t().lockedNav[key] }}</a>
         }
       </nav>
@@ -124,6 +134,10 @@ import { DemoContactKind, DemoStore } from './demo.store';
       .dm-ghost, .dm-solid, .dm-line, .dm-wa { display: inline-flex; align-items: center; justify-content: center; gap: 0.45rem; cursor: pointer; font: inherit; font-size: 0.85rem; font-weight: 700; padding: 0.5rem 0.9rem; border-radius: 0.6rem; border: 1px solid transparent; }
       .dm-ghost { background: transparent; color: var(--ex-muted, #5f7b88); border-color: var(--ex-line, #dbe6ef); }
       .dm-ghost:hover { background: #f1f6fa; }
+      .dm-country { display: inline-flex; border: 1px solid var(--ex-line, #dbe6ef); border-radius: 0.6rem; overflow: hidden; background: #fff; }
+      .dm-country button { cursor: pointer; font: inherit; font-size: 0.82rem; font-weight: 700; padding: 0.5rem 0.8rem; border: 0; background: transparent; color: var(--ex-muted, #5f7b88); }
+      .dm-country button:hover { background: #f1f6fa; }
+      .dm-country button.on { background: #1385b6; color: #fff; }
       .dm-solid { background: #1ab7af; color: #fff; }
       .dm-solid:hover { background: #14a29b; }
       .dm-line { background: #fff; color: #1385b6; border-color: #1385b6; }
@@ -190,7 +204,6 @@ export class DemoShell {
 
   // Las tres preguntas del diagnóstico, en el idioma actual.
   readonly questions = computed(() => (['units', 'method', 'pain'] as const).map((key) => ({ key, ...this.t().diagnosis[key] })));
-  readonly locked = ['conciliacion', 'facturacion', 'votaciones', 'app'];
   readonly showFinish = signal(false);
 
   // El cierre se abre solo al completar la quinta misión (no al cargar con el recorrido ya terminado).
@@ -225,6 +238,15 @@ export class DemoShell {
 
   contact(kind: DemoContactKind): void {
     this.store.track('contact_click', kind);
+  }
+
+  // Cambiar de país reinicia la demo (otros datos, otra moneda, otras misiones) y deja la dirección lista para compartir (?pais=ar).
+  chooseCountry(country: DemoCountry): void {
+    if (country === this.store.country()) return;
+    this.store.setCountry(country);
+    this.autoShown = false;
+    this.showFinish.set(false);
+    void this.router.navigate(['/explorar/panel'], { queryParams: { pais: country } });
   }
 
   reset(): void {

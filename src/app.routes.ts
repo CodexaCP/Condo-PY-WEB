@@ -44,6 +44,8 @@ export const appRoutes: Routes = [
             { path: 'gastos', loadComponent: () => import('./app/pages/demo/demo-expenses.component').then(m => m.DemoExpensesComponent) },
             { path: 'informes', loadComponent: () => import('./app/pages/demo/demo-reports.component').then(m => m.DemoReportsComponent) },
             { path: 'libro-diario', loadComponent: () => import('./app/pages/demo/demo-journal.component').then(m => m.DemoJournalComponent) },
+            { path: 'certificado', loadComponent: () => import('./app/pages/demo/demo-certificate.component').then(m => m.DemoCertificateComponent) },
+            { path: 'certificado/:code', loadComponent: () => import('./app/pages/demo/demo-certificate.component').then(m => m.DemoCertificateComponent) },
             { path: 'bloqueado', loadComponent: () => import('./app/pages/demo/demo-locked.component').then(m => m.DemoLockedComponent) },
             { path: '**', redirectTo: 'panel' }
         ]

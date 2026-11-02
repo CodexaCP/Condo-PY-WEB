@@ -1,6 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { formatGs } from '../condo/finance-format';
 import { DEMO_PAGE_STYLES } from './demo.styles';
 import { DemoStore } from './demo.store';
 
@@ -80,7 +79,7 @@ interface Kpi {
             </li>
           }
         </ul>
-        <a routerLink="/explorar/libro-diario" class="muted-link">{{ t().panel.seeAll }}</a>
+        <a [routerLink]="store.ledgerRoute()" class="muted-link">{{ t().panel.seeAll }}</a>
       </div>
     </div>
 
@@ -129,8 +128,8 @@ interface Kpi {
 export class DemoPanelComponent {
   readonly store = inject(DemoStore);
   readonly t = this.store.t;
-  readonly gs = formatGs;
-  readonly alert = computed(() => this.t().panel.alert(this.store.overdueUnits.length, formatGs(this.store.overdueTotal)));
+  readonly gs = (v: number): string => this.store.money(v);
+  readonly alert = computed(() => this.t().panel.alert(this.store.overdueUnits.length, this.store.money(this.store.overdueTotal)));
   readonly selectedId = signal<string | null>(null);
 
   readonly kpis = computed<Kpi[]>(() => {
@@ -140,22 +139,22 @@ export class DemoPanelComponent {
     const collected = s.collectedMonth;
     const expenses = s.expensesTotal();
     const rate = tx.percent(s.chargedMonth ? Math.round((collected / s.chargedMonth) * 100) : 0);
-    const top = s.expensesByCategory().slice(0, 4).map((c) => ({ label: `${c.label} (${tx.percent(c.share)})`, value: formatGs(c.amount) }));
+    const top = s.expensesByCategory().slice(0, 4).map((c) => ({ label: `${c.label} (${tx.percent(c.share)})`, value: s.money(c.amount) }));
     return [
       {
-        id: 'cash', icon: 'pi-building-columns', label: k.cash.label, value: formatGs(s.cashBalance()), note: k.cash.note, tone: 'teal',
+        id: 'cash', icon: 'pi-building-columns', label: k.cash.label, value: s.money(s.cashBalance()), note: k.cash.note, tone: 'teal',
         text: k.cash.text,
-        rows: [{ label: k.cash.opening, value: formatGs(s.openingCash) }, { label: k.cash.plus, value: formatGs(collected) }, { label: k.cash.minus, value: formatGs(expenses) }, { label: k.cash.equals, value: formatGs(s.cashBalance()) }],
-        link: { label: k.cash.link, route: '/explorar/libro-diario' }
+        rows: [{ label: k.cash.opening, value: s.money(s.openingCash) }, { label: k.cash.plus, value: s.money(collected) }, { label: k.cash.minus, value: s.money(expenses) }, { label: k.cash.equals, value: s.money(s.cashBalance()) }],
+        link: { label: k.cash.link, route: s.ledgerRoute() }
       },
       {
-        id: 'collected', icon: 'pi-money-bill', label: k.collected.label, value: formatGs(collected), note: k.collected.note(rate), tone: 'blue',
+        id: 'collected', icon: 'pi-money-bill', label: k.collected.label, value: s.money(collected), note: k.collected.note(rate), tone: 'blue',
         text: k.collected.text,
-        rows: [{ label: k.collected.issued, value: formatGs(s.chargedMonth) }, { label: k.collected.collectedWith(s.paymentsMonth.length), value: formatGs(collected) }, { label: k.collected.rate, value: rate }],
+        rows: [{ label: k.collected.issued, value: s.money(s.chargedMonth) }, { label: k.collected.collectedWith(s.paymentsMonth.length), value: s.money(collected) }, { label: k.collected.rate, value: rate }],
         link: { label: k.collected.link, route: '/explorar/unidades' }
       },
       {
-        id: 'expenses', icon: 'pi-wallet', label: k.expenses.label, value: formatGs(expenses), note: k.expenses.note(s.expenses().length), tone: 'amber',
+        id: 'expenses', icon: 'pi-wallet', label: k.expenses.label, value: s.money(expenses), note: k.expenses.note(s.expenses().length), tone: 'amber',
         text: k.expenses.text,
         rows: top,
         link: { label: k.expenses.link, route: '/explorar/gastos' }
@@ -163,18 +162,18 @@ export class DemoPanelComponent {
       {
         id: 'morosity', icon: 'pi-percentage', label: k.morosity.label, value: tx.percent(tx.decimal(s.morosityPct)), note: k.morosity.note(s.overdueUnits.length, s.units.length), tone: 'coral',
         text: k.morosity.text,
-        rows: [{ label: k.morosity.withDebt, value: `${s.overdueUnits.length}` }, { label: k.morosity.totalUnits, value: `${s.units.length}` }, { label: k.morosity.totalDebt, value: formatGs(s.overdueTotal) }],
+        rows: [{ label: k.morosity.withDebt, value: `${s.overdueUnits.length}` }, { label: k.morosity.totalUnits, value: `${s.units.length}` }, { label: k.morosity.totalDebt, value: s.money(s.overdueTotal) }],
         link: { label: k.morosity.link, route: '/explorar/unidades', query: { deuda: 1 } }
       },
       {
-        id: 'pending', icon: 'pi-clock', label: k.pending.label, value: formatGs(s.pendingTotal), note: k.pending.note, tone: 'violet',
+        id: 'pending', icon: 'pi-clock', label: k.pending.label, value: s.money(s.pendingTotal), note: k.pending.note, tone: 'violet',
         text: k.pending.text,
-        rows: [{ label: k.pending.overdue, value: formatGs(s.overdueTotal) }, { label: k.pending.upcoming, value: formatGs(Math.max(s.pendingTotal - s.overdueTotal, 0)) }]
+        rows: [{ label: k.pending.overdue, value: s.money(s.overdueTotal) }, { label: k.pending.upcoming, value: s.money(Math.max(s.pendingTotal - s.overdueTotal, 0)) }]
       },
       {
-        id: 'reserve', icon: 'pi-shield', label: k.reserve.label, value: formatGs(s.reserveFund), note: k.reserve.note, tone: 'teal',
+        id: 'reserve', icon: 'pi-shield', label: k.reserve.label, value: s.money(s.reserveFund), note: k.reserve.note, tone: 'teal',
         text: k.reserve.text,
-        rows: [{ label: k.reserve.balance, value: formatGs(s.reserveFund) }]
+        rows: [{ label: k.reserve.balance, value: s.money(s.reserveFund) }]
       }
     ];
   });

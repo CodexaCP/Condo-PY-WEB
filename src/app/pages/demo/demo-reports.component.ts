@@ -1,6 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, signal, untracked } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { formatGs } from '../condo/finance-format';
 import { DEMO_PAGE_STYLES } from './demo.styles';
 import { DemoStore } from './demo.store';
 
@@ -116,7 +115,7 @@ type Tab = 'ingresos' | 'morosidad' | 'rubros';
 export class DemoReportsComponent {
   readonly store = inject(DemoStore);
   readonly t = this.store.t;
-  readonly gs = formatGs;
+  readonly gs = (v: number): string => this.store.money(v);
   readonly tab = signal<Tab>('ingresos');
   private readonly visited = signal<Tab[]>(['ingresos']);
 

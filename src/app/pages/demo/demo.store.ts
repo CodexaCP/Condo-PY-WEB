@@ -1,9 +1,10 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { LangService } from '../../core/i18n/lang.service';
 import { salesWhatsAppUrlFor } from '../../config/sales.config';
+import { DEMO_COUNTRIES, DemoCountry, detectDemoCountry, formatDemoMoney, rememberDemoCountry } from './demo.country';
 import { DemoDiagnosisAnswers, DemoFunnelEvent, trackDemoEvent } from './demo-funnel';
-import { DEMO_OPENING_CASH, DEMO_RESERVE_FUND, DemoCharge, DemoExpense, DemoMonthStat, DemoMovement, DemoPeriod, DemoUnit, buildDemoData, hasVat, vatOf } from './demo.data';
-import { CategoryId, ContactKind, DEMO_TX, JournalKind, LockedId, MissionId, PainId } from './demo.i18n';
+import { DemoCharge, DemoData, DemoExpense, DemoMonthStat, DemoMovement, DemoPeriod, DemoUnit, buildDemoData, hasVat, vatOf } from './demo.data';
+import { CategoryId, ContactKind, DEMO_TX, DEMO_TX_AR, JournalKind, LockedId, MissionId, PainId } from './demo.i18n';
 
 export interface DemoMission {
   id: MissionId;
@@ -14,15 +15,25 @@ export interface DemoMission {
 }
 
 // Las cinco misiones del recorrido guiado. Cada una enseña una capacidad real de Expenses (los textos están en demo.i18n.ts).
-const MISSION_BASE: { id: MissionId; route: string; icon: string }[] = [
-  { id: 'panel', route: '/explorar/panel', icon: 'pi-chart-bar' },
-  { id: 'unidad', route: '/explorar/unidades', icon: 'pi-home' },
-  { id: 'gasto', route: '/explorar/gastos', icon: 'pi-wallet' },
-  { id: 'informes', route: '/explorar/informes', icon: 'pi-file' },
-  { id: 'libro', route: '/explorar/libro-diario', icon: 'pi-book' }
-];
+// Argentina cambia el libro diario (que es de Finanzas) por el certificado de deudas, un documento real del sistema.
+const MISSIONS: Record<DemoCountry, { id: MissionId; route: string; icon: string }[]> = {
+  py: [
+    { id: 'panel', route: '/explorar/panel', icon: 'pi-chart-bar' },
+    { id: 'unidad', route: '/explorar/unidades', icon: 'pi-home' },
+    { id: 'gasto', route: '/explorar/gastos', icon: 'pi-wallet' },
+    { id: 'informes', route: '/explorar/informes', icon: 'pi-file' },
+    { id: 'libro', route: '/explorar/libro-diario', icon: 'pi-book' }
+  ],
+  ar: [
+    { id: 'panel', route: '/explorar/panel', icon: 'pi-chart-bar' },
+    { id: 'unidad', route: '/explorar/unidades', icon: 'pi-home' },
+    { id: 'gasto', route: '/explorar/gastos', icon: 'pi-wallet' },
+    { id: 'informes', route: '/explorar/informes', icon: 'pi-file' },
+    { id: 'certificado', route: '/explorar/certificado', icon: 'pi-verified' }
+  ]
+};
 
-// Funciones que la demostración no incluye: llevan a una invitación a contactar.
+// Funciones que la demostración no incluye: llevan a una invitación a contactar. En Argentina no se ofrece facturación.
 export const DEMO_LOCKED_ICONS: Record<LockedId, string> = {
   'estado-pdf': 'pi-file-pdf',
   conciliacion: 'pi-sync',
@@ -30,6 +41,11 @@ export const DEMO_LOCKED_ICONS: Record<LockedId, string> = {
   votaciones: 'pi-users',
   app: 'pi-mobile',
   mas: 'pi-th-large'
+};
+
+const LOCKED_NAV: Record<DemoCountry, string[]> = {
+  py: ['conciliacion', 'facturacion', 'votaciones', 'app'],
+  ar: ['conciliacion', 'votaciones', 'app']
 };
 
 export interface JournalLine {
@@ -50,6 +66,22 @@ export interface JournalEntry {
   lines: JournalLine[];
 }
 
+export interface DemoCertificateLine {
+  period: string;
+  due: string;
+  charged: number;
+  paid: number;
+  balance: number;
+}
+
+export interface DemoCertificate {
+  unit: DemoUnit;
+  issuedOn: string;
+  lines: DemoCertificateLine[];
+  totalDebt: number;
+  credit: number;
+}
+
 const EXPENSE_ACCOUNT_CODES: Record<CategoryId, string> = {
   utilities: '5.1.01',
   payroll: '5.1.02',
@@ -64,33 +96,90 @@ const EXPENSE_ACCOUNT_CODES: Record<CategoryId, string> = {
 const PROGRESS_KEY = 'expenses-demo-progress';
 const JOURNAL_BASE = 120;
 
+const round2 = (n: number): number => Math.round(n * 100) / 100;
+
 export type DemoContactKind = ContactKind;
 
 @Injectable({ providedIn: 'root' })
 export class DemoStore {
   private readonly lang = inject(LangService);
-  // Textos de la demostración en el idioma actual.
-  readonly t = computed(() => DEMO_TX[this.lang.lang()]);
 
-  private readonly data = buildDemoData(new Date());
+  // País de la demostración (Paraguay o Argentina): cambia los datos, la moneda y el vocabulario. Se elige en la cabecera o con ?pais=ar.
+  readonly country = signal<DemoCountry>(detectDemoCountry());
+  readonly countryOptions = computed(() => DEMO_COUNTRIES.map((code) => ({ code, label: this.t().countries[code] })));
 
-  readonly today = this.data.today;
-  readonly periods = this.data.periods;
-  readonly units: DemoUnit[] = this.data.units;
-  readonly months: DemoMonthStat[] = this.data.months;
+  // Textos de la demostración en el idioma y el país actuales.
+  readonly t = computed(() => (this.country() === 'ar' ? DEMO_TX_AR : DEMO_TX)[this.lang.lang()]);
+
+  private readonly now = new Date();
+  private readonly dataSignal = computed(() => buildDemoData(this.now, this.country()));
+
+  // Todo lo que se deriva de los datos del país elegido; si el visitante cambia de país se recalcula entero.
+  private readonly view = computed(() => {
+    const data = this.dataSignal();
+    const today = data.today;
+    const overdue = (c: DemoCharge): boolean => c.paidOn === null && c.due < today;
+    const currentPeriod = data.periods[data.periods.length - 1];
+    const lastMonth = data.months[data.months.length - 1];
+    const overdueUnits = data.units
+      .map((unit) => {
+        const items = data.charges.filter((c) => c.unitCode === unit.code && overdue(c));
+        return { unit, amount: round2(items.reduce((s, c) => s + c.amount, 0)), months: items.filter((c) => c.kind === 'ordinaria').length };
+      })
+      .filter((x) => x.amount > 0)
+      .sort((a, b) => b.amount - a.amount);
+    return {
+      today,
+      periods: data.periods,
+      units: data.units,
+      months: data.months,
+      currentPeriod,
+      collectedMonth: lastMonth.collected,
+      chargedMonth: lastMonth.charged,
+      paymentsMonth: data.payments.filter((p) => p.date.slice(0, 7) === currentPeriod.key),
+      pendingTotal: round2(data.charges.filter((c) => c.paidOn === null).reduce((s, c) => s + c.amount, 0)),
+      overdueUnits,
+      overdueTotal: round2(overdueUnits.reduce((s, x) => s + x.amount, 0)),
+      morosityPct: Math.round((overdueUnits.length / data.units.length) * 1000) / 10
+    };
+  });
+
+  private get data(): DemoData {
+    return this.dataSignal();
+  }
+
+  get today(): string { return this.view().today; }
+  get periods(): DemoPeriod[] { return this.view().periods; }
+  get units(): DemoUnit[] { return this.view().units; }
+  get months(): DemoMonthStat[] { return this.view().months; }
+  get currentPeriod(): DemoPeriod { return this.view().currentPeriod; }
+  get collectedMonth(): number { return this.view().collectedMonth; }
+  get chargedMonth(): number { return this.view().chargedMonth; }
+  get paymentsMonth() { return this.view().paymentsMonth; }
+  get pendingTotal(): number { return this.view().pendingTotal; }
+  get overdueUnits() { return this.view().overdueUnits; }
+  get overdueTotal(): number { return this.view().overdueTotal; }
+  get morosityPct(): number { return this.view().morosityPct; }
+  get reserveFund(): number { return this.data.reserveFund; }
+  get openingCash(): number { return this.data.openingCash; }
 
   private readonly simulated = signal<DemoExpense[]>([]);
-  private readonly done = signal<string[]>(this.readProgress());
+  private readonly done = signal<string[]>(this.readProgress(this.country()));
   private readonly answers = signal<DemoDiagnosisAnswers>({});
 
-  readonly missions = computed<DemoMission[]>(() => MISSION_BASE.map((m) => ({ ...m, ...this.t().missions[m.id] })));
+  readonly missions = computed<DemoMission[]>(() => MISSIONS[this.country()].map((m) => ({ ...m, ...this.t().missions[m.id] })));
+
+  // Pantallas que dependen del país: el libro diario es de Paraguay; en Argentina el cierre del mes se mira en Informes.
+  readonly hasJournal = computed(() => this.country() === 'py');
+  readonly ledgerRoute = computed(() => (this.country() === 'py' ? '/explorar/libro-diario' : '/explorar/informes'));
+  readonly lockedKeys = computed(() => LOCKED_NAV[this.country()]);
 
   readonly diagnosis = this.answers.asReadonly();
   readonly diagnosisDone = computed(() => !!(this.answers().units && this.answers().method && this.answers().pain));
   readonly recommendation = computed(() => this.t().recommendation[(this.answers().pain ?? '') as PainId] ?? '');
   readonly completed = this.done.asReadonly();
   readonly completedCount = computed(() => this.done().length);
-  readonly allDone = computed(() => this.done().length >= MISSION_BASE.length);
+  readonly allDone = computed(() => this.done().length >= this.missions().length);
   readonly nextMission = computed(() => this.missions().find((m) => !this.done().includes(m.id)) ?? null);
 
   readonly buildingName = computed(() => this.t().building.name);
@@ -104,29 +193,9 @@ export class DemoStore {
       .sort((a, b) => b.date.localeCompare(a.date) || Number(b.simulated) - Number(a.simulated));
   });
   readonly expensesTotal = computed(() => this.expenses().reduce((s, e) => s + e.amount, 0));
-  readonly currentPeriod = this.data.periods[this.data.periods.length - 1];
   readonly currentPeriodLabel = computed(() => this.periodLabel(this.currentPeriod));
 
-  readonly collectedMonth = this.data.months[this.data.months.length - 1].collected;
-  readonly chargedMonth = this.data.months[this.data.months.length - 1].charged;
-  readonly paymentsMonth = this.data.payments.filter((p) => p.date.slice(0, 7) === this.currentPeriod.key);
-  readonly cashBalance = computed(() => DEMO_OPENING_CASH + this.collectedMonth - this.expensesTotal());
-  readonly reserveFund = DEMO_RESERVE_FUND;
-  readonly openingCash = DEMO_OPENING_CASH;
-
-  readonly pendingTotal = this.data.charges.filter((c) => c.paidOn === null).reduce((s, c) => s + c.amount, 0);
-
-  // Unidades con deuda vencida, de mayor a menor.
-  readonly overdueUnits = this.units
-    .map((unit) => {
-      const overdue = this.data.charges.filter((c) => c.unitCode === unit.code && this.isOverdue(c));
-      return { unit, amount: overdue.reduce((s, c) => s + c.amount, 0), months: overdue.filter((c) => c.kind === 'ordinaria').length };
-    })
-    .filter((x) => x.amount > 0)
-    .sort((a, b) => b.amount - a.amount);
-
-  readonly overdueTotal = this.overdueUnits.reduce((s, x) => s + x.amount, 0);
-  readonly morosityPct = Math.round((this.overdueUnits.length / this.units.length) * 1000) / 10;
+  readonly cashBalance = computed(() => this.openingCash + this.collectedMonth - this.expensesTotal());
 
   // Gráfico: el mes actual refleja los gastos simulados que cargue el visitante.
   readonly chart = computed(() => this.months.map((m, i) => ({ label: this.periodShort(m.period), income: m.collected, expense: i === this.months.length - 1 ? this.expensesTotal() : m.expenses })));
@@ -148,7 +217,7 @@ export class DemoStore {
     return buckets;
   });
 
-  // Libro diario del mes: liquidación, cobros y gastos (incluidos los simulados).
+  // Libro diario del mes: liquidación, cobros y gastos (incluidos los simulados). Solo lo muestra la demo de Paraguay.
   readonly journal = computed<JournalEntry[]>(() => {
     const tx = this.t();
     const key = this.currentPeriod.key;
@@ -173,7 +242,7 @@ export class DemoStore {
     }
 
     for (const e of this.expenses()) {
-      const vat = hasVat(e.category) ? vatOf(e.amount) : 0;
+      const vat = this.vatFor(e.category, e.amount);
       const lines: JournalLine[] = [{ account: EXPENSE_ACCOUNT_CODES[e.category], name: tx.accountNames[e.category], debit: e.amount - vat, credit: 0 }];
       if (vat > 0) lines.push({ account: '1.1.05', name: tx.accounts.vat, debit: vat, credit: 0 });
       lines.push({ account: '1.1.01', name: tx.accounts.cash, debit: 0, credit: e.amount });
@@ -199,6 +268,22 @@ export class DemoStore {
     const exps = this.expenses().map((e) => ({ date: e.date, text: `${e.concept} · ${e.supplier}`, amount: e.amount, income: false, id: e.id }));
     return [...pays, ...exps].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 8);
   });
+
+  // Importe en la moneda del país de la demo (guaraníes o pesos); no depende de la sesión.
+  money(value: number): string {
+    return formatDemoMoney(this.country(), value);
+  }
+
+  // Los sueldos no llevan IVA y el resto sí (10 %) en Paraguay; en Argentina la demo no discrimina impuesto.
+  vatFor(category: CategoryId, amount: number): number {
+    return this.country() === 'py' && hasVat(category) ? vatOf(amount) : 0;
+  }
+
+  // Superficie en Paraguay («74 m²»); en Argentina el porcentual de la unidad funcional («4,7 %»).
+  unitMetric(unit: DemoUnit): string {
+    const tx = this.t();
+    return this.country() === 'ar' ? tx.percent(tx.decimal(unit.share ?? 0)) : `${unit.area} m²`;
+  }
 
   unit(code: string): DemoUnit | undefined {
     return this.units.find((u) => u.code === code);
@@ -241,17 +326,37 @@ export class DemoStore {
     raw.sort((a, b) => a.date.localeCompare(b.date) || a.order - b.order);
     let balance = 0;
     const rows: DemoMovement[] = raw.map((r) => {
-      balance += r.charge - r.payment;
+      balance = round2(balance + r.charge - r.payment);
       return { date: r.date, concept: r.concept, charge: r.charge, payment: r.payment, balance, reference: r.reference, overdue: r.overdue };
     });
     const payments = this.data.payments.filter((x) => x.unitCode === code);
     return {
       unit,
       rows: rows.reverse(),
-      pending: charges.filter((c) => c.paidOn === null).reduce((s, c) => s + c.amount, 0),
-      overdue: charges.filter((c) => this.isOverdue(c)).reduce((s, c) => s + c.amount, 0),
+      pending: round2(charges.filter((c) => c.paidOn === null).reduce((s, c) => s + c.amount, 0)),
+      overdue: round2(charges.filter((c) => this.isOverdue(c)).reduce((s, c) => s + c.amount, 0)),
       lastPayment: payments.length ? payments[payments.length - 1].date : null
     };
+  }
+
+  // Certificado de deudas y créditos de una unidad (el documento que la administración entrega a pedido de un interesado): lo adeudado
+  // por período (expensas e intereses) y el saldo a favor del propietario. Solo se ofrece en la demo de Argentina.
+  certificate(code: string): DemoCertificate | null {
+    const unit = this.unit(code);
+    if (!unit) return null;
+    const byPeriod = new Map<string, { due: string; charged: number; paid: number }>();
+    for (const c of this.data.charges.filter((x) => x.unitCode === code)) {
+      const entry = byPeriod.get(c.period) ?? { due: c.due, charged: 0, paid: 0 };
+      if (c.kind === 'ordinaria') entry.due = c.due;
+      entry.charged += c.amount;
+      if (c.paidOn !== null) entry.paid += c.amount;
+      byPeriod.set(c.period, entry);
+    }
+    const lines = this.periods
+      .map((p) => ({ p, e: byPeriod.get(p.key) }))
+      .filter((x): x is { p: DemoPeriod; e: { due: string; charged: number; paid: number } } => !!x.e && round2(x.e.charged - x.e.paid) > 0)
+      .map(({ p, e }) => ({ period: this.periodLabel(p), due: e.due, charged: round2(e.charged), paid: round2(e.paid), balance: round2(e.charged - e.paid) }));
+    return { unit, issuedOn: this.today, lines, totalDebt: round2(lines.reduce((s, l) => s + l.balance, 0)), credit: unit.credit ?? 0 };
   }
 
   addExpense(input: { concept: string; supplier: string; category: CategoryId; amount: number }): DemoExpense {
@@ -270,12 +375,12 @@ export class DemoStore {
   }
 
   complete(id: string): void {
-    if (this.done().includes(id)) return;
+    if (this.done().includes(id) || !this.missions().some((m) => m.id === id)) return;
     const next = [...this.done(), id];
     this.done.set(next);
     this.writeStorage(PROGRESS_KEY, JSON.stringify(next));
     this.track('mission_complete', id);
-    if (next.length >= MISSION_BASE.length) this.track('demo_complete');
+    if (next.length >= this.missions().length) this.track('demo_complete');
   }
 
   // Paso 4 del embudo: el diagnóstico de tres preguntas (se guardan identificadores, no textos, para medir igual en cualquier idioma).
@@ -283,6 +388,18 @@ export class DemoStore {
     const was = this.diagnosisDone();
     this.answers.update((a) => ({ ...a, [key]: value }));
     if (!was && this.diagnosisDone()) this.track('diagnosis_done', Object.values(this.answers()).join(' | '));
+  }
+
+  // Cambia de país: se recuerda para el resto de la visita y la demo empieza de nuevo (los datos, la moneda y las misiones son otras).
+  setCountry(country: DemoCountry): void {
+    if (country === this.country()) return;
+    this.country.set(country);
+    rememberDemoCountry(country);
+    this.simulated.set([]);
+    this.answers.set({});
+    this.done.set([]);
+    this.writeStorage(PROGRESS_KEY, '[]');
+    this.track('country_change');
   }
 
   reset(): void {
@@ -293,7 +410,8 @@ export class DemoStore {
     this.track('demo_reset');
   }
 
-  // Mensaje de WhatsApp para el cierre comercial: dice qué exploró la persona, para saber qué le interesó. Va en el idioma que usa.
+  // Mensaje de WhatsApp para el cierre comercial: dice qué exploró la persona, para saber qué le interesó, y desde qué país mira la demo.
+  // Va en el idioma que usa.
   whatsappUrl(kind: DemoContactKind): string | null {
     const tx = this.t();
     const explored = this.missions().filter((m) => this.done().includes(m.id)).map((m) => m.title.toLowerCase());
@@ -301,22 +419,23 @@ export class DemoStore {
     const a = this.answers();
     const label = (key: 'units' | 'method' | 'pain'): string => (tx.diagnosis[key].options.find(([id]) => id === a[key])?.[1] ?? '').toLowerCase();
     const profile = this.diagnosisDone() ? tx.whatsapp.profile(label('units'), label('method'), label('pain')) : '';
-    return salesWhatsAppUrlFor(tx.whatsapp.intro[kind] + tail + profile);
+    return salesWhatsAppUrlFor(tx.whatsapp.intro[kind] + tail + profile + tx.whatsapp.country(tx.countries[this.country()]));
   }
 
-  // Medición del embudo en el navegador (ver demo-funnel.ts).
+  // Medición del embudo en el navegador (ver demo-funnel.ts). Cada evento lleva el país de la demo en el detalle.
   track(event: DemoFunnelEvent, detail?: string): void {
-    trackDemoEvent(event, detail);
+    const country = this.country();
+    trackDemoEvent(event, detail ? `${detail} · ${country}` : country);
   }
 
   dateLabel(isoDate: string): string {
     return this.t().date(isoDate);
   }
 
-  private readProgress(): string[] {
+  private readProgress(country: DemoCountry): string[] {
     try {
       const parsed = JSON.parse(localStorage.getItem(PROGRESS_KEY) ?? '[]');
-      return Array.isArray(parsed) ? parsed.filter((x): x is string => typeof x === 'string' && MISSION_BASE.some((m) => m.id === x)) : [];
+      return Array.isArray(parsed) ? parsed.filter((x): x is string => typeof x === 'string' && MISSIONS[country].some((m) => m.id === x)) : [];
     } catch {
       return [];
     }

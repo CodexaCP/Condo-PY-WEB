@@ -3,7 +3,7 @@ import { gaEvent } from '../../core/analytics';
 // Embudo de la demostración (medición simple en el navegador, sin enviar nada a un servidor):
 // 1 visita la web → 2 inicia la demo → 3 descubre funciones → 4 identifica su necesidad → 5 pide contacto.
 
-export type DemoFunnelEvent = 'portal_visit' | 'demo_start' | 'mission_complete' | 'demo_complete' | 'diagnosis_done' | 'contact_click' | 'locked_click' | 'demo_reset';
+export type DemoFunnelEvent = 'portal_visit' | 'demo_start' | 'mission_complete' | 'demo_complete' | 'diagnosis_done' | 'contact_click' | 'locked_click' | 'demo_reset' | 'country_change';
 
 const EVENTS_KEY = 'expenses-demo-events';
 const ANON_KEY = 'expenses-demo-anon';

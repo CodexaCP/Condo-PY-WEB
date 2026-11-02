@@ -1,8 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import { formatGs } from '../condo/finance-format';
-import { EXPENSE_CATEGORIES, hasVat, vatOf } from './demo.data';
+import { EXPENSE_CATEGORIES } from './demo.data';
 import { CategoryId } from './demo.i18n';
 import { DEMO_PAGE_STYLES } from './demo.styles';
 import { DemoStore } from './demo.store';
@@ -49,7 +48,7 @@ import { DemoStore } from './demo.store';
             <i class="pi pi-check-circle"></i>
             <div>
               <b>{{ t().expenses.addedTitle }}</b>{{ t().expenses.added(a.concept, gs(a.amount)) }}<br />
-              <a routerLink="/explorar/libro-diario" [queryParams]="{ focus: a.id }">{{ t().expenses.seeEntry }}</a>
+              <a [routerLink]="store.ledgerRoute()" [queryParams]="store.hasJournal() ? { focus: a.id } : null">{{ t().expenses.seeEntry }}</a>
               · <a routerLink="/explorar/panel">{{ t().expenses.seePanel }}</a>
             </div>
           </div>
@@ -111,7 +110,7 @@ import { DemoStore } from './demo.store';
 export class DemoExpensesComponent {
   readonly store = inject(DemoStore);
   readonly t = this.store.t;
-  readonly gs = formatGs;
+  readonly gs = (v: number): string => this.store.money(v);
   readonly categories = EXPENSE_CATEGORIES;
 
   readonly concept = signal('');
@@ -121,7 +120,7 @@ export class DemoExpensesComponent {
   readonly error = signal('');
   readonly added = signal<{ id: string; concept: string; amount: number } | null>(null);
 
-  readonly vat = computed(() => (hasVat(this.category()) ? vatOf(this.amount() || 0) : 0));
+  readonly vat = computed(() => this.store.vatFor(this.category(), this.amount() || 0));
 
   submit(): void {
     this.error.set('');

@@ -1,12 +1,13 @@
 import { Dict } from '../../core/i18n/lang.service';
+import { DemoCountry } from './demo.country';
 
 // Todos los textos de la demostración pública («Explora Expenses») en español, portugués e inglés.
 // Los datos ficticios (demo.data.ts) guardan identificadores neutros; aquí está cómo se llama cada cosa en cada idioma.
 
 export type CategoryId = 'utilities' | 'payroll' | 'security' | 'maintenance' | 'cleaning' | 'admin' | 'insurance' | 'other';
 export type MethodId = 'transfer' | 'cash' | 'deposit' | 'card';
-export type ExpenseItemId = 'staff' | 'guard' | 'power' | 'water' | 'elevator' | 'supplies' | 'adminFee' | 'pump';
-export type MissionId = 'panel' | 'unidad' | 'gasto' | 'informes' | 'libro';
+export type ExpenseItemId = 'staff' | 'guard' | 'power' | 'water' | 'elevator' | 'supplies' | 'insurance' | 'adminFee' | 'pump';
+export type MissionId = 'panel' | 'unidad' | 'gasto' | 'informes' | 'libro' | 'certificado';
 export type LockedId = 'estado-pdf' | 'conciliacion' | 'facturacion' | 'votaciones' | 'app' | 'mas';
 export type PainId = 'collections' | 'expenses' | 'accounting' | 'assembly' | 'communication';
 export type JournalKind = 'liquidacion' | 'cobro' | 'gasto';
@@ -32,6 +33,7 @@ const ES = {
   decimal: (n: number): string => String(n).replace('.', ','),
   percent: (n: number | string): string => `${n} %`,
 
+  countries: { py: 'Paraguay', ar: 'Argentina' } as Record<DemoCountry, string>,
   building: { name: 'Edificio Torre Mirador', city: 'Asunción' },
   defaultSupplier: 'Proveedor de ejemplo',
   categories: { utilities: 'Servicios', payroll: 'Personal', security: 'Seguridad', maintenance: 'Mantenimiento', cleaning: 'Limpieza', admin: 'Administración', insurance: 'Seguros', other: 'Otros' } as Record<CategoryId, string>,
@@ -45,6 +47,7 @@ const ES = {
     water: { supplier: 'ESSAP', concept: 'Agua y alcantarillado' },
     elevator: { supplier: 'Elevadores del Sur S.A.', concept: 'Mantenimiento mensual de ascensores' },
     supplies: { supplier: 'Distribuidora Limpia SRL', concept: 'Insumos de limpieza' },
+    insurance: { supplier: 'Seguros Integrales Demo S.A.', concept: 'Seguro integral del edificio' },
     adminFee: { supplier: 'Administración Demo S.A.', concept: 'Honorarios de administración' },
     pump: { supplier: 'Hidrosistemas Paraguay', concept: 'Reparación de bomba de agua' }
   } as Record<ExpenseItemId, { supplier: string; concept: string }>,
@@ -69,7 +72,8 @@ const ES = {
     unidad: { title: 'Revisa una unidad', hint: 'Busca un departamento con deuda y abre su estado de cuenta.' },
     gasto: { title: 'Registra un gasto', hint: 'Carga un gasto simulado y mira cómo impacta en el edificio.' },
     informes: { title: 'Descubre los informes', hint: 'Cambia entre los informes de ingresos y gastos, morosidad y rubros.' },
-    libro: { title: 'Comprueba el control contable', hint: 'Abre un asiento del libro diario y mira de qué movimiento sale.' }
+    libro: { title: 'Comprueba el control contable', hint: 'Abre un asiento del libro diario y mira de qué movimiento sale.' },
+    certificado: { title: 'Genera un certificado de deudas', hint: 'Elige una unidad y mira el certificado de deudas y créditos que se entrega a quien lo pide.' }
   } as Record<MissionId, { title: string; hint: string }>,
   locked: {
     'estado-pdf': { title: 'Estados de cuenta en PDF y envío al propietario', text: 'Genera el estado de cuenta de cada unidad en PDF y envíalo por correo o por la app, con un solo clic.' },
@@ -100,7 +104,8 @@ const ES = {
       general: 'Hola, estuve explorando Expenses y quiero más información.'
     } as Record<ContactKind, string>,
     explored: (list: string) => ` En la demo exploré: ${list}.`,
-    profile: (units: string, method: string, pain: string) => ` Administro ${units} unidades, hoy llevo las expensas con ${method} y lo que más me preocupa es: ${pain}.`
+    profile: (units: string, method: string, pain: string) => ` Administro ${units} unidades, hoy llevo las expensas con ${method} y lo que más me preocupa es: ${pain}.`,
+    country: (country: string) => ` Mi administración está en ${country}.`
   },
 
   shell: {
@@ -112,8 +117,10 @@ const ES = {
     exit: 'Salir',
     contextLine: (city: string, units: number, period: string) => `${city} · ${units} unidades · ${period}`,
     note: 'Nada de lo que hagas aquí se guarda ni afecta datos reales.',
+    country: 'País',
+    countryAria: 'País de la demostración',
     navAria: 'Módulos de la demostración',
-    nav: { panel: 'Panel', units: 'Unidades', expenses: 'Gastos', reports: 'Informes', journal: 'Libro diario' },
+    nav: { panel: 'Panel', units: 'Unidades', expenses: 'Gastos', reports: 'Informes', journal: 'Libro diario', certificate: 'Certificado de deudas' },
     missionsAria: 'Recorrido guiado',
     missionsTitle: 'Recorrido guiado',
     missionsProgress: (done: number, total: number) => `${done} de ${total} herramientas descubiertas`,
@@ -195,7 +202,7 @@ const ES = {
   statement: {
     back: '← Volver a unidades',
     title: (code: string) => `Estado de cuenta · Unidad ${code}`,
-    sub: (owner: string, floor: number, area: number, fee: string) => `${owner} · piso ${floor} · ${area} m² · cuota ordinaria ${fee}`,
+    sub: (owner: string, floor: number, metric: string, fee: string) => `${owner} · piso ${floor} · ${metric} · cuota ordinaria ${fee}`,
     pending: 'Saldo pendiente',
     overdueOf: 'De los cuales vencidos',
     lastPayment: 'Último pago',
@@ -270,6 +277,25 @@ const ES = {
     moreRest: '. Lo ya asentado no se modifica: los errores se corrigen con un contraasiento.',
     learnMore: 'Conocer más →'
   },
+  certificate: {
+    title: 'Certificado de deudas y créditos',
+    sub: 'El documento que la administración entrega a pedido de un interesado (por ejemplo, para transmitir una unidad): lo adeudado por período y el saldo a favor.',
+    pick: 'Unidad',
+    statementLink: 'Estado de cuenta →',
+    issued: (date: string, unit: string, building: string, place: string) => `A la fecha de emisión (${date}), la administración certifica el estado de cuenta de la unidad ${unit} del ${building}, ubicado en ${place}.`,
+    owner: 'Propietario',
+    cols: { period: 'Período', due: 'Vencimiento', charged: 'Emitido', paid: 'Pagado', pending: 'Pendiente' },
+    total: 'Total adeudado',
+    credit: 'Saldo a favor del propietario en la administración',
+    noDebt: 'La unidad no registra expensas ni intereses pendientes de pago a la fecha de emisión.',
+    hasDebt: 'La unidad registra expensas e intereses pendientes de pago por el importe indicado.',
+    none: 'Sin períodos con saldo pendiente.',
+    note: 'El saldo a favor pertenece al propietario y puede incluir importes generados por otras unidades. Este certificado refleja los registros de la administración a la fecha indicada; los pagos acreditados después no figuran.',
+    signature: 'Administración Demo S.A.',
+    registry: 'Registro N.º 1234 (dato de ejemplo)',
+    pdf: 'Descargar PDF',
+    place: 'Asunción'
+  },
   lockedPage: {
     badge: 'Disponible en la versión completa',
     cta: 'Ver esta función en una demostración',
@@ -286,6 +312,7 @@ const PT: DemoTx = {
   decimal: (n: number): string => String(n).replace('.', ','),
   percent: (n: number | string): string => `${n}%`,
 
+  countries: { py: 'Paraguai', ar: 'Argentina' } as Record<DemoCountry, string>,
   building: { name: 'Edifício Torre Mirador', city: 'Assunção' },
   defaultSupplier: 'Fornecedor de exemplo',
   categories: { utilities: 'Serviços', payroll: 'Pessoal', security: 'Segurança', maintenance: 'Manutenção', cleaning: 'Limpeza', admin: 'Administração', insurance: 'Seguros', other: 'Outros' },
@@ -299,6 +326,7 @@ const PT: DemoTx = {
     water: { supplier: 'ESSAP', concept: 'Água e esgoto' },
     elevator: { supplier: 'Elevadores del Sur S.A.', concept: 'Manutenção mensal dos elevadores' },
     supplies: { supplier: 'Distribuidora Limpia SRL', concept: 'Material de limpeza' },
+    insurance: { supplier: 'Seguros Integrales Demo S.A.', concept: 'Seguro integral do edifício' },
     adminFee: { supplier: 'Administración Demo S.A.', concept: 'Honorários de administração' },
     pump: { supplier: 'Hidrosistemas Paraguay', concept: 'Reparo da bomba d’água' }
   },
@@ -323,7 +351,8 @@ const PT: DemoTx = {
     unidad: { title: 'Confira uma unidade', hint: 'Procure um apartamento com dívida e abra o extrato.' },
     gasto: { title: 'Registre uma despesa', hint: 'Lance uma despesa simulada e veja como ela impacta o edifício.' },
     informes: { title: 'Descubra os relatórios', hint: 'Alterne entre os relatórios de receitas e despesas, inadimplência e categorias.' },
-    libro: { title: 'Confira o controle contábil', hint: 'Abra um lançamento do livro diário e veja de qual movimento ele vem.' }
+    libro: { title: 'Confira o controle contábil', hint: 'Abra um lançamento do livro diário e veja de qual movimento ele vem.' },
+    certificado: { title: 'Gere uma certidão de débitos', hint: 'Escolha uma unidade e veja a certidão de débitos e créditos entregue a quem a solicita.' }
   },
   locked: {
     'estado-pdf': { title: 'Extratos em PDF e envio ao proprietário', text: 'Gere o extrato de cada unidade em PDF e envie por e-mail ou pelo app, com um só clique.' },
@@ -354,7 +383,8 @@ const PT: DemoTx = {
       general: 'Olá, estive explorando a Expenses e quero mais informações.'
     },
     explored: (list: string) => ` Na demo explorei: ${list}.`,
-    profile: (units: string, method: string, pain: string) => ` Administro ${units} unidades, hoje controlo as taxas com ${method} e o que mais me preocupa é: ${pain}.`
+    profile: (units: string, method: string, pain: string) => ` Administro ${units} unidades, hoje controlo as taxas com ${method} e o que mais me preocupa é: ${pain}.`,
+    country: (country: string) => ` Minha administração fica em ${country}.`
   },
 
   shell: {
@@ -366,8 +396,10 @@ const PT: DemoTx = {
     exit: 'Sair',
     contextLine: (city: string, units: number, period: string) => `${city} · ${units} unidades · ${period}`,
     note: 'Nada do que você fizer aqui é salvo nem afeta dados reais.',
+    country: 'País',
+    countryAria: 'País da demonstração',
     navAria: 'Módulos da demonstração',
-    nav: { panel: 'Painel', units: 'Unidades', expenses: 'Despesas', reports: 'Relatórios', journal: 'Livro diário' },
+    nav: { panel: 'Painel', units: 'Unidades', expenses: 'Despesas', reports: 'Relatórios', journal: 'Livro diário', certificate: 'Certidão de débitos' },
     missionsAria: 'Roteiro guiado',
     missionsTitle: 'Roteiro guiado',
     missionsProgress: (done: number, total: number) => `${done} de ${total} ferramentas descobertas`,
@@ -449,7 +481,7 @@ const PT: DemoTx = {
   statement: {
     back: '← Voltar às unidades',
     title: (code: string) => `Extrato · Unidade ${code}`,
-    sub: (owner: string, floor: number, area: number, fee: string) => `${owner} · andar ${floor} · ${area} m² · taxa ordinária ${fee}`,
+    sub: (owner: string, floor: number, metric: string, fee: string) => `${owner} · andar ${floor} · ${metric} · taxa ordinária ${fee}`,
     pending: 'Saldo pendente',
     overdueOf: 'Dos quais vencidos',
     lastPayment: 'Último pagamento',
@@ -524,6 +556,25 @@ const PT: DemoTx = {
     moreRest: '. O que já foi lançado não é alterado: os erros se corrigem com um estorno.',
     learnMore: 'Saiba mais →'
   },
+  certificate: {
+    title: 'Certidão de débitos e créditos',
+    sub: 'O documento que a administração entrega a pedido de um interessado (por exemplo, para transferir uma unidade): o devido por período e o saldo credor.',
+    pick: 'Unidade',
+    statementLink: 'Extrato →',
+    issued: (date: string, unit: string, building: string, place: string) => `Na data de emissão (${date}), a administração certifica a situação da unidade ${unit} do ${building}, localizado em ${place}.`,
+    owner: 'Proprietário',
+    cols: { period: 'Período', due: 'Vencimento', charged: 'Emitido', paid: 'Pago', pending: 'Pendente' },
+    total: 'Total devido',
+    credit: 'Saldo credor do proprietário na administração',
+    noDebt: 'A unidade não tem taxas nem juros pendentes de pagamento na data de emissão.',
+    hasDebt: 'A unidade tem taxas e juros pendentes de pagamento no valor indicado.',
+    none: 'Sem períodos com saldo pendente.',
+    note: 'O saldo credor pertence ao proprietário e pode incluir valores gerados por outras unidades. Esta certidão reflete os registros da administração na data indicada; pagamentos creditados depois não constam.',
+    signature: 'Administración Demo S.A.',
+    registry: 'Registro nº 1234 (dado de exemplo)',
+    pdf: 'Baixar PDF',
+    place: 'Assunção'
+  },
   lockedPage: {
     badge: 'Disponível na versão completa',
     cta: 'Ver esta função em uma demonstração',
@@ -538,6 +589,7 @@ const EN: DemoTx = {
   decimal: (n: number): string => String(n),
   percent: (n: number | string): string => `${n}%`,
 
+  countries: { py: 'Paraguay', ar: 'Argentina' } as Record<DemoCountry, string>,
   building: { name: 'Torre Mirador Building', city: 'Asunción' },
   defaultSupplier: 'Sample supplier',
   categories: { utilities: 'Utilities', payroll: 'Staff', security: 'Security', maintenance: 'Maintenance', cleaning: 'Cleaning', admin: 'Administration', insurance: 'Insurance', other: 'Other' },
@@ -551,6 +603,7 @@ const EN: DemoTx = {
     water: { supplier: 'ESSAP', concept: 'Water and sewage' },
     elevator: { supplier: 'Elevadores del Sur S.A.', concept: 'Monthly elevator maintenance' },
     supplies: { supplier: 'Distribuidora Limpia SRL', concept: 'Cleaning supplies' },
+    insurance: { supplier: 'Seguros Integrales Demo S.A.', concept: 'Comprehensive building insurance' },
     adminFee: { supplier: 'Administración Demo S.A.', concept: 'Administration fees' },
     pump: { supplier: 'Hidrosistemas Paraguay', concept: 'Water pump repair' }
   },
@@ -575,7 +628,8 @@ const EN: DemoTx = {
     unidad: { title: 'Review a unit', hint: 'Look up an apartment with a debt and open its account statement.' },
     gasto: { title: 'Record an expense', hint: 'Enter a simulated expense and see how it affects the building.' },
     informes: { title: 'Discover the reports', hint: 'Switch between the income and expenses, arrears and category reports.' },
-    libro: { title: 'Check the accounting control', hint: 'Open a general journal entry and see which movement it comes from.' }
+    libro: { title: 'Check the accounting control', hint: 'Open a general journal entry and see which movement it comes from.' },
+    certificado: { title: 'Issue a debt certificate', hint: 'Pick a unit and see the certificate of debts and credits handed to whoever requests it.' }
   },
   locked: {
     'estado-pdf': { title: 'PDF account statements sent to the owner', text: 'Generate each unit\'s account statement as a PDF and send it by email or through the app, with a single click.' },
@@ -606,7 +660,8 @@ const EN: DemoTx = {
       general: 'Hello, I have been exploring Expenses and I would like more information.'
     },
     explored: (list: string) => ` In the demo I explored: ${list}.`,
-    profile: (units: string, method: string, pain: string) => ` I manage ${units} units, I currently handle fees with ${method} and what worries me most is: ${pain}.`
+    profile: (units: string, method: string, pain: string) => ` I manage ${units} units, I currently handle fees with ${method} and what worries me most is: ${pain}.`,
+    country: (country: string) => ` My administration is in ${country}.`
   },
 
   shell: {
@@ -618,8 +673,10 @@ const EN: DemoTx = {
     exit: 'Exit',
     contextLine: (city: string, units: number, period: string) => `${city} · ${units} units · ${period}`,
     note: 'Nothing you do here is saved or affects real data.',
+    country: 'Country',
+    countryAria: 'Demo country',
     navAria: 'Demo modules',
-    nav: { panel: 'Dashboard', units: 'Units', expenses: 'Expenses', reports: 'Reports', journal: 'General journal' },
+    nav: { panel: 'Dashboard', units: 'Units', expenses: 'Expenses', reports: 'Reports', journal: 'General journal', certificate: 'Debt certificate' },
     missionsAria: 'Guided tour',
     missionsTitle: 'Guided tour',
     missionsProgress: (done: number, total: number) => `${done} of ${total} tools discovered`,
@@ -701,7 +758,7 @@ const EN: DemoTx = {
   statement: {
     back: '← Back to units',
     title: (code: string) => `Account statement · Unit ${code}`,
-    sub: (owner: string, floor: number, area: number, fee: string) => `${owner} · floor ${floor} · ${area} m² · ordinary fee ${fee}`,
+    sub: (owner: string, floor: number, metric: string, fee: string) => `${owner} · floor ${floor} · ${metric} · ordinary fee ${fee}`,
     pending: 'Balance due',
     overdueOf: 'Of which overdue',
     lastPayment: 'Last payment',
@@ -776,6 +833,25 @@ const EN: DemoTx = {
     moreRest: '. What has already been posted is not edited: errors are corrected with a reversing entry.',
     learnMore: 'Learn more →'
   },
+  certificate: {
+    title: 'Certificate of debts and credits',
+    sub: 'The document the administration hands out at the request of an interested party (for example, to transfer a unit): what is owed per period and the credit balance.',
+    pick: 'Unit',
+    statementLink: 'Account statement →',
+    issued: (date: string, unit: string, building: string, place: string) => `As of the issue date (${date}), the administration certifies the account status of unit ${unit} of ${building}, located in ${place}.`,
+    owner: 'Owner',
+    cols: { period: 'Period', due: 'Due date', charged: 'Issued', paid: 'Paid', pending: 'Pending' },
+    total: 'Total owed',
+    credit: 'Owner credit balance with the administration',
+    noDebt: 'The unit has no fees or interest pending payment as of the issue date.',
+    hasDebt: 'The unit has fees and interest pending payment for the amount shown.',
+    none: 'No periods with a pending balance.',
+    note: 'The credit balance belongs to the owner and may include amounts generated by other units. This certificate reflects the administration\'s records as of the date shown; payments credited afterwards are not included.',
+    signature: 'Administración Demo S.A.',
+    registry: 'Registry No. 1234 (sample data)',
+    pdf: 'Download PDF',
+    place: 'Asunción'
+  },
   lockedPage: {
     badge: 'Available in the full version',
     cta: 'See this feature in a demo',
@@ -784,3 +860,318 @@ const EN: DemoTx = {
 };
 
 export const DEMO_TX: Dict<DemoTx> = { es: ES, pt: PT, en: EN };
+
+// ─── Argentina ────────────────────────────────────────────────────────────────────────────────────────────────────────
+// Versión Argentina de la demostración: parte de los textos base de cada idioma y reemplaza solo lo que cambia (consorcio de la CABA, pesos,
+// expensas, unidad funcional, porcentual, intereses por mora; sin IVA, RUC, timbrado, facturas ni libro diario). Son datos ficticios y no
+// afirman cumplimiento legal: las reglas (vencimientos, intereses, mayorías) se configuran por consorcio.
+
+type DeepPartial<T> = T extends (...args: never[]) => unknown ? T : T extends readonly unknown[] ? T : T extends object ? { [K in keyof T]?: DeepPartial<T[K]> } : T;
+
+function mergeTx<T>(base: T, patch: DeepPartial<T>): T {
+  const out: Record<string, unknown> = { ...(base as Record<string, unknown>) };
+  for (const [key, value] of Object.entries(patch as Record<string, unknown>)) {
+    const current = out[key];
+    const plain = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
+    out[key] = plain(value) && plain(current) ? mergeTx(current, value as DeepPartial<typeof current>) : value;
+  }
+  return out as T;
+}
+
+const AR_ES: DeepPartial<DemoTx> = {
+  building: { name: 'Consorcio Rivadavia 1450', city: 'CABA' },
+  expenseItems: {
+    staff: { supplier: 'Nómina del consorcio', concept: 'Sueldo y cargas sociales del encargado' },
+    power: { supplier: 'Empresa de energía', concept: 'Luz de áreas comunes' },
+    water: { supplier: 'Servicio de agua y cloacas', concept: 'Agua y cloacas' },
+    elevator: { supplier: 'Ascensores del Plata S.A.', concept: 'Mantenimiento mensual de ascensores' },
+    supplies: { supplier: 'Distribuidora Limpia S.R.L.', concept: 'Insumos de limpieza' },
+    insurance: { supplier: 'Seguros Integrales Demo S.A.', concept: 'Seguro integral del consorcio' },
+    adminFee: { supplier: 'Administración Demo S.A.', concept: 'Honorarios de administración' },
+    pump: { supplier: 'Hidráulica Demo S.R.L.', concept: 'Reparación de bomba de agua' }
+  },
+  charge: {
+    extra: 'Expensa extraordinaria · impermeabilización de la terraza',
+    surcharge: (period: string) => `Intereses por mora (3 % mensual) · ${period}`
+  },
+  missions: {
+    panel: { title: 'Conocé el consorcio', hint: 'Tocá cualquier indicador del panel para ver de dónde sale la cifra.' },
+    unidad: { title: 'Revisá una unidad funcional', hint: 'Buscá una unidad con deuda y abrí su estado de cuenta.' },
+    gasto: { title: 'Registrá un gasto', hint: 'Cargá un gasto común simulado y mirá cómo impacta en el consorcio.' },
+    informes: { title: 'Descubrí los informes', hint: 'Cambiá entre los informes de ingresos y gastos, morosidad y rubros.' },
+    certificado: { title: 'Generá un certificado de deudas', hint: 'Elegí una unidad funcional y mirá el certificado de deudas y créditos que se entrega a quien lo pide.' }
+  },
+  locked: {
+    'estado-pdf': { title: 'Estados de cuenta y certificados en PDF', text: 'Generá el estado de cuenta o el certificado de deudas de cada unidad funcional en PDF y enviáselo al propietario por correo o por la app.' },
+    conciliacion: { text: 'Importá el extracto del banco y conciliá cobros y pagos contra lo registrado en Expenses.' },
+    votaciones: { title: 'Votaciones de propietarios', text: 'Convocá y registrá votaciones con mayoría absoluta sobre el total de unidades y de porcentual. En la app son consultas informativas: no reemplazan el acta de la asamblea.' }
+  },
+  diagnosis: {
+    units: { title: '¿Cuántas unidades funcionales administrás?', options: [['u30', 'Hasta 30'], ['u100', '31 a 100'], ['u300', '101 a 300'], ['u300p', 'Más de 300']] },
+    method: { title: '¿Cómo llevás hoy las expensas?', options: [['excel', 'Planillas de Excel'], ['software', 'Otro software'], ['paper', 'Cuaderno o papel'], ['accountant', 'Lo lleva mi estudio contable']] },
+    pain: { title: '¿Qué te quita más tiempo o te preocupa más?', options: [['collections', 'Cobrar y la morosidad'], ['expenses', 'Controlar gastos y proveedores'], ['accounting', 'La liquidación de expensas'], ['assembly', 'Rendir cuentas en la asamblea'], ['communication', 'Comunicarme con los propietarios']] }
+  },
+  recommendation: {
+    collections: 'Intereses por mora mensuales configurables, estados de cuenta por unidad funcional y el informe de morosidad que viste en la demo.',
+    expenses: 'Gastos comunes por rubro, proveedores y cuentas por pagar, con el impacto en las expensas al instante.',
+    accounting: 'Liquidación de expensas, certificados de deudas y la información ordenada para tu contador.',
+    assembly: 'Informe para la asamblea, presupuesto contra lo real y fondo de reserva, para rendir cuentas claras.',
+    communication: 'Comunicados, reclamos, avisos en la app y consultas a los propietarios, para que todos estén informados.'
+  },
+  whatsapp: {
+    intro: {
+      presupuesto: 'Hola, probé la demostración de Expenses y quiero pedir un presupuesto para mi consorcio.',
+      demostracion: 'Hola, probé la demostración de Expenses y quiero solicitar una demostración personalizada.',
+      planes: 'Hola, probé la demostración de Expenses y quiero consultar planes y condiciones.',
+      general: 'Hola, estuve explorando Expenses y quiero más información.'
+    },
+    profile: (units: string, method: string, pain: string) => ` Administro ${units} unidades funcionales, hoy llevo las expensas con ${method} y lo que más me preocupa es: ${pain}.`
+  },
+  shell: {
+    note: 'Datos ficticios. Las reglas (vencimientos, intereses, mayorías) se configuran por consorcio.',
+    contextLine: (city: string, units: number, period: string) => `${city} · ${units} unidades funcionales · ${period}`,
+    nav: { units: 'Unidades funcionales' },
+    allDone: '¡Recorrido completo! Ya viste cómo Expenses ayuda a controlar un consorcio.',
+    footCta: 'Quiero esto para mi consorcio',
+    finishTodo: '¿Listo para administrar tu propio consorcio?',
+    finishLead: 'Ya viste cómo funciona Expenses en un entorno de prueba. Contanos tu caso y te ayudamos a evaluar cómo adaptarlo a tu administración.',
+    seoTitle: 'Demostración gratuita de Expenses | Consorcio de ejemplo',
+    seoDescription: 'Explorá Expenses sin registrarte: un consorcio de demostración con unidades funcionales, expensas, gastos, informes y certificado de deudas, con datos ficticios.'
+  },
+  panel: {
+    title: 'Así está el consorcio hoy',
+    sub: 'Tocá un indicador para descubrir de dónde sale la cifra.',
+    seeAll: 'Ver el resultado mensual en Informes →',
+    alert: (n: number, amount: string) => ({ bold: `${n} unidades funcionales`, rest: ` tienen deuda vencida por ${amount}. ` }),
+    kpi: {
+      cash: { text: 'Es el saldo de apertura del mes, más lo cobrado a los propietarios, menos los gastos comunes pagados.', link: 'Ver el resultado mensual' },
+      collected: { text: 'Suma de los pagos registrados este mes contra lo emitido en la liquidación de expensas.' },
+      morosity: { text: 'Unidades funcionales con al menos una expensa vencida y sin pagar, sobre el total del consorcio.', withDebt: 'Unidades funcionales con deuda vencida', totalUnits: 'Total de unidades funcionales' },
+      pending: { text: 'Todo lo emitido que todavía no se cobró: la deuda vencida (con intereses) más las expensas del mes que aún no vencen.' }
+    }
+  },
+  units: {
+    title: 'Unidades funcionales y propietarios',
+    sub: 'Buscá una unidad funcional y abrí su estado de cuenta para ver cargos, pagos y saldo.',
+    count: (shown: number, total: number) => `${shown} de ${total} unidades funcionales`,
+    cols: { unit: 'Unidad funcional', area: 'Porcentual', fee: 'Expensa ordinaria' }
+  },
+  statement: {
+    title: (code: string) => `Estado de cuenta · UF ${code}`,
+    sub: (owner: string, floor: number, metric: string, fee: string) => `${owner} · piso ${floor} · porcentual ${metric} · expensa ordinaria ${fee}`,
+    pdf: 'Descargar PDF'
+  },
+  expenses: {
+    title: 'Gastos comunes del consorcio',
+    sub: 'Registrá un gasto común de prueba y mirá cómo cambia el panel y los informes. No se guarda: es solo una simulación.',
+    amount: 'Importe en pesos',
+    amountPlaceholder: 'Ej.: 85000',
+    errConcept: 'Escribí un concepto para el gasto.',
+    errAmount: 'Ingresá un importe mayor que cero.',
+    added: (concept: string, amount: string) => ` «${concept}» por ${amount}. El saldo de caja bajó y el gasto ya figura en el panel y en los informes.`,
+    seeEntry: 'Ver el impacto en Informes →'
+  },
+  reports: {
+    sub: 'Lo que necesitás para decidir y para rendir cuentas en la asamblea. Cambiá de informe con las pestañas.',
+    monthlyNote: 'El resultado del mes actual cambia si registrás gastos simulados en la sección Gastos.',
+    unitCount: (n: number) => `${n} ${n === 1 ? 'unidad funcional' : 'unidades funcionales'}`,
+    more: 'En la versión completa también tenés el ',
+    moreBold: 'informe para la asamblea',
+    moreRest: ', presupuesto contra lo real, flujo de caja y exportación a Excel.'
+  },
+  certificate: {
+    pick: 'Unidad funcional',
+    issued: (date: string, unit: string, building: string, place: string) => `A la fecha de emisión (${date}), la administración certifica el estado de cuenta de la unidad funcional ${unit} del ${building}, ubicado en ${place}.`,
+    noDebt: 'La unidad funcional no registra expensas ni intereses pendientes de pago a la fecha de emisión.',
+    hasDebt: 'La unidad funcional registra expensas e intereses pendientes de pago por el importe indicado.',
+    place: 'Ciudad Autónoma de Buenos Aires'
+  }
+};
+
+const AR_PT: DeepPartial<DemoTx> = {
+  building: { name: 'Condomínio Rivadavia 1450', city: 'CABA' },
+  expenseItems: {
+    staff: { supplier: 'Folha do condomínio', concept: 'Salário e encargos do zelador' },
+    power: { supplier: 'Empresa de energia', concept: 'Luz das áreas comuns' },
+    water: { supplier: 'Serviço de água e esgoto', concept: 'Água e esgoto' },
+    elevator: { supplier: 'Ascensores del Plata S.A.', concept: 'Manutenção mensal dos elevadores' },
+    supplies: { supplier: 'Distribuidora Limpia S.R.L.', concept: 'Material de limpeza' },
+    insurance: { supplier: 'Seguros Integrales Demo S.A.', concept: 'Seguro integral do condomínio' },
+    adminFee: { supplier: 'Administración Demo S.A.', concept: 'Honorários de administração' },
+    pump: { supplier: 'Hidráulica Demo S.R.L.', concept: 'Reparo da bomba d’água' }
+  },
+  charge: {
+    extra: 'Taxa extraordinária · impermeabilização do terraço',
+    surcharge: (period: string) => `Juros por atraso (3% ao mês) · ${period}`
+  },
+  missions: {
+    panel: { title: 'Conheça o condomínio', hint: 'Clique em qualquer indicador do painel para ver de onde vem o valor.' },
+    unidad: { title: 'Confira uma unidade funcional', hint: 'Procure uma unidade com dívida e abra o extrato.' },
+    gasto: { title: 'Registre uma despesa', hint: 'Lance uma despesa comum simulada e veja como ela impacta o condomínio.' }
+  },
+  locked: {
+    'estado-pdf': { title: 'Extratos e certidões em PDF', text: 'Gere o extrato ou a certidão de débitos de cada unidade funcional em PDF e envie ao proprietário por e-mail ou pelo app.' },
+    votaciones: { title: 'Votações de proprietários', text: 'Convoque e registre votações com maioria absoluta sobre o total de unidades e de percentual. No app são consultas informativas: não substituem a ata da assembleia.' }
+  },
+  diagnosis: {
+    units: { title: 'Quantas unidades funcionais você administra?', options: [['u30', 'Até 30'], ['u100', '31 a 100'], ['u300', '101 a 300'], ['u300p', 'Mais de 300']] },
+    method: { title: 'Como você controla as taxas hoje?', options: [['excel', 'Planilhas de Excel'], ['software', 'Outro software'], ['paper', 'Caderno ou papel'], ['accountant', 'Meu escritório contábil cuida']] }
+  },
+  recommendation: {
+    collections: 'Juros por atraso mensais configuráveis, extratos por unidade funcional e o relatório de inadimplência que você viu na demo.',
+    expenses: 'Despesas comuns por categoria, fornecedores e contas a pagar, com o impacto nas taxas na hora.',
+    accounting: 'Apuração das taxas, certidões de débitos e a informação organizada para o seu contador.',
+    assembly: 'Relatório para a assembleia, orçamento contra o realizado e fundo de reserva, para apresentar contas claras.'
+  },
+  whatsapp: {
+    intro: {
+      presupuesto: 'Olá, testei a demonstração da Expenses e quero pedir um orçamento para o meu condomínio.'
+    },
+    profile: (units: string, method: string, pain: string) => ` Administro ${units} unidades funcionais, hoje controlo as taxas com ${method} e o que mais me preocupa é: ${pain}.`
+  },
+  shell: {
+    note: 'Dados fictícios. As regras (vencimentos, juros, maiorias) são configuradas por condomínio.',
+    contextLine: (city: string, units: number, period: string) => `${city} · ${units} unidades funcionais · ${period}`,
+    nav: { units: 'Unidades funcionais' },
+    footCta: 'Quero isto para o meu condomínio',
+    finishTodo: 'Pronto para administrar o seu próprio condomínio?',
+    seoTitle: 'Demonstração gratuita da Expenses | Condomínio de exemplo',
+    seoDescription: 'Explore a Expenses sem cadastro: um condomínio de demonstração com unidades funcionais, taxas, despesas, relatórios e certidão de débitos, com dados fictícios.'
+  },
+  panel: {
+    title: 'Assim está o condomínio hoje',
+    seeAll: 'Ver o resultado mensal em Relatórios →',
+    alert: (n: number, amount: string) => ({ bold: `${n} unidades funcionais`, rest: ` têm dívida vencida de ${amount}. ` }),
+    kpi: {
+      cash: { link: 'Ver o resultado mensal' },
+      morosity: { withDebt: 'Unidades funcionais com dívida vencida', totalUnits: 'Total de unidades funcionais' }
+    }
+  },
+  units: {
+    title: 'Unidades funcionais e proprietários',
+    sub: 'Procure uma unidade funcional e abra o extrato para ver cobranças, pagamentos e saldo.',
+    count: (shown: number, total: number) => `${shown} de ${total} unidades funcionais`,
+    cols: { unit: 'Unidade funcional', area: 'Percentual', fee: 'Taxa ordinária' }
+  },
+  statement: {
+    title: (code: string) => `Extrato · UF ${code}`,
+    sub: (owner: string, floor: number, metric: string, fee: string) => `${owner} · andar ${floor} · percentual ${metric} · taxa ordinária ${fee}`
+  },
+  expenses: {
+    title: 'Despesas comuns do condomínio',
+    sub: 'Registre uma despesa comum de teste e veja como mudam o painel e os relatórios. Nada é salvo: é apenas uma simulação.',
+    amount: 'Valor em pesos',
+    amountPlaceholder: 'Ex.: 85000',
+    added: (concept: string, amount: string) => ` «${concept}» de ${amount}. O saldo do caixa diminuiu e a despesa já aparece no painel e nos relatórios.`,
+    seeEntry: 'Ver o impacto nos Relatórios →'
+  },
+  reports: {
+    unitCount: (n: number) => `${n} ${n === 1 ? 'unidade funcional' : 'unidades funcionais'}`,
+    more: 'Na versão completa você também tem o ',
+    moreBold: 'relatório para a assembleia',
+    moreRest: ', orçamento contra o realizado, fluxo de caixa e exportação para Excel.'
+  },
+  certificate: {
+    pick: 'Unidade funcional',
+    issued: (date: string, unit: string, building: string, place: string) => `Na data de emissão (${date}), a administração certifica a situação da unidade funcional ${unit} do ${building}, localizado em ${place}.`,
+    noDebt: 'A unidade funcional não tem taxas nem juros pendentes de pagamento na data de emissão.',
+    hasDebt: 'A unidade funcional tem taxas e juros pendentes de pagamento no valor indicado.',
+    place: 'Cidade Autônoma de Buenos Aires'
+  }
+};
+
+const AR_EN: DeepPartial<DemoTx> = {
+  building: { name: 'Rivadavia 1450 Condominium', city: 'CABA' },
+  expenseItems: {
+    staff: { supplier: 'Condominium payroll', concept: 'Salary and social charges of the on-site manager' },
+    power: { supplier: 'Electricity company', concept: 'Electricity for common areas' },
+    water: { supplier: 'Water and sewage service', concept: 'Water and sewage' },
+    elevator: { supplier: 'Ascensores del Plata S.A.', concept: 'Monthly elevator maintenance' },
+    supplies: { supplier: 'Distribuidora Limpia S.R.L.', concept: 'Cleaning supplies' },
+    insurance: { supplier: 'Seguros Integrales Demo S.A.', concept: 'Comprehensive condominium insurance' },
+    adminFee: { supplier: 'Administración Demo S.A.', concept: 'Administration fees' },
+    pump: { supplier: 'Hidráulica Demo S.R.L.', concept: 'Water pump repair' }
+  },
+  charge: {
+    extra: 'Extraordinary fee · terrace waterproofing',
+    surcharge: (period: string) => `Late interest (3% per month) · ${period}`
+  },
+  missions: {
+    panel: { title: 'Get to know the condominium', hint: 'Click any indicator on the dashboard to see where the figure comes from.' },
+    unidad: { title: 'Review a functional unit', hint: 'Look up a unit with a debt and open its account statement.' },
+    gasto: { title: 'Record an expense', hint: 'Enter a simulated common expense and see how it affects the condominium.' }
+  },
+  locked: {
+    'estado-pdf': { title: 'PDF account statements and certificates', text: 'Generate the account statement or the debt certificate of each functional unit as a PDF and send it to the owner by email or through the app.' },
+    votaciones: { title: 'Owner votes', text: 'Call and record votes with an absolute majority over the total of units and of ownership share. In the app they are informative polls: they do not replace the meeting minutes.' }
+  },
+  diagnosis: {
+    units: { title: 'How many functional units do you manage?', options: [['u30', 'Up to 30'], ['u100', '31 to 100'], ['u300', '101 to 300'], ['u300p', 'More than 300']] },
+    method: { title: 'How do you handle expenses today?', options: [['excel', 'Excel spreadsheets'], ['software', 'Other software'], ['paper', 'Notebook or paper'], ['accountant', 'My accounting firm handles it']] }
+  },
+  recommendation: {
+    collections: 'Configurable monthly late interest, account statements per functional unit and the arrears report you saw in the demo.',
+    expenses: 'Common expenses by category, suppliers and accounts payable, with the impact on the monthly expenses instantly.',
+    accounting: 'Monthly expense settlement, debt certificates and the information organized for your accountant.',
+    assembly: 'Meeting report, budget versus actual and reserve fund, so you can present clear accounts.'
+  },
+  whatsapp: {
+    intro: {
+      presupuesto: 'Hello, I tried the Expenses demo and I would like to request a quote for my condominium.'
+    },
+    profile: (units: string, method: string, pain: string) => ` I manage ${units} functional units, I currently handle expenses with ${method} and what worries me most is: ${pain}.`
+  },
+  shell: {
+    note: 'Fictitious data. The rules (due dates, interest, majorities) are configured per condominium.',
+    contextLine: (city: string, units: number, period: string) => `${city} · ${units} functional units · ${period}`,
+    nav: { units: 'Functional units' },
+    footCta: 'I want this for my condominium',
+    finishTodo: 'Ready to manage your own condominium?',
+    seoTitle: 'Free Expenses demo | Sample condominium',
+    seoDescription: 'Explore Expenses without signing up: a demo condominium with functional units, expenses, reports and a debt certificate, with fictitious data.'
+  },
+  panel: {
+    title: 'This is the condominium today',
+    seeAll: 'See the monthly result in Reports →',
+    alert: (n: number, amount: string) => ({ bold: `${n} functional units`, rest: ` have overdue debt of ${amount}. ` }),
+    kpi: {
+      cash: { link: 'See the monthly result' },
+      morosity: { withDebt: 'Functional units with overdue debt', totalUnits: 'Total functional units' }
+    }
+  },
+  units: {
+    title: 'Functional units and owners',
+    sub: 'Look up a functional unit and open its account statement to see charges, payments and balance.',
+    count: (shown: number, total: number) => `${shown} of ${total} functional units`,
+    cols: { unit: 'Functional unit', area: 'Share', fee: 'Ordinary expense' }
+  },
+  statement: {
+    title: (code: string) => `Account statement · FU ${code}`,
+    sub: (owner: string, floor: number, metric: string, fee: string) => `${owner} · floor ${floor} · share ${metric} · ordinary expense ${fee}`
+  },
+  expenses: {
+    title: 'Common expenses of the condominium',
+    sub: 'Record a test common expense and see how the dashboard and the reports change. Nothing is saved: it is only a simulation.',
+    amount: 'Amount in pesos',
+    amountPlaceholder: 'E.g.: 85000',
+    added: (concept: string, amount: string) => ` “${concept}” for ${amount}. The cash balance went down and the expense already shows on the dashboard and in the reports.`,
+    seeEntry: 'See the impact in Reports →'
+  },
+  reports: {
+    unitCount: (n: number) => `${n} ${n === 1 ? 'functional unit' : 'functional units'}`,
+    more: 'The full version also includes the ',
+    moreBold: 'owners\' meeting report',
+    moreRest: ', budget versus actual, cash flow and Excel export.'
+  },
+  certificate: {
+    pick: 'Functional unit',
+    issued: (date: string, unit: string, building: string, place: string) => `As of the issue date (${date}), the administration certifies the account status of functional unit ${unit} of ${building}, located in ${place}.`,
+    noDebt: 'The functional unit has no expenses or interest pending payment as of the issue date.',
+    hasDebt: 'The functional unit has expenses and interest pending payment for the amount shown.',
+    place: 'Autonomous City of Buenos Aires'
+  }
+};
+
+// Textos de la versión Argentina en los tres idiomas (ver el bloque de arriba).
+export const DEMO_TX_AR: Dict<DemoTx> = { es: mergeTx(ES, AR_ES), pt: mergeTx(PT, AR_PT), en: mergeTx(EN, AR_EN) };
+
