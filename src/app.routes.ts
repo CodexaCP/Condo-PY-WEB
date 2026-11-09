@@ -50,6 +50,11 @@ export const appRoutes: Routes = [
             { path: '**', redirectTo: 'panel' }
         ]
     },
+    // Verificación pública de un documento: el QR de la liquidación lleva acá. Sin login; solo dice si el documento es auténtico y vigente.
+    {
+        path: 'v/:token',
+        loadComponent: () => import('./app/pages/verify/verify-page.component').then(m => m.VerifyPageComponent)
+    },
     {
         path: 'forgot-password',
         loadComponent: () => import('./app/pages/auth/forgot-password').then(m => m.ForgotPassword)

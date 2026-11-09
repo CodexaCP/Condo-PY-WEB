@@ -32,7 +32,7 @@ interface CalibField {
 }
 
 interface CalibSection { name: string; fields: CalibField[]; }
-const SECTION_ORDER = ['Encabezado', 'Ingresos', 'Gastos', 'Cuerpo', 'Totales', 'Fechas', 'Firmas'];
+const SECTION_ORDER = ['Encabezado', 'Ingresos', 'Gastos', 'Cuerpo', 'Totales', 'Fechas', 'Firmas', 'QR'];
 
 const IMAGE_H_PT = 40; // alto del cajetin de una firma (imagen)
 
@@ -160,7 +160,11 @@ const FIELDS: CalibField[] = [
   { key: 'firmaAutorizado',       section: 'Firmas', group: 'Autorizado por (presidente)', label: 'Imagen de la firma', kind: 'image', sample: 'firma',                   x: 250, top: 655, width: 110, defaultFontSize: 8 },
   { key: 'firmaAutorizadoNombre', section: 'Firmas', group: 'Autorizado por (presidente)', label: 'Nombre',             kind: 'text',  sample: 'Nombre Apellido',         x: 215, top: 700, width: 175, defaultFontSize: 8, align: 'C' },
   { key: 'firmaAutorizadoCargo',  section: 'Firmas', group: 'Autorizado por (presidente)', label: 'Cargo',              kind: 'text',  sample: 'Presidente del consorcio', x: 215, top: 711, width: 175, defaultFontSize: 8, align: 'C' },
-  { key: 'firmaVerificacion',       section: 'Firmas', group: 'Verificación (building manager)', label: 'Imagen de la firma', kind: 'image', sample: 'firma',              x: 420, top: 655, width: 110, defaultFontSize: 8 }
+  { key: 'firmaVerificacion',       section: 'Firmas', group: 'Verificación (building manager)', label: 'Imagen de la firma', kind: 'image', sample: 'firma',              x: 420, top: 655, width: 110, defaultFontSize: 8 },
+
+  // QR de verificación (solo en la última hoja): un cuadrado cuyo lado es el "ancho". Arranca oculto: el papel propio ya trae su diseño y el QR se
+  // muestra y se ubica donde haya lugar libre. Al escanearlo se confirma que la liquidación es auténtica y vigente.
+  { key: 'qr', section: 'QR', group: '', label: 'Código QR de verificación (el ancho es el lado del cuadrado)', kind: 'image', sample: 'QR', x: 490, top: 740, width: 55, defaultFontSize: 7, hiddenByDefault: true }
 ];
 
 // Filas de ejemplo de cada columna (una fila por renglon del cuerpo).
@@ -268,7 +272,7 @@ const ZOOM_MAX = 1.6;
                          [style.textAlign]="alignOf(f)"
                          [style.height.px]="rowHeight * SCALE" [style.lineHeight.px]="rowHeight * SCALE">{{ text }}</div>
                   </ng-container>
-                  <div *ngSwitchCase="'image'" class="mock-sign-img">{{ f.sample }}</div>
+                  <div *ngSwitchCase="'image'" class="mock-sign-img" [class.mock-qr]="f.key === 'qr'">{{ f.sample }}</div>
                 </ng-container>
               </div>
             </ng-container>
@@ -379,6 +383,7 @@ const ZOOM_MAX = 1.6;
     .calib-field.dragging { cursor: grabbing; background: rgba(19,133,182,0.25); z-index: 10; }
     .mock-cell { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .mock-sign-img { height: 100%; display: flex; align-items: flex-end; justify-content: center; opacity: 0.5; }
+    .mock-sign-img.mock-qr { align-items: center; border: 1px dashed currentColor; font-weight: 700; }
     .calib-section { border: 1px solid #e3ecea; border-radius: 8px; overflow: hidden; background: #fff; }
     .calib-section-head {
       display: flex; align-items: center; gap: 0.5rem; width: 100%;
@@ -549,6 +554,7 @@ export class SettlementCalibrationPageComponent implements OnInit {
   }
 
   heightOf(f: CalibField): number | null {
+    if (f.key === 'qr') return this.widthOf(f) * this.SCALE; // el QR es cuadrado: su alto es su ancho
     return f.kind === 'image' ? IMAGE_H_PT * this.SCALE : null;
   }
 
