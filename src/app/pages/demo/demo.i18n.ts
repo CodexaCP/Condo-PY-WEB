@@ -931,6 +931,7 @@ const AR_ES: DeepPartial<DemoTx> = {
     note: 'Datos ficticios. Las reglas (vencimientos, intereses, mayorías) se configuran por consorcio.',
     contextLine: (city: string, units: number, period: string) => `${city} · ${units} unidades funcionales · ${period}`,
     nav: { units: 'Unidades funcionales' },
+    forYou: 'Para vos, Expenses ofrece:',
     allDone: '¡Recorrido completo! Ya viste cómo Expenses ayuda a controlar un consorcio.',
     footCta: 'Quiero esto para mi consorcio',
     finishTodo: '¿Listo para administrar tu propio consorcio?',
@@ -946,6 +947,7 @@ const AR_ES: DeepPartial<DemoTx> = {
     kpi: {
       cash: { text: 'Es el saldo de apertura del mes, más lo cobrado a los propietarios, menos los gastos comunes pagados.', link: 'Ver el resultado mensual' },
       collected: { text: 'Suma de los pagos registrados este mes contra lo emitido en la liquidación de expensas.' },
+      expenses: { text: 'Todos los gastos comunes cargados este mes, agrupados por rubro. Si registrás un gasto simulado, esta cifra cambia.' },
       morosity: { text: 'Unidades funcionales con al menos una expensa vencida y sin pagar, sobre el total del consorcio.', withDebt: 'Unidades funcionales con deuda vencida', totalUnits: 'Total de unidades funcionales' },
       pending: { text: 'Todo lo emitido que todavía no se cobró: la deuda vencida (con intereses) más las expensas del mes que aún no vencen.' }
     }
