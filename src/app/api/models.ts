@@ -25,6 +25,8 @@ export interface BuildingProfileData {
   logoUrl?: string | null;
   whatsAppPhone?: string | null;
   officeHours?: string | null;
+  // Muestra las cuentas de cobro en la página pública a la que lleva el QR de la liquidación.
+  qrShowBankAccounts?: boolean | null;
 
   fincaNumber?: string | null;
   padronNumber?: string | null;

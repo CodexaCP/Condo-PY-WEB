@@ -6,12 +6,14 @@ export function homeRoute(auth: AuthService): string {
   return auth.hasRole('SuperAdmin') ? '/superadmin' : '/dashboard';
 }
 
-export const authGuard: CanActivateFn = () => {
+export const authGuard: CanActivateFn = (_route, state) => {
   const auth = inject(AuthService);
   const router = inject(Router);
 
   if (!auth.isAuthenticated()) {
-    return router.createUrlTree(['/login']);
+    // Recuerda a dónde iba (por ejemplo, el enlace del QR) para volver ahí después de iniciar sesión.
+    const target = state.url && state.url !== '/' ? { queryParams: { returnUrl: state.url } } : undefined;
+    return router.createUrlTree(['/login'], target);
   }
 
   return auth.mustChangePassword() ? router.createUrlTree(['/change-password']) : true;

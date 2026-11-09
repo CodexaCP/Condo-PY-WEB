@@ -16,6 +16,12 @@ export interface VerifyTx {
   privacy: string;
   retry: string;
   footer: string;
+  actionsTitle: string;
+  account: { button: string; ownersTitle: string; ownersText: string; adminText: string; adminButton: string };
+  whatsapp: string;
+  transfer: { button: string; bank: string; type: string; number: string; holder: string; document: string; alias: string; copy: string; copied: string; checking: string; savings: string };
+  app: string;
+  calendar: { button: string; title: string };
 }
 
 const ES: VerifyTx = {
@@ -48,7 +54,22 @@ const ES: VerifyTx = {
   check: 'Comparalo con el papel: si el total o el período no coinciden, no es el documento original.',
   privacy: 'Esta página muestra solo datos que ya figuran en la liquidación. No muestra unidades ni datos personales.',
   retry: 'Reintentar',
-  footer: 'Verificación de documentos'
+  footer: 'Verificación de documentos',
+  actionsTitle: 'Qué querés hacer',
+  account: {
+    button: 'Ver mi estado de cuenta',
+    ownersTitle: 'Propietarios y residentes',
+    ownersText: 'Abrí la app Expenses e ingresá con tu usuario y tu contraseña. Ahí ves tu estado de cuenta, tus recibos y podés avisar tus pagos.',
+    adminText: '¿Sos de la administración o encargado del edificio?',
+    adminButton: 'Ingresar en la web'
+  },
+  whatsapp: 'Hablar con la administración',
+  transfer: {
+    button: 'Datos para transferir', bank: 'Banco', type: 'Tipo', number: 'N.º de cuenta', holder: 'Titular', document: 'Documento', alias: 'Alias',
+    copy: 'Copiar', copied: 'Copiado', checking: 'Cuenta corriente', savings: 'Caja de ahorro'
+  },
+  app: 'Descargar la app',
+  calendar: { button: 'Agregar el vencimiento a mi calendario', title: 'Vencen las expensas de {period} · {building}' }
 };
 
 const PT: VerifyTx = {
@@ -81,7 +102,22 @@ const PT: VerifyTx = {
   check: 'Compare com o papel: se o total ou o período não coincidirem, não é o documento original.',
   privacy: 'Esta página mostra apenas dados que já constam no documento. Não mostra unidades nem dados pessoais.',
   retry: 'Tentar novamente',
-  footer: 'Verificação de documentos'
+  footer: 'Verificação de documentos',
+  actionsTitle: 'O que você quer fazer',
+  account: {
+    button: 'Ver minha conta',
+    ownersTitle: 'Proprietários e moradores',
+    ownersText: 'Abra o app Expenses e entre com seu usuário e senha. Lá você vê sua conta, seus recibos e pode avisar seus pagamentos.',
+    adminText: 'Você é da administração ou zelador do edifício?',
+    adminButton: 'Entrar na web'
+  },
+  whatsapp: 'Falar com a administração',
+  transfer: {
+    button: 'Dados para transferência', bank: 'Banco', type: 'Tipo', number: 'N.º da conta', holder: 'Titular', document: 'Documento', alias: 'Alias',
+    copy: 'Copiar', copied: 'Copiado', checking: 'Conta corrente', savings: 'Poupança'
+  },
+  app: 'Baixar o app',
+  calendar: { button: 'Adicionar o vencimento ao meu calendário', title: 'Vencem as despesas de {period} · {building}' }
 };
 
 const EN: VerifyTx = {
@@ -114,7 +150,22 @@ const EN: VerifyTx = {
   check: 'Compare it with the paper: if the total or the period do not match, it is not the original document.',
   privacy: 'This page only shows data that already appears on the statement. It shows no units or personal data.',
   retry: 'Try again',
-  footer: 'Document verification'
+  footer: 'Document verification',
+  actionsTitle: 'What would you like to do',
+  account: {
+    button: 'View my account statement',
+    ownersTitle: 'Owners and residents',
+    ownersText: 'Open the Expenses app and sign in with your username and password. There you see your account statement and receipts, and can report your payments.',
+    adminText: 'Are you part of the administration or the building manager?',
+    adminButton: 'Sign in on the web'
+  },
+  whatsapp: 'Talk to the administration',
+  transfer: {
+    button: 'Bank transfer details', bank: 'Bank', type: 'Type', number: 'Account no.', holder: 'Holder', document: 'ID', alias: 'Alias',
+    copy: 'Copy', copied: 'Copied', checking: 'Checking account', savings: 'Savings account'
+  },
+  app: 'Download the app',
+  calendar: { button: 'Add the due date to my calendar', title: 'Expenses due: {period} · {building}' }
 };
 
 export const VERIFY_TX: Dict<VerifyTx> = { es: ES, pt: PT, en: EN };

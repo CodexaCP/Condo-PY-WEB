@@ -449,6 +449,13 @@ interface Tower { cx: number; cy: number; a: number; b: number; h: number; floor
 export class Login {
     private readonly auth = inject(AuthService);
     private readonly router = inject(Router);
+
+    // Dirección a la que volver después de iniciar sesión (?returnUrl=...). Solo rutas internas: nunca otro sitio.
+    private safeReturnUrl(): string | null {
+        const value = this.router.parseUrl(this.router.url).queryParams['returnUrl'];
+        if (typeof value !== 'string' || !value.startsWith('/') || value.startsWith('//') || value.includes('\\') ||value.startsWith('/login')) return null;
+        return value;
+    }
     private readonly pushSvc = inject(PushService);
 
     private readonly lang = inject(LangService);
@@ -533,7 +540,7 @@ export class Login {
                     if (!mustChangePassword) {
                         void this.pushSvc.init();
                     }
-                    void this.router.navigateByUrl(mustChangePassword ? '/change-password' : homeRoute(this.auth));
+                    void this.router.navigateByUrl(mustChangePassword ? '/change-password' : (this.safeReturnUrl() ?? homeRoute(this.auth)));
                 },
                 error: (error) => {
                     const body = error?.error;

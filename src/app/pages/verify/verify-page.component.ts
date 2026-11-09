@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { Component, computed, effect, inject, signal } from '@angular/core';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { API_BASE_URL } from '../../config/api.config';
 import { LANGS, LangService } from '../../core/i18n/lang.service';
 import { LangSwitcherComponent } from '../../core/i18n/lang-switcher.component';
@@ -19,6 +19,11 @@ interface VerifyResult {
   totalFormatted?: string | null;
   issuedAtUtc?: string | null;
   replacedAtUtc?: string | null;
+  // Botones (solo en un documento vigente).
+  dueDate?: string | null;
+  whatsAppUrl?: string | null;
+  appDownloadUrl?: string | null;
+  bankAccounts?: { bankName: string; accountType: string; accountNumber: string; holderName: string; holderDocument?: string | null; alias?: string | null }[];
 }
 
 // Página pública a la que lleva el QR de la liquidación: sin sesión, solo muestra si el documento es auténtico y vigente.
@@ -26,7 +31,7 @@ interface VerifyResult {
 @Component({
   selector: 'app-verify-page',
   standalone: true,
-  imports: [CommonModule, LangSwitcherComponent],
+  imports: [CommonModule, RouterLink, LangSwitcherComponent],
   template: `
     <div class="vf-page">
       <div class="vf-lang"><app-lang-switcher /></div>
@@ -62,6 +67,63 @@ interface VerifyResult {
                 }
               </dl>
               <p class="vf-note">{{ t().check }}</p>
+
+              @if (r.status === 'valid') {
+                <h2 class="vf-actions-title">{{ t().actionsTitle }}</h2>
+                <div class="vf-actions">
+                  <button type="button" class="vf-btn is-primary" [attr.aria-expanded]="accountOpen()" (click)="accountOpen.set(!accountOpen())">
+                    <span aria-hidden="true">🔐</span> {{ t().account.button }}
+                  </button>
+                  @if (accountOpen()) {
+                    <div class="vf-panel">
+                      <strong>{{ t().account.ownersTitle }}</strong>
+                      <p>{{ t().account.ownersText }}</p>
+                      @if (r.appDownloadUrl) {
+                        <a class="vf-link" [href]="r.appDownloadUrl">{{ t().app }}</a>
+                      }
+                      <p class="vf-admin">{{ t().account.adminText }}
+                        <a class="vf-link" routerLink="/account-statements">{{ t().account.adminButton }}</a>
+                      </p>
+                    </div>
+                  }
+
+                  @if (r.whatsAppUrl) {
+                    <a class="vf-btn" [href]="r.whatsAppUrl" target="_blank" rel="noopener noreferrer"><span aria-hidden="true">💬</span> {{ t().whatsapp }}</a>
+                  }
+
+                  @if (r.bankAccounts?.length) {
+                    <button type="button" class="vf-btn" [attr.aria-expanded]="transferOpen()" (click)="transferOpen.set(!transferOpen())">
+                      <span aria-hidden="true">🏦</span> {{ t().transfer.button }}
+                    </button>
+                    @if (transferOpen()) {
+                      @for (a of r.bankAccounts; track a.accountNumber + a.bankName) {
+                        <div class="vf-panel">
+                          <dl class="vf-bank">
+                            <div><dt>{{ t().transfer.bank }}</dt><dd>{{ a.bankName }}</dd></div>
+                            <div><dt>{{ t().transfer.type }}</dt><dd>{{ a.accountType === 'Savings' ? t().transfer.savings : t().transfer.checking }}</dd></div>
+                            <div><dt>{{ t().transfer.number }}</dt><dd>{{ a.accountNumber }} <button type="button" class="vf-copy" (click)="copy(a.accountNumber)">{{ copied() === a.accountNumber ? t().transfer.copied : t().transfer.copy }}</button></dd></div>
+                            <div><dt>{{ t().transfer.holder }}</dt><dd>{{ a.holderName }}</dd></div>
+                            @if (a.holderDocument) {
+                              <div><dt>{{ t().transfer.document }}</dt><dd>{{ a.holderDocument }}</dd></div>
+                            }
+                            @if (a.alias) {
+                              <div><dt>{{ t().transfer.alias }}</dt><dd>{{ a.alias }} <button type="button" class="vf-copy" (click)="copy(a.alias)">{{ copied() === a.alias ? t().transfer.copied : t().transfer.copy }}</button></dd></div>
+                            }
+                          </dl>
+                        </div>
+                      }
+                    }
+                  }
+
+                  @if (r.appDownloadUrl) {
+                    <a class="vf-btn" [href]="r.appDownloadUrl"><span aria-hidden="true">📱</span> {{ t().app }}</a>
+                  }
+
+                  @if (r.dueDate) {
+                    <button type="button" class="vf-btn" (click)="downloadCalendar(r)"><span aria-hidden="true">📅</span> {{ t().calendar.button }}</button>
+                  }
+                </div>
+              }
             }
           }
 
@@ -97,6 +159,21 @@ interface VerifyResult {
     .vf-data dd { margin: 0; font-weight: 600; text-align: right; color: #16324a; overflow-wrap: anywhere; }
     .vf-total { font-size: 1.05rem; }
     .vf-note { margin: 1rem 0 0; font-size: 0.85rem; color: #16324a; background: #f4f9fc; border-radius: 10px; padding: 0.65rem 0.8rem; }
+    .vf-actions-title { margin: 1.4rem 0 0.6rem; font-size: 0.95rem; color: #16324a; }
+    .vf-actions { display: grid; gap: 0.6rem; }
+    .vf-btn { display: flex; align-items: center; gap: 0.6rem; width: 100%; padding: 0.8rem 1rem; border-radius: 12px; border: 1px solid #cfe0ea; background: #fff; color: #16324a; font: inherit; font-weight: 600; text-align: left; text-decoration: none; cursor: pointer; }
+    .vf-btn:hover, .vf-btn:focus-visible { background: #eef6fb; outline: none; border-color: var(--brand-blue, #1385b6); }
+    .vf-btn.is-primary { background: var(--brand-blue, #1385b6); border-color: var(--brand-blue, #1385b6); color: #fff; }
+    .vf-btn.is-primary:hover { opacity: 0.92; background: var(--brand-blue, #1385b6); }
+    .vf-panel { background: #f4f9fc; border-radius: 12px; padding: 0.8rem 1rem; font-size: 0.88rem; color: #16324a; }
+    .vf-panel p { margin: 0.35rem 0; line-height: 1.45; }
+    .vf-link { color: var(--brand-blue, #1385b6); font-weight: 700; }
+    .vf-admin { color: #637b88; }
+    .vf-bank { margin: 0; display: grid; gap: 0.4rem; }
+    .vf-bank div { display: flex; justify-content: space-between; gap: 0.8rem; }
+    .vf-bank dt { color: #637b88; }
+    .vf-bank dd { margin: 0; font-weight: 600; text-align: right; overflow-wrap: anywhere; }
+    .vf-copy { margin-left: 0.4rem; padding: 0.15rem 0.55rem; border-radius: 999px; border: 1px solid #cfe0ea; background: #fff; color: var(--brand-blue, #1385b6); font: inherit; font-size: 0.75rem; font-weight: 700; cursor: pointer; }
     .vf-privacy { margin: 1rem 0 0; font-size: 0.75rem; color: #637b88; text-align: center; }
     .vf-retry { display: block; margin: 1rem auto 0; padding: 0.6rem 1.2rem; border: none; border-radius: 10px; background: var(--brand-blue, #1385b6); color: #fff; font-weight: 700; cursor: pointer; }
     .vf-foot { font-size: 0.75rem; color: #637b88; }
@@ -107,6 +184,12 @@ interface VerifyResult {
       .vf-data dd { color: #e6eef4; }
       .vf-data div { border-color: #26394a; }
       .vf-note { background: #1c3042; color: #e6eef4; }
+      .vf-actions-title { color: #e6eef4; }
+      .vf-btn { background: #1c3042; border-color: #2c4459; color: #e6eef4; }
+      .vf-btn:hover, .vf-btn:focus-visible { background: #24394d; }
+      .vf-btn.is-primary { background: var(--brand-blue, #1385b6); color: #fff; }
+      .vf-panel { background: #1c3042; color: #e6eef4; }
+      .vf-copy { background: #162634; border-color: #2c4459; }
       .vf-badge.is-ok { background: #123524; border-color: #1f6a43; color: #bff0d3; }
       .vf-badge.is-warn { background: #3a2e0c; border-color: #7a6020; color: #f6e1a0; }
       .vf-badge.is-bad { background: #3b1717; border-color: #7a2b2b; color: #f6c3c3; }
@@ -122,6 +205,9 @@ export class VerifyPageComponent {
   readonly loading = signal(true);
   readonly result = signal<VerifyResult | null>(null);
   readonly failed = signal(false);
+  readonly accountOpen = signal(false);
+  readonly transferOpen = signal(false);
+  readonly copied = signal('');
 
   readonly status = computed<VerifyStatus>(() => (this.failed() ? 'error' : (this.result()?.status ?? 'notfound')));
   readonly tone = computed(() => {
@@ -152,6 +238,47 @@ export class VerifyPageComponent {
       next: (r) => { this.result.set(r); this.loading.set(false); },
       error: () => { this.failed.set(true); this.loading.set(false); }
     });
+  }
+
+  // Copia el dato al portapapeles y lo marca como "Copiado" unos segundos.
+  copy(text: string): void {
+    const done = () => {
+      this.copied.set(text);
+      setTimeout(() => { if (this.copied() === text) this.copied.set(''); }, 2500);
+    };
+    try {
+      void navigator.clipboard.writeText(text).then(done, () => undefined);
+    } catch {
+      // sin portapapeles (navegador viejo o sin permiso): no se hace nada
+    }
+  }
+
+  // Recordatorio de calendario (.ics) de todo el día en la fecha de vencimiento, con aviso a las 9:00 del día anterior.
+  // Se arma en el navegador: no sale ningún dato de esta página.
+  downloadCalendar(r: VerifyResult): void {
+    if (!r.dueDate) return;
+    const day = r.dueDate.replace(/-/g, '');
+    const next = new Date(`${r.dueDate}T00:00:00Z`);
+    next.setUTCDate(next.getUTCDate() + 1);
+    const end = next.toISOString().slice(0, 10).replace(/-/g, '');
+    const title = this.t().calendar.title.replace('{period}', r.periodName ?? '').replace('{building}', r.buildingName ?? '');
+    const esc = (v: string) => v.replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\r?\n/g, '\\n');
+    const stamp = new Date().toISOString().replace(/[-:]/g, '').replace(/\.\d+/, '');
+    const lines = [
+      'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Expenses//Vencimiento//ES', 'CALSCALE:GREGORIAN', 'BEGIN:VEVENT',
+      `UID:${day}-${Math.random().toString(36).slice(2)}@expenses.com.py`, `DTSTAMP:${stamp}`,
+      `DTSTART;VALUE=DATE:${day}`, `DTEND;VALUE=DATE:${end}`, `SUMMARY:${esc(title)}`,
+      'BEGIN:VALARM', 'ACTION:DISPLAY', `DESCRIPTION:${esc(title)}`, 'TRIGGER:-PT15H', 'END:VALARM', 'END:VEVENT', 'END:VCALENDAR'
+    ];
+    const blob = new Blob([lines.join('\r\n') + '\r\n'], { type: 'text/calendar;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `vencimiento-${r.dueDate}.ics`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
 
   dateText(iso?: string | null): string {

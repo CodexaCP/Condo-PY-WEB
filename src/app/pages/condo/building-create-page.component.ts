@@ -722,6 +722,16 @@ interface BankAccountForm {
                         *ngIf="!isBuildingManager && form.bankAccounts.length < maxBankAccounts" (onClick)="addBankAccount()">
               </p-button>
             </div>
+            <div class="field checkbox-field">
+              <label class="checkbox-label">
+                <input type="checkbox" [(ngModel)]="form.qrShowBankAccounts" name="qrShowBankAccounts" [disabled]="isBuildingManager" />
+                <span>Mostrar estas cuentas como «Datos para transferir» en la página del QR de la liquidación</span>
+              </label>
+              <small class="field-hint">
+                Quien escanea el QR de la liquidación ve banco, cuenta, titular y alias de las cuentas activas, sin iniciar sesión.
+                Opcional — desactivado por defecto.
+              </small>
+            </div>
           </section>
         </ng-container>
 
@@ -948,6 +958,7 @@ export class BuildingCreatePageComponent implements OnInit {
     // Contabilidad y pagos
     defaultDueDay: null as number | null, graceDays: null as number | null, paymentInstructions: '',
     bankAccounts: [] as BankAccountForm[],
+    qrShowBankAccounts: false,
 
     // Configuración
     timeZoneId: currentLocale().timeZoneId,
@@ -1118,6 +1129,7 @@ export class BuildingCreatePageComponent implements OnInit {
 
             defaultDueDay: entity.defaultDueDay ?? null, graceDays: entity.graceDays ?? null,
             paymentInstructions: entity.paymentInstructions ?? '',
+            qrShowBankAccounts: entity.qrShowBankAccounts === true,
             bankAccounts: (entity.bankAccounts ?? []).map(a => ({
               key: ++this.bankKeySeq, id: a.id ?? null, bankName: a.bankName, accountType: a.accountType,
               accountNumber: a.accountNumber, holderName: a.holderName,
@@ -1380,6 +1392,7 @@ export class BuildingCreatePageComponent implements OnInit {
                     invoiceEmail: nullIfBlank(this.form.invoiceEmail),
                     defaultDueDay: numOrNull(this.form.defaultDueDay), graceDays: numOrNull(this.form.graceDays),
                     paymentInstructions: nullIfBlank(this.form.paymentInstructions),
+                    qrShowBankAccounts: this.form.qrShowBankAccounts,
                     bankAccounts: this.form.bankAccounts.map(a => ({
                       id: a.id, bankName: a.bankName.trim(), accountType: a.accountType, accountNumber: a.accountNumber.trim(),
                       holderName: a.holderName.trim(), holderDocument: nullIfBlank(a.holderDocument), alias: nullIfBlank(a.alias),
