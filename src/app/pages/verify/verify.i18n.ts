@@ -19,6 +19,7 @@ export interface VerifyTx {
   actionsTitle: string;
   account: { button: string; ownersTitle: string; ownersText: string; adminText: string; adminButton: string };
   whatsapp: string;
+  whatsappManager: string;
   transfer: { button: string; bank: string; type: string; number: string; holder: string; document: string; alias: string; copy: string; copied: string; checking: string; savings: string };
   app: string;
   calendar: { button: string; title: string };
@@ -64,6 +65,7 @@ const ES: VerifyTx = {
     adminButton: 'Ingresar en la web'
   },
   whatsapp: 'Hablar con la administración',
+  whatsappManager: 'Hablar con el encargado del edificio',
   transfer: {
     button: 'Datos para transferir', bank: 'Banco', type: 'Tipo', number: 'N.º de cuenta', holder: 'Titular', document: 'Documento', alias: 'Alias',
     copy: 'Copiar', copied: 'Copiado', checking: 'Cuenta corriente', savings: 'Caja de ahorro'
@@ -112,6 +114,7 @@ const PT: VerifyTx = {
     adminButton: 'Entrar na web'
   },
   whatsapp: 'Falar com a administração',
+  whatsappManager: 'Falar com o zelador do edifício',
   transfer: {
     button: 'Dados para transferência', bank: 'Banco', type: 'Tipo', number: 'N.º da conta', holder: 'Titular', document: 'Documento', alias: 'Alias',
     copy: 'Copiar', copied: 'Copiado', checking: 'Conta corrente', savings: 'Poupança'
@@ -160,6 +163,7 @@ const EN: VerifyTx = {
     adminButton: 'Sign in on the web'
   },
   whatsapp: 'Talk to the administration',
+  whatsappManager: 'Talk to the building manager',
   transfer: {
     button: 'Bank transfer details', bank: 'Bank', type: 'Type', number: 'Account no.', holder: 'Holder', document: 'ID', alias: 'Alias',
     copy: 'Copy', copied: 'Copied', checking: 'Checking account', savings: 'Savings account'

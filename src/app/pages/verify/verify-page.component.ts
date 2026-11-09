@@ -22,6 +22,7 @@ interface VerifyResult {
   // Botones (solo en un documento vigente).
   dueDate?: string | null;
   whatsAppUrl?: string | null;
+  whatsAppContact?: 'manager' | 'administration' | null;
   appDownloadUrl?: string | null;
   bankAccounts?: { bankName: string; accountType: string; accountNumber: string; holderName: string; holderDocument?: string | null; alias?: string | null }[];
 }
@@ -88,7 +89,7 @@ interface VerifyResult {
                   }
 
                   @if (r.whatsAppUrl) {
-                    <a class="vf-btn" [href]="r.whatsAppUrl" target="_blank" rel="noopener noreferrer"><span aria-hidden="true">💬</span> {{ t().whatsapp }}</a>
+                    <a class="vf-btn" [href]="r.whatsAppUrl" target="_blank" rel="noopener noreferrer"><span aria-hidden="true">💬</span> {{ r.whatsAppContact === 'manager' ? t().whatsappManager : t().whatsapp }}</a>
                   }
 
                   @if (r.bankAccounts?.length) {
