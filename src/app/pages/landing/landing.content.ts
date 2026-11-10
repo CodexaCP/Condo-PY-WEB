@@ -49,6 +49,7 @@ export interface LandingContent {
   plans: { h2: string; sub: string; cards: TitledText[]; quote: string };
   faqH2: string;
   faqs: Faq[];
+  contact: { h2: string; sub: string };
   final: { h2: string; text: string; ctaDemo: string; ctaWhatsapp: string };
   footer: { tagline: string; demo: string; login: string; app: string };
 }
@@ -153,6 +154,10 @@ export const LANDING_ES: LandingContent = {
   },
   faqH2: 'Preguntas frecuentes sobre Expenses',
   faqs: FAQS,
+  contact: {
+    h2: 'Déjanos tus datos y te contactamos',
+    sub: 'Cuéntanos de tu edificio o de tu cartera de condominios y te respondemos con una propuesta a medida.'
+  },
   final: {
     h2: '¿Listo para administrar tu edificio con claridad?',
     text: 'Prueba la demostración gratuita o escríbenos y te contamos cómo implementar Expenses en tu edificio o en tu cartera de condominios.',
@@ -269,6 +274,10 @@ export const LANDING_PT: LandingContent = {
   },
   faqH2: 'Perguntas frequentes sobre a Expenses',
   faqs: FAQS_PT,
+  contact: {
+    h2: 'Deixe seus dados e entramos em contato',
+    sub: 'Conte-nos sobre o seu condomínio ou a sua carteira de condomínios e respondemos com uma proposta sob medida.'
+  },
   final: {
     h2: 'Pronto para administrar seu condomínio com clareza?',
     text: 'Teste a demonstração gratuita ou escreva para nós e contamos como implementar a Expenses no seu condomínio ou na sua carteira de condomínios.',
@@ -385,6 +394,10 @@ export const LANDING_EN: LandingContent = {
   },
   faqH2: 'Frequently asked questions about Expenses',
   faqs: FAQS_EN,
+  contact: {
+    h2: 'Leave your details and we will get in touch',
+    sub: 'Tell us about your building or your portfolio of condominiums and we will reply with a tailored proposal.'
+  },
   final: {
     h2: 'Ready to manage your building with clarity?',
     text: 'Try the free demo or write to us and we will tell you how to implement Expenses in your building or in your portfolio of condominiums.',
