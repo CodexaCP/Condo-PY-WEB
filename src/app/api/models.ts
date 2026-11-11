@@ -1739,7 +1739,10 @@ export interface CreateUserRequest {
   signatureUrl?: string | null;
 }
 
-export type VoteStatus = 'Draft' | 'Open' | 'Closed';
+export type VoteStatus = 'Draft' | 'Open' | 'Closed' | 'Cancelled';
+// Owner = voto del propietario; Staff = cargado por el personal (asamblea presencial).
+export type VoteCastSource = 'Owner' | 'Staff';
+export type VoteCastAction = 'Cast' | 'Change' | 'Remove';
 export type VoteWeightType = 'ByUnit' | 'ByCoefficient';
 // "Simple" (porcentaje de quorum) o "DoubleAbsolute" (mayoria absoluta sobre la totalidad, por unidades y por coeficiente a la vez).
 export type VoteMajorityRule = 'Simple' | 'DoubleAbsolute';
@@ -1765,6 +1768,27 @@ export interface VoteUnitSummary {
   votedOptionId: string | null;
   votedOptionLabel: string | null;
   castAtUtc: string | null;
+  castSource: VoteCastSource | null;
+  // Movimientos en el historial de la unidad (voto, cambios y quitas).
+  historyCount: number;
+}
+
+export interface VoteCastEvent {
+  id: string;
+  unitId: string;
+  unitCode: string;
+  action: VoteCastAction;
+  previousOptionLabel: string | null;
+  newOptionLabel: string | null;
+  coefficientWeight: number;
+  source: VoteCastSource;
+  actingUserName: string;
+  ownerUserName: string;
+  occurredAtUtc: string;
+}
+
+export interface VoteCancelRequest {
+  reason: string;
 }
 
 export interface Vote {
@@ -1778,15 +1802,30 @@ export interface Vote {
   majorityRule: VoteMajorityRule;
   // Consulta informativa: el voto en la app no reemplaza al voto formal de la asamblea.
   isInformative: boolean;
+  // La opción que cumple la regla (Simple: la de más peso, sin empate y con quórum; DoubleAbsolute: mayoría absoluta). null si ninguna.
   approvedOptionId: string | null;
+  // La opción con más peso si es una sola; con empate en el primer puesto queda null e isTie = true.
+  winningOptionId: string | null;
+  isTie: boolean;
   status: VoteStatus;
   openedAtUtc: string | null;
   closedAtUtc: string | null;
+  closedByName: string;
+  cancelledAtUtc: string | null;
+  cancelReason: string | null;
   createdByName: string;
   createdAtUtc: string;
   totalUnits: number;
   participatingUnits: number;
+  totalCoefficient: number;
+  participatingCoefficient: number;
   quorumReached: boolean;
+  // true: el resultado sale de lo congelado al cerrar/anular; false: se calcula con las unidades actuales.
+  resultFrozen: boolean;
+  resultHash: string | null;
+  // Permisos del usuario sobre la votación: gestionar (crear/editar/abrir/cerrar/anular) y cargar votos presenciales.
+  canManage: boolean;
+  canCast: boolean;
   options: VoteOptionDto[];
   units: VoteUnitSummary[];
 }

@@ -11,15 +11,16 @@ import { Select } from 'primeng/select';
 import { MessageService } from 'primeng/api';
 import { VotesApiService } from '../../api/votes-api.service';
 import { BuildingsApiService } from '../../api/buildings-api.service';
-import { Building, Vote, VoteMajorityRule, VoteStatus, VoteWeightType, VoteUpsertRequest, VoteCastRequest, VoteUnitSummary, VoteOptionDto } from '../../api/models';
+import { Building, Vote, VoteMajorityRule, VoteStatus, VoteWeightType, VoteUpsertRequest, VoteCastRequest, VoteUnitSummary, VoteOptionDto, VoteCastEvent } from '../../api/models';
 import { extractApiErrorMessage } from '../../api/api-error.util';
-import { currentLocale } from '../../core/locale/locale.state';
+import { AuthService } from '../../auth/auth.service';
 
 type TagSeverity = 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contrast';
 type PanelMode = 'form' | 'results';
 
-const STATUS_LABEL: Record<VoteStatus, string> = { Draft: 'Borrador', Open: 'Abierta', Closed: 'Cerrada' };
-const STATUS_SEVERITY: Record<VoteStatus, TagSeverity> = { Draft: 'secondary', Open: 'success', Closed: 'contrast' };
+const STATUS_LABEL: Record<VoteStatus, string> = { Draft: 'Borrador', Open: 'Abierta', Closed: 'Cerrada', Cancelled: 'Anulada' };
+const STATUS_SEVERITY: Record<VoteStatus, TagSeverity> = { Draft: 'secondary', Open: 'success', Closed: 'contrast', Cancelled: 'danger' };
+const ACTION_LABEL: Record<string, string> = { Cast: 'Votó', Change: 'Cambió', Remove: 'Quitó' };
 
 @Component({
   standalone: true,
@@ -35,7 +36,7 @@ const STATUS_SEVERITY: Record<VoteStatus, TagSeverity> = { Draft: 'secondary', O
           </div>
         </div>
         <div class="toolbar-actions">
-          <p-button label="Nueva votación" icon="pi pi-plus" (onClick)="openCreate()"></p-button>
+          <p-button *ngIf="canCreate" label="Nueva votación" icon="pi pi-plus" (onClick)="openCreate()"></p-button>
         </div>
       </div>
 
@@ -64,9 +65,9 @@ const STATUS_SEVERITY: Record<VoteStatus, TagSeverity> = { Draft: 'secondary', O
           <button class="row-link" (click)="openResults(v)">{{ v.title }}</button>
           <p-tag [value]="statusLabel(v.status)" [severity]="statusSeverity(v.status)"></p-tag>
           <span *ngIf="buildings.length > 1" class="building-label">{{ v.buildingName }}</span>
-          <span class="quorum-cell" [class.q-ok]="v.quorumReached" [class.q-no]="!v.quorumReached && v.status !== 'Draft'">
+          <span class="quorum-cell" [class.q-ok]="v.quorumReached && v.status !== 'Cancelled'" [class.q-no]="!v.quorumReached && v.status !== 'Draft' && v.status !== 'Cancelled'">
             {{ v.quorumPercentage }}%
-            <span *ngIf="v.status !== 'Draft'" class="pi"
+            <span *ngIf="v.status !== 'Draft' && v.status !== 'Cancelled'" class="pi"
                   [class.pi-check-circle]="v.quorumReached"
                   [class.pi-times-circle]="!v.quorumReached"></span>
           </span>
@@ -127,7 +128,7 @@ const STATUS_SEVERITY: Record<VoteStatus, TagSeverity> = { Draft: 'secondary', O
               Descripción <span class="field-optional">(opcional)</span>
             </label>
             <textarea class="field-textarea" [(ngModel)]="form.description" name="description"
-                      rows="3" placeholder="Contexto adicional sobre el tema a votar..."></textarea>
+                      rows="3" maxlength="1000" placeholder="Contexto adicional sobre el tema a votar..."></textarea>
           </div>
         </div>
 
@@ -200,7 +201,7 @@ const STATUS_SEVERITY: Record<VoteStatus, TagSeverity> = { Draft: 'secondary', O
             <div class="option-row" *ngFor="let opt of optionLabels; let i = index; trackBy: trackByIdx">
               <div class="option-badge">{{ i + 1 }}</div>
               <input class="field-input option-input" [(ngModel)]="optionLabels[i]" [name]="'opt' + i"
-                     placeholder="Ej: A favor" maxlength="100" />
+                     placeholder="Ej: A favor" maxlength="200" />
               <button type="button" class="option-remove" (click)="removeOption(i)"
                       [disabled]="optionLabels.length <= 2" title="Eliminar opción">
                 <span class="pi pi-times"></span>
@@ -230,17 +231,18 @@ const STATUS_SEVERITY: Record<VoteStatus, TagSeverity> = { Draft: 'secondary', O
 
       <div class="panel-header"
            [class.mode-open]="detail?.status === 'Open'"
-           [class.mode-closed]="detail?.status === 'Closed'"
+           [class.mode-closed]="detail?.status === 'Closed' || detail?.status === 'Cancelled'"
            [class.mode-draft]="detail?.status === 'Draft' || !detail">
         <div class="panel-header-icon">
           <span class="pi"
                 [class.pi-chart-bar]="detail?.status === 'Open'"
                 [class.pi-lock]="detail?.status === 'Closed'"
+                [class.pi-ban]="detail?.status === 'Cancelled'"
                 [class.pi-file-edit]="detail?.status === 'Draft' || !detail"></span>
         </div>
         <div class="panel-header-text">
           <h2>{{ detail?.title ?? 'Cargando...' }}</h2>
-          <p *ngIf="detail">{{ detail.buildingName }} · Quórum {{ detail.quorumPercentage }}% · {{ weightLabel(detail.weightType) }}</p>
+          <p *ngIf="detail">{{ detail.buildingName }} · Quórum {{ detail.quorumPercentage }}% {{ quorumBasisLabel(detail.weightType) }} · {{ weightLabel(detail.weightType) }}</p>
           <p *ngIf="detail?.isInformative" class="informative-note">
             <span class="pi pi-info-circle"></span> Consulta informativa: no reemplaza el voto de la asamblea.
           </p>
@@ -261,13 +263,49 @@ const STATUS_SEVERITY: Record<VoteStatus, TagSeverity> = { Draft: 'secondary', O
         <!-- Barra de estado + acciones -->
         <div class="status-bar">
           <p-tag [value]="statusLabel(detail.status)" [severity]="statusSeverity(detail.status)"></p-tag>
-          <div class="status-actions">
+          <div class="status-actions" *ngIf="detail.canManage">
             <p-button *ngIf="detail.status === 'Draft'" label="Editar" icon="pi pi-pencil"
                       severity="secondary" [outlined]="true" (onClick)="switchToEdit()"></p-button>
             <p-button *ngIf="detail.status === 'Draft'" label="Abrir votación" icon="pi pi-lock-open"
                       severity="success" [loading]="transitioning" (onClick)="openVote()"></p-button>
-            <p-button *ngIf="detail.status === 'Open'" label="Cerrar votación" icon="pi pi-lock"
+            <p-button *ngIf="detail.status === 'Open' && !cancelMode" label="Anular" icon="pi pi-ban"
+                      severity="danger" [outlined]="true" [disabled]="transitioning" (onClick)="startCancel()"></p-button>
+            <p-button *ngIf="detail.status === 'Open' && !cancelMode" label="Cerrar votación" icon="pi pi-lock"
                       severity="warn" [loading]="transitioning" (onClick)="closeVote()"></p-button>
+          </div>
+        </div>
+
+        <!-- Anulación con motivo -->
+        <div class="cancel-box" *ngIf="cancelMode && detail.status === 'Open'">
+          <label class="field-label">Motivo de la anulación</label>
+          <textarea class="field-textarea" [(ngModel)]="cancelReason" name="cancelReason" rows="2" maxlength="500"
+                    placeholder="Ej: la asamblea se convocó con un orden del día equivocado"></textarea>
+          <p class="config-hint"><span class="pi pi-info-circle"></span> Los votos y su historial se conservan; la votación queda sin opción aprobada y no se puede reabrir.</p>
+          <div class="cancel-actions">
+            <p-button label="Volver" severity="secondary" [text]="true" [disabled]="transitioning" (onClick)="cancelMode = false"></p-button>
+            <p-button label="Anular votación" icon="pi pi-ban" severity="danger" [loading]="transitioning"
+                      [disabled]="!cancelReason.trim()" (onClick)="confirmCancel()"></p-button>
+          </div>
+        </div>
+
+        <!-- Cierre / anulación y resultado congelado -->
+        <div class="closure-info" *ngIf="detail.status === 'Closed' || detail.status === 'Cancelled'">
+          <div *ngIf="detail.status === 'Closed'">
+            <span class="pi pi-lock"></span>
+            Cerrada {{ detail.closedAtUtc ? formatDateTime(detail.closedAtUtc) : '' }}<span *ngIf="detail.closedByName"> por {{ detail.closedByName }}</span>.
+          </div>
+          <div *ngIf="detail.status === 'Cancelled'" class="cancel-note">
+            <span class="pi pi-ban"></span>
+            Anulada {{ detail.cancelledAtUtc ? formatDateTime(detail.cancelledAtUtc) : '' }}. Motivo: {{ detail.cancelReason }}
+          </div>
+          <div *ngIf="detail.resultFrozen" class="frozen-note">
+            <span class="pi pi-shield"></span>
+            Resultado congelado al {{ detail.status === 'Cancelled' ? 'anular' : 'cerrar' }}: no cambia aunque después cambien las unidades o sus coeficientes.
+            <span class="hash" *ngIf="detail.resultHash" [title]="detail.resultHash">Huella {{ detail.resultHash.slice(0, 12) }}…</span>
+          </div>
+          <div *ngIf="!detail.resultFrozen" class="legacy-note">
+            <span class="pi pi-exclamation-triangle"></span>
+            Votación cerrada antes del congelamiento de resultados: los números se calculan con las unidades actuales.
           </div>
         </div>
 
@@ -279,10 +317,8 @@ const STATUS_SEVERITY: Record<VoteStatus, TagSeverity> = { Draft: 'secondary', O
           </div>
           <div class="qs-div"></div>
           <div class="qs-stat">
-            <span class="qs-num">
-              {{ detail.totalUnits > 0 ? (detail.participatingUnits * 100 / detail.totalUnits | number:'1.1-1') : 0 }}%
-            </span>
-            <span class="qs-lbl">Participación</span>
+            <span class="qs-num">{{ participationPct(detail) | number:'1.1-1' }}%</span>
+            <span class="qs-lbl">Participación {{ detail.weightType === 'ByCoefficient' ? '(coeficiente)' : '' }}</span>
           </div>
           <div class="qs-div"></div>
           <div class="qs-stat">
@@ -299,8 +335,8 @@ const STATUS_SEVERITY: Record<VoteStatus, TagSeverity> = { Draft: 'secondary', O
         <div class="results-section">
           <div class="results-title"><span class="pi pi-chart-bar"></span> Resultados</div>
           <div *ngIf="detail.options.length === 0" class="empty-hint">Aún no hay opciones definidas.</div>
-          <div *ngIf="detail.majorityRule === 'DoubleAbsolute'" class="absolute-summary">
-            {{ approvedLabel(detail) }}
+          <div *ngIf="detail.status !== 'Draft'" class="absolute-summary" [class.summary-ok]="!!detail.approvedOptionId">
+            {{ resultLabel(detail) }}
           </div>
           <div class="option-result" *ngFor="let opt of detail.options">
             <div class="opt-header">
@@ -322,34 +358,49 @@ const STATUS_SEVERITY: Record<VoteStatus, TagSeverity> = { Draft: 'secondary', O
         <div class="units-section" *ngIf="detail.status !== 'Draft'">
           <div class="results-title">
             <span class="pi pi-building"></span> Unidades
-            <span class="units-hint" *ngIf="detail.status === 'Open'">
-              · Haz clic en una opción para registrar el voto
+            <span class="units-hint" *ngIf="detail.status === 'Open' && detail.canCast">
+              · Hacé clic en una opción para registrar el voto presencial
             </span>
           </div>
           <div class="units-list">
-            <div class="unit-row" *ngFor="let u of detail.units"
-                 [class.unit-voted]="u.castId"
-                 [class.unit-pending]="!u.castId">
-              <div class="unit-info">
-                <span class="unit-code">{{ u.unitCode }}</span>
-                <span class="unit-coeff">({{ u.coefficient | number:'1.2-4' }})</span>
-                <span class="unit-badge voted" *ngIf="u.castId">
-                  <span class="pi pi-check"></span> {{ u.votedOptionLabel }}
-                </span>
-                <span class="unit-badge pending" *ngIf="!u.castId">Sin votar</span>
+            <div class="unit-block" *ngFor="let u of detail.units">
+              <div class="unit-row"
+                   [class.unit-voted]="u.castId"
+                   [class.unit-pending]="!u.castId">
+                <div class="unit-info">
+                  <span class="unit-code">{{ u.unitCode }}</span>
+                  <span class="unit-coeff">({{ u.coefficient | number:'1.2-4' }})</span>
+                  <span class="unit-badge voted" *ngIf="u.castId">
+                    <span class="pi pi-check"></span> {{ u.votedOptionLabel }}
+                  </span>
+                  <span class="unit-badge source" *ngIf="u.castId && u.castSource">{{ sourceLabel(u.castSource) }}</span>
+                  <span class="unit-badge pending" *ngIf="!u.castId">Sin votar</span>
+                  <button *ngIf="u.historyCount > 0" type="button" class="history-btn"
+                          [title]="'Ver historial (' + u.historyCount + ')'" (click)="toggleHistory(u)">
+                    <span class="pi pi-history"></span> {{ u.historyCount }}
+                  </button>
+                </div>
+                <div class="unit-cast-actions" *ngIf="detail.status === 'Open' && detail.canCast">
+                  <button *ngFor="let opt of detail.options" type="button"
+                          class="cast-btn" [class.cast-active]="u.votedOptionId === opt.id"
+                          [disabled]="castingUnitId === u.unitId"
+                          (click)="castVote(u, opt)">
+                    {{ opt.label }}
+                  </button>
+                  <button *ngIf="u.castId" type="button" class="cast-remove-btn"
+                          [disabled]="castingUnitId === u.unitId"
+                          title="Quitar voto" (click)="removeCast(u)">
+                    <span class="pi pi-times"></span>
+                  </button>
+                </div>
               </div>
-              <div class="unit-cast-actions" *ngIf="detail.status === 'Open'">
-                <button *ngFor="let opt of detail.options" type="button"
-                        class="cast-btn" [class.cast-active]="u.votedOptionId === opt.id"
-                        [disabled]="castingUnitId === u.unitId"
-                        (click)="castVote(u, opt)">
-                  {{ opt.label }}
-                </button>
-                <button *ngIf="u.castId" type="button" class="cast-remove-btn"
-                        [disabled]="castingUnitId === u.unitId"
-                        title="Quitar voto" (click)="removeCast(u)">
-                  <span class="pi pi-times"></span>
-                </button>
+              <div class="unit-history" *ngIf="historyUnitId === u.unitId">
+                <div *ngIf="historyLoading" class="empty-hint">Cargando historial...</div>
+                <div *ngFor="let ev of history" class="history-row">
+                  <span class="history-when">{{ formatDateTime(ev.occurredAtUtc) }}</span>
+                  <span class="history-what">{{ eventLabel(ev) }}</span>
+                  <span class="history-who">{{ ev.actingUserName || 'Sistema' }} · {{ sourceLabel(ev.source) }}<span *ngIf="ev.ownerUserName"> · titular: {{ ev.ownerUserName }}</span></span>
+                </div>
               </div>
             </div>
           </div>
@@ -673,6 +724,41 @@ const STATUS_SEVERITY: Record<VoteStatus, TagSeverity> = { Draft: 'secondary', O
     }
     .cast-remove-btn:hover:not(:disabled) { background: rgba(239,68,68,.08); }
     .cast-remove-btn:disabled { opacity: .4; cursor: wait; }
+
+    /* Anulación, cierre y resultado congelado */
+    .cancel-box {
+      display: flex; flex-direction: column; gap: .5rem;
+      border: 1px solid rgba(220,38,38,.25); background: rgba(220,38,38,.03);
+      border-radius: 10px; padding: .8rem 1rem;
+    }
+    .cancel-actions { display: flex; justify-content: flex-end; gap: .5rem; }
+    .closure-info {
+      display: flex; flex-direction: column; gap: .35rem;
+      font-size: .82rem; color: #475569;
+      background: #f8fafd; border: 1px solid rgba(19,133,182,.1); border-radius: 10px; padding: .7rem .9rem;
+    }
+    .closure-info .pi { margin-right: .3rem; }
+    .cancel-note { color: #b91c1c; font-weight: 600; }
+    .frozen-note { color: #047857; }
+    .legacy-note { color: #b45309; }
+    .hash { margin-left: .4rem; font-family: monospace; font-size: .75rem; color: #64748b; }
+    .summary-ok { color: #047857; }
+
+    /* Historial por unidad */
+    .unit-badge.source { background: rgba(19,133,182,.08); color: var(--brand-blue); font-weight: 500; }
+    .history-btn {
+      background: none; border: 1px solid #e2e8f0; border-radius: 6px; cursor: pointer;
+      color: #64748b; font-size: .72rem; padding: 1px 6px; display: inline-flex; align-items: center; gap: 3px;
+    }
+    .history-btn:hover { border-color: var(--brand-blue); color: var(--brand-blue); }
+    .unit-history {
+      margin: .25rem 0 .2rem .9rem; padding: .4rem .7rem;
+      border-left: 2px solid rgba(19,133,182,.2); display: flex; flex-direction: column; gap: .3rem;
+    }
+    .history-row { display: flex; flex-wrap: wrap; gap: .2rem .6rem; font-size: .76rem; color: #475569; }
+    .history-when { font-variant-numeric: tabular-nums; color: #94a3b8; }
+    .history-what { font-weight: 600; color: var(--brand-ink); }
+    .history-who { color: #64748b; }
   `]
 })
 export class VotacionesPageComponent implements OnInit {
@@ -681,6 +767,10 @@ export class VotacionesPageComponent implements OnInit {
   private readonly msg = inject(MessageService);
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly auth = inject(AuthService);
+
+  // Crear votaciones: encargado y administradores (el operador solo carga votos presenciales). El servidor lo valida igual.
+  readonly canCreate = this.auth.hasRole('SuperAdmin', 'CompanyAdmin', 'BuildingManager');
 
   buildings: Building[] = [];
   buildingOptions: { label: string; value: string }[] = [];
@@ -698,7 +788,7 @@ export class VotacionesPageComponent implements OnInit {
 
   form: { buildingId: string; title: string; description: string; quorumPercentage: number; weightType: VoteWeightType; majorityRule: VoteMajorityRule; isInformative: boolean } = {
     buildingId: '', title: '', description: '', quorumPercentage: 50, weightType: 'ByUnit',
-    majorityRule: 'Simple', isInformative: currentLocale().countryCode !== 'PY'
+    majorityRule: 'Simple', isInformative: true
   };
   optionLabels: string[] = ['A favor', 'En contra'];
 
@@ -707,6 +797,13 @@ export class VotacionesPageComponent implements OnInit {
   panelError = '';
   transitioning = false;
   castingUnitId: string | null = null;
+
+  cancelMode = false;
+  cancelReason = '';
+
+  historyUnitId: string | null = null;
+  history: VoteCastEvent[] = [];
+  historyLoading = false;
 
   ngOnInit() {
     forkJoin({
@@ -744,8 +841,8 @@ export class VotacionesPageComponent implements OnInit {
     this.form = {
       buildingId: this.buildings.length === 1 ? this.buildings[0].id : '',
       title: '', description: '', quorumPercentage: 50, weightType: 'ByUnit',
-      // Fuera de Paraguay el voto en la app es una consulta informativa hasta que un abogado confirme su validez.
-      majorityRule: 'Simple', isInformative: currentLocale().countryCode !== 'PY'
+      // En todos los países el voto en la app es una consulta informativa hasta que un abogado confirme su validez.
+      majorityRule: 'Simple', isInformative: true
     };
     this.optionLabels = ['A favor', 'En contra'];
     this.formError = '';
@@ -757,10 +854,30 @@ export class VotacionesPageComponent implements OnInit {
     this.detail = null;
     this.panelMode = 'results';
     this.panelVisible = true;
-    this.votesApi.getById(vote.id).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-      next: v => { this.detail = v; this.cdr.markForCheck(); },
+    this.resetPanelExtras();
+    this.reloadDetail(vote.id);
+  }
+
+  private reloadDetail(id: string) {
+    this.votesApi.getById(id).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: v => { this.detail = v; this.upsertLocal(v); this.cdr.markForCheck(); },
       error: err => { this.panelError = extractApiErrorMessage(err, 'No se pudo cargar la votación.'); this.cdr.markForCheck(); }
     });
+  }
+
+  private resetPanelExtras() {
+    this.cancelMode = false;
+    this.cancelReason = '';
+    this.historyUnitId = null;
+    this.history = [];
+  }
+
+  // Error de una acción sobre la votación abierta. Con 409 (otro usuario votó, la cerró o la editó a la vez) se recarga el detalle
+  // para que se vea el estado real antes de reintentar.
+  private actionError(err: unknown, fallback: string) {
+    this.panelError = extractApiErrorMessage(err, fallback);
+    if ((err as { status?: number })?.status === 409 && this.detail) this.reloadDetail(this.detail.id);
+    this.cdr.markForCheck();
   }
 
   switchToEdit() {
@@ -783,15 +900,33 @@ export class VotacionesPageComponent implements OnInit {
     this.cdr.markForCheck();
   }
 
-  // Resultado de la doble mayoría absoluta: la opción aprobada, o que ninguna alcanza todavía el 50 % de unidades y de coeficiente.
-  approvedLabel(vote: Vote): string {
+  // Resumen del resultado según la regla: opción aprobada, empate, falta de quórum o de mayoría absoluta.
+  resultLabel(vote: Vote): string {
+    if (vote.status === 'Cancelled') return 'Votación anulada: no hay opción aprobada.';
+    const pending = vote.status === 'Open' ? ' todavía' : '';
     const approved = vote.options.find(o => o.id === vote.approvedOptionId);
-    return approved
-      ? `Aprobada por mayoría absoluta: ${approved.label}`
-      : 'Ninguna opción alcanza todavía la mayoría absoluta (más del 50 % de las unidades y del coeficiente totales).';
+    if (vote.majorityRule === 'DoubleAbsolute') {
+      return approved
+        ? `Aprobada por mayoría absoluta: ${approved.label}`
+        : `Ninguna opción alcanza${pending} la mayoría absoluta (más del 50 % de las unidades y del coeficiente totales).`;
+    }
+    if (approved) return `${vote.status === 'Open' ? 'Va ganando' : 'Aprobada'}: ${approved.label}`;
+    if (vote.isTie) return 'Empate en el primer puesto: no hay opción ganadora.';
+    if (vote.participatingUnits === 0) return 'Sin votos registrados.';
+    const leader = vote.options.find(o => o.id === vote.winningOptionId);
+    return leader
+      ? `${leader.label} tiene más votos, pero${pending} no se alcanzó el quórum.`
+      : `No se alcanzó${pending} el quórum.`;
   }
 
-  closePanel() { this.panelVisible = false; this.selectedVote = null; this.detail = null; }
+  participationPct(vote: Vote): number {
+    if (vote.weightType === 'ByCoefficient') {
+      return vote.totalCoefficient > 0 ? vote.participatingCoefficient * 100 / vote.totalCoefficient : 0;
+    }
+    return vote.totalUnits > 0 ? vote.participatingUnits * 100 / vote.totalUnits : 0;
+  }
+
+  closePanel() { this.panelVisible = false; this.selectedVote = null; this.detail = null; this.resetPanelExtras(); }
 
   save() {
     if (!this.form.buildingId) { this.formError = 'Selecciona un edificio.'; return; }
@@ -860,10 +995,22 @@ export class VotacionesPageComponent implements OnInit {
 
   closeVote() {
     if (!this.detail) return;
+    if (!confirm('¿Cerrar la votación? El resultado queda congelado y ya no se pueden cargar ni cambiar votos.')) return;
     this.transitioning = true; this.panelError = '';
     this.votesApi.close(this.detail.id).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: v => { this.transitioning = false; this.detail = v; this.upsertLocal(v); this.cdr.markForCheck(); },
-      error: err => { this.transitioning = false; this.panelError = extractApiErrorMessage(err, 'No se pudo cerrar.'); this.cdr.markForCheck(); }
+      error: err => { this.transitioning = false; this.actionError(err, 'No se pudo cerrar.'); }
+    });
+  }
+
+  startCancel() { this.cancelMode = true; this.cancelReason = ''; this.panelError = ''; }
+
+  confirmCancel() {
+    if (!this.detail || !this.cancelReason.trim()) return;
+    this.transitioning = true; this.panelError = '';
+    this.votesApi.cancel(this.detail.id, { reason: this.cancelReason.trim() }).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: v => { this.transitioning = false; this.cancelMode = false; this.detail = v; this.upsertLocal(v); this.cdr.markForCheck(); },
+      error: err => { this.transitioning = false; this.actionError(err, 'No se pudo anular.'); }
     });
   }
 
@@ -872,8 +1019,8 @@ export class VotacionesPageComponent implements OnInit {
     this.castingUnitId = unit.unitId;
     const req: VoteCastRequest = { unitId: unit.unitId, voteOptionId: opt.id };
     this.votesApi.cast(this.detail.id, req).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-      next: v => { this.castingUnitId = null; this.detail = v; this.upsertLocal(v); this.cdr.markForCheck(); },
-      error: err => { this.castingUnitId = null; this.panelError = extractApiErrorMessage(err, 'No se pudo registrar el voto.'); this.cdr.markForCheck(); }
+      next: v => { this.castingUnitId = null; this.afterCastChange(v, unit.unitId); },
+      error: err => { this.castingUnitId = null; this.actionError(err, 'No se pudo registrar el voto.'); }
     });
   }
 
@@ -881,15 +1028,49 @@ export class VotacionesPageComponent implements OnInit {
     if (!this.detail || !unit.castId || this.castingUnitId) return;
     this.castingUnitId = unit.unitId;
     this.votesApi.removeCast(this.detail.id, unit.castId).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-      next: v => { this.castingUnitId = null; this.detail = v; this.upsertLocal(v); this.cdr.markForCheck(); },
-      error: err => { this.castingUnitId = null; this.panelError = extractApiErrorMessage(err, 'No se pudo quitar el voto.'); this.cdr.markForCheck(); }
+      next: v => { this.castingUnitId = null; this.afterCastChange(v, unit.unitId); },
+      error: err => { this.castingUnitId = null; this.actionError(err, 'No se pudo quitar el voto.'); }
     });
   }
 
+  private afterCastChange(v: Vote, unitId: string) {
+    this.panelError = '';
+    this.detail = v;
+    this.upsertLocal(v);
+    // Si el historial de esa unidad está abierto, se actualiza con el movimiento nuevo.
+    if (this.historyUnitId === unitId) this.loadHistory(unitId);
+    this.cdr.markForCheck();
+  }
+
+  toggleHistory(unit: VoteUnitSummary) {
+    if (this.historyUnitId === unit.unitId) { this.historyUnitId = null; this.history = []; return; }
+    this.historyUnitId = unit.unitId;
+    this.loadHistory(unit.unitId);
+  }
+
+  private loadHistory(unitId: string) {
+    if (!this.detail) return;
+    this.historyLoading = true;
+    this.history = [];
+    this.votesApi.history(this.detail.id, unitId).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: events => { this.historyLoading = false; if (this.historyUnitId === unitId) this.history = events; this.cdr.markForCheck(); },
+      error: err => { this.historyLoading = false; this.panelError = extractApiErrorMessage(err, 'No se pudo cargar el historial.'); this.cdr.markForCheck(); }
+    });
+  }
+
+  eventLabel(ev: VoteCastEvent): string {
+    const action = ACTION_LABEL[ev.action] ?? ev.action;
+    if (ev.action === 'Change') return `${action}: ${ev.previousOptionLabel ?? '—'} → ${ev.newOptionLabel ?? '—'}`;
+    if (ev.action === 'Remove') return `${action} el voto (${ev.previousOptionLabel ?? '—'})`;
+    return `${action}: ${ev.newOptionLabel ?? '—'}`;
+  }
+
+  sourceLabel(source: string | null): string { return source === 'Owner' ? 'Propietario' : 'Personal'; }
+
+  // Se destaca la opción aprobada; si no hay, la que va ganando sin empate.
   isWinner(opt: VoteOptionDto): boolean {
-    if (!this.detail || this.detail.options.length === 0) return false;
-    const max = Math.max(...this.detail.options.map(o => o.percentage));
-    return opt.percentage === max && max > 0;
+    if (!this.detail || this.detail.status === 'Cancelled') return false;
+    return opt.id === (this.detail.approvedOptionId ?? this.detail.winningOptionId);
   }
 
   private upsertLocal(vote: Vote) {
@@ -901,7 +1082,9 @@ export class VotacionesPageComponent implements OnInit {
   statusLabel(status: string): string { return STATUS_LABEL[status as VoteStatus] ?? status; }
   statusSeverity(status: string): TagSeverity { return STATUS_SEVERITY[status as VoteStatus] ?? 'secondary'; }
   weightLabel(wt?: string | null): string { return wt === 'ByCoefficient' ? 'Por coeficiente' : 'Por unidad'; }
+  quorumBasisLabel(wt?: string | null): string { return wt === 'ByCoefficient' ? 'del coeficiente' : 'de las unidades'; }
   formatDate(d: string): string { return new Date(d).toLocaleDateString('es-PY'); }
+  formatDateTime(d: string): string { return new Date(d).toLocaleString('es-PY', { dateStyle: 'short', timeStyle: 'short' }); }
   trackByIdx(i: number): number { return i; }
   addOption() { if (this.optionLabels.length < 10) this.optionLabels.push(''); }
   removeOption(i: number) { if (this.optionLabels.length > 2) this.optionLabels.splice(i, 1); }

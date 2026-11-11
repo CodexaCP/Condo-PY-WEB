@@ -1,7 +1,7 @@
 import { inject, Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { Vote, VoteUpsertRequest, VoteCastRequest } from './models';
+import { Vote, VoteUpsertRequest, VoteCastRequest, VoteCancelRequest, VoteCastEvent } from './models';
 import { API_BASE_URL } from '../config/api.config';
 
 @Injectable({ providedIn: 'root' })
@@ -45,5 +45,17 @@ export class VotesApiService {
 
   removeCast(id: string, castId: string): Observable<Vote> {
     return this.http.delete<Vote>(`${this.base}/${id}/casts/${castId}`);
+  }
+
+  // Anula una votación abierta: los votos y su historial se conservan, sin opción aprobada.
+  cancel(id: string, request: VoteCancelRequest): Observable<Vote> {
+    return this.http.post<Vote>(`${this.base}/${id}/cancel`, request);
+  }
+
+  // Historial de votos (voto, cambio, quita) de toda la votación o de una unidad.
+  history(id: string, unitId?: string): Observable<VoteCastEvent[]> {
+    let params = new HttpParams();
+    if (unitId) params = params.set('unitId', unitId);
+    return this.http.get<VoteCastEvent[]>(`${this.base}/${id}/history`, { params });
   }
 }
