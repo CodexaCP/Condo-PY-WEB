@@ -103,6 +103,7 @@ import { LANDING_LANGS, LandingContent, landingContent } from './landing.content
             <article class="card feat"><h3>{{ f.title }}</h3><p>{{ f.text }}</p></article>
           }
         </div>
+        <p class="app-line"><a routerLink="/explorar" class="btn solid big">{{ t.hero.ctaDemo }}</a></p>
       </section>
 
       <section class="sec alt" id="perfiles">

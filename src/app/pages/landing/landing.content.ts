@@ -161,7 +161,7 @@ export const LANDING_ES: LandingContent = {
   },
   final: {
     h2: '¿Listo para administrar tu edificio con claridad?',
-    text: 'Prueba la demostración gratuita o escríbenos y te contamos cómo implementar Expenses en tu edificio o en tu cartera de condominios.',
+    text: 'Prueba la demostración gratuita sin registrarte o escríbenos: si eres cliente nuevo, tus primeros 2 meses son gratis. Te contamos cómo implementar Expenses en tu edificio o en tu cartera de condominios.',
     ctaDemo: 'Explorar demostración gratuita →',
     ctaWhatsapp: 'Hablar por WhatsApp'
   },
@@ -284,7 +284,7 @@ export const LANDING_PT: LandingContent = {
   },
   final: {
     h2: 'Pronto para administrar seu condomínio com clareza?',
-    text: 'Teste a demonstração gratuita ou escreva para nós e contamos como implementar a Expenses no seu condomínio ou na sua carteira de condomínios.',
+    text: 'Teste a demonstração gratuita sem cadastro ou escreva para nós: se você é cliente novo, os 2 primeiros meses são grátis. Contamos como implementar a Expenses no seu condomínio ou na sua carteira de condomínios.',
     ctaDemo: 'Explorar demonstração gratuita →',
     ctaWhatsapp: 'Falar pelo WhatsApp'
   },
@@ -407,7 +407,7 @@ export const LANDING_EN: LandingContent = {
   },
   final: {
     h2: 'Ready to manage your building with clarity?',
-    text: 'Try the free demo or write to us and we will tell you how to implement Expenses in your building or in your portfolio of condominiums.',
+    text: 'Try the free demo with no sign-up or write to us: if you are a new customer, your first 2 months are free. We will tell you how to implement Expenses in your building or in your portfolio of condominiums.',
     ctaDemo: 'Explore the free demo →',
     ctaWhatsapp: 'Talk on WhatsApp'
   },
