@@ -142,6 +142,7 @@ import { LANDING_LANGS, LandingContent, landingContent } from './landing.content
             <article class="card"><h3>{{ c.title }}</h3><p>{{ c.text }}</p></article>
           }
         </div>
+        <p class="sub plans-note">{{ t.plans.note }}</p>
         <p class="app-line">
           @if (whatsapp) { <a [href]="whatsapp" class="btn solid big" target="_blank" rel="noopener noreferrer">{{ t.plans.quote }}</a> }
         </p>
@@ -187,6 +188,8 @@ import { LANDING_LANGS, LandingContent, landingContent } from './landing.content
         <a routerLink="/login">{{ t.footer.login }}</a>
         <a href="/downloads/expenses.apk" download="Expenses.apk">{{ t.footer.app }}</a>
         <a href="https://www.linkedin.com/company/expensespy/home/" target="_blank" rel="noopener noreferrer">LinkedIn</a>
+        <a routerLink="/privacidad">{{ t.footer.privacy }}</a>
+        <a routerLink="/terminos">{{ t.footer.terms }}</a>
         @for (l of langs; track l.code) {
           @if (l.code !== t.lang) {
             <a [routerLink]="l.path" [attr.hreflang]="l.code" [attr.lang]="l.code" (click)="pick(l.code)">{{ l.label }}</a>
@@ -259,6 +262,7 @@ import { LANDING_LANGS, LandingContent, landingContent } from './landing.content
       .sec.alt > * { max-width: 1180px; margin-left: auto; margin-right: auto; }
       .sec h2 { font-size: clamp(1.5rem, 3vw, 2.1rem); font-weight: 800; text-align: center; }
       .sub { text-align: center; color: #4a6270; margin: 0.6rem auto 2rem; max-width: 40rem; }
+      .plans-note { margin: 1.5rem auto 0; }
       .grid3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1rem; }
       .grid4 { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 1rem; }
       .card { background: #fff; border: 1px solid #dbe6ef; border-radius: 1rem; padding: 1.3rem; }

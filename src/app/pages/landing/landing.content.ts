@@ -46,12 +46,12 @@ export interface LandingContent {
   featuresSec: { h2: string; sub: string; items: TitledText[] };
   profilesSec: { h2: string; sub: string; items: Profile[]; downloadApp: string; seeDemo: string };
   start: { h2: string; steps: { title: string; text: string }[] };
-  plans: { h2: string; sub: string; cards: TitledText[]; quote: string };
+  plans: { h2: string; sub: string; cards: TitledText[]; note: string; quote: string };
   faqH2: string;
   faqs: Faq[];
   contact: { h2: string; sub: string };
   final: { h2: string; text: string; ctaDemo: string; ctaWhatsapp: string };
-  footer: { tagline: string; demo: string; login: string; app: string };
+  footer: { tagline: string; demo: string; login: string; app: string; privacy: string; terms: string };
 }
 
 export const LANDING_ES: LandingContent = {
@@ -150,6 +150,7 @@ export const LANDING_ES: LandingContent = {
       { title: 'Módulos opcionales', text: 'Finanzas del edificio, Marketplace de espacios y publicidad se activan por edificio, según tu plan.' },
       { title: 'Período de prueba', text: 'Todo edificio nuevo comienza con un período de prueba para que lo uses con tus datos reales.' }
     ],
+    note: 'La propuesta se arma según cuántos edificios administras y qué módulos activas. Cuéntanos de tu cartera y te respondemos por WhatsApp.',
     quote: 'Pedí tu cotización'
   },
   faqH2: 'Preguntas frecuentes sobre Expenses',
@@ -168,7 +169,9 @@ export const LANDING_ES: LandingContent = {
     tagline: 'Plataforma de administración de edificios y condominios.',
     demo: 'Demostración gratuita',
     login: 'Ingresar al sistema',
-    app: 'App para Android'
+    app: 'App para Android',
+    privacy: 'Privacidad',
+    terms: 'Términos'
   }
 };
 
@@ -270,6 +273,7 @@ export const LANDING_PT: LandingContent = {
       { title: 'Módulos opcionais', text: 'Finanças do condomínio, Marketplace de espaços e publicidade são ativados por condomínio, conforme o seu plano.' },
       { title: 'Período de teste', text: 'Todo condomínio novo começa com um período de teste para você usar com seus dados reais.' }
     ],
+    note: 'A proposta é montada conforme quantos condomínios você administra e quais módulos ativa. Conte-nos sobre a sua carteira e respondemos pelo WhatsApp.',
     quote: 'Peça seu orçamento'
   },
   faqH2: 'Perguntas frequentes sobre a Expenses',
@@ -288,7 +292,9 @@ export const LANDING_PT: LandingContent = {
     tagline: 'Plataforma de administração de condomínios e edifícios no Paraguai.',
     demo: 'Demonstração gratuita',
     login: 'Entrar no sistema',
-    app: 'App para Android'
+    app: 'App para Android',
+    privacy: 'Privacidade',
+    terms: 'Termos'
   }
 };
 
@@ -390,6 +396,7 @@ export const LANDING_EN: LandingContent = {
       { title: 'Optional modules', text: 'Building finances, the spaces Marketplace and advertising are enabled per building, according to your plan.' },
       { title: 'Trial period', text: 'Every new building starts with a trial period so you can use it with your real data.' }
     ],
+    note: 'The proposal is built around how many buildings you manage and which modules you turn on. Tell us about your portfolio and we reply on WhatsApp.',
     quote: 'Request your quote'
   },
   faqH2: 'Frequently asked questions about Expenses',
@@ -408,7 +415,9 @@ export const LANDING_EN: LandingContent = {
     tagline: 'Condominium and building management platform in Paraguay.',
     demo: 'Free demo',
     login: 'Log in to the system',
-    app: 'Android app'
+    app: 'Android app',
+    privacy: 'Privacy',
+    terms: 'Terms'
   }
 };
 

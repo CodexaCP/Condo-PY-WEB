@@ -27,6 +27,19 @@ export const appRoutes: Routes = [
         data: { lang: 'en' },
         loadComponent: () => import('./app/pages/landing/home.component').then(m => m.HomeComponent)
     },
+    // Páginas legales en borrador (noindex): política de privacidad y términos de uso del sitio.
+    {
+        path: 'privacidad',
+        pathMatch: 'full',
+        data: { doc: 'privacy' },
+        loadComponent: () => import('./app/pages/landing/legal-page.component').then(m => m.LegalPageComponent)
+    },
+    {
+        path: 'terminos',
+        pathMatch: 'full',
+        data: { doc: 'terms' },
+        loadComponent: () => import('./app/pages/landing/legal-page.component').then(m => m.LegalPageComponent)
+    },
     {
         path: 'login',
         loadComponent: () => import('./app/pages/auth/login').then(m => m.Login),
