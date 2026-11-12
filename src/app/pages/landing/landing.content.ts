@@ -37,7 +37,9 @@ export interface LandingContent {
   whatsappMessage: string;
   brandAria: string;
   navAria: string;
+  footerNavAria: string;
   nav: { features: string; profiles: string; plans: string; faq: string; menu: string; close: string; skip: string };
+  langAria: string;
   login: string;
   tryDemo: string;
   hero: { eyebrow: string; h1: string; lead: string; ctaDemo: string; ctaQuote: string; chips: string[] };
@@ -68,7 +70,9 @@ export const LANDING_ES: LandingContent = {
   whatsappMessage: 'Hola, vi la página de Expenses y quiero pedir una cotización para mi edificio. ¿Me pueden contactar?',
   brandAria: 'Expenses, inicio',
   navAria: 'Secciones',
+  footerNavAria: 'Pie de página',
   nav: { features: 'Funciones', profiles: 'Para quién', plans: 'Planes', faq: 'Preguntas', menu: 'Menú', close: 'Cerrar', skip: 'Saltar al contenido' },
+  langAria: 'Idioma',
   login: 'Ingresar',
   tryDemo: 'Probar demo',
   hero: {
@@ -83,9 +87,9 @@ export const LANDING_ES: LandingContent = {
     head: 'Resumen del edificio',
     sample: 'Vista de ejemplo',
     kpis: [
-      { label: 'Cobrado del mes', value: 'Gs. 31.134.000', note: '82 % de lo emitido' },
-      { label: 'Gastos del mes', value: 'Gs. 30.730.000', note: '8 gastos registrados' },
-      { label: 'Morosidad', value: '17,5 %', note: '7 de 40 unidades' }
+      { label: 'Cobrado del mes', value: 'Gs. 31.134.000', note: '82 % de lo emitido' },
+      { label: 'Gastos del mes', value: 'Gs. 30.730.000', note: '8 gastos registrados' },
+      { label: 'Morosidad', value: '17,5 %', note: '7 de 40 unidades' }
     ]
   },
   why: {
@@ -191,7 +195,9 @@ export const LANDING_PT: LandingContent = {
   whatsappMessage: 'Olá, vi a página da Expenses em português e quero pedir um orçamento para o meu condomínio. Podem entrar em contato?',
   brandAria: 'Expenses, início',
   navAria: 'Seções',
+  footerNavAria: 'Rodapé',
   nav: { features: 'Funções', profiles: 'Para quem', plans: 'Planos', faq: 'Perguntas', menu: 'Menu', close: 'Fechar', skip: 'Ir para o conteúdo' },
+  langAria: 'Idioma',
   login: 'Entrar',
   tryDemo: 'Testar demo',
   hero: {
@@ -206,8 +212,8 @@ export const LANDING_PT: LandingContent = {
     head: 'Resumo do condomínio',
     sample: 'Exemplo ilustrativo',
     kpis: [
-      { label: 'Recebido no mês', value: 'Gs. 31.134.000', note: '82% do valor emitido' },
-      { label: 'Despesas do mês', value: 'Gs. 30.730.000', note: '8 despesas registradas' },
+      { label: 'Recebido no mês', value: 'Gs. 31.134.000', note: '82% do valor emitido' },
+      { label: 'Despesas do mês', value: 'Gs. 30.730.000', note: '8 despesas registradas' },
       { label: 'Inadimplência', value: '17,5%', note: '7 de 40 unidades' }
     ]
   },
@@ -314,7 +320,9 @@ export const LANDING_EN: LandingContent = {
   whatsappMessage: 'Hello, I saw the Expenses page in English and I would like to request a quote for my building. Could you contact me?',
   brandAria: 'Expenses, home',
   navAria: 'Sections',
+  footerNavAria: 'Footer',
   nav: { features: 'Features', profiles: 'Who it is for', plans: 'Plans', faq: 'Questions', menu: 'Menu', close: 'Close', skip: 'Skip to content' },
+  langAria: 'Language',
   login: 'Log in',
   tryDemo: 'Try the demo',
   hero: {
@@ -329,8 +337,8 @@ export const LANDING_EN: LandingContent = {
     head: 'Building summary',
     sample: 'Sample view',
     kpis: [
-      { label: 'Collected this month', value: 'Gs. 31,134,000', note: '82% of the amount billed' },
-      { label: 'Expenses this month', value: 'Gs. 30,730,000', note: '8 expenses recorded' },
+      { label: 'Collected this month', value: 'Gs. 31,134,000', note: '82% of the amount billed' },
+      { label: 'Expenses this month', value: 'Gs. 30,730,000', note: '8 expenses recorded' },
       { label: 'Arrears', value: '17.5%', note: '7 of 40 units' }
     ]
   },

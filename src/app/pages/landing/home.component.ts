@@ -20,14 +20,14 @@ import { LANDING_LANGS, LandingContent, landingContent } from './landing.content
     <a class="skip" [routerLink]="t.path" fragment="contenido">{{ t.nav.skip }}</a>
     @if (offer(); as o) {
       <div class="lang-bar">
-        <a [routerLink]="o.path" [attr.hreflang]="o.code" [attr.lang]="o.code" (click)="pick(o.code)">{{ o.hint }} →</a>
+        <a [routerLink]="o.path" [attr.hreflang]="o.code" [attr.lang]="o.code" (click)="pick(o.code)">{{ o.hint }} <span aria-hidden="true">→</span></a>
         <button type="button" (click)="offer.set(null)" [attr.aria-label]="t.nav.close">×</button>
       </div>
     }
     <div class="hd-wrap"><header class="hd">
       <a [routerLink]="t.path" class="brand" [attr.aria-label]="t.brandAria">
         <img src="/brand/expenses-icon.svg" alt="" width="34" height="23" />
-        <b>EXPENSES</b>
+        <b translate="no">EXPENSES</b>
       </a>
       <nav [attr.aria-label]="t.navAria">
         <a [routerLink]="t.path" fragment="funciones">{{ t.nav.features }}</a>
@@ -46,7 +46,7 @@ import { LANDING_LANGS, LandingContent, landingContent } from './landing.content
           </div>
         </details>
         <details class="lang-dd">
-          <summary aria-label="Idioma / Language"><span class="globe" aria-hidden="true">🌐</span> {{ t.lang.toUpperCase() }} <span class="caret" aria-hidden="true">▾</span></summary>
+          <summary [attr.aria-label]="t.langAria"><span class="globe" aria-hidden="true">🌐</span> {{ t.lang.toUpperCase() }} <span class="caret" aria-hidden="true">▾</span></summary>
           <div class="lang-menu">
             @for (l of langs; track l.code) {
               <a [routerLink]="l.path" [class.on]="l.code === t.lang" [attr.hreflang]="l.code" [attr.lang]="l.code" [attr.aria-current]="l.code === t.lang ? 'true' : null" (click)="pick(l.code)">{{ l.label }}</a>
@@ -181,10 +181,10 @@ import { LANDING_LANGS, LandingContent, landingContent } from './landing.content
 
     <footer class="ft">
       <div>
-        <b>EXPENSES</b>
+        <b translate="no">EXPENSES</b>
         <p>{{ t.footer.tagline }}</p>
       </div>
-      <nav [attr.aria-label]="t.navAria">
+      <nav [attr.aria-label]="t.footerNavAria">
         <a routerLink="/explorar">{{ t.footer.demo }}</a>
         <a routerLink="/login">{{ t.footer.login }}</a>
         <a href="/downloads/expenses.apk" download="Expenses.apk">{{ t.footer.app }}</a>
@@ -212,7 +212,7 @@ import { LANDING_LANGS, LandingContent, landingContent } from './landing.content
       main:focus { outline: none; }
       .skip { position: absolute; left: 0.5rem; top: -4rem; z-index: 60; padding: 0.6rem 1rem; background: #11364a; color: #fff; border-radius: 0.5rem; font-weight: 700; }
       .skip:focus { top: 0.5rem; }
-      h1, h2, h3 { color: #11364a; line-height: 1.2; margin: 0; }
+      h1, h2, h3 { color: #11364a; line-height: 1.2; margin: 0; text-wrap: balance; }
       .lang-bar { display: flex; justify-content: center; align-items: center; gap: 0.8rem; padding: 0.45rem 1rem; background: #11364a; color: #fff; font-size: 0.85rem; font-weight: 600; }
       .lang-bar button { background: none; border: 0; color: #cfe3ee; font-size: 1.1rem; cursor: pointer; line-height: 1; }
       .hd { display: flex; align-items: center; gap: 1.5rem; padding: 0.9rem 1.5rem; max-width: 1180px; margin: 0 auto; }
@@ -235,12 +235,19 @@ import { LANDING_LANGS, LandingContent, landingContent } from './landing.content
       .lang-menu a.on { background: #0f6f9a; color: #fff; }
       .btn { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0.55rem 1.1rem; border-radius: 0.7rem; font-weight: 700; font-size: 0.9rem; border: 1.5px solid transparent; cursor: pointer; transition: background 0.15s, transform 0.15s; }
       .btn:hover { transform: translateY(-1px); }
+      .btn, summary { touch-action: manipulation; }
+      a:focus-visible, summary:focus-visible, button:focus-visible { outline: 3px solid #0f6f9a; outline-offset: 2px; border-radius: 0.4rem; }
+      .btn.solid:focus-visible, .final a:focus-visible { outline-color: #f59e0b; }
       .btn.solid { background: #0f766e; color: #fff; box-shadow: 0 6px 16px rgba(15, 118, 110, 0.28); }
       .btn.solid:hover { background: #0b5f59; }
       .btn.ghost { color: #0f6f9a; border-color: #cfe3ee; }
+      .btn.ghost:hover { background: #eef6fb; }
       .btn.line { color: #0f6f9a; border-color: #0f6f9a; background: #fff; }
+      .btn.line:hover { background: #eef6fb; }
       .btn.white { background: #fff; color: #11364a; }
+      .btn.white:hover { background: #e6f4f6; }
       .btn.outw { color: #fff; border-color: #fff; }
+      .btn.outw:hover { background: rgba(255, 255, 255, 0.14); }
       .btn.big { padding: 0.85rem 1.5rem; font-size: 1rem; }
       .hero-bg { background: radial-gradient(70% 90% at 85% 0%, #dff3f1 0%, rgba(223, 243, 241, 0) 70%), radial-gradient(60% 80% at 0% 100%, #e4f0fa 0%, rgba(228, 240, 250, 0) 70%), #fff; }
       .hero { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 2.5rem; align-items: center; max-width: 1180px; margin: 0 auto; padding: 4.5rem 1.5rem 5rem; }
@@ -257,7 +264,7 @@ import { LANDING_LANGS, LandingContent, landingContent } from './landing.content
       .mock-kpis { display: grid; gap: 0.6rem; }
       .mock-kpis div { background: #fff; border-radius: 0.8rem; padding: 0.7rem 0.9rem; border: 1px solid #e3edf4; display: grid; }
       .mock-kpis small { color: #4a6270; font-size: 0.74rem; }
-      .mock-kpis strong { font-size: 1.15rem; }
+      .mock-kpis strong { font-size: 1.15rem; font-variant-numeric: tabular-nums; }
       .mock-kpis em { font-style: normal; font-size: 0.74rem; color: #1f7a45; }
       .mock-bars { display: flex; align-items: flex-end; gap: 0.5rem; height: 90px; margin-top: 1rem; }
       .mock-bars i { flex: 1; background: linear-gradient(180deg, #1ab7af, #5cc36a); border-radius: 6px 6px 0 0; }
