@@ -17,7 +17,9 @@ function loadPdfjs(): Promise<typeof import('pdfjs-dist')> {
 export async function pdfFirstPageToPngFile(file: File, targetDpi = 150): Promise<File> {
   const pdfjsLib = await loadPdfjs();
   const buffer = await file.arrayBuffer();
-  const pdf = await pdfjsLib.getDocument({ data: buffer }).promise;
+  // En pdf.js 6 destroy() vive en la tarea de carga, no en el documento.
+  const loadingTask = pdfjsLib.getDocument({ data: buffer });
+  const pdf = await loadingTask.promise;
   try {
     const page = await pdf.getPage(1);
     const viewport = page.getViewport({ scale: targetDpi / 72 });
@@ -36,7 +38,7 @@ export async function pdfFirstPageToPngFile(file: File, targetDpi = 150): Promis
     const pngName = `${file.name.replace(/\.pdf$/i, '')}.png`;
     return new File([blob], pngName, { type: 'image/png' });
   } finally {
-    await pdf.destroy();
+    await loadingTask.destroy();
   }
 }
 
