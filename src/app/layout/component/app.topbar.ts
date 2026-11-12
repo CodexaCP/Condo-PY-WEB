@@ -5,11 +5,12 @@ import { LayoutService } from '@/app/layout/service/layout.service';
 import { AuthService } from '@/app/auth/auth.service';
 import { NotificationAlertService } from '@/app/core/notification-alert.service';
 import { PushService } from '@/app/core/push.service';
+import { AppVoiceCommand } from './app.voice-command';
 
 @Component({
     selector: 'app-topbar',
     standalone: true,
-    imports: [RouterModule, CommonModule],
+    imports: [RouterModule, CommonModule, AppVoiceCommand],
     template: ` <div class="layout-topbar">
         <div class="layout-topbar-logo-container">
             <button class="layout-menu-button layout-topbar-action" (click)="layoutService.onMenuToggle()">
@@ -24,6 +25,9 @@ import { PushService } from '@/app/core/push.service';
 
         <div class="layout-topbar-actions">
             @if (currentUser() && isSuperAdmin) {
+                @if (canUseVoice) {
+                    <app-voice-command />
+                }
                 <button type="button" class="layout-topbar-action notif-btn" (click)="goToNotificaciones()" title="Notificaciones">
                     <i class="pi pi-bell"></i>
                     @if (unreadCount() > 0) {
@@ -46,6 +50,9 @@ import { PushService } from '@/app/core/push.service';
                     }
                 </div>
             } @else if (currentUser()) {
+                @if (canUseVoice) {
+                    <app-voice-command />
+                }
                 <span style="color:#ffffff; font-size:0.9rem; font-weight:500; opacity:0.9">
                     Hola, {{ currentUser()!.fullName.split(' ')[0] }}
                 </span>
@@ -90,6 +97,7 @@ export class AppTopbar implements OnInit {
     readonly userMenuOpen = signal(false);
 
     get isSuperAdmin(): boolean { return this.auth.hasRole('SuperAdmin'); }
+    get canUseVoice(): boolean { return this.auth.hasRole('SuperAdmin', 'CompanyAdmin', 'CompanyOperator', 'BuildingManager'); }
 
     toggleUserMenu(event: Event): void {
         event.stopPropagation();

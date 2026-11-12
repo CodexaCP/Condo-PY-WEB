@@ -2,7 +2,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { API_BASE_URL } from '../config/api.config';
-import { MorosityReport } from './models';
+import { MorosityReport, MorosityUnit } from './models';
 
 export interface MorosityReportFilters {
   buildingId?: string;
@@ -43,5 +43,12 @@ export class MorosityApiService {
     if (filters?.ownerSearch) params = params.set('ownerSearch', filters.ownerSearch);
     if (filters?.agingBucket) params = params.set('agingBucket', filters.agingBucket);
     return this.http.post<MorosityReminderResult>(`${API_BASE_URL}/morosity/send-reminders`, null, { params });
+  }
+
+  getUnits(buildingId?: string, dueOnOrBefore?: string | null): Observable<MorosityUnit[]> {
+    let params = new HttpParams();
+    if (buildingId) params = params.set('buildingId', buildingId);
+    if (dueOnOrBefore) params = params.set('dueOnOrBefore', dueOnOrBefore);
+    return this.http.get<MorosityUnit[]>(`${API_BASE_URL}/morosity/units`, { params });
   }
 }

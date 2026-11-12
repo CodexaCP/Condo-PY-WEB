@@ -3215,3 +3215,17 @@ export interface PeopleImportResult {
   message?: string | null;
   rows: PeopleImportRow[];
 }
+
+export type VoiceCommandIntent = 'Unknown' | 'CreateEmptyPeriod' | 'ClonePreviousPeriod' | 'ListDelinquents';
+export type OverdueAgeUnit = 'Days' | 'Weeks' | 'Months' | 'Years';
+export interface VoiceCommandInterpretation {
+  text: string; intent: VoiceCommandIntent; requiresConfirmation: boolean; summary: string; message: string | null;
+  buildingId: string | null; buildingName: string | null; sourcePeriodId: string | null; sourcePeriodName: string | null;
+  targetPeriodName: string | null; proposedPeriod: CreateExpensePeriodRequest | null;
+  ageAmount: number | null; ageUnit: OverdueAgeUnit | null; dueOnOrBefore: string | null;
+}
+export interface MorosityUnit {
+  unitId: string; unitCode: string; buildingId: string; buildingName: string;
+  responsibleName: string; responsiblePhone: string; ownerName: string; ownerPhone: string;
+  oldestDueDate: string; daysOverdue: number; overduePeriods: number; totalBalance: number;
+}
