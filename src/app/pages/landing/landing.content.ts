@@ -77,7 +77,7 @@ export const LANDING_ES: LandingContent = {
     lead: 'Expensas, cobranza, gastos, facturación y contabilidad de tu edificio en un solo sistema. Panel web para el administrador y app para el Encargado y los propietarios.',
     ctaDemo: 'Explorar demostración gratuita →',
     ctaQuote: 'Pedí tu cotización',
-    chips: ['Todo en guaraníes', 'IVA y timbrado', 'Propiedad horizontal', 'La demo no pide registro']
+    chips: ['Clientes nuevos: 2 meses gratis', 'Todo en guaraníes', 'IVA y timbrado', 'Propiedad horizontal', 'La demo no pide registro']
   },
   mock: {
     head: 'Resumen del edificio',
@@ -148,7 +148,7 @@ export const LANDING_ES: LandingContent = {
     cards: [
       { title: 'Por edificio', text: 'Pagas según los edificios que administras, con ciclo mensual, trimestral, semestral o anual.' },
       { title: 'Módulos opcionales', text: 'Finanzas del edificio, Marketplace de espacios y publicidad se activan por edificio, según tu plan.' },
-      { title: 'Período de prueba', text: 'Todo edificio nuevo comienza con un período de prueba para que lo uses con tus datos reales.' }
+      { title: '2 meses gratis', text: 'Clientes nuevos: tu primer edificio, completo y con la configuración incluida, sin costo por 2 meses. Si ya eres cliente y sumas más edificios: 1 mes gratis y configuración sin costo.' }
     ],
     note: 'La propuesta se arma según cuántos edificios administras y qué módulos activas. Cuéntanos de tu cartera y te respondemos por WhatsApp.',
     quote: 'Pedí tu cotización'
@@ -200,7 +200,7 @@ export const LANDING_PT: LandingContent = {
     lead: 'Taxas condominiais, cobrança, despesas, faturamento e contabilidade do seu condomínio em um só sistema. Painel web para o administrador e app para o encarregado e os proprietários.',
     ctaDemo: 'Explorar demonstração gratuita →',
     ctaQuote: 'Peça seu orçamento',
-    chips: ['Tudo em guaranis', 'IVA e timbrado', 'Propriedade horizontal', 'Demo sem cadastro']
+    chips: ['Clientes novos: 2 meses grátis', 'Tudo em guaranis', 'IVA e timbrado', 'Propriedade horizontal', 'Demo sem cadastro']
   },
   mock: {
     head: 'Resumo do condomínio',
@@ -271,7 +271,7 @@ export const LANDING_PT: LandingContent = {
     cards: [
       { title: 'Por condomínio', text: 'Você paga conforme os condomínios que administra, com ciclo mensal, trimestral, semestral ou anual.' },
       { title: 'Módulos opcionais', text: 'Finanças do condomínio, Marketplace de espaços e publicidade são ativados por condomínio, conforme o seu plano.' },
-      { title: 'Período de teste', text: 'Todo condomínio novo começa com um período de teste para você usar com seus dados reais.' }
+      { title: '2 meses grátis', text: 'Clientes novos: seu primeiro condomínio, completo e com a configuração incluída, sem custo por 2 meses. Se você já é cliente e adiciona mais condomínios: 1 mês grátis e configuração sem custo.' }
     ],
     note: 'A proposta é montada conforme quantos condomínios você administra e quais módulos ativa. Conte-nos sobre a sua carteira e respondemos pelo WhatsApp.',
     quote: 'Peça seu orçamento'
@@ -323,7 +323,7 @@ export const LANDING_EN: LandingContent = {
     lead: 'Maintenance fees, collections, expenses, invoicing and accounting for your building in one system. A web dashboard for the administrator and an app for the on-site manager and owners.',
     ctaDemo: 'Explore the free demo →',
     ctaQuote: 'Request your quote',
-    chips: ['Everything in Guaraníes', 'VAT and timbrado', 'Horizontal property', 'The demo needs no sign-up']
+    chips: ['New customers: 2 months free', 'Everything in Guaraníes', 'VAT and timbrado', 'Horizontal property', 'The demo needs no sign-up']
   },
   mock: {
     head: 'Building summary',
@@ -394,7 +394,7 @@ export const LANDING_EN: LandingContent = {
     cards: [
       { title: 'Per building', text: 'You pay according to the buildings you manage, on a monthly, quarterly, semi-annual or annual cycle.' },
       { title: 'Optional modules', text: 'Building finances, the spaces Marketplace and advertising are enabled per building, according to your plan.' },
-      { title: 'Trial period', text: 'Every new building starts with a trial period so you can use it with your real data.' }
+      { title: '2 months free', text: 'New customers: your first building, complete and with setup included, at no cost for 2 months. If you are already a customer and add more buildings: 1 month free and free setup.' }
     ],
     note: 'The proposal is built around how many buildings you manage and which modules you turn on. Tell us about your portfolio and we reply on WhatsApp.',
     quote: 'Request your quote'
