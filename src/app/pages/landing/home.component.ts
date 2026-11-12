@@ -288,11 +288,11 @@ import { LANDING_LANGS, LandingContent, landingContent } from './landing.content
       .final { text-align: center; padding: 4rem 1.5rem; background: linear-gradient(160deg, #11364a, #0f6f9a 65%, #0f766e); color: #fff; }
       .final h2 { color: #fff; font-size: clamp(1.5rem, 3vw, 2.1rem); }
       .final p { max-width: 38rem; margin: 0.8rem auto 1.6rem; color: #e6f4f6; }
-      .ft { display: grid; grid-template-columns: 1fr auto; gap: 1.5rem; max-width: 1180px; margin: 0 auto; padding: 2.5rem 1.5rem; font-size: 0.9rem; }
-      .ft p { margin: 0.3rem 0 0; color: #4a6270; }
-      .ft nav { display: flex; flex-direction: column; font-weight: 600; color: #0f6f9a; }
+      .ft { display: grid; gap: 0.4rem; max-width: 1180px; margin: 0 auto; padding: 1.5rem 1.5rem 1.2rem; font-size: 0.9rem; border-top: 1px solid #dbe6ef; }
+      .ft p { margin: 0.2rem 0 0; color: #4a6270; }
+      .ft nav { display: flex; flex-wrap: wrap; column-gap: 1.4rem; font-weight: 600; color: #0f6f9a; }
       .ft nav a { display: flex; align-items: center; min-height: 44px; }
-      .ft small { grid-column: 1 / -1; color: #587383; }
+      .ft small { color: #587383; }
       .wa-bar { display: none; }
       @media (max-width: 860px) {
         :host { padding-bottom: 4.6rem; }
@@ -302,7 +302,6 @@ import { LANDING_LANGS, LandingContent, landingContent } from './landing.content
         .hd nav { display: none; }
         .menu-dd { display: block; }
         .hd-act .ghost { display: none; }
-        .ft { grid-template-columns: 1fr; }
       }
       @media (max-width: 480px) {
         .reach-card { min-height: 780px; }
