@@ -194,6 +194,11 @@ import { LANDING_LANGS, LandingContent, landingContent } from './landing.content
       </nav>
       <small>© {{ year }} Expenses · expenses.com.py</small>
     </footer>
+    @if (whatsapp) {
+      <div class="wa-bar">
+        <a [href]="whatsapp" class="btn solid big" target="_blank" rel="noopener noreferrer">{{ t.final.ctaWhatsapp }}</a>
+      </div>
+    }
   `,
   styles: [
     `
@@ -277,7 +282,11 @@ import { LANDING_LANGS, LandingContent, landingContent } from './landing.content
       .ft p { margin: 0.3rem 0 0; color: #4a6270; }
       .ft nav { display: flex; flex-direction: column; gap: 0.4rem; font-weight: 600; color: #0f6f9a; }
       .ft small { grid-column: 1 / -1; color: #587383; }
+      .wa-bar { display: none; }
       @media (max-width: 860px) {
+        :host { padding-bottom: 4.6rem; }
+        .wa-bar { display: flex; justify-content: center; position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; padding: 0.6rem 1rem calc(0.6rem + env(safe-area-inset-bottom)); background: rgba(255, 255, 255, 0.97); border-top: 1px solid #dbe6ef; }
+        .wa-bar .btn { width: 100%; max-width: 26rem; }
         .hero { grid-template-columns: 1fr; padding-top: 1.5rem; }
         .hd nav { display: none; }
         .menu-dd { display: block; }
