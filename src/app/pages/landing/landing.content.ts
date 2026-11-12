@@ -37,7 +37,7 @@ export interface LandingContent {
   whatsappMessage: string;
   brandAria: string;
   navAria: string;
-  nav: { features: string; profiles: string; plans: string; faq: string; menu: string };
+  nav: { features: string; profiles: string; plans: string; faq: string; menu: string; close: string; skip: string };
   login: string;
   tryDemo: string;
   hero: { eyebrow: string; h1: string; lead: string; ctaDemo: string; ctaQuote: string; chips: string[] };
@@ -68,7 +68,7 @@ export const LANDING_ES: LandingContent = {
   whatsappMessage: 'Hola, vi la página de Expenses y quiero pedir una cotización para mi edificio. ¿Me pueden contactar?',
   brandAria: 'Expenses, inicio',
   navAria: 'Secciones',
-  nav: { features: 'Funciones', profiles: 'Para quién', plans: 'Planes', faq: 'Preguntas', menu: 'Menú' },
+  nav: { features: 'Funciones', profiles: 'Para quién', plans: 'Planes', faq: 'Preguntas', menu: 'Menú', close: 'Cerrar', skip: 'Saltar al contenido' },
   login: 'Ingresar',
   tryDemo: 'Probar demo',
   hero: {
@@ -188,7 +188,7 @@ export const LANDING_PT: LandingContent = {
   whatsappMessage: 'Olá, vi a página da Expenses em português e quero pedir um orçamento para o meu condomínio. Podem entrar em contato?',
   brandAria: 'Expenses, início',
   navAria: 'Seções',
-  nav: { features: 'Funções', profiles: 'Para quem', plans: 'Planos', faq: 'Perguntas', menu: 'Menu' },
+  nav: { features: 'Funções', profiles: 'Para quem', plans: 'Planos', faq: 'Perguntas', menu: 'Menu', close: 'Fechar', skip: 'Ir para o conteúdo' },
   login: 'Entrar',
   tryDemo: 'Testar demo',
   hero: {
@@ -308,7 +308,7 @@ export const LANDING_EN: LandingContent = {
   whatsappMessage: 'Hello, I saw the Expenses page in English and I would like to request a quote for my building. Could you contact me?',
   brandAria: 'Expenses, home',
   navAria: 'Sections',
-  nav: { features: 'Features', profiles: 'Who it is for', plans: 'Plans', faq: 'Questions', menu: 'Menu' },
+  nav: { features: 'Features', profiles: 'Who it is for', plans: 'Plans', faq: 'Questions', menu: 'Menu', close: 'Close', skip: 'Skip to content' },
   login: 'Log in',
   tryDemo: 'Try the demo',
   hero: {

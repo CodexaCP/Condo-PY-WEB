@@ -17,15 +17,16 @@ import { LANDING_LANGS, LandingContent, landingContent } from './landing.content
   imports: [RouterLink],
   host: { '(click)': 'trackClick($event)', '(document:click)': 'closeLangMenu($event)' },
   template: `
+    <a class="skip" [routerLink]="t.path" fragment="contenido">{{ t.nav.skip }}</a>
     @if (offer(); as o) {
       <div class="lang-bar">
         <a [routerLink]="o.path" [attr.hreflang]="o.code" [attr.lang]="o.code" (click)="pick(o.code)">{{ o.hint }} →</a>
-        <button type="button" (click)="offer.set(null)" aria-label="×">×</button>
+        <button type="button" (click)="offer.set(null)" [attr.aria-label]="t.nav.close">×</button>
       </div>
     }
     <header class="hd">
       <a [routerLink]="t.path" class="brand" [attr.aria-label]="t.brandAria">
-        <img src="/brand/expenses-icon.svg" alt="" width="34" height="34" />
+        <img src="/brand/expenses-icon.svg" alt="" width="34" height="23" />
         <b>EXPENSES</b>
       </a>
       <nav [attr.aria-label]="t.navAria">
@@ -57,7 +58,7 @@ import { LANDING_LANGS, LandingContent, landingContent } from './landing.content
       </div>
     </header>
 
-    <main>
+    <main id="contenido" tabindex="-1">
       <section class="hero">
         <div class="hero-txt">
           <span class="eyebrow">{{ t.hero.eyebrow }}</span>
@@ -204,26 +205,29 @@ import { LANDING_LANGS, LandingContent, landingContent } from './landing.content
     `
       :host { display: block; color: var(--ex-ink, #16324a); font-family: 'Plus Jakarta Sans', system-ui, sans-serif; background: #fff; line-height: 1.55; }
       a { text-decoration: none; color: inherit; }
+      main:focus { outline: none; }
+      .skip { position: absolute; left: 0.5rem; top: -4rem; z-index: 60; padding: 0.6rem 1rem; background: #11364a; color: #fff; border-radius: 0.5rem; font-weight: 700; }
+      .skip:focus { top: 0.5rem; }
       h1, h2, h3 { color: #11364a; line-height: 1.2; margin: 0; }
       .lang-bar { display: flex; justify-content: center; align-items: center; gap: 0.8rem; padding: 0.45rem 1rem; background: #11364a; color: #fff; font-size: 0.85rem; font-weight: 600; }
       .lang-bar button { background: none; border: 0; color: #cfe3ee; font-size: 1.1rem; cursor: pointer; line-height: 1; }
       .hd { display: flex; align-items: center; gap: 1.5rem; padding: 0.9rem 1.5rem; max-width: 1180px; margin: 0 auto; }
-      .brand { display: flex; align-items: center; gap: 0.5rem; letter-spacing: 0.08em; }
+      .brand { display: flex; align-items: center; gap: 0.5rem; letter-spacing: 0.08em; min-height: 2.75rem; }
       .hd nav { display: flex; gap: 1.4rem; margin-left: 1rem; font-size: 0.92rem; font-weight: 600; color: #4a6270; }
       .hd nav a:hover { color: #0f6f9a; }
       .hd-act { margin-left: auto; display: flex; gap: 0.5rem; align-items: center; }
       .lang-dd, .menu-dd { position: relative; }
       .menu-dd { display: none; }
       .hd-act .btn { white-space: nowrap; }
-      .lang-dd summary, .menu-dd summary { list-style: none; cursor: pointer; display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.5rem 0.75rem; border: 1.5px solid #cfe3ee; border-radius: 0.7rem; font-size: 0.82rem; font-weight: 800; letter-spacing: 0.04em; color: #4a6270; user-select: none; }
+      .lang-dd summary, .menu-dd summary { list-style: none; cursor: pointer; display: inline-flex; align-items: center; gap: 0.35rem; min-height: 2.75rem; padding: 0.5rem 0.75rem; border: 1.5px solid #cfe3ee; border-radius: 0.7rem; font-size: 0.82rem; font-weight: 800; letter-spacing: 0.04em; color: #4a6270; user-select: none; }
       .lang-dd summary::-webkit-details-marker, .menu-dd summary::-webkit-details-marker { display: none; }
       .lang-dd summary:hover, .lang-dd[open] summary, .menu-dd summary:hover, .menu-dd[open] summary { background: #eef6fb; }
       .lang-dd .caret { font-size: 0.7rem; }
       .lang-menu { position: absolute; right: 0; top: calc(100% + 0.35rem); z-index: 30; min-width: 9.5rem; display: grid; padding: 0.3rem; background: #fff; border: 1px solid #dbe6ef; border-radius: 0.7rem; box-shadow: 0 12px 28px rgba(17, 54, 74, 0.16); }
-      .lang-menu a { padding: 0.5rem 0.7rem; border-radius: 0.5rem; font-size: 0.9rem; font-weight: 600; color: #16324a; }
+      .lang-menu a { display: flex; align-items: center; min-height: 2.75rem; padding: 0.5rem 0.7rem; border-radius: 0.5rem; font-size: 0.9rem; font-weight: 600; color: #16324a; }
       .lang-menu a:hover { background: #eef6fb; }
       .lang-menu a.on { background: #0f6f9a; color: #fff; }
-      .btn { display: inline-flex; align-items: center; justify-content: center; padding: 0.55rem 1.1rem; border-radius: 0.7rem; font-weight: 700; font-size: 0.9rem; border: 1.5px solid transparent; cursor: pointer; transition: background 0.15s, transform 0.15s; }
+      .btn { display: inline-flex; align-items: center; justify-content: center; min-height: 2.75rem; padding: 0.55rem 1.1rem; border-radius: 0.7rem; font-weight: 700; font-size: 0.9rem; border: 1.5px solid transparent; cursor: pointer; transition: background 0.15s, transform 0.15s; }
       .btn:hover { transform: translateY(-1px); }
       .btn.solid { background: #0f766e; color: #fff; }
       .btn.solid:hover { background: #0b5f59; }
@@ -280,7 +284,8 @@ import { LANDING_LANGS, LandingContent, landingContent } from './landing.content
       .final p { max-width: 38rem; margin: 0.8rem auto 1.6rem; color: #e6f4f6; }
       .ft { display: grid; grid-template-columns: 1fr auto; gap: 1.5rem; max-width: 1180px; margin: 0 auto; padding: 2.5rem 1.5rem; font-size: 0.9rem; }
       .ft p { margin: 0.3rem 0 0; color: #4a6270; }
-      .ft nav { display: flex; flex-direction: column; gap: 0.4rem; font-weight: 600; color: #0f6f9a; }
+      .ft nav { display: flex; flex-direction: column; font-weight: 600; color: #0f6f9a; }
+      .ft nav a { display: flex; align-items: center; min-height: 2.75rem; }
       .ft small { grid-column: 1 / -1; color: #587383; }
       .wa-bar { display: none; }
       @media (max-width: 860px) {
