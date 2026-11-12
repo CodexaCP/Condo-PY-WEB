@@ -217,6 +217,7 @@ import { LANDING_LANGS, LandingContent, landingContent } from './landing.content
       .hd { display: flex; align-items: center; gap: 1.5rem; padding: 0.9rem 1.5rem; max-width: 1180px; margin: 0 auto; }
       .brand { display: flex; align-items: center; gap: 0.5rem; letter-spacing: 0.08em; min-height: 2.75rem; }
       .hd nav { display: flex; gap: 1.4rem; margin-left: 1rem; font-size: 0.92rem; font-weight: 600; color: #4a6270; }
+      .hd nav a { display: inline-flex; align-items: center; min-height: 2.75rem; }
       .hd nav a:hover { color: #0f6f9a; }
       .hd-act { margin-left: auto; display: flex; gap: 0.5rem; align-items: center; }
       .lang-dd, .menu-dd { position: relative; }
@@ -282,7 +283,7 @@ import { LANDING_LANGS, LandingContent, landingContent } from './landing.content
       .faq summary::after { content: '+'; position: absolute; right: 0.3rem; top: 50%; transform: translateY(-50%); font-size: 1.4rem; font-weight: 400; color: #0f6f9a; }
       .faq details[open] summary::after { content: '–'; }
       .faq details p { margin: 0 0 1rem; color: #4a6270; }
-      .reach-card { max-width: 34rem; margin: 0 auto; padding: 1.6rem; background: #fff; border: 1px solid #dbe6ef; border-radius: 1.2rem; box-shadow: 0 24px 50px rgba(17, 54, 74, 0.1); min-height: 8rem; }
+      .reach-card { max-width: 34rem; margin: 0 auto; padding: 1.6rem; background: #fff; border: 1px solid #dbe6ef; border-radius: 1.2rem; box-shadow: 0 24px 50px rgba(17, 54, 74, 0.1); min-height: 40rem; }
       .final { text-align: center; padding: 4rem 1.5rem; background: linear-gradient(160deg, #11364a, #0f6f9a 65%, #0f766e); color: #fff; }
       .final h2 { color: #fff; font-size: clamp(1.5rem, 3vw, 2.1rem); }
       .final p { max-width: 38rem; margin: 0.8rem auto 1.6rem; color: #e6f4f6; }
@@ -303,6 +304,7 @@ import { LANDING_LANGS, LandingContent, landingContent } from './landing.content
         .ft { grid-template-columns: 1fr; }
       }
       @media (max-width: 480px) {
+        .reach-card { min-height: 46rem; }
         .hd { gap: 0.6rem; padding: 0.7rem 1rem; }
         .hd-act { gap: 0.4rem; }
         .hd-act .btn { padding: 0.5rem 0.75rem; font-size: 0.85rem; }
