@@ -73,7 +73,7 @@ export const LANDING_ES: LandingContent = {
   tryDemo: 'Probar demo',
   hero: {
     eyebrow: 'Software de administración de edificios y condominios',
-    h1: 'Software para administrar edificios y condominios',
+    h1: 'Cobra expensas y rinde cuentas sin planillas',
     lead: 'Expensas, cobranza, gastos, facturación y contabilidad de tu edificio en un solo sistema. Panel web para el administrador y app para el Encargado y los propietarios.',
     ctaDemo: 'Explorar demostración gratuita →',
     ctaQuote: 'Pedí tu cotización',
@@ -193,7 +193,7 @@ export const LANDING_PT: LandingContent = {
   tryDemo: 'Testar demo',
   hero: {
     eyebrow: 'Software de gestão de condomínios · Paraguai',
-    h1: 'Software para administrar condomínios e edifícios no Paraguai',
+    h1: 'Cobre as taxas e preste contas sem planilhas',
     lead: 'Taxas condominiais, cobrança, despesas, faturamento e contabilidade do seu condomínio em um só sistema. Painel web para o administrador e app para o encarregado e os proprietários.',
     ctaDemo: 'Explorar demonstração gratuita →',
     ctaQuote: 'Peça seu orçamento',
@@ -313,7 +313,7 @@ export const LANDING_EN: LandingContent = {
   tryDemo: 'Try the demo',
   hero: {
     eyebrow: 'Condominium and building management software · Paraguay',
-    h1: 'Software to manage condominiums and buildings in Paraguay',
+    h1: 'Collect fees and report to owners without spreadsheets',
     lead: 'Maintenance fees, collections, expenses, invoicing and accounting for your building in one system. A web dashboard for the administrator and an app for the on-site manager and owners.',
     ctaDemo: 'Explore the free demo →',
     ctaQuote: 'Request your quote',
