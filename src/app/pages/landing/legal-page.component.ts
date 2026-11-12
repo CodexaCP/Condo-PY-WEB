@@ -130,7 +130,7 @@ const TERMS: LegalDoc = {
     `
       :host { display: block; min-height: 100vh; background: #fff; color: #16324a; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; line-height: 1.6; }
       .top { max-width: 46rem; margin: 0 auto; padding: 1rem 1.5rem 0; }
-      .back { display: inline-flex; align-items: center; min-height: 2.75rem; color: #0f6f9a; font-weight: 700; text-decoration: none; }
+      .back { display: inline-flex; align-items: center; min-height: 44px; color: #0f6f9a; font-weight: 700; text-decoration: none; }
       .back:hover { text-decoration: underline; }
       .doc { max-width: 46rem; margin: 0 auto; padding: 0.5rem 1.5rem 4rem; }
       .draft { background: #fff7e0; border: 1px solid #e8c766; border-radius: 0.7rem; padding: 0.7rem 1rem; font-size: 0.9rem; color: #5a4300; }
