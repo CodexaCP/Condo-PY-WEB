@@ -35,6 +35,15 @@ import { LANDING_LANGS, LandingContent, landingContent } from './landing.content
         <a [routerLink]="t.path" fragment="preguntas">{{ t.nav.faq }}</a>
       </nav>
       <div class="hd-act">
+        <details class="menu-dd">
+          <summary [attr.aria-label]="t.nav.menu"><span aria-hidden="true">☰</span> <span class="menu-txt">{{ t.nav.menu }}</span></summary>
+          <div class="lang-menu">
+            <a [routerLink]="t.path" fragment="funciones">{{ t.nav.features }}</a>
+            <a [routerLink]="t.path" fragment="perfiles">{{ t.nav.profiles }}</a>
+            <a [routerLink]="t.path" fragment="planes">{{ t.nav.plans }}</a>
+            <a [routerLink]="t.path" fragment="preguntas">{{ t.nav.faq }}</a>
+          </div>
+        </details>
         <details class="lang-dd">
           <summary aria-label="Idioma / Language"><span class="globe" aria-hidden="true">🌐</span> {{ t.lang.toUpperCase() }} <span class="caret" aria-hidden="true">▾</span></summary>
           <div class="lang-menu">
@@ -196,28 +205,30 @@ import { LANDING_LANGS, LandingContent, landingContent } from './landing.content
       .hd { display: flex; align-items: center; gap: 1.5rem; padding: 0.9rem 1.5rem; max-width: 1180px; margin: 0 auto; }
       .brand { display: flex; align-items: center; gap: 0.5rem; letter-spacing: 0.08em; }
       .hd nav { display: flex; gap: 1.4rem; margin-left: 1rem; font-size: 0.92rem; font-weight: 600; color: #4a6270; }
-      .hd nav a:hover { color: #1385b6; }
+      .hd nav a:hover { color: #0f6f9a; }
       .hd-act { margin-left: auto; display: flex; gap: 0.5rem; align-items: center; }
-      .lang-dd { position: relative; }
-      .lang-dd summary { list-style: none; cursor: pointer; display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.5rem 0.75rem; border: 1.5px solid #cfe3ee; border-radius: 0.7rem; font-size: 0.82rem; font-weight: 800; letter-spacing: 0.04em; color: #4a6270; user-select: none; }
-      .lang-dd summary::-webkit-details-marker { display: none; }
-      .lang-dd summary:hover, .lang-dd[open] summary { background: #eef6fb; }
+      .lang-dd, .menu-dd { position: relative; }
+      .menu-dd { display: none; }
+      .hd-act .btn { white-space: nowrap; }
+      .lang-dd summary, .menu-dd summary { list-style: none; cursor: pointer; display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.5rem 0.75rem; border: 1.5px solid #cfe3ee; border-radius: 0.7rem; font-size: 0.82rem; font-weight: 800; letter-spacing: 0.04em; color: #4a6270; user-select: none; }
+      .lang-dd summary::-webkit-details-marker, .menu-dd summary::-webkit-details-marker { display: none; }
+      .lang-dd summary:hover, .lang-dd[open] summary, .menu-dd summary:hover, .menu-dd[open] summary { background: #eef6fb; }
       .lang-dd .caret { font-size: 0.7rem; }
       .lang-menu { position: absolute; right: 0; top: calc(100% + 0.35rem); z-index: 30; min-width: 9.5rem; display: grid; padding: 0.3rem; background: #fff; border: 1px solid #dbe6ef; border-radius: 0.7rem; box-shadow: 0 12px 28px rgba(17, 54, 74, 0.16); }
       .lang-menu a { padding: 0.5rem 0.7rem; border-radius: 0.5rem; font-size: 0.9rem; font-weight: 600; color: #16324a; }
       .lang-menu a:hover { background: #eef6fb; }
-      .lang-menu a.on { background: #1385b6; color: #fff; }
+      .lang-menu a.on { background: #0f6f9a; color: #fff; }
       .btn { display: inline-flex; align-items: center; justify-content: center; padding: 0.55rem 1.1rem; border-radius: 0.7rem; font-weight: 700; font-size: 0.9rem; border: 1.5px solid transparent; cursor: pointer; transition: background 0.15s, transform 0.15s; }
       .btn:hover { transform: translateY(-1px); }
-      .btn.solid { background: #1ab7af; color: #fff; }
-      .btn.solid:hover { background: #14a29b; }
-      .btn.ghost { color: #1385b6; border-color: #cfe3ee; }
-      .btn.line { color: #1385b6; border-color: #1385b6; background: #fff; }
+      .btn.solid { background: #0f766e; color: #fff; }
+      .btn.solid:hover { background: #0b5f59; }
+      .btn.ghost { color: #0f6f9a; border-color: #cfe3ee; }
+      .btn.line { color: #0f6f9a; border-color: #0f6f9a; background: #fff; }
       .btn.white { background: #fff; color: #11364a; }
       .btn.outw { color: #fff; border-color: #fff; }
       .btn.big { padding: 0.85rem 1.5rem; font-size: 1rem; }
       .hero { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 2.5rem; align-items: center; max-width: 1180px; margin: 0 auto; padding: 3rem 1.5rem 4rem; }
-      .eyebrow { font-size: 0.78rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: #0f8a84; }
+      .eyebrow { font-size: 0.78rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: #0b6f69; }
       h1 { font-size: clamp(2rem, 4.4vw, 3.1rem); font-weight: 800; margin: 0.7rem 0 1rem; letter-spacing: -0.02em; }
       .lead { font-size: 1.12rem; color: #4a6270; margin: 0 0 1.6rem; max-width: 36rem; }
       .cta { display: flex; gap: 0.8rem; flex-wrap: wrap; }
@@ -226,10 +237,10 @@ import { LANDING_LANGS, LandingContent, landingContent } from './landing.content
       .chips li { font-size: 0.8rem; font-weight: 600; padding: 0.3rem 0.75rem; border-radius: 999px; background: #eef6fb; color: #1b5e9e; }
       .mock { background: linear-gradient(160deg, #f4f9fd, #e9f6f5); border: 1px solid #dbe6ef; border-radius: 1.2rem; padding: 1.2rem; box-shadow: 0 24px 50px rgba(17, 54, 74, 0.12); }
       .mock-head { display: flex; justify-content: space-between; font-size: 0.85rem; margin-bottom: 0.9rem; }
-      .mock-head span { color: #5f7b88; font-size: 0.74rem; }
+      .mock-head span { color: #4a6270; font-size: 0.74rem; }
       .mock-kpis { display: grid; gap: 0.6rem; }
       .mock-kpis div { background: #fff; border-radius: 0.8rem; padding: 0.7rem 0.9rem; border: 1px solid #e3edf4; display: grid; }
-      .mock-kpis small { color: #5f7b88; font-size: 0.74rem; }
+      .mock-kpis small { color: #4a6270; font-size: 0.74rem; }
       .mock-kpis strong { font-size: 1.15rem; }
       .mock-kpis em { font-style: normal; font-size: 0.74rem; color: #1f7a45; }
       .mock-bars { display: flex; align-items: flex-end; gap: 0.5rem; height: 90px; margin-top: 1rem; }
@@ -245,32 +256,41 @@ import { LANDING_LANGS, LandingContent, landingContent } from './landing.content
       .card h3 { font-size: 1.05rem; margin-bottom: 0.4rem; }
       .card p { margin: 0; color: #4a6270; font-size: 0.93rem; }
       .card ul { margin: 0.6rem 0 0; padding-left: 1.1rem; color: #4a6270; font-size: 0.92rem; }
-      .tag { display: inline-block; font-size: 0.7rem; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: #0f8a84; margin-bottom: 0.5rem; }
+      .tag { display: inline-block; font-size: 0.7rem; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: #0b6f69; margin-bottom: 0.5rem; }
       .app-line { display: flex; justify-content: center; gap: 0.8rem; flex-wrap: wrap; margin: 2rem auto 0; }
       .steps { list-style: none; counter-reset: s; display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem; padding: 0; margin: 2rem 0 0; }
       .steps li { counter-increment: s; background: #fff; border: 1px solid #dbe6ef; border-radius: 1rem; padding: 1.3rem; display: grid; gap: 0.3rem; }
-      .steps li::before { content: counter(s); width: 2rem; height: 2rem; border-radius: 50%; background: #1ab7af; color: #fff; font-weight: 800; display: grid; place-items: center; }
+      .steps li::before { content: counter(s); width: 2rem; height: 2rem; border-radius: 50%; background: #0f766e; color: #fff; font-weight: 800; display: grid; place-items: center; }
       .steps span { color: #4a6270; font-size: 0.93rem; }
       .faq { max-width: 52rem; margin: 2rem auto 0; }
-      details { border-bottom: 1px solid #dbe6ef; }
-      summary { cursor: pointer; padding: 1rem 2rem 1rem 0; font-weight: 700; list-style: none; position: relative; }
-      summary::-webkit-details-marker { display: none; }
-      summary::after { content: '+'; position: absolute; right: 0.3rem; top: 50%; transform: translateY(-50%); font-size: 1.4rem; font-weight: 400; color: #1385b6; }
-      details[open] summary::after { content: '–'; }
-      details p { margin: 0 0 1rem; color: #4a6270; }
+      .faq details { border-bottom: 1px solid #dbe6ef; }
+      .faq summary { cursor: pointer; padding: 1rem 2rem 1rem 0; font-weight: 700; list-style: none; position: relative; }
+      .faq summary::-webkit-details-marker { display: none; }
+      .faq summary::after { content: '+'; position: absolute; right: 0.3rem; top: 50%; transform: translateY(-50%); font-size: 1.4rem; font-weight: 400; color: #0f6f9a; }
+      .faq details[open] summary::after { content: '–'; }
+      .faq details p { margin: 0 0 1rem; color: #4a6270; }
       .reach-card { max-width: 34rem; margin: 0 auto; padding: 1.6rem; background: #fff; border: 1px solid #dbe6ef; border-radius: 1.2rem; box-shadow: 0 24px 50px rgba(17, 54, 74, 0.1); min-height: 8rem; }
-      .final { text-align: center; padding: 4rem 1.5rem; background: linear-gradient(160deg, #11364a, #1385b6 65%, #1ab7af); color: #fff; }
+      .final { text-align: center; padding: 4rem 1.5rem; background: linear-gradient(160deg, #11364a, #0f6f9a 65%, #0f766e); color: #fff; }
       .final h2 { color: #fff; font-size: clamp(1.5rem, 3vw, 2.1rem); }
       .final p { max-width: 38rem; margin: 0.8rem auto 1.6rem; color: #e6f4f6; }
       .ft { display: grid; grid-template-columns: 1fr auto; gap: 1.5rem; max-width: 1180px; margin: 0 auto; padding: 2.5rem 1.5rem; font-size: 0.9rem; }
-      .ft p { margin: 0.3rem 0 0; color: #5f7b88; }
-      .ft nav { display: flex; flex-direction: column; gap: 0.4rem; font-weight: 600; color: #1385b6; }
-      .ft small { grid-column: 1 / -1; color: #7a8fa0; }
+      .ft p { margin: 0.3rem 0 0; color: #4a6270; }
+      .ft nav { display: flex; flex-direction: column; gap: 0.4rem; font-weight: 600; color: #0f6f9a; }
+      .ft small { grid-column: 1 / -1; color: #587383; }
       @media (max-width: 860px) {
         .hero { grid-template-columns: 1fr; padding-top: 1.5rem; }
         .hd nav { display: none; }
+        .menu-dd { display: block; }
         .hd-act .ghost { display: none; }
         .ft { grid-template-columns: 1fr; }
+      }
+      @media (max-width: 480px) {
+        .hd { gap: 0.6rem; padding: 0.7rem 1rem; }
+        .hd-act { gap: 0.4rem; }
+        .hd-act .btn { padding: 0.5rem 0.75rem; font-size: 0.85rem; }
+        .lang-dd .globe, .menu-dd .menu-txt { display: none; }
+        .brand { letter-spacing: 0.04em; }
+        .brand b { font-size: 0.9rem; }
       }
     `
   ]
@@ -293,8 +313,10 @@ export class HomeComponent {
 
   // El desplegable de idioma se cierra al tocar fuera de él.
   closeLangMenu(event: Event): void {
-    const menu = (this.host.nativeElement as HTMLElement).querySelector('details.lang-dd');
-    if (menu && !menu.contains(event.target as Node)) menu.removeAttribute('open');
+    const menus = (this.host.nativeElement as HTMLElement).querySelectorAll('details.lang-dd, details.menu-dd');
+    menus.forEach((menu) => {
+      if (!menu.contains(event.target as Node)) menu.removeAttribute('open');
+    });
   }
 
   // Quien elige un idioma con el selector lo conserva en el resto del sitio (login, demostración).
@@ -305,6 +327,8 @@ export class HomeComponent {
   // Mide los clics que importan para ventas: WhatsApp (contacto) y entrada a la demostración.
   trackClick(event: Event): void {
     const link = (event.target as HTMLElement | null)?.closest?.('a');
+    // Al elegir una sección en el menú del celular, el menú se cierra.
+    link?.closest('details.menu-dd')?.removeAttribute('open');
     const href = link?.getAttribute('href') ?? '';
     if (href.includes('wa.me')) trackWhatsAppClick({ placement: 'landing', language: this.t.lang });
     else if (href.startsWith('/explorar')) gaEvent('demo_click', { language: this.t.lang });
