@@ -244,14 +244,14 @@ import { LANDING_LANGS, LandingContent, landingContent } from './landing.content
       .btn.big { padding: 0.85rem 1.5rem; font-size: 1rem; }
       .hero-bg { background: radial-gradient(70% 90% at 85% 0%, #dff3f1 0%, rgba(223, 243, 241, 0) 70%), radial-gradient(60% 80% at 0% 100%, #e4f0fa 0%, rgba(228, 240, 250, 0) 70%), #fff; }
       .hero { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 2.5rem; align-items: center; max-width: 1180px; margin: 0 auto; padding: 4.5rem 1.5rem 5rem; }
-      .eyebrow { display: inline-block; padding: 0.3rem 0.75rem; border-radius: 999px; background: #e1f3f1; font-size: 0.74rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: #0b6f69; }
+      .eyebrow { display: inline-block; font-size: 0.9rem; font-weight: 700; color: #0b6f69; }
       h1 { font-size: clamp(2.2rem, 4.8vw, 3.6rem); font-weight: 800; margin: 0.7rem 0 1rem; letter-spacing: -0.02em; }
       .lead { font-size: 1.12rem; color: #4a6270; margin: 0 0 1.6rem; max-width: 36rem; }
       .cta { display: flex; gap: 0.8rem; flex-wrap: wrap; }
       .cta.center { justify-content: center; }
       .chips { list-style: none; display: flex; flex-wrap: wrap; gap: 0.5rem; padding: 0; margin: 1.4rem 0 0; }
       .chips li { font-size: 0.8rem; font-weight: 600; padding: 0.3rem 0.75rem; border-radius: 999px; background: #eef6fb; color: #1b5e9e; }
-      .mock { transform: perspective(1400px) rotateY(-4deg) rotateX(1deg); background: linear-gradient(160deg, #f4f9fd, #e9f6f5); border: 1px solid #dbe6ef; border-radius: 1.2rem; padding: 1.2rem; box-shadow: 0 24px 50px rgba(17, 54, 74, 0.12); }
+      .mock { background: linear-gradient(160deg, #f4f9fd, #e9f6f5); border: 1px solid #dbe6ef; border-radius: 1.2rem; padding: 1.2rem; box-shadow: 0 24px 50px rgba(17, 54, 74, 0.12); }
       .mock-head { display: flex; justify-content: space-between; font-size: 0.85rem; margin-bottom: 0.9rem; }
       .mock-head span { color: #4a6270; font-size: 0.74rem; }
       .mock-kpis { display: grid; gap: 0.6rem; }
@@ -270,13 +270,11 @@ import { LANDING_LANGS, LandingContent, landingContent } from './landing.content
       .grid3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1rem; }
       .grid4 { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 1rem; }
       .card { position: relative; background: #fff; border: 1px solid #dbe6ef; border-radius: 1rem; padding: 1.5rem; box-shadow: 0 1px 2px rgba(17, 54, 74, 0.04); transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s; }
-      .card::before { content: ''; position: absolute; left: 1.5rem; top: 0; width: 2.4rem; height: 3px; border-radius: 0 0 3px 3px; background: linear-gradient(90deg, #1ab7af, #5cc36a); }
-      .card:hover { transform: translateY(-3px); border-color: #b7d6e6; box-shadow: 0 16px 32px rgba(17, 54, 74, 0.1); }
       .alt .card { border-color: #e1ebf2; }
       .card h3 { font-size: 1.05rem; margin-bottom: 0.4rem; }
       .card p { margin: 0; color: #4a6270; font-size: 0.93rem; }
       .card ul { margin: 0.6rem 0 0; padding-left: 1.1rem; color: #4a6270; font-size: 0.92rem; }
-      .tag { display: inline-block; font-size: 0.7rem; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: #0b6f69; margin-bottom: 0.5rem; }
+      .tag { display: inline-block; font-size: 0.82rem; font-weight: 700; color: #0b6f69; margin-bottom: 0.5rem; }
       .app-line { display: flex; justify-content: center; gap: 0.8rem; flex-wrap: wrap; margin: 2rem auto 0; }
       .steps { list-style: none; counter-reset: s; display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem; padding: 0; margin: 2rem 0 0; }
       .steps li { counter-increment: s; background: #fff; border: 1px solid #dbe6ef; border-radius: 1rem; padding: 1.5rem; display: grid; gap: 0.3rem; }

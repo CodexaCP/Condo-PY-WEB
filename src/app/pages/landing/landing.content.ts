@@ -75,7 +75,7 @@ export const LANDING_ES: LandingContent = {
     eyebrow: 'Software de administración de edificios y condominios',
     h1: 'Cobra expensas y rinde cuentas sin planillas',
     lead: 'Expensas, cobranza, gastos, facturación y contabilidad de tu edificio en un solo sistema. Panel web para el administrador y app para el Encargado y los propietarios.',
-    ctaDemo: 'Explorar demostración gratuita →',
+    ctaDemo: 'Explorar demostración gratuita',
     ctaQuote: 'Pedí tu cotización',
     chips: ['Clientes nuevos: 2 meses gratis', 'Todo en guaraníes', 'IVA y timbrado', 'Propiedad horizontal', 'La demo no pide registro']
   },
@@ -162,7 +162,7 @@ export const LANDING_ES: LandingContent = {
   final: {
     h2: '¿Listo para administrar tu edificio con claridad?',
     text: 'Prueba la demostración gratuita sin registrarte o escríbenos: si eres cliente nuevo, tus primeros 2 meses son gratis. Te contamos cómo implementar Expenses en tu edificio o en tu cartera de condominios.',
-    ctaDemo: 'Explorar demostración gratuita →',
+    ctaDemo: 'Explorar demostración gratuita',
     ctaWhatsapp: 'Hablar por WhatsApp'
   },
   footer: {
@@ -198,7 +198,7 @@ export const LANDING_PT: LandingContent = {
     eyebrow: 'Software de gestão de condomínios · Paraguai',
     h1: 'Cobre as taxas e preste contas sem planilhas',
     lead: 'Taxas condominiais, cobrança, despesas, faturamento e contabilidade do seu condomínio em um só sistema. Painel web para o administrador e app para o encarregado e os proprietários.',
-    ctaDemo: 'Explorar demonstração gratuita →',
+    ctaDemo: 'Explorar demonstração gratuita',
     ctaQuote: 'Peça seu orçamento',
     chips: ['Clientes novos: 2 meses grátis', 'Tudo em guaranis', 'IVA e timbrado', 'Propriedade horizontal', 'Demo sem cadastro']
   },
@@ -285,7 +285,7 @@ export const LANDING_PT: LandingContent = {
   final: {
     h2: 'Pronto para administrar seu condomínio com clareza?',
     text: 'Teste a demonstração gratuita sem cadastro ou escreva para nós: se você é cliente novo, os 2 primeiros meses são grátis. Contamos como implementar a Expenses no seu condomínio ou na sua carteira de condomínios.',
-    ctaDemo: 'Explorar demonstração gratuita →',
+    ctaDemo: 'Explorar demonstração gratuita',
     ctaWhatsapp: 'Falar pelo WhatsApp'
   },
   footer: {
@@ -321,7 +321,7 @@ export const LANDING_EN: LandingContent = {
     eyebrow: 'Condominium and building management software · Paraguay',
     h1: 'Collect fees and report to owners without spreadsheets',
     lead: 'Maintenance fees, collections, expenses, invoicing and accounting for your building in one system. A web dashboard for the administrator and an app for the on-site manager and owners.',
-    ctaDemo: 'Explore the free demo →',
+    ctaDemo: 'Explore the free demo',
     ctaQuote: 'Request your quote',
     chips: ['New customers: 2 months free', 'Everything in Guaraníes', 'VAT and timbrado', 'Horizontal property', 'The demo needs no sign-up']
   },
@@ -408,7 +408,7 @@ export const LANDING_EN: LandingContent = {
   final: {
     h2: 'Ready to manage your building with clarity?',
     text: 'Try the free demo with no sign-up or write to us: if you are a new customer, your first 2 months are free. We will tell you how to implement Expenses in your building or in your portfolio of condominiums.',
-    ctaDemo: 'Explore the free demo →',
+    ctaDemo: 'Explore the free demo',
     ctaWhatsapp: 'Talk on WhatsApp'
   },
   footer: {
