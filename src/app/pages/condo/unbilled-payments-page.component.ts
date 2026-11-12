@@ -6,7 +6,6 @@ import { Subject } from 'rxjs';
 import { debounceTime, distinctUntilChanged } from 'rxjs/operators';
 import { Button } from 'primeng/button';
 import { Card } from 'primeng/card';
-import * as XLSX from 'xlsx';
 import { extractApiErrorMessage } from '../../api/api-error.util';
 import { BuildingsApiService } from '../../api/buildings-api.service';
 import { InvoicesApiService } from '../../api/invoices-api.service';
@@ -225,7 +224,8 @@ export class UnbilledPaymentsPageComponent implements OnInit {
     this.invoicesApi.getFunnel(this.buildFilters(), 1, 5000)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: data => {
+        next: async data => {
+          const XLSX = await import('xlsx');
           const rows = data.paymentsWithoutInvoiceItems.map(r => ({
             'Edificio': r.buildingName,
             'Unidad': r.unitCode,

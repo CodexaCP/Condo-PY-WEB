@@ -1,4 +1,3 @@
-import * as XLSX from 'xlsx';
 import { CommonModule } from '@angular/common';
 import { ChangeDetectorRef, Component, DestroyRef, inject, OnInit } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -409,7 +408,8 @@ export class MorosityPageComponent implements OnInit {
       page: 1,
       pageSize: 5000
     }).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-      next: (full) => {
+      next: async (full) => {
+        const XLSX = await import('xlsx');
         const rows = full.items.map(item => ({
           'Unidad':            item.unitCode,
           'Edificio':          item.buildingName,

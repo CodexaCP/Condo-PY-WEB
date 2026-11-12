@@ -1,13 +1,21 @@
-import * as pdfjsLib from 'pdfjs-dist';
+// pdf.js pesa ~400 kB: se carga bajo demanda, solo cuando el usuario sube un PDF.
+let pdfjsPromise: Promise<typeof import('pdfjs-dist')> | null = null;
 
-// El worker de pdf.js se copia a la raiz del build (ver angular.json -> assets) porque el builder de
-// Angular (esbuild) no soporta el patron `new URL(..., import.meta.url)` para resolver paquetes de npm.
-pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
+function loadPdfjs(): Promise<typeof import('pdfjs-dist')> {
+  pdfjsPromise ??= import('pdfjs-dist').then((lib) => {
+    // El worker de pdf.js se copia a la raiz del build (ver angular.json -> assets) porque el builder de
+    // Angular (esbuild) no soporta el patron `new URL(..., import.meta.url)` para resolver paquetes de npm.
+    lib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
+    return lib;
+  });
+  return pdfjsPromise;
+}
 
 // El backend solo puede incrustar como fondo del PDF de prueba archivos de imagen (jpg/png/webp/gif),
 // no un PDF dentro de otro PDF. Si la plantilla que sube el usuario es un PDF (comun cuando lo manda
 // la imprenta asi), se convierte la primera pagina a PNG en el navegador antes de subirla.
 export async function pdfFirstPageToPngFile(file: File, targetDpi = 150): Promise<File> {
+  const pdfjsLib = await loadPdfjs();
   const buffer = await file.arrayBuffer();
   const pdf = await pdfjsLib.getDocument({ data: buffer }).promise;
   try {

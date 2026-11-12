@@ -91,7 +91,7 @@ const MAX_FILE_BYTES = 10 * 1024 * 1024;
             <a *ngIf="n.documentUrl" [href]="fileUrl(n.documentUrl)" target="_blank" rel="noopener" class="doc-link">
               <i class="pi" [ngClass]="isPdf(n.documentUrl) ? 'pi-file-pdf' : 'pi-paperclip'"></i> Ver documento del proveedor
             </a>
-            <div class="alloc" *ngIf="n.allocations?.length">
+            <div class="alloc" *ngIf="n.allocations.length">
               <span class="alloc-title">Acreditado como saldo a favor:</span>
               <span class="alloc-row" *ngFor="let a of n.allocations"><span>Unidad {{ a.unitCode }} · {{ a.ownerName }}</span><strong>{{ gs(a.amount) }}</strong></span>
             </div>
