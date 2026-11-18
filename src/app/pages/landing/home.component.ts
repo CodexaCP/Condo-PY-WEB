@@ -74,7 +74,7 @@ import { LANDING_LANGS, LandingContent, landingContent } from './landing.content
           </div>
           <p class="note"><span class="tick" aria-hidden="true">✓</span> {{ t.hero.note }}</p>
         </div>
-        <img class="hero-img" src="/brand/hero-mockup.png" alt="" width="559" height="356" fetchpriority="high" />
+        <img class="hero-img" src="/brand/hero-mockup.webp" alt="" width="1096" height="678" fetchpriority="high" />
       </section></div>
 
       <section class="benefits">
@@ -253,7 +253,7 @@ import { LANDING_LANGS, LandingContent, landingContent } from './landing.content
       .watch .play { display: grid; place-items: center; width: 2rem; height: 2rem; border: 2px solid #fff; border-radius: 50%; font-size: 0.7rem; padding-left: 2px; }
       .note { display: flex; align-items: center; gap: 0.5rem; margin: 1.1rem 0 0; color: #fff; font-size: 0.95rem; }
       .tick { display: grid; place-items: center; width: 1.3rem; height: 1.3rem; border-radius: 50%; background: #fff; color: #22a447; font-size: 0.8rem; font-weight: 800; }
-      .hero-img { width: 100%; height: auto; display: block; border-radius: 1rem; filter: drop-shadow(0 24px 40px rgba(0, 0, 0, 0.35)); }
+      .hero-img { width: 100%; height: auto; display: block; filter: drop-shadow(0 24px 36px rgba(0, 0, 0, 0.4)); }
       h1 { font-size: clamp(2.2rem, 4.8vw, 3.6rem); font-weight: 800; margin: 0.7rem 0 1rem; letter-spacing: -0.02em; }
       .lead { font-size: 1.12rem; color: #fff; margin: 0 0 1.6rem; max-width: 36rem; }
       .cta { display: flex; gap: 0.8rem; flex-wrap: wrap; }
