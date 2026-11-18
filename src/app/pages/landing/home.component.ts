@@ -61,36 +61,26 @@ import { LANDING_LANGS, LandingContent, landingContent } from './landing.content
     <main id="contenido" tabindex="-1">
       <div class="hero-bg"><section class="hero">
         <div class="hero-txt">
-          <span class="eyebrow">{{ t.hero.eyebrow }}</span>
+          <p class="badge"><span>{{ t.hero.badge1 }}</span><strong>{{ t.hero.badge2 }}</strong></p>
           <h1>{{ t.hero.h1 }}</h1>
           <p class="lead">{{ t.hero.lead }}</p>
           <div class="cta">
-            <a routerLink="/explorar" class="btn solid big">{{ t.hero.ctaDemo }}</a>
             @if (whatsapp) {
-              <a [href]="whatsapp" class="btn line big" target="_blank" rel="noopener noreferrer">{{ t.hero.ctaQuote }}</a>
+              <a [href]="whatsapp" class="btn solid big" target="_blank" rel="noopener noreferrer"><span aria-hidden="true">→</span> {{ t.hero.ctaActivate }}</a>
+            } @else {
+              <a routerLink="/explorar" class="btn solid big"><span aria-hidden="true">→</span> {{ t.hero.ctaActivate }}</a>
             }
+            <a routerLink="/explorar" class="watch"><span class="play" aria-hidden="true">▶</span> {{ t.hero.ctaWatch }}</a>
           </div>
-          <ul class="chips">
-            @for (c of t.hero.chips; track c) { <li>{{ c }}</li> }
-          </ul>
+          <p class="note"><span class="tick" aria-hidden="true">✓</span> {{ t.hero.note }}</p>
         </div>
-        <div class="mock" aria-hidden="true">
-          <div class="mock-head"><b>{{ t.mock.head }}</b><span>{{ t.mock.sample }}</span></div>
-          <div class="mock-kpis">
-            @for (k of t.mock.kpis; track k.label) {
-              <div><small>{{ k.label }}</small><strong>{{ k.value }}</strong><em>{{ k.note }}</em></div>
-            }
-          </div>
-          <div class="mock-bars"><i style="height: 62%"></i><i style="height: 78%"></i><i style="height: 70%"></i><i style="height: 92%"></i><i style="height: 84%"></i><i style="height: 96%"></i></div>
-        </div>
+        <img class="hero-img" src="/brand/hero-mockup.png" alt="" width="559" height="356" fetchpriority="high" />
       </section></div>
 
-      <section class="sec alt">
-        <h2>{{ t.why.h2 }}</h2>
-        <p class="sub">{{ t.why.sub }}</p>
-        <div class="grid3">
+      <section class="benefits">
+        <div class="benefits-in">
           @for (c of t.why.cards; track c.title) {
-            <article class="card"><h3>{{ c.title }}</h3><p>{{ c.text }}</p></article>
+            <div class="benefit"><span class="ico" aria-hidden="true">✓</span><span>{{ c.title }}</span></div>
           }
         </div>
       </section>
@@ -99,8 +89,8 @@ import { LANDING_LANGS, LandingContent, landingContent } from './landing.content
         <h2>{{ t.featuresSec.h2 }}</h2>
         <p class="sub">{{ t.featuresSec.sub }}</p>
         <div class="grid4">
-          @for (f of t.featuresSec.items; track f.title) {
-            <article class="card feat"><h3>{{ f.title }}</h3><p>{{ f.text }}</p></article>
+          @for (f of t.featuresSec.items; track f.title; let i = $index) {
+            <article class="card feat"><span class="ico" aria-hidden="true">{{ i + 1 }}</span><h3>{{ f.title }}</h3><p>{{ f.text }}</p></article>
           }
         </div>
         <p class="app-line"><a routerLink="/explorar" class="btn solid big">{{ t.hero.ctaDemo }}</a></p>
@@ -216,9 +206,9 @@ import { LANDING_LANGS, LandingContent, landingContent } from './landing.content
       .lang-bar { display: flex; justify-content: center; align-items: center; gap: 0.8rem; padding: 0.45rem 1rem; background: #11364a; color: #fff; font-size: 0.85rem; font-weight: 600; }
       .lang-bar button { background: none; border: 0; color: #cfe3ee; font-size: 1.1rem; cursor: pointer; line-height: 1; }
       .hd { display: flex; align-items: center; gap: 1.5rem; padding: 0.9rem 1.5rem; max-width: 1180px; margin: 0 auto; }
-      .hd-wrap { position: sticky; top: 0; z-index: 40; background: rgba(255, 255, 255, 0.9); backdrop-filter: saturate(1.4) blur(10px); border-bottom: 1px solid #e3edf4; }
+      .hd-wrap { position: sticky; top: 0; z-index: 40; background: #fff; border-bottom: 1px solid #e3edf4; }
       .brand { display: flex; align-items: center; gap: 0.5rem; letter-spacing: 0.08em; min-height: 44px; }
-      .hd nav { display: flex; gap: 1.4rem; margin-left: 1rem; font-size: 0.92rem; font-weight: 600; color: #4a6270; }
+      .hd nav { display: flex; gap: 1.4rem; margin-left: 1rem; font-size: 0.92rem; font-weight: 600; color: #11364a; }
       .hd nav a { display: inline-flex; align-items: center; min-height: 44px; }
       .hd nav a:hover { color: #0f6f9a; }
       .hd-act { margin-left: auto; display: flex; gap: 0.5rem; align-items: center; }
@@ -238,8 +228,8 @@ import { LANDING_LANGS, LandingContent, landingContent } from './landing.content
       .btn, summary { touch-action: manipulation; }
       a:focus-visible, summary:focus-visible, button:focus-visible { outline: 3px solid #0f6f9a; outline-offset: 2px; border-radius: 0.4rem; }
       .btn.solid:focus-visible, .final a:focus-visible { outline-color: #f59e0b; }
-      .btn.solid { background: #0f766e; color: #fff; box-shadow: 0 6px 16px rgba(15, 118, 110, 0.28); }
-      .btn.solid:hover { background: #0b5f59; }
+      .btn.solid { background: #22a447; color: #fff; box-shadow: 0 6px 16px rgba(34, 164, 71, 0.3); border-radius: 999px; }
+      .btn.solid:hover { background: #1b8a3a; }
       .btn.ghost { color: #0f6f9a; border-color: #cfe3ee; }
       .btn.ghost:hover { background: #eef6fb; }
       .btn.line { color: #0f6f9a; border-color: #0f6f9a; background: #fff; }
@@ -249,25 +239,30 @@ import { LANDING_LANGS, LandingContent, landingContent } from './landing.content
       .btn.outw { color: #fff; border-color: #fff; }
       .btn.outw:hover { background: rgba(255, 255, 255, 0.14); }
       .btn.big { padding: 0.85rem 1.5rem; font-size: 1rem; }
-      .hero-bg { background: radial-gradient(70% 90% at 85% 0%, #dff3f1 0%, rgba(223, 243, 241, 0) 70%), radial-gradient(60% 80% at 0% 100%, #e4f0fa 0%, rgba(228, 240, 250, 0) 70%), #fff; }
+      .hero-bg { background: linear-gradient(100deg, rgba(11, 42, 91, 0.92) 0%, rgba(14, 63, 134, 0.72) 50%, rgba(14, 63, 134, 0.15) 100%), url('/brand/hero-edificio.webp') center right / cover no-repeat; }
+      .hero-txt { display: flex; flex-direction: column; align-items: flex-start; }
+      .hero-txt h1, .hero-txt .lead { color: #fff; }
       .hero { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 2.5rem; align-items: center; max-width: 1180px; margin: 0 auto; padding: 4.5rem 1.5rem 5rem; }
-      .eyebrow { display: inline-block; font-size: 0.9rem; font-weight: 700; color: #0b6f69; }
+      .badge { margin: 0 0 1.4rem; padding: 0.7rem 1.4rem 0.9rem; background: #22a447; color: #fff; border-radius: 1rem; text-align: center; line-height: 1; box-shadow: 0 10px 26px rgba(0, 0, 0, 0.3); text-transform: uppercase; font-weight: 800; }
+      .badge span { display: block; font-size: clamp(1.4rem, 3.4vw, 2.2rem); color: #0b2a5b; letter-spacing: 0.01em; }
+      .badge strong { display: block; margin-top: 0.15rem; font-size: clamp(2.6rem, 6.6vw, 4.4rem); letter-spacing: -0.02em; }
+      .hero-txt h1 { font-size: clamp(1.9rem, 3.6vw, 2.7rem); margin: 0 0 1rem; }
+      .hero-txt .lead { font-size: 1.15rem; color: #fff; }
+      .hero .btn.big { gap: 0.6rem; padding: 0.95rem 1.8rem; font-size: 1.05rem; }
+      .watch { display: inline-flex; align-items: center; gap: 0.6rem; min-height: 44px; color: #fff; font-weight: 700; text-decoration: underline; text-underline-offset: 4px; }
+      .watch .play { display: grid; place-items: center; width: 2rem; height: 2rem; border: 2px solid #fff; border-radius: 50%; font-size: 0.7rem; padding-left: 2px; }
+      .note { display: flex; align-items: center; gap: 0.5rem; margin: 1.1rem 0 0; color: #fff; font-size: 0.95rem; }
+      .tick { display: grid; place-items: center; width: 1.3rem; height: 1.3rem; border-radius: 50%; background: #fff; color: #22a447; font-size: 0.8rem; font-weight: 800; }
+      .hero-img { width: 100%; height: auto; display: block; border-radius: 1rem; filter: drop-shadow(0 24px 40px rgba(0, 0, 0, 0.35)); }
       h1 { font-size: clamp(2.2rem, 4.8vw, 3.6rem); font-weight: 800; margin: 0.7rem 0 1rem; letter-spacing: -0.02em; }
-      .lead { font-size: 1.12rem; color: #4a6270; margin: 0 0 1.6rem; max-width: 36rem; }
+      .lead { font-size: 1.12rem; color: #fff; margin: 0 0 1.6rem; max-width: 36rem; }
       .cta { display: flex; gap: 0.8rem; flex-wrap: wrap; }
       .cta.center { justify-content: center; }
-      .chips { list-style: none; display: flex; flex-wrap: wrap; gap: 0.5rem; padding: 0; margin: 1.4rem 0 0; }
-      .chips li { font-size: 0.8rem; font-weight: 600; padding: 0.3rem 0.75rem; border-radius: 999px; background: #eef6fb; color: #1b5e9e; }
-      .mock { background: linear-gradient(160deg, #f4f9fd, #e9f6f5); border: 1px solid #dbe6ef; border-radius: 1.2rem; padding: 1.2rem; box-shadow: 0 24px 50px rgba(17, 54, 74, 0.12); }
-      .mock-head { display: flex; justify-content: space-between; font-size: 0.85rem; margin-bottom: 0.9rem; }
-      .mock-head span { color: #4a6270; font-size: 0.74rem; }
-      .mock-kpis { display: grid; gap: 0.6rem; }
-      .mock-kpis div { background: #fff; border-radius: 0.8rem; padding: 0.7rem 0.9rem; border: 1px solid #e3edf4; display: grid; }
-      .mock-kpis small { color: #4a6270; font-size: 0.74rem; }
-      .mock-kpis strong { font-size: 1.15rem; font-variant-numeric: tabular-nums; }
-      .mock-kpis em { font-style: normal; font-size: 0.74rem; color: #1f7a45; }
-      .mock-bars { display: flex; align-items: flex-end; gap: 0.5rem; height: 90px; margin-top: 1rem; }
-      .mock-bars i { flex: 1; background: linear-gradient(180deg, #1ab7af, #5cc36a); border-radius: 6px 6px 0 0; }
+      .benefits { background: #f1f6fb; color: #11364a; font-weight: 700; }
+      .benefits-in { display: grid; grid-template-columns: repeat(3, 1fr); max-width: 1180px; margin: 0 auto; }
+      .benefit { display: flex; align-items: center; gap: 0.9rem; padding: 1.3rem 1.5rem; }
+      .benefit + .benefit { border-left: 1px solid #d7e3ee; }
+      .benefits .ico { flex: none; width: 40px; height: 40px; border-radius: 50%; background: #1a5fb4; color: #fff; display: grid; place-items: center; }
       .sec { padding: 5rem 1.5rem; max-width: 1180px; margin: 0 auto; }
       .sec.alt { max-width: none; background: #f4f9fc; }
       .sec.alt > * { max-width: 1180px; margin-left: auto; margin-right: auto; }
@@ -278,14 +273,17 @@ import { LANDING_LANGS, LandingContent, landingContent } from './landing.content
       .grid4 { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 1rem; }
       .card { position: relative; background: #fff; border: 1px solid #dbe6ef; border-radius: 1rem; padding: 1.5rem; box-shadow: 0 1px 2px rgba(17, 54, 74, 0.04); transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s; }
       .alt .card { border-color: #e1ebf2; }
+      .feat { text-align: center; border-color: #dbe6ef; border-radius: 0.9rem; }
+      .feat h3 { text-align: center; }
+      .feat .ico { width: 40px; height: 40px; margin: 0 auto 0.7rem; border-radius: 50%; background: #1a5fb4; color: #fff; font-weight: 800; display: grid; place-items: center; }
       .card h3 { font-size: 1.05rem; margin-bottom: 0.4rem; }
       .card p { margin: 0; color: #4a6270; font-size: 0.93rem; }
       .card ul { margin: 0.6rem 0 0; padding-left: 1.1rem; color: #4a6270; font-size: 0.92rem; }
       .tag { display: inline-block; font-size: 0.82rem; font-weight: 700; color: #0b6f69; margin-bottom: 0.5rem; }
       .app-line { display: flex; justify-content: center; gap: 0.8rem; flex-wrap: wrap; margin: 2rem auto 0; }
       .steps { list-style: none; counter-reset: s; display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem; padding: 0; margin: 2rem 0 0; }
-      .steps li { counter-increment: s; background: #fff; border: 1px solid #dbe6ef; border-radius: 1rem; padding: 1.5rem; display: grid; gap: 0.3rem; }
-      .steps li::before { content: counter(s); width: 2.4rem; height: 2.4rem; margin-bottom: 0.4rem; border-radius: 50%; background: linear-gradient(135deg, #0f766e, #1ab7af); box-shadow: 0 6px 14px rgba(15, 118, 110, 0.25); color: #fff; font-weight: 800; display: grid; place-items: center; }
+      .steps li { counter-increment: s; background: transparent; border: 0; border-radius: 1rem; padding: 1.5rem; display: grid; gap: 0.3rem; text-align: center; justify-items: center; }
+      .steps li::before { content: counter(s); width: 2.4rem; height: 2.4rem; margin-bottom: 0.4rem; border-radius: 50%; background: #22a447; box-shadow: 0 6px 14px rgba(34, 164, 71, 0.25); color: #fff; font-weight: 800; display: grid; place-items: center; }
       .steps span { color: #4a6270; font-size: 0.93rem; }
       .faq { max-width: 52rem; margin: 2rem auto 0; }
       .faq details { border-bottom: 1px solid #dbe6ef; }
@@ -295,20 +293,24 @@ import { LANDING_LANGS, LandingContent, landingContent } from './landing.content
       .faq details[open] summary::after { content: '–'; }
       .faq details p { margin: 0 0 1rem; color: #4a6270; }
       .reach-card { max-width: 34rem; margin: 0 auto; padding: 1.6rem; background: #fff; border: 1px solid #dbe6ef; border-radius: 1.2rem; box-shadow: 0 24px 50px rgba(17, 54, 74, 0.1); min-height: 680px; }
-      .final { position: relative; overflow: hidden; text-align: center; padding: 5rem 1.5rem; background: linear-gradient(160deg, #11364a, #0f6f9a 65%, #0f766e); color: #fff; }
-      .final::after { content: ''; position: absolute; right: -8rem; top: -8rem; width: 26rem; height: 26rem; border-radius: 50%; background: radial-gradient(circle, rgba(92, 195, 106, 0.28), rgba(92, 195, 106, 0) 70%); pointer-events: none; }
+      .final { position: relative; overflow: hidden; text-align: center; padding: 5rem 1.5rem; max-width: 1180px; margin: 2rem auto; border-radius: 1.2rem; background: linear-gradient(100deg, #0b2a5b, #0e3f86); color: #fff; }
+      .final .btn.white { background: #22a447; color: #fff; }
+      .final .btn.white:hover { background: #1b8a3a; }
+      .final::after { display: none; content: ''; position: absolute; right: -8rem; top: -8rem; width: 26rem; height: 26rem; border-radius: 50%; background: radial-gradient(circle, rgba(92, 195, 106, 0.28), rgba(92, 195, 106, 0) 70%); pointer-events: none; }
       .final > * { position: relative; z-index: 1; }
       .final h2 { color: #fff; font-size: clamp(1.5rem, 3vw, 2.1rem); }
       .final p { max-width: 38rem; margin: 0.8rem auto 1.6rem; color: #e6f4f6; }
-      .ft { display: grid; gap: 0.4rem; max-width: 1180px; margin: 0 auto; padding: 1.5rem 1.5rem 1.2rem; font-size: 0.9rem; border-top: 1px solid #dbe6ef; }
-      .ft p { margin: 0.2rem 0 0; color: #4a6270; }
-      .ft nav { display: flex; flex-wrap: wrap; column-gap: 1.4rem; font-weight: 600; color: #0f6f9a; }
-      .ft nav a { display: flex; align-items: center; min-height: 44px; }
-      .ft small { color: #587383; }
+      .ft { display: grid; gap: 0.4rem; max-width: none; margin: 0; padding: 2rem max(1.5rem, calc((100vw - 1180px) / 2)); font-size: 0.9rem; border-top: 0; background: #0b2a5b; color: #fff; }
+      .ft p { margin: 0.2rem 0 0; color: #bcd0e6; }
+      .ft nav { display: flex; flex-wrap: wrap; column-gap: 1.4rem; font-weight: 600; color: #fff; }
+      .ft nav a { display: flex; align-items: center; min-height: 44px; color: #fff; }
+      .ft small { color: #bcd0e6; }
       .wa-bar { display: none; }
       @media (prefers-reduced-motion: reduce) { .card, .btn { transition: none; } .card:hover, .btn:hover { transform: none; } }
       @media (max-width: 860px) {
-        .mock { transform: none; }
+        .benefits-in { grid-template-columns: 1fr; }
+        .benefit + .benefit { border-left: 0; }
+        .final { margin: 1.5rem 1rem; }
         .hero { padding: 2rem 1.5rem 3rem; }
         .sec { padding: 3.5rem 1.5rem; }
         :host { padding-bottom: 4.6rem; }

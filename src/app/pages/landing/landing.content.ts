@@ -42,7 +42,7 @@ export interface LandingContent {
   langAria: string;
   login: string;
   tryDemo: string;
-  hero: { eyebrow: string; h1: string; lead: string; ctaDemo: string; ctaQuote: string; chips: string[] };
+  hero: { eyebrow: string; h1: string; lead: string; ctaDemo: string; ctaQuote: string; badge1: string; badge2: string; ctaActivate: string; ctaWatch: string; note: string };
   mock: { head: string; sample: string; kpis: { label: string; value: string; note: string }[] };
   why: { h2: string; sub: string; cards: TitledText[] };
   featuresSec: { h2: string; sub: string; items: TitledText[] };
@@ -77,11 +77,15 @@ export const LANDING_ES: LandingContent = {
   tryDemo: 'Probar demo',
   hero: {
     eyebrow: 'Software de administración de edificios y condominios',
-    h1: 'Cobra expensas y rinde cuentas sin planillas',
-    lead: 'Expensas, cobranza, gastos, facturación y contabilidad de tu edificio en un solo sistema. Panel web para el administrador y app para el Encargado y los propietarios.',
+    h1: 'Administrá tus edificios con más control y menos trabajo manual.',
+    lead: 'Centralizá expensas, gastos, cobranzas, mantenimiento y comunicación con propietarios en una sola plataforma.',
     ctaDemo: 'Explorar demostración gratuita',
     ctaQuote: 'Pedí tu cotización',
-    chips: ['Clientes nuevos: 2 meses gratis', 'Todo en guaraníes', 'IVA y timbrado', 'Propiedad horizontal', 'La demo no pide registro']
+    badge1: '2 meses de gestión',
+    badge2: '100% gratis',
+    ctaActivate: 'Activar mis 2 meses gratis',
+    ctaWatch: 'Ver demostración',
+    note: 'Sin costo de gestión durante los primeros 2 meses'
   },
   mock: {
     head: 'Resumen del edificio',
@@ -202,11 +206,15 @@ export const LANDING_PT: LandingContent = {
   tryDemo: 'Testar demo',
   hero: {
     eyebrow: 'Software de gestão de condomínios · Paraguai',
-    h1: 'Cobre as taxas e preste contas sem planilhas',
-    lead: 'Taxas condominiais, cobrança, despesas, faturamento e contabilidade do seu condomínio em um só sistema. Painel web para o administrador e app para o encarregado e os proprietários.',
+    h1: 'Administre seus condomínios com mais controle e menos trabalho manual.',
+    lead: 'Centralize taxas, despesas, cobranças, manutenção e comunicação com os proprietários em uma só plataforma.',
     ctaDemo: 'Explorar demonstração gratuita',
     ctaQuote: 'Peça seu orçamento',
-    chips: ['Clientes novos: 2 meses grátis', 'Tudo em guaranis', 'IVA e timbrado', 'Propriedade horizontal', 'Demo sem cadastro']
+    badge1: '2 meses de gestão',
+    badge2: '100% grátis',
+    ctaActivate: 'Ativar meus 2 meses grátis',
+    ctaWatch: 'Ver demonstração',
+    note: 'Sem custo de gestão nos primeiros 2 meses'
   },
   mock: {
     head: 'Resumo do condomínio',
@@ -327,11 +335,15 @@ export const LANDING_EN: LandingContent = {
   tryDemo: 'Try the demo',
   hero: {
     eyebrow: 'Condominium and building management software · Paraguay',
-    h1: 'Collect fees and report to owners without spreadsheets',
-    lead: 'Maintenance fees, collections, expenses, invoicing and accounting for your building in one system. A web dashboard for the administrator and an app for the on-site manager and owners.',
+    h1: 'Manage your buildings with more control and less manual work.',
+    lead: 'Centralize fees, expenses, collections, maintenance and communication with owners on a single platform.',
     ctaDemo: 'Explore the free demo',
     ctaQuote: 'Request your quote',
-    chips: ['New customers: 2 months free', 'Everything in Guaraníes', 'VAT and timbrado', 'Horizontal property', 'The demo needs no sign-up']
+    badge1: '2 months of management',
+    badge2: '100% free',
+    ctaActivate: 'Activate my 2 free months',
+    ctaWatch: 'Watch the demo',
+    note: 'No management fee for the first 2 months'
   },
   mock: {
     head: 'Building summary',
