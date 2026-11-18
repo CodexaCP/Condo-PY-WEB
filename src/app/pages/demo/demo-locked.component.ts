@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, effect, inject } from '@a
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { map } from 'rxjs';
+import { Card } from 'primeng/card';
 import { DEMO_PAGE_STYLES } from './demo.styles';
 import { DemoContactKind, DemoStore } from './demo.store';
 
@@ -10,9 +11,9 @@ import { DemoContactKind, DemoStore } from './demo.store';
   standalone: true,
   selector: 'app-demo-locked',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink],
+  imports: [RouterLink, Card],
   template: `
-    <div class="card lock">
+    <p-card styleClass="app-page-card"><div class="card lock">
       <span class="ico"><i [class]="'pi ' + info().icon"></i></span>
       <span class="badge info"><i class="pi pi-lock"></i> {{ t().lockedPage.badge }}</span>
       <h1>{{ info().title }}</h1>
@@ -21,7 +22,7 @@ import { DemoContactKind, DemoStore } from './demo.store';
         <a class="btn" [href]="store.whatsappUrl('demostracion')" target="_blank" rel="noopener noreferrer" (click)="contact('demostracion')"><i class="pi pi-video"></i> {{ t().lockedPage.cta }}</a>
         <a class="btn line" routerLink="/explorar/panel"><i class="pi pi-arrow-left"></i> {{ t().lockedPage.back }}</a>
       </div>
-    </div>
+    </div></p-card>
   `,
   styles: [
     DEMO_PAGE_STYLES,

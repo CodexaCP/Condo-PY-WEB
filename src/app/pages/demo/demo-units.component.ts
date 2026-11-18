@@ -2,7 +2,9 @@ import { ChangeDetectionStrategy, Component, computed, effect, inject, signal, u
 import { toSignal } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
+import { Card } from 'primeng/card';
 import { map } from 'rxjs';
+import { LIST_FILTERS_STYLES } from '../condo/list-filters.styles';
 import { DEMO_PAGE_STYLES } from './demo.styles';
 import { DemoStore } from './demo.store';
 
@@ -11,15 +13,23 @@ import { DemoStore } from './demo.store';
   standalone: true,
   selector: 'app-demo-units',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [FormsModule, RouterLink],
+  imports: [FormsModule, RouterLink, Card],
   template: `
-    <h1>{{ t().units.title }}</h1>
-    <p class="sub">{{ t().units.sub }}</p>
+    <p-card styleClass="app-page-card">
+      <div class="app-toolbar">
+        <div class="app-page-head"><div><h1>{{ t().units.title }}</h1><p class="sub">{{ t().units.sub }}</p></div></div>
+      </div>
 
-    <div class="card">
-      <div class="row bar">
-        <input type="search" [placeholder]="t().units.searchPlaceholder" [ngModel]="search()" (ngModelChange)="search.set($event)" [attr.aria-label]="t().units.searchAria" />
-        <label class="chk"><input type="checkbox" [ngModel]="onlyDebt()" (ngModelChange)="onlyDebt.set($event)" /> {{ t().units.onlyDebt }}</label>
+      <div class="filters-bar">
+        <div class="field-block search-field">
+          <div class="search-box">
+            <i class="pi pi-search"></i>
+            <input type="search" [placeholder]="t().units.searchPlaceholder" [ngModel]="search()" (ngModelChange)="search.set($event)" [attr.aria-label]="t().units.searchAria" />
+          </div>
+        </div>
+      </div>
+      <div class="chip-row">
+        <button type="button" class="chip-btn" [class.active]="onlyDebt()" (click)="onlyDebt.set(!onlyDebt())">{{ t().units.onlyDebt }}</button>
         <span class="muted count">{{ t().units.count(rows().length, store.units.length) }}</span>
       </div>
       <div class="tbl-wrap">
@@ -44,9 +54,9 @@ import { DemoStore } from './demo.store';
           </tbody>
         </table>
       </div>
-    </div>
+    </p-card>
   `,
-  styles: [DEMO_PAGE_STYLES, `.bar { margin-bottom: 0.8rem; } .bar input[type='search'] { flex: 1; min-width: 220px; } .chk { display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.86rem; } .chk input { min-width: auto; } .count { margin-left: auto; font-size: 0.82rem; }`]
+  styles: [DEMO_PAGE_STYLES, LIST_FILTERS_STYLES, `.count { margin-left: auto; font-size: 0.82rem; }`]
 })
 export class DemoUnitsComponent {
   readonly store = inject(DemoStore);
@@ -75,26 +85,27 @@ export class DemoUnitsComponent {
   standalone: true,
   selector: 'app-demo-statement',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink],
+  imports: [RouterLink, Card],
   template: `
+    <p-card styleClass="app-page-card">
     @if (st(); as s) {
       <p class="back"><a routerLink="/explorar/unidades">{{ t().statement.back }}</a></p>
-      <h1>{{ t().statement.title(s.unit.code) }}</h1>
-      <p class="sub">{{ t().statement.sub(s.unit.owner, s.unit.floor, store.unitMetric(s.unit), gs(s.unit.fee)) }}</p>
+      <div class="app-toolbar">
+        <div class="app-page-head"><div><h1>{{ t().statement.title(s.unit.code) }}</h1><p class="sub">{{ t().statement.sub(s.unit.owner, s.unit.floor, store.unitMetric(s.unit), gs(s.unit.fee)) }}</p></div></div>
+        <div class="toolbar-actions">
+          <a class="btn line" routerLink="/explorar/bloqueado" [queryParams]="{ f: 'estado-pdf' }"><i class="pi pi-file-pdf"></i> {{ t().statement.pdf }}</a>
+          <a class="btn line" routerLink="/explorar/bloqueado" [queryParams]="{ f: 'estado-pdf' }"><i class="pi pi-send"></i> {{ t().statement.send }}</a>
+          @if (store.country() === 'ar') {
+            <a class="btn" [routerLink]="['/explorar/certificado', s.unit.code]"><i class="pi pi-verified"></i> {{ t().certificate.title }}</a>
+          }
+        </div>
+      </div>
 
       <div class="sum">
         <div class="card"><span class="muted">{{ t().statement.pending }}</span><strong [class.neg]="s.pending > 0" [class.pos]="s.pending === 0">{{ gs(s.pending) }}</strong></div>
         <div class="card"><span class="muted">{{ t().statement.overdueOf }}</span><strong [class.neg]="s.overdue > 0">{{ gs(s.overdue) }}</strong></div>
         <div class="card"><span class="muted">{{ t().statement.lastPayment }}</span><strong>{{ s.lastPayment ? store.dateLabel(s.lastPayment) : '—' }}</strong></div>
         <div class="card"><span class="muted">{{ t().statement.status }}</span>@if (s.overdue) { <span class="badge bad">{{ t().statement.withDebt }}</span> } @else { <span class="badge ok">{{ t().statement.upToDate }}</span> }</div>
-      </div>
-
-      <div class="row acts">
-        <a class="btn line" routerLink="/explorar/bloqueado" [queryParams]="{ f: 'estado-pdf' }"><i class="pi pi-file-pdf"></i> {{ t().statement.pdf }}</a>
-        <a class="btn line" routerLink="/explorar/bloqueado" [queryParams]="{ f: 'estado-pdf' }"><i class="pi pi-send"></i> {{ t().statement.send }}</a>
-        @if (store.country() === 'ar') {
-          <a class="btn" [routerLink]="['/explorar/certificado', s.unit.code]"><i class="pi pi-verified"></i> {{ t().certificate.title }}</a>
-        }
       </div>
 
       <div class="card">
@@ -118,9 +129,11 @@ export class DemoUnitsComponent {
         </div>
       </div>
     } @else {
-      <h1>{{ t().statement.notFoundTitle }}</h1>
-      <p class="sub">{{ t().statement.notFound }}<a routerLink="/explorar/unidades">{{ t().statement.backShort }}</a></p>
+      <div class="app-toolbar">
+        <div class="app-page-head"><div><h1>{{ t().statement.notFoundTitle }}</h1><p class="sub">{{ t().statement.notFound }}<a routerLink="/explorar/unidades">{{ t().statement.backShort }}</a></p></div></div>
+      </div>
     }
+    </p-card>
   `,
   styles: [DEMO_PAGE_STYLES, `.back { margin: 0.2rem 0 0; font-size: 0.86rem; font-weight: 700; } .sum { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 0.8rem; margin-bottom: 1rem; } .sum .card { display: grid; gap: 0.25rem; } .sum strong { font-size: 1.15rem; } .acts { margin-bottom: 1rem; }`]
 })

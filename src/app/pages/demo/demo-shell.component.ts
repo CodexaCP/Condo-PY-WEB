@@ -1,90 +1,92 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, signal, untracked } from '@angular/core';
-import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router';
+import { filter } from 'rxjs';
+import { LayoutService } from '@/app/layout/service/layout.service';
 import { LANGS, LangService } from '../../core/i18n/lang.service';
 import { LangSwitcherComponent } from '../../core/i18n/lang-switcher.component';
 import { SeoService } from '../../core/seo.service';
 import { DemoCountry } from './demo.country';
+import { DemoMenuComponent } from './demo-menu.component';
 import { DemoContactKind, DemoStore } from './demo.store';
 
-// Marco de la demostración pública: encabezado, navegación, misiones con progreso y el cierre comercial
+// Marco de la demostración pública (mismo layout que el panel real): barra superior, menú lateral, misiones con progreso y el cierre comercial
 // (paso 4 del embudo: diagnóstico; paso 5: contacto). Todo es ficticio y vive solo en el navegador.
 @Component({
   standalone: true,
   selector: 'app-demo-shell',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, LangSwitcherComponent],
+  imports: [RouterOutlet, RouterLink, LangSwitcherComponent, DemoMenuComponent],
   template: `
-    <div class="dm">
-      <header class="dm-top">
-        <a routerLink="/login" class="dm-brand" [attr.aria-label]="t().shell.backHome">
-          <img src="/brand/expenses-icon.svg" alt="" />
-          <b>EXPENSES</b>
-        </a>
-        <span class="dm-badge"><i class="pi pi-eye"></i> {{ t().shell.badge }}</span>
-        <div class="dm-actions">
+    <div class="layout-wrapper layout-static" [class.layout-mobile-active]="layout.layoutState().mobileMenuActive">
+      <div class="layout-topbar">
+        <div class="layout-topbar-logo-container">
+          <button type="button" class="layout-menu-button layout-topbar-action" (click)="layout.onMenuToggle()"><i class="pi pi-bars"></i></button>
+          <a class="layout-topbar-logo" routerLink="/explorar/panel">
+            <img src="/brand/expenses-icon-white.svg" alt="" aria-hidden="true" style="width:2.6rem;height:auto;flex-shrink:0" />
+            <span>Expenses</span>
+          </a>
+        </div>
+        <div class="layout-topbar-actions">
           <div class="dm-country" role="group" [attr.aria-label]="t().shell.countryAria">
             @for (c of store.countryOptions(); track c.code) {
               <button type="button" [class.on]="store.country() === c.code" [attr.aria-pressed]="store.country() === c.code" (click)="chooseCountry(c.code)">{{ c.label }}</button>
             }
           </div>
           <app-lang-switcher />
-          <button type="button" class="dm-ghost" (click)="reset()" [title]="t().shell.resetTitle"><i class="pi pi-refresh"></i> <span>{{ t().shell.reset }}</span></button>
+          <span class="dm-greeting">Hola, {{ t().shell.greeting }}</span>
+          <button type="button" class="layout-topbar-action notif-btn">
+            <i class="pi pi-bell"></i>
+            <span class="notif-badge">3</span>
+          </button>
           <button type="button" class="dm-solid" (click)="showFinish.set(true)"><i class="pi pi-comments"></i> <span>{{ t().shell.talk }}</span></button>
-          <a routerLink="/login" class="dm-ghost"><i class="pi pi-sign-out"></i> <span>{{ t().shell.exit }}</span></a>
+          <button type="button" class="layout-topbar-action" (click)="reset()" [title]="t().shell.resetTitle"><i class="pi pi-refresh"></i></button>
+          <button type="button" class="layout-topbar-action" routerLink="/login" [title]="t().shell.exit"><i class="pi pi-sign-out"></i></button>
         </div>
-      </header>
+      </div>
 
-      <section class="dm-context">
-        <div>
-          <strong>{{ store.buildingName() }}</strong>
-          <span>{{ t().shell.contextLine(store.buildingCity(), store.units.length, store.currentPeriodLabel()) }}</span>
+      <div class="layout-sidebar"><app-demo-menu /></div>
+
+      <div class="layout-main-container">
+        <div class="layout-main">
+          <section class="dm-context">
+            <div>
+              <strong>{{ store.buildingName() }}</strong>
+              <span>{{ t().shell.contextLine(store.buildingCity(), store.units.length, store.currentPeriodLabel()) }}</span>
+            </div>
+            <span class="dm-note">{{ t().shell.note }}</span>
+          </section>
+
+          <section class="dm-missions" [attr.aria-label]="t().shell.missionsAria">
+            <div class="dm-mhead">
+              <b>{{ t().shell.missionsTitle }}</b>
+              <span>{{ t().shell.missionsProgress(store.completedCount(), store.missions().length) }}</span>
+              <div class="dm-bar"><i [style.width.%]="(store.completedCount() / store.missions().length) * 100"></i></div>
+            </div>
+            <div class="dm-chips">
+              @for (m of store.missions(); track m.id) {
+                <a [routerLink]="m.route" class="dm-chip" [class.done]="isDone(m.id)">
+                  <i [class]="'pi ' + (isDone(m.id) ? 'pi-check-circle' : m.icon)"></i>
+                  {{ m.title }}
+                </a>
+              }
+            </div>
+            @if (store.nextMission(); as next) {
+              <p class="dm-hint"><i class="pi pi-compass"></i> <span><b>{{ t().shell.next }}</b> {{ next.hint }}</span> <a [routerLink]="next.route">{{ t().shell.goNow }}</a></p>
+            } @else {
+              <p class="dm-hint ok"><i class="pi pi-star"></i> <span>{{ t().shell.allDone }}</span> <button type="button" (click)="showFinish.set(true)">{{ t().shell.nextStep }}</button></p>
+            }
+          </section>
+
+          <router-outlet />
         </div>
-        <span class="dm-note">{{ t().shell.note }}</span>
-      </section>
 
-      <nav class="dm-nav" [attr.aria-label]="t().shell.navAria">
-        <a routerLink="/explorar/panel" routerLinkActive="on"><i class="pi pi-chart-bar"></i> {{ t().shell.nav.panel }}</a>
-        <a routerLink="/explorar/unidades" routerLinkActive="on"><i class="pi pi-home"></i> {{ t().shell.nav.units }}</a>
-        <a routerLink="/explorar/gastos" routerLinkActive="on"><i class="pi pi-wallet"></i> {{ t().shell.nav.expenses }}</a>
-        <a routerLink="/explorar/informes" routerLinkActive="on"><i class="pi pi-file"></i> {{ t().shell.nav.reports }}</a>
-        @if (store.hasJournal()) {
-          <a routerLink="/explorar/libro-diario" routerLinkActive="on"><i class="pi pi-book"></i> {{ t().shell.nav.journal }}</a>
-        } @else {
-          <a routerLink="/explorar/certificado" routerLinkActive="on"><i class="pi pi-verified"></i> {{ t().shell.nav.certificate }}</a>
-        }
-        <span class="dm-nav-sep"></span>
-        @for (key of store.lockedKeys(); track key) {
-          <a routerLink="/explorar/bloqueado" [queryParams]="{ f: key }" class="lock"><i class="pi pi-lock"></i> {{ t().lockedNav[key] }}</a>
-        }
-      </nav>
-
-      <section class="dm-missions" [attr.aria-label]="t().shell.missionsAria">
-        <div class="dm-mhead">
-          <b>{{ t().shell.missionsTitle }}</b>
-          <span>{{ t().shell.missionsProgress(store.completedCount(), store.missions().length) }}</span>
-          <div class="dm-bar"><i [style.width.%]="(store.completedCount() / store.missions().length) * 100"></i></div>
-        </div>
-        <div class="dm-chips">
-          @for (m of store.missions(); track m.id) {
-            <a [routerLink]="m.route" class="dm-chip" [class.done]="isDone(m.id)">
-              <i [class]="'pi ' + (isDone(m.id) ? 'pi-check-circle' : m.icon)"></i>
-              {{ m.title }}
-            </a>
-          }
-        </div>
-        @if (store.nextMission(); as next) {
-          <p class="dm-hint"><i class="pi pi-compass"></i> <span><b>{{ t().shell.next }}</b> {{ next.hint }}</span> <a [routerLink]="next.route">{{ t().shell.goNow }}</a></p>
-        } @else {
-          <p class="dm-hint ok"><i class="pi pi-star"></i> <span>{{ t().shell.allDone }}</span> <button type="button" (click)="showFinish.set(true)">{{ t().shell.nextStep }}</button></p>
-        }
-      </section>
-
-      <main class="dm-main"><router-outlet /></main>
-
-      <footer class="dm-foot">
-        <span>{{ t().shell.footText }}</span>
-        <button type="button" class="dm-solid" (click)="showFinish.set(true)">{{ t().shell.footCta }}</button>
-      </footer>
+        <footer class="dm-foot">
+          <span>{{ t().shell.footText }}</span>
+          <button type="button" class="dm-solid" (click)="showFinish.set(true)">{{ t().shell.footCta }}</button>
+        </footer>
+      </div>
+      <div class="layout-mask" (click)="closeMenu()"></div>
 
       @if (showFinish()) {
         <div class="dm-overlay" (click)="showFinish.set(false)">
@@ -123,54 +125,40 @@ import { DemoContactKind, DemoStore } from './demo.store';
   styles: [
     `
       :host { display: block; }
-      .dm { min-height: 100vh; background: #f4f8fb; color: var(--ex-ink, #16324a); font-family: 'Plus Jakarta Sans', system-ui, sans-serif; display: flex; flex-direction: column; }
-      .dm a { text-decoration: none; }
-      .dm-top { display: flex; align-items: center; gap: 0.9rem; flex-wrap: wrap; padding: 0.7rem 1.25rem; background: #fff; border-bottom: 1px solid var(--ex-line, #dbe6ef); }
-      .dm-brand { display: flex; align-items: center; gap: 0.5rem; color: var(--ex-ink, #16324a); }
-      .dm-brand img { width: 30px; height: 30px; }
-      .dm-brand b { letter-spacing: 0.08em; font-size: 1rem; }
-      .dm-badge { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.3rem 0.7rem; border-radius: 999px; background: #e6f7f6; color: #0f8a84; font-size: 0.78rem; font-weight: 700; }
-      .dm-actions { margin-left: auto; display: flex; gap: 0.5rem; flex-wrap: wrap; }
-      .dm-ghost, .dm-solid, .dm-line, .dm-wa { display: inline-flex; align-items: center; justify-content: center; gap: 0.45rem; cursor: pointer; font: inherit; font-size: 0.85rem; font-weight: 700; padding: 0.5rem 0.9rem; border-radius: 0.6rem; border: 1px solid transparent; }
-      .dm-ghost { background: transparent; color: var(--ex-muted, #5f7b88); border-color: var(--ex-line, #dbe6ef); }
-      .dm-ghost:hover { background: #f1f6fa; }
-      .dm-country { display: inline-flex; border: 1px solid var(--ex-line, #dbe6ef); border-radius: 0.6rem; overflow: hidden; background: #fff; }
-      .dm-country button { cursor: pointer; font: inherit; font-size: 0.82rem; font-weight: 700; padding: 0.5rem 0.8rem; border: 0; background: transparent; color: var(--ex-muted, #5f7b88); }
-      .dm-country button:hover { background: #f1f6fa; }
-      .dm-country button.on { background: #1385b6; color: #fff; }
+      .dm-greeting { color: #fff; font-size: 0.9rem; font-weight: 500; opacity: 0.9; }
+      .dm-solid, .dm-line, .dm-wa { display: inline-flex; align-items: center; justify-content: center; gap: 0.45rem; cursor: pointer; font: inherit; font-size: 0.85rem; font-weight: 700; padding: 0.5rem 0.9rem; border-radius: 0.6rem; border: 1px solid transparent; text-decoration: none; }
+      .dm-country { display: inline-flex; gap: 0.25rem; }
+      .dm-country button { cursor: pointer; font: inherit; font-size: 0.82rem; font-weight: 700; padding: 0.4rem 0.75rem; border: 0; border-radius: 999px; background: rgba(255, 255, 255, 0.16); color: #fff; }
+      .dm-country button:hover { background: rgba(255, 255, 255, 0.28); }
+      .dm-country button.on { background: #fff; color: #1385b6; }
+      .notif-btn { position: relative; }
+      .notif-badge { position: absolute; top: 4px; right: 4px; background: #ef4444; color: #fff; font-size: 0.65rem; font-weight: 700; line-height: 1; min-width: 1.1rem; height: 1.1rem; border-radius: 0.55rem; display: flex; align-items: center; justify-content: center; padding: 0 0.25rem; pointer-events: none; }
       .dm-solid { background: #1ab7af; color: #fff; }
       .dm-solid:hover { background: #14a29b; }
       .dm-line { background: #fff; color: #1385b6; border-color: #1385b6; }
       .dm-line:hover { background: rgba(19, 133, 182, 0.08); }
       .dm-wa { background: #25d366; color: #fff; }
       .dm-wa:hover { background: #1fb858; }
-      .dm-context { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; flex-wrap: wrap; padding: 0.9rem 1.25rem 0.2rem; }
+      .dm-context { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 1.1rem; }
       .dm-context strong { display: block; font-size: 1.15rem; }
-      .dm-context span { font-size: 0.85rem; color: var(--ex-muted, #5f7b88); }
+      .dm-context span { font-size: 0.85rem; color: var(--brand-muted); }
       .dm-note { font-size: 0.8rem; }
-      .dm-nav { display: flex; align-items: center; gap: 0.35rem; padding: 0.6rem 1.25rem; overflow-x: auto; white-space: nowrap; }
-      .dm-nav a { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.5rem 0.85rem; border-radius: 0.6rem; font-size: 0.88rem; font-weight: 600; color: var(--ex-muted, #5f7b88); }
-      .dm-nav a:hover { background: #e9f1f7; }
-      .dm-nav a.on { background: #1385b6; color: #fff; }
-      .dm-nav a.lock { font-weight: 500; font-size: 0.82rem; opacity: 0.85; }
-      .dm-nav-sep { width: 1px; height: 1.4rem; background: var(--ex-line, #dbe6ef); margin: 0 0.4rem; flex: none; }
-      .dm-missions { margin: 0.25rem 1.25rem 0.5rem; padding: 0.9rem 1rem; background: #fff; border: 1px solid var(--ex-line, #dbe6ef); border-radius: 0.9rem; }
+      .dm-missions { background: var(--p-content-background, #fff); border-radius: 22px; border: 1px solid rgba(19, 133, 182, 0.09); box-shadow: 0 8px 30px rgba(17, 54, 74, 0.07); padding: 1rem 1.25rem; margin-bottom: 1.1rem; }
       .dm-mhead { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
-      .dm-mhead span { font-size: 0.82rem; color: var(--ex-muted, #5f7b88); }
-      .dm-bar { flex: 1; min-width: 120px; height: 8px; border-radius: 999px; background: #e6eef4; overflow: hidden; }
-      .dm-bar i { display: block; height: 100%; background: linear-gradient(90deg, #1ab7af, #5cc36a); transition: width 0.4s ease; }
+      .dm-mhead span { font-size: 0.82rem; color: var(--brand-muted); }
+      .dm-bar { flex: 1; min-width: 120px; height: 8px; border-radius: 999px; background: rgba(19, 133, 182, 0.1); overflow: hidden; }
+      .dm-bar i { display: block; height: 100%; background: linear-gradient(90deg, #1ab7af, #6ac64a); transition: width 0.4s ease; }
       .dm-chips { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.7rem; }
-      .dm-chip { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.4rem 0.8rem; border-radius: 999px; border: 1px solid var(--ex-line, #dbe6ef); font-size: 0.82rem; font-weight: 600; color: var(--ex-ink, #16324a); background: #fafcfe; }
+      .dm-chip { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.4rem 0.8rem; border-radius: 999px; border: 1px solid rgba(19, 133, 182, 0.25); font-size: 0.82rem; font-weight: 600; color: var(--p-text-color); background: #fff; text-decoration: none; }
       .dm-chip:hover { border-color: #1ab7af; }
-      .dm-chip.done { background: #e8f7ee; border-color: #8fd6a8; color: #1f7a45; }
-      .dm-hint { display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; margin: 0.8rem 0 0; padding: 0.6rem 0.8rem; border-radius: 0.6rem; background: #eef6fb; font-size: 0.88rem; }
+      .dm-chip.done { background: rgba(106, 198, 74, 0.15); border-color: rgba(106, 198, 74, 0.4); color: #2f7a1b; }
+      .dm-hint { display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; margin: 0.8rem 0 0; padding: 0.6rem 0.8rem; border-radius: 0.6rem; background: rgba(19, 133, 182, 0.08); font-size: 0.88rem; }
       .dm-hint i { color: #1385b6; }
       .dm-hint span { flex: 1; min-width: 200px; }
-      .dm-hint a, .dm-hint button { color: #1385b6; font-weight: 700; background: none; border: 0; cursor: pointer; font: inherit; font-weight: 700; }
-      .dm-hint.ok { background: #e8f7ee; }
-      .dm-hint.ok i { color: #1f7a45; }
-      .dm-main { flex: 1; padding: 0.5rem 1.25rem 1.5rem; }
-      .dm-foot { display: flex; align-items: center; justify-content: center; gap: 1rem; flex-wrap: wrap; padding: 1rem 1.25rem; background: #fff; border-top: 1px solid var(--ex-line, #dbe6ef); font-size: 0.9rem; text-align: center; }
+      .dm-hint a, .dm-hint button { color: #1385b6; font-weight: 700; background: none; border: 0; cursor: pointer; font: inherit; font-weight: 700; text-decoration: none; }
+      .dm-hint.ok { background: rgba(106, 198, 74, 0.15); }
+      .dm-hint.ok i { color: #2f7a1b; }
+      .dm-foot { display: flex; align-items: center; justify-content: center; gap: 1rem; flex-wrap: wrap; padding: 1rem 1.25rem; font-size: 0.9rem; text-align: center; }
       .dm-overlay { position: fixed; inset: 0; z-index: 1000; background: rgba(12, 30, 46, 0.55); display: flex; align-items: center; justify-content: center; padding: 1rem; overflow-y: auto; }
       .dm-modal { position: relative; width: 100%; max-width: 640px; max-height: 94vh; overflow-y: auto; background: #fff; border-radius: 1.1rem; padding: 1.6rem 1.5rem 1.2rem; box-shadow: 0 24px 60px rgba(0, 0, 0, 0.3); }
       .dm-modal h2 { margin: 0 2rem 0.4rem 0; font-size: 1.4rem; font-weight: 800; }
@@ -188,9 +176,8 @@ import { DemoContactKind, DemoStore } from './demo.store';
       .big { padding: 0.8rem 1rem; font-size: 0.95rem; }
       .dm-back { display: block; margin: 0.8rem auto 0; background: none; border: 0; cursor: pointer; font: inherit; font-size: 0.85rem; color: var(--ex-muted, #5f7b88); text-decoration: underline; }
       @media (max-width: 640px) {
-        .dm-actions { margin-left: 0; width: 100%; }
-        .dm-actions > * { flex: 1; }
-        .dm-ghost span { display: none; }
+        .dm-greeting { display: none; }
+        .dm-solid span { display: none; }
         .dm-note { display: none; }
       }
     `
@@ -201,6 +188,7 @@ export class DemoShell {
   readonly t = this.store.t;
   private readonly router = inject(Router);
   private readonly lang = inject(LangService);
+  readonly layout = inject(LayoutService);
 
   // Las tres preguntas del diagnóstico, en el idioma actual.
   readonly questions = computed(() => (['units', 'method', 'pain'] as const).map((key) => ({ key, ...this.t().diagnosis[key] })));
@@ -210,6 +198,10 @@ export class DemoShell {
   private autoShown = this.store.allDone();
 
   constructor() {
+    // Al navegar se cierra el menú móvil y se avisa al menú qué pantalla está activa (igual que AppSidebar).
+    this.router.events.pipe(filter((e): e is NavigationEnd => e instanceof NavigationEnd), takeUntilDestroyed()).subscribe((e) => this.onRouteChange(e.urlAfterRedirects));
+    this.onRouteChange(this.router.url);
+
     const seo = inject(SeoService);
     effect(() => {
       const info = LANGS.find((l) => l.code === this.lang.lang());
@@ -230,6 +222,14 @@ export class DemoShell {
         untracked(() => this.showFinish.set(true));
       }
     });
+  }
+
+  closeMenu(): void {
+    this.layout.layoutState.update((s) => ({ ...s, mobileMenuActive: false, staticMenuMobileActive: false, overlayMenuActive: false }));
+  }
+
+  private onRouteChange(url: string): void {
+    this.layout.layoutState.update((s) => ({ ...s, mobileMenuActive: false, staticMenuMobileActive: false, overlayMenuActive: false, activePath: url.split(/[?#]/)[0] }));
   }
 
   isDone(id: string): boolean {

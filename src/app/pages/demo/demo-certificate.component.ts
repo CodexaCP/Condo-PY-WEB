@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, effect, inject, signal, u
 import { toSignal } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { Card } from 'primeng/card';
 import { map } from 'rxjs';
 import { DEMO_PAGE_STYLES } from './demo.styles';
 import { DemoStore } from './demo.store';
@@ -13,11 +14,17 @@ import { DemoStore } from './demo.store';
   standalone: true,
   selector: 'app-demo-certificate',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [FormsModule, RouterLink],
+  imports: [FormsModule, RouterLink, Card],
   template: `
+    <p-card styleClass="app-page-card">
     @if (cert(); as c) {
-      <h1>{{ t().certificate.title }}</h1>
-      <p class="sub">{{ t().certificate.sub }}</p>
+      <div class="app-toolbar">
+        <div class="app-page-head"><div><h1>{{ t().certificate.title }}</h1><p class="sub">{{ t().certificate.sub }}</p></div></div>
+        <div class="toolbar-actions">
+          <a class="btn line" [routerLink]="['/explorar/unidades', c.unit.code]">{{ t().certificate.statementLink }}</a>
+          <a class="btn line" routerLink="/explorar/bloqueado" [queryParams]="{ f: 'estado-pdf' }"><i class="pi pi-file-pdf"></i> {{ t().certificate.pdf }}</a>
+        </div>
+      </div>
 
       <div class="row bar">
         <label class="fld">{{ t().certificate.pick }}
@@ -27,8 +34,6 @@ import { DemoStore } from './demo.store';
             }
           </select>
         </label>
-        <a class="btn line" [routerLink]="['/explorar/unidades', c.unit.code]">{{ t().certificate.statementLink }}</a>
-        <a class="btn line" routerLink="/explorar/bloqueado" [queryParams]="{ f: 'estado-pdf' }"><i class="pi pi-file-pdf"></i> {{ t().certificate.pdf }}</a>
       </div>
 
       <div class="card doc">
@@ -81,6 +86,7 @@ import { DemoStore } from './demo.store';
         </div>
       </div>
     }
+    </p-card>
   `,
   styles: [
     DEMO_PAGE_STYLES,

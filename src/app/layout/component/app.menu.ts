@@ -11,15 +11,15 @@ import { hasCapability, pluralTerm } from '@/app/core/locale/locale.state';
 
 // Los grupos del menú son plegables (acordeón): cada uno lleva un `path` propio, que usa AppMenuitem para saber cuál está abierto.
 // El prefijo evita que un grupo se confunda con la URL de una pantalla (el sidebar guarda la URL como ruta activa).
-const GROUP_PREFIX = '/g-';
+export const GROUP_PREFIX = '/g-';
 
-function group(label: string, icon: string, key: string, items: MenuItem[]): MenuItem {
+export function group(label: string, icon: string, key: string, items: MenuItem[]): MenuItem {
     return { label, icon, path: `${GROUP_PREFIX}${key}`, items } as MenuItem;
 }
 
 // Grupo del menú que contiene la pantalla de esta URL (la coincidencia más específica gana; sirve también para sub-rutas
 // como /buildings/new o /invoice-series/:id/calibrate).
-function groupPathForUrl(items: MenuItem[], rawUrl: string): string | null {
+export function groupPathForUrl(items: MenuItem[], rawUrl: string): string | null {
     const url = rawUrl.split(/[?#]/)[0];
     let best: { path: string; length: number } | null = null;
 

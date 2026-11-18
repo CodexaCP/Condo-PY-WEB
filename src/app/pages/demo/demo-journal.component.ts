@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { Card } from 'primeng/card';
 import { DEMO_PAGE_STYLES } from './demo.styles';
 import { DemoStore, JournalEntry } from './demo.store';
 
@@ -10,54 +11,57 @@ type Filter = 'todos' | JournalEntry['kind'];
   standalone: true,
   selector: 'app-demo-journal',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink],
+  imports: [RouterLink, Card],
   template: `
-    <h1>{{ t().journal.title }}</h1>
-    <p class="sub">{{ t().journal.sub }}</p>
+    <p-card styleClass="app-page-card">
+      <div class="app-toolbar">
+        <div class="app-page-head"><div><h1>{{ t().journal.title }}</h1><p class="sub">{{ t().journal.sub }}</p></div></div>
+      </div>
 
-    <div class="row filters">
-      @for (key of filters; track key) {
-        <button type="button" class="chip" [class.on]="filter() === key" (click)="filter.set(key)">{{ t().journal.filters[key] }}</button>
-      }
-      <span class="muted count">{{ t().journal.count(entries().length) }}</span>
-    </div>
+      <div class="row filters">
+        @for (key of filters; track key) {
+          <button type="button" class="chip" [class.on]="filter() === key" (click)="filter.set(key)">{{ t().journal.filters[key] }}</button>
+        }
+        <span class="muted count">{{ t().journal.count(entries().length) }}</span>
+      </div>
 
-    <div class="list">
-      @for (e of entries(); track e.id) {
-        <div class="entry card" [id]="'je-' + e.id" [class.open]="openId() === e.id">
-          <button type="button" class="head" (click)="toggle(e.id)" [attr.aria-expanded]="openId() === e.id">
-            <span class="no">{{ t().journal.number }} {{ pad(e.number) }}</span>
-            <span class="dt">{{ store.dateLabel(e.date) }}</span>
-            <span class="ds">{{ e.description }}</span>
-            <span class="badge" [class]="'badge ' + tone(e.kind)">{{ label(e.kind) }}</span>
-            <span class="am">{{ gs(total(e)) }}</span>
-            <i class="pi" [class.pi-chevron-down]="openId() !== e.id" [class.pi-chevron-up]="openId() === e.id"></i>
-          </button>
-          @if (openId() === e.id) {
-            <div class="body">
-              <div class="tbl-wrap">
-                <table class="tb">
-                  <thead><tr><th>{{ t().journal.cols.account }}</th><th>{{ t().journal.cols.name }}</th><th class="num">{{ t().journal.cols.debit }}</th><th class="num">{{ t().journal.cols.credit }}</th></tr></thead>
-                  <tbody>
-                    @for (l of e.lines; track $index) {
-                      <tr><td>{{ l.account }}</td><td>{{ l.name }}</td><td class="num">{{ l.debit ? gs(l.debit) : '' }}</td><td class="num">{{ l.credit ? gs(l.credit) : '' }}</td></tr>
-                    }
-                    <tr class="tot"><td colspan="2"><b>{{ t().journal.totals }}</b> <span class="badge ok">{{ t().journal.balanced }}</span></td><td class="num"><b>{{ gs(total(e)) }}</b></td><td class="num"><b>{{ gs(total(e)) }}</b></td></tr>
-                  </tbody>
-                </table>
+      <div class="list">
+        @for (e of entries(); track e.id) {
+          <div class="entry card" [id]="'je-' + e.id" [class.open]="openId() === e.id">
+            <button type="button" class="head" (click)="toggle(e.id)" [attr.aria-expanded]="openId() === e.id">
+              <span class="no">{{ t().journal.number }} {{ pad(e.number) }}</span>
+              <span class="dt">{{ store.dateLabel(e.date) }}</span>
+              <span class="ds">{{ e.description }}</span>
+              <span class="badge" [class]="'badge ' + tone(e.kind)">{{ label(e.kind) }}</span>
+              <span class="am">{{ gs(total(e)) }}</span>
+              <i class="pi" [class.pi-chevron-down]="openId() !== e.id" [class.pi-chevron-up]="openId() === e.id"></i>
+            </button>
+            @if (openId() === e.id) {
+              <div class="body">
+                <div class="tbl-wrap">
+                  <table class="tb">
+                    <thead><tr><th>{{ t().journal.cols.account }}</th><th>{{ t().journal.cols.name }}</th><th class="num">{{ t().journal.cols.debit }}</th><th class="num">{{ t().journal.cols.credit }}</th></tr></thead>
+                    <tbody>
+                      @for (l of e.lines; track $index) {
+                        <tr><td>{{ l.account }}</td><td>{{ l.name }}</td><td class="num">{{ l.debit ? gs(l.debit) : '' }}</td><td class="num">{{ l.credit ? gs(l.credit) : '' }}</td></tr>
+                      }
+                      <tr class="tot"><td colspan="2"><b>{{ t().journal.totals }}</b> <span class="badge ok">{{ t().journal.balanced }}</span></td><td class="num"><b>{{ gs(total(e)) }}</b></td><td class="num"><b>{{ gs(total(e)) }}</b></td></tr>
+                    </tbody>
+                  </table>
+                </div>
+                <p class="origin"><i class="pi pi-link"></i> <b>{{ t().journal.origin }}</b> {{ e.origin }} · <a [routerLink]="e.link">{{ t().journal.seeMovement }}</a></p>
               </div>
-              <p class="origin"><i class="pi pi-link"></i> <b>{{ t().journal.origin }}</b> {{ e.origin }} · <a [routerLink]="e.link">{{ t().journal.seeMovement }}</a></p>
-            </div>
-          }
-        </div>
-      }
-    </div>
+            }
+          </div>
+        }
+      </div>
 
-    <div class="card more">
-      <i class="pi pi-lock"></i>
-      <span>{{ t().journal.more }}<b>{{ t().journal.moreBold }}</b>{{ t().journal.moreRest }}</span>
-      <a routerLink="/explorar/bloqueado" [queryParams]="{ f: 'mas' }">{{ t().journal.learnMore }}</a>
-    </div>
+      <div class="card more">
+        <i class="pi pi-lock"></i>
+        <span>{{ t().journal.more }}<b>{{ t().journal.moreBold }}</b>{{ t().journal.moreRest }}</span>
+        <a routerLink="/explorar/bloqueado" [queryParams]="{ f: 'mas' }">{{ t().journal.learnMore }}</a>
+      </div>
+    </p-card>
   `,
   styles: [
     DEMO_PAGE_STYLES,

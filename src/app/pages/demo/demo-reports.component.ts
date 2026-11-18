@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, signal, untracked } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { Card } from 'primeng/card';
 import { DEMO_PAGE_STYLES } from './demo.styles';
 import { DemoStore } from './demo.store';
 
@@ -10,84 +11,87 @@ type Tab = 'ingresos' | 'morosidad' | 'rubros';
   standalone: true,
   selector: 'app-demo-reports',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink],
+  imports: [RouterLink, Card],
   template: `
-    <h1>{{ t().reports.title }}</h1>
-    <p class="sub">{{ t().reports.sub }}</p>
+    <p-card styleClass="app-page-card">
+      <div class="app-toolbar">
+        <div class="app-page-head"><div><h1>{{ t().reports.title }}</h1><p class="sub">{{ t().reports.sub }}</p></div></div>
+      </div>
 
-    <div class="tabs" role="tablist">
-      <button type="button" role="tab" [class.on]="tab() === 'ingresos'" (click)="open('ingresos')">{{ t().reports.tabs.ingresos }}</button>
-      <button type="button" role="tab" [class.on]="tab() === 'morosidad'" (click)="open('morosidad')">{{ t().reports.tabs.morosidad }}</button>
-      <button type="button" role="tab" [class.on]="tab() === 'rubros'" (click)="open('rubros')">{{ t().reports.tabs.rubros }}</button>
-    </div>
+      <div class="tabs" role="tablist">
+        <button type="button" role="tab" [class.on]="tab() === 'ingresos'" (click)="open('ingresos')">{{ t().reports.tabs.ingresos }}</button>
+        <button type="button" role="tab" [class.on]="tab() === 'morosidad'" (click)="open('morosidad')">{{ t().reports.tabs.morosidad }}</button>
+        <button type="button" role="tab" [class.on]="tab() === 'rubros'" (click)="open('rubros')">{{ t().reports.tabs.rubros }}</button>
+      </div>
 
-    @switch (tab()) {
-      @case ('ingresos') {
-        <div class="card">
-          <h2>{{ t().reports.monthlyTitle }}</h2>
-          <div class="tbl-wrap">
-            <table class="tb">
-              <thead><tr><th>{{ t().reports.monthlyCols.month }}</th><th class="num">{{ t().reports.monthlyCols.issued }}</th><th class="num">{{ t().reports.monthlyCols.collected }}</th><th class="num">{{ t().reports.monthlyCols.rate }}</th><th class="num">{{ t().reports.monthlyCols.expenses }}</th><th class="num">{{ t().reports.monthlyCols.result }}</th></tr></thead>
-              <tbody>
-                @for (r of monthly(); track r.label) {
-                  <tr>
-                    <td><b>{{ r.label }}</b></td>
-                    <td class="num">{{ gs(r.charged) }}</td>
-                    <td class="num">{{ gs(r.collected) }}</td>
-                    <td class="num">{{ t().percent(r.rate) }}</td>
-                    <td class="num">{{ gs(r.expense) }}</td>
-                    <td class="num" [class.pos]="r.result >= 0" [class.neg]="r.result < 0"><b>{{ gs(r.result) }}</b></td>
-                  </tr>
-                }
-              </tbody>
-            </table>
+      @switch (tab()) {
+        @case ('ingresos') {
+          <div class="card">
+            <h2>{{ t().reports.monthlyTitle }}</h2>
+            <div class="tbl-wrap">
+              <table class="tb">
+                <thead><tr><th>{{ t().reports.monthlyCols.month }}</th><th class="num">{{ t().reports.monthlyCols.issued }}</th><th class="num">{{ t().reports.monthlyCols.collected }}</th><th class="num">{{ t().reports.monthlyCols.rate }}</th><th class="num">{{ t().reports.monthlyCols.expenses }}</th><th class="num">{{ t().reports.monthlyCols.result }}</th></tr></thead>
+                <tbody>
+                  @for (r of monthly(); track r.label) {
+                    <tr>
+                      <td><b>{{ r.label }}</b></td>
+                      <td class="num">{{ gs(r.charged) }}</td>
+                      <td class="num">{{ gs(r.collected) }}</td>
+                      <td class="num">{{ t().percent(r.rate) }}</td>
+                      <td class="num">{{ gs(r.expense) }}</td>
+                      <td class="num" [class.pos]="r.result >= 0" [class.neg]="r.result < 0"><b>{{ gs(r.result) }}</b></td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+            <p class="muted note">{{ t().reports.monthlyNote }}</p>
           </div>
-          <p class="muted note">{{ t().reports.monthlyNote }}</p>
-        </div>
-      }
-      @case ('morosidad') {
-        <div class="aging">
-          @for (b of store.aging(); track b.label) {
-            <div class="card"><span class="muted">{{ b.label }}</span><strong>{{ gs(b.amount) }}</strong><small>{{ t().reports.unitCount(b.units) }}</small></div>
-          }
-        </div>
-        <div class="card">
-          <h2>{{ t().reports.overdueTitle }}</h2>
-          <div class="tbl-wrap">
-            <table class="tb">
-              <thead><tr><th>{{ t().reports.overdueCols.unit }}</th><th>{{ t().reports.overdueCols.owner }}</th><th class="num">{{ t().reports.overdueCols.months }}</th><th class="num">{{ t().reports.overdueCols.debt }}</th><th></th></tr></thead>
-              <tbody>
-                @for (x of store.overdueUnits; track x.unit.code) {
-                  <tr>
-                    <td><b>{{ x.unit.code }}</b></td>
-                    <td>{{ x.unit.owner }}</td>
-                    <td class="num">{{ x.months }}</td>
-                    <td class="num neg"><b>{{ gs(x.amount) }}</b></td>
-                    <td><a [routerLink]="['/explorar/unidades', x.unit.code]">{{ t().reports.statementLink }}</a></td>
-                  </tr>
-                }
-              </tbody>
-            </table>
-          </div>
-        </div>
-      }
-      @case ('rubros') {
-        <div class="card">
-          <h2>{{ t().reports.byCategory(store.currentPeriodLabel()) }}</h2>
-          <ul class="cats">
-            @for (c of store.expensesByCategory(); track c.category) {
-              <li><span>{{ c.label }}</span><div class="meter"><i [style.width.%]="c.share"></i></div><b>{{ t().percent(c.share) }}</b><em>{{ gs(c.amount) }}</em></li>
+        }
+        @case ('morosidad') {
+          <div class="aging">
+            @for (b of store.aging(); track b.label) {
+              <div class="card"><span class="muted">{{ b.label }}</span><strong>{{ gs(b.amount) }}</strong><small>{{ t().reports.unitCount(b.units) }}</small></div>
             }
-          </ul>
-        </div>
+          </div>
+          <div class="card">
+            <h2>{{ t().reports.overdueTitle }}</h2>
+            <div class="tbl-wrap">
+              <table class="tb">
+                <thead><tr><th>{{ t().reports.overdueCols.unit }}</th><th>{{ t().reports.overdueCols.owner }}</th><th class="num">{{ t().reports.overdueCols.months }}</th><th class="num">{{ t().reports.overdueCols.debt }}</th><th></th></tr></thead>
+                <tbody>
+                  @for (x of store.overdueUnits; track x.unit.code) {
+                    <tr>
+                      <td><b>{{ x.unit.code }}</b></td>
+                      <td>{{ x.unit.owner }}</td>
+                      <td class="num">{{ x.months }}</td>
+                      <td class="num neg"><b>{{ gs(x.amount) }}</b></td>
+                      <td><a [routerLink]="['/explorar/unidades', x.unit.code]">{{ t().reports.statementLink }}</a></td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </div>
+        }
+        @case ('rubros') {
+          <div class="card">
+            <h2>{{ t().reports.byCategory(store.currentPeriodLabel()) }}</h2>
+            <ul class="cats">
+              @for (c of store.expensesByCategory(); track c.category) {
+                <li><span>{{ c.label }}</span><div class="meter"><i [style.width.%]="c.share"></i></div><b>{{ t().percent(c.share) }}</b><em>{{ gs(c.amount) }}</em></li>
+              }
+            </ul>
+          </div>
+        }
       }
-    }
 
-    <div class="card more">
-      <i class="pi pi-lock"></i>
-      <span>{{ t().reports.more }}<b>{{ t().reports.moreBold }}</b>{{ t().reports.moreRest }}</span>
-      <a routerLink="/explorar/bloqueado" [queryParams]="{ f: 'mas' }">{{ t().reports.learnMore }}</a>
-    </div>
+      <div class="card more">
+        <i class="pi pi-lock"></i>
+        <span>{{ t().reports.more }}<b>{{ t().reports.moreBold }}</b>{{ t().reports.moreRest }}</span>
+        <a routerLink="/explorar/bloqueado" [queryParams]="{ f: 'mas' }">{{ t().reports.learnMore }}</a>
+      </div>
+    </p-card>
   `,
   styles: [
     DEMO_PAGE_STYLES,

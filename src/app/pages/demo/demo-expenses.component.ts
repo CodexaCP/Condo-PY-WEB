@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
+import { Card } from 'primeng/card';
 import { EXPENSE_CATEGORIES } from './demo.data';
 import { CategoryId } from './demo.i18n';
 import { DEMO_PAGE_STYLES } from './demo.styles';
@@ -11,80 +12,83 @@ import { DemoStore } from './demo.store';
   standalone: true,
   selector: 'app-demo-expenses',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [FormsModule, RouterLink],
+  imports: [FormsModule, RouterLink, Card],
   template: `
-    <h1>{{ t().expenses.title }}</h1>
-    <p class="sub">{{ t().expenses.sub }}</p>
+    <p-card styleClass="app-page-card">
+      <div class="app-toolbar">
+        <div class="app-page-head"><div><h1>{{ t().expenses.title }}</h1><p class="sub">{{ t().expenses.sub }}</p></div></div>
+      </div>
 
-    <div class="grid2">
-      <div class="card">
-        <h2><i class="pi pi-plus-circle"></i> {{ t().expenses.formTitle }}</h2>
-        <form class="form" (ngSubmit)="submit()">
-          <label class="fld">{{ t().expenses.concept }}
-            <input name="concept" [ngModel]="concept()" (ngModelChange)="concept.set($event)" [placeholder]="t().expenses.conceptPlaceholder" maxlength="80" />
-          </label>
-          <label class="fld">{{ t().expenses.supplier }}
-            <input name="supplier" [ngModel]="supplier()" (ngModelChange)="supplier.set($event)" [placeholder]="t().expenses.supplierPlaceholder" maxlength="60" />
-          </label>
-          <div class="two">
-            <label class="fld">{{ t().expenses.category }}
-              <select name="category" [ngModel]="category()" (ngModelChange)="category.set($event)">
-                @for (c of categories; track c) { <option [value]="c">{{ t().categories[c] }}</option> }
-              </select>
+      <div class="grid2">
+        <div class="card">
+          <h2><i class="pi pi-plus-circle"></i> {{ t().expenses.formTitle }}</h2>
+          <form class="form" (ngSubmit)="submit()">
+            <label class="fld">{{ t().expenses.concept }}
+              <input name="concept" [ngModel]="concept()" (ngModelChange)="concept.set($event)" [placeholder]="t().expenses.conceptPlaceholder" maxlength="80" />
             </label>
-            <label class="fld">{{ t().expenses.amount }}
-              <input name="amount" type="number" min="0" step="1000" [ngModel]="amount()" (ngModelChange)="amount.set($event)" [placeholder]="t().expenses.amountPlaceholder" />
+            <label class="fld">{{ t().expenses.supplier }}
+              <input name="supplier" [ngModel]="supplier()" (ngModelChange)="supplier.set($event)" [placeholder]="t().expenses.supplierPlaceholder" maxlength="60" />
             </label>
-          </div>
-          @if (amount() > 0) {
-            <p class="preview">{{ t().expenses.preview }}<b>{{ gs(amount()) }}</b>@if (vat() > 0) { {{ t().expenses.vatIncluded(gs(vat())) }} }</p>
-          }
-          @if (error()) { <p class="err">{{ error() }}</p> }
-          <button class="btn" type="submit"><i class="pi pi-check"></i> {{ t().expenses.submit }}</button>
-        </form>
-
-        @if (added(); as a) {
-          <div class="ok">
-            <i class="pi pi-check-circle"></i>
-            <div>
-              <b>{{ t().expenses.addedTitle }}</b>{{ t().expenses.added(a.concept, gs(a.amount)) }}<br />
-              <a [routerLink]="store.ledgerRoute()" [queryParams]="store.hasJournal() ? { focus: a.id } : null">{{ t().expenses.seeEntry }}</a>
-              · <a routerLink="/explorar/panel">{{ t().expenses.seePanel }}</a>
+            <div class="two">
+              <label class="fld">{{ t().expenses.category }}
+                <select name="category" [ngModel]="category()" (ngModelChange)="category.set($event)">
+                  @for (c of categories; track c) { <option [value]="c">{{ t().categories[c] }}</option> }
+                </select>
+              </label>
+              <label class="fld">{{ t().expenses.amount }}
+                <input name="amount" type="number" min="0" step="1000" [ngModel]="amount()" (ngModelChange)="amount.set($event)" [placeholder]="t().expenses.amountPlaceholder" />
+              </label>
             </div>
-          </div>
-        }
-      </div>
-
-      <div class="card">
-        <h2>{{ t().expenses.summary }}</h2>
-        <p class="tot">{{ gs(store.expensesTotal()) }}</p>
-        <ul class="cats">
-          @for (c of store.expensesByCategory(); track c.category) {
-            <li><span>{{ c.label }}</span><div class="meter"><i [style.width.%]="c.share"></i></div><b>{{ t().percent(c.share) }}</b></li>
-          }
-        </ul>
-      </div>
-    </div>
-
-    <div class="card list">
-      <h2>{{ t().expenses.listTitle(store.currentPeriodLabel()) }}</h2>
-      <div class="tbl-wrap">
-        <table class="tb">
-          <thead><tr><th>{{ t().expenses.cols.date }}</th><th>{{ t().expenses.cols.concept }}</th><th>{{ t().expenses.cols.supplier }}</th><th>{{ t().expenses.cols.category }}</th><th class="num">{{ t().expenses.cols.amount }}</th></tr></thead>
-          <tbody>
-            @for (e of store.expenses(); track e.id) {
-              <tr>
-                <td>{{ store.dateLabel(e.date) }}</td>
-                <td>{{ e.concept }} @if (e.simulated) { <span class="badge sim">{{ t().expenses.simulated }}</span> }</td>
-                <td class="muted">{{ e.supplier }}</td>
-                <td><span class="badge info">{{ t().categories[e.category] }}</span></td>
-                <td class="num">{{ gs(e.amount) }}</td>
-              </tr>
+            @if (amount() > 0) {
+              <p class="preview">{{ t().expenses.preview }}<b>{{ gs(amount()) }}</b>@if (vat() > 0) { {{ t().expenses.vatIncluded(gs(vat())) }} }</p>
             }
-          </tbody>
-        </table>
+            @if (error()) { <p class="err">{{ error() }}</p> }
+            <button class="btn" type="submit"><i class="pi pi-check"></i> {{ t().expenses.submit }}</button>
+          </form>
+
+          @if (added(); as a) {
+            <div class="ok">
+              <i class="pi pi-check-circle"></i>
+              <div>
+                <b>{{ t().expenses.addedTitle }}</b>{{ t().expenses.added(a.concept, gs(a.amount)) }}<br />
+                <a [routerLink]="store.ledgerRoute()" [queryParams]="store.hasJournal() ? { focus: a.id } : null">{{ t().expenses.seeEntry }}</a>
+                · <a routerLink="/explorar/panel">{{ t().expenses.seePanel }}</a>
+              </div>
+            </div>
+          }
+        </div>
+
+        <div class="card">
+          <h2>{{ t().expenses.summary }}</h2>
+          <p class="tot">{{ gs(store.expensesTotal()) }}</p>
+          <ul class="cats">
+            @for (c of store.expensesByCategory(); track c.category) {
+              <li><span>{{ c.label }}</span><div class="meter"><i [style.width.%]="c.share"></i></div><b>{{ t().percent(c.share) }}</b></li>
+            }
+          </ul>
+        </div>
       </div>
-    </div>
+
+      <div class="card list">
+        <h2>{{ t().expenses.listTitle(store.currentPeriodLabel()) }}</h2>
+        <div class="tbl-wrap">
+          <table class="tb">
+            <thead><tr><th>{{ t().expenses.cols.date }}</th><th>{{ t().expenses.cols.concept }}</th><th>{{ t().expenses.cols.supplier }}</th><th>{{ t().expenses.cols.category }}</th><th class="num">{{ t().expenses.cols.amount }}</th></tr></thead>
+            <tbody>
+              @for (e of store.expenses(); track e.id) {
+                <tr>
+                  <td>{{ store.dateLabel(e.date) }}</td>
+                  <td>{{ e.concept }} @if (e.simulated) { <span class="badge sim">{{ t().expenses.simulated }}</span> }</td>
+                  <td class="muted">{{ e.supplier }}</td>
+                  <td><span class="badge info">{{ t().categories[e.category] }}</span></td>
+                  <td class="num">{{ gs(e.amount) }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </p-card>
   `,
   styles: [
     DEMO_PAGE_STYLES,
