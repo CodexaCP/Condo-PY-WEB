@@ -21,6 +21,14 @@ interface Profile {
   items: string[];
 }
 
+export type WaSource = 'general' | 'hero' | 'expensas' | 'morosidad' | 'app' | 'promo' | 'admin';
+
+// Mensaje que abre WhatsApp: saludo comercial + línea del tema (según el botón tocado) + edificios + demostración.
+export function buildWhatsAppMessage(t: LandingContent, source: WaSource): string {
+  const topic = t.wa.topics[source].topic;
+  return [t.wa.intro, ...(topic ? [topic] : []), t.wa.buildings, t.wa.demo].join('\n\n');
+}
+
 // Todos los textos de la página de inicio en un idioma. La página (home.component) solo los pinta: así español y portugués
 // comparten diseño y la versión en portugués es una URL propia (/pt/) que Google puede indexar por separado.
 export interface LandingContent {
@@ -35,6 +43,13 @@ export interface LandingContent {
   jsonLdDescription: string;
   areaServed: string;
   whatsappMessage: string;
+  wa: {
+    floatLabel: string;
+    intro: string;
+    buildings: string;
+    demo: string;
+    topics: Record<WaSource, { label: string; topic: string }>;
+  };
   brandAria: string;
   navAria: string;
   footerNavAria: string;
@@ -68,6 +83,21 @@ export const LANDING_ES: LandingContent = {
     'Expensas, cobranza, gastos, facturación y contabilidad de tu edificio en un solo sistema, con app para el Encargado y propietarios. Prueba la demo gratis.',
   areaServed: 'Paraguay',
   whatsappMessage: 'Hola, vi la página de Expenses y quiero pedir una cotización para mi edificio. ¿Me pueden contactar?',
+  wa: {
+    floatLabel: 'Consultar por WhatsApp',
+    intro: 'Hola, quiero conocer Expenses y saber cómo acceder a los 2 meses gratis de gestión completa.',
+    buildings: 'Actualmente administro ___ edificio(s).',
+    demo: 'Me gustaría coordinar una demostración.',
+    topics: {
+      general: { label: 'Hablar por WhatsApp', topic: '' },
+      hero: { label: 'Quiero conocer Expenses', topic: 'Me interesa conocer Expenses.' },
+      expensas: { label: 'Quiero automatizar mis expensas', topic: 'Me interesa automatizar mis expensas.' },
+      morosidad: { label: 'Quiero mejorar mis cobranzas', topic: 'Me interesa mejorar mis cobranzas y reducir la morosidad.' },
+      app: { label: 'Quiero ver cómo funciona', topic: 'Me interesa ver cómo funciona la aplicación móvil.' },
+      promo: { label: 'Quiero mis 2 meses gratis', topic: 'Quiero activar mis 2 meses gratis.' },
+      admin: { label: 'Soy administrador: quiero una demo', topic: 'Soy administrador y quiero una demostración para mi cartera.' }
+    }
+  },
   brandAria: 'Expenses, inicio',
   navAria: 'Secciones',
   footerNavAria: 'Pie de página',
@@ -197,6 +227,21 @@ export const LANDING_PT: LandingContent = {
     'Taxas condominiais, cobrança, despesas, faturamento e contabilidade do seu condomínio em um só sistema, com app para o encarregado e os proprietários.',
   areaServed: 'Paraguai',
   whatsappMessage: 'Olá, vi a página da Expenses em português e quero pedir um orçamento para o meu condomínio. Podem entrar em contato?',
+  wa: {
+    floatLabel: 'Consultar pelo WhatsApp',
+    intro: 'Olá, quero conhecer a Expenses e saber como acessar os 2 meses grátis de gestão completa.',
+    buildings: 'Atualmente administro ___ condomínio(s).',
+    demo: 'Gostaria de agendar uma demonstração.',
+    topics: {
+      general: { label: 'Falar pelo WhatsApp', topic: '' },
+      hero: { label: 'Quero conhecer a Expenses', topic: 'Tenho interesse em conhecer a Expenses.' },
+      expensas: { label: 'Quero automatizar minhas taxas', topic: 'Tenho interesse em automatizar as taxas de condomínio.' },
+      morosidad: { label: 'Quero melhorar minha cobrança', topic: 'Tenho interesse em melhorar a cobrança e reduzir a inadimplência.' },
+      app: { label: 'Quero ver como funciona', topic: 'Tenho interesse em ver como funciona o aplicativo móvel.' },
+      promo: { label: 'Quero meus 2 meses grátis', topic: 'Quero ativar meus 2 meses grátis.' },
+      admin: { label: 'Sou administrador: quero uma demo', topic: 'Sou administrador e quero uma demonstração para a minha carteira.' }
+    }
+  },
   brandAria: 'Expenses, início',
   navAria: 'Seções',
   footerNavAria: 'Rodapé',
@@ -326,6 +371,21 @@ export const LANDING_EN: LandingContent = {
     'Maintenance fees, collections, expenses, invoicing and accounting for your building in one system, with an app for the on-site manager and owners.',
   areaServed: 'Paraguay',
   whatsappMessage: 'Hello, I saw the Expenses page in English and I would like to request a quote for my building. Could you contact me?',
+  wa: {
+    floatLabel: 'Ask on WhatsApp',
+    intro: 'Hello, I would like to get to know Expenses and learn how to get the 2 free months of full management.',
+    buildings: 'I currently manage ___ building(s).',
+    demo: 'I would like to schedule a demo.',
+    topics: {
+      general: { label: 'Talk on WhatsApp', topic: '' },
+      hero: { label: 'I want to get to know Expenses', topic: 'I am interested in getting to know Expenses.' },
+      expensas: { label: 'I want to automate my building fees', topic: 'I am interested in automating my building fees.' },
+      morosidad: { label: 'I want to improve my collections', topic: 'I am interested in improving collections and reducing late payments.' },
+      app: { label: 'I want to see how it works', topic: 'I am interested in seeing how the mobile app works.' },
+      promo: { label: 'I want my 2 free months', topic: 'I want to activate my 2 free months.' },
+      admin: { label: 'I am a manager: I want a demo', topic: 'I am a property manager and I want a demo for my portfolio.' }
+    }
+  },
   brandAria: 'Expenses, home',
   navAria: 'Sections',
   footerNavAria: 'Footer',

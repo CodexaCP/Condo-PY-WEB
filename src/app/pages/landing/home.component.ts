@@ -5,7 +5,7 @@ import { salesWhatsAppUrlFor } from '../../config/sales.config';
 import { gaEvent, trackWhatsAppClick } from '../../core/analytics';
 import { LangService } from '../../core/i18n/lang.service';
 import { SITE_URL, SeoService } from '../../core/seo.service';
-import { LANDING_LANGS, LandingContent, landingContent } from './landing.content';
+import { LANDING_LANGS, LandingContent, WaSource, buildWhatsAppMessage, landingContent } from './landing.content';
 
 // Página pública de inicio: español en «/», portugués en «/pt/» e inglés en «/en/» (mismo diseño, textos de landing.content.ts).
 // Es lo que ve Google y quien llega por primera vez: qué es Expenses, qué hace y cómo probarlo.
@@ -66,7 +66,7 @@ import { LANDING_LANGS, LandingContent, landingContent } from './landing.content
           <p class="lead">{{ t.hero.lead }}</p>
           <div class="cta">
             @if (whatsapp) {
-              <a [href]="whatsapp" class="btn solid big" target="_blank" rel="noopener noreferrer"><span aria-hidden="true">→</span> {{ t.hero.ctaActivate }}</a>
+              <a [href]="wa('hero')" data-wa="hero" class="btn solid big" target="_blank" rel="noopener noreferrer"><span aria-hidden="true">→</span> {{ waLabel('hero') }}</a>
             } @else {
               <a routerLink="/explorar" class="btn solid big"><span aria-hidden="true">→</span> {{ t.hero.ctaActivate }}</a>
             }
@@ -83,6 +83,9 @@ import { LANDING_LANGS, LandingContent, landingContent } from './landing.content
             <div class="benefit"><span class="ico" aria-hidden="true">✓</span><span>{{ c.title }}</span></div>
           }
         </div>
+        @if (whatsapp) {
+          <p class="app-line cta-row"><a [href]="wa('morosidad')" data-wa="morosidad" class="btn solid big" target="_blank" rel="noopener noreferrer">{{ waLabel('morosidad') }}</a></p>
+        }
       </section>
 
       <section class="sec" id="funciones">
@@ -93,26 +96,37 @@ import { LANDING_LANGS, LandingContent, landingContent } from './landing.content
             <article class="card feat"><span class="ico" aria-hidden="true">{{ i + 1 }}</span><h3>{{ f.title }}</h3><p>{{ f.text }}</p></article>
           }
         </div>
-        <p class="app-line"><a routerLink="/explorar" class="btn solid big">{{ t.hero.ctaDemo }}</a></p>
+        <p class="app-line">
+          <a routerLink="/explorar" class="btn line big">{{ t.hero.ctaDemo }}</a>
+          @if (whatsapp) {
+            <a [href]="wa('expensas')" data-wa="expensas" class="btn solid big" target="_blank" rel="noopener noreferrer">{{ waLabel('expensas') }}</a>
+          }
+        </p>
       </section>
 
       <section class="sec alt" id="perfiles">
         <h2>{{ t.profilesSec.h2 }}</h2>
         <p class="sub">{{ t.profilesSec.sub }}</p>
         <div class="grid3">
-          @for (p of t.profilesSec.items; track p.title) {
+          @for (p of t.profilesSec.items; track p.title; let i = $index) {
             <article class="card">
               <span class="tag">{{ p.where }}</span>
               <h3>{{ p.title }}</h3>
               <ul>
-                @for (i of p.items; track i) { <li>{{ i }}</li> }
+                @for (it of p.items; track it) { <li>{{ it }}</li> }
               </ul>
+              @if (i === 0 && whatsapp) {
+                <a class="btn line admin-cta" [href]="wa('admin')" data-wa="admin" target="_blank" rel="noopener noreferrer">{{ waLabel('admin') }}</a>
+              }
             </article>
           }
         </div>
         <p class="app-line">
           <a href="/downloads/expenses.apk" download="Expenses.apk" class="btn line">{{ t.profilesSec.downloadApp }}</a>
           <a routerLink="/explorar" class="btn line">{{ t.profilesSec.seeDemo }}</a>
+          @if (whatsapp) {
+            <a [href]="wa('app')" data-wa="app" class="btn solid" target="_blank" rel="noopener noreferrer">{{ waLabel('app') }}</a>
+          }
         </p>
       </section>
 
@@ -135,7 +149,7 @@ import { LANDING_LANGS, LandingContent, landingContent } from './landing.content
         </div>
         <p class="sub plans-note">{{ t.plans.note }}</p>
         <p class="app-line">
-          @if (whatsapp) { <a [href]="whatsapp" class="btn solid big" target="_blank" rel="noopener noreferrer">{{ t.plans.quote }}</a> }
+          @if (whatsapp) { <a [href]="wa('promo')" data-wa="promo" class="btn solid big" target="_blank" rel="noopener noreferrer">{{ waLabel('promo') }}</a> }
         </p>
       </section>
 
@@ -164,7 +178,7 @@ import { LANDING_LANGS, LandingContent, landingContent } from './landing.content
         <p>{{ t.final.text }}</p>
         <div class="cta center">
           <a routerLink="/explorar" class="btn white big">{{ t.final.ctaDemo }}</a>
-          @if (whatsapp) { <a [href]="whatsapp" class="btn outw big" target="_blank" rel="noopener noreferrer">{{ t.final.ctaWhatsapp }}</a> }
+          @if (whatsapp) { <a [href]="wa('general')" data-wa="general" class="btn outw big" target="_blank" rel="noopener noreferrer">{{ waLabel('general') }}</a> }
         </div>
       </section>
     </main>
@@ -190,9 +204,10 @@ import { LANDING_LANGS, LandingContent, landingContent } from './landing.content
       <small>© {{ year }} Expenses · expenses.com.py</small>
     </footer>
     @if (whatsapp) {
-      <div class="wa-bar">
-        <a [href]="whatsapp" class="btn solid big" target="_blank" rel="noopener noreferrer">{{ t.final.ctaWhatsapp }}</a>
-      </div>
+      <a class="wa-float" [href]="wa('general')" data-wa="flotante" target="_blank" rel="noopener noreferrer" [attr.aria-label]="t.wa.floatLabel">
+        <svg class="wa-ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="currentColor" d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>
+        <span class="wa-txt">{{ t.wa.floatLabel }}</span>
+      </a>
     }
   `,
   styles: [
@@ -305,17 +320,23 @@ import { LANDING_LANGS, LandingContent, landingContent } from './landing.content
       .ft nav { display: flex; flex-wrap: wrap; column-gap: 1.4rem; font-weight: 600; color: #fff; }
       .ft nav a { display: flex; align-items: center; min-height: 44px; color: #fff; }
       .ft small { color: #bcd0e6; }
-      .wa-bar { display: none; }
-      @media (prefers-reduced-motion: reduce) { .card, .btn { transition: none; } .card:hover, .btn:hover { transform: none; } }
+      .wa-float { position: fixed; right: 1.25rem; bottom: 1.25rem; z-index: 35; display: inline-flex; align-items: center; gap: 0.6rem; min-height: 56px; padding: 0 1.3rem 0 1rem; border-radius: 999px; background: #25d366; color: #fff; font-weight: 800; font-size: 0.95rem; box-shadow: 0 8px 22px rgba(0, 0, 0, 0.28); animation: wa-pulse 6s ease-in-out 3s infinite; }
+      .wa-float:hover { background: #1ebe5b; }
+      .wa-float:focus-visible { outline-color: #11364a; }
+      .wa-ico { width: 28px; height: 28px; flex: none; }
+      .cta-row { margin: 0 auto; padding: 0 1.5rem 1.6rem; }
+      .admin-cta { margin-top: 1rem; }
+      @keyframes wa-pulse { 0%, 88%, 100% { box-shadow: 0 8px 22px rgba(0, 0, 0, 0.28), 0 0 0 0 rgba(37, 211, 102, 0); } 94% { box-shadow: 0 8px 22px rgba(0, 0, 0, 0.28), 0 0 0 14px rgba(37, 211, 102, 0.25); } }
+      @media (prefers-reduced-motion: reduce) { .card, .btn { transition: none; } .card:hover, .btn:hover { transform: none; } .wa-float { animation: none; } }
       @media (max-width: 860px) {
         .benefits-in { grid-template-columns: 1fr; }
         .benefit + .benefit { border-left: 0; }
         .final { margin: 1.5rem 1rem; }
         .hero { padding: 2rem 1.5rem 3rem; }
         .sec { padding: 3.5rem 1.5rem; }
-        :host { padding-bottom: 4.6rem; }
-        .wa-bar { display: flex; justify-content: center; position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; padding: 0.6rem 1rem calc(0.6rem + env(safe-area-inset-bottom)); background: rgba(255, 255, 255, 0.97); border-top: 1px solid #dbe6ef; }
-        .wa-bar .btn { width: 100%; max-width: 26rem; }
+        .wa-float { right: 1rem; bottom: calc(1rem + env(safe-area-inset-bottom)); width: 56px; padding: 0; justify-content: center; }
+        .wa-txt { display: none; }
+        .ft { padding-bottom: 5rem; }
         .hero { grid-template-columns: 1fr; padding-top: 1.5rem; }
         .hd nav { display: none; }
         .menu-dd { display: block; }
@@ -343,7 +364,10 @@ export class HomeComponent {
 
   // El idioma viene de la ruta: «/» es español y «/pt/» es portugués (data: { lang: 'pt' }).
   readonly t: LandingContent = landingContent(inject(ActivatedRoute).snapshot.data['lang']);
-  readonly whatsapp = salesWhatsAppUrlFor(this.t.whatsappMessage);
+  // Enlace de WhatsApp por origen (cada botón lleva un mensaje y una etiqueta propios). null si no hay número configurado.
+  wa(source: WaSource): string | null { return salesWhatsAppUrlFor(buildWhatsAppMessage(this.t, source)); }
+  waLabel(source: WaSource): string { return this.t.wa.topics[source].label; }
+  readonly whatsapp = this.wa('general');
   readonly year = new Date().getFullYear();
   // Aviso discreto (no una redirección automática, que perjudica al buscador) para quien navega con el celular o el
   // navegador en otro de los tres idiomas y llegó a una versión distinta.
@@ -368,7 +392,7 @@ export class HomeComponent {
     // Al elegir una sección en el menú del celular, el menú se cierra.
     link?.closest('details.menu-dd')?.removeAttribute('open');
     const href = link?.getAttribute('href') ?? '';
-    if (href.includes('wa.me')) trackWhatsAppClick({ placement: 'landing', language: this.t.lang });
+    if (href.includes('wa.me')) trackWhatsAppClick({ placement: 'landing', language: this.t.lang, contactType: link?.getAttribute('data-wa') ?? 'general' });
     else if (href.startsWith('/explorar')) gaEvent('demo_click', { language: this.t.lang });
   }
 

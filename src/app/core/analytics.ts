@@ -17,7 +17,7 @@ export interface WhatsAppClickInfo {
   language?: string;
   // País de la demostración («py» o «ar»). Solo la demostración lo tiene.
   country?: string;
-  // Qué botón de contacto se tocó (demostracion, planes, presupuesto). Solo la demostración los distingue.
+  // Qué botón de contacto se tocó (en la demostración: demostracion, planes, presupuesto; en la portada: hero, morosidad, expensas, admin, app, promo, general, flotante).
   contactType?: string;
 }
 
