@@ -37,3 +37,14 @@ export function trackWhatsAppClick(info: WhatsAppClickInfo): void {
   if (info.contactType) params['contact_type'] = info.contactType;
   gaEvent('whatsapp_click', params);
 }
+
+// Asistente animado (personaje con preguntas). Solo se envían el tema, el idioma y el lugar: nunca texto escrito por la persona.
+export type AssistantEvent = 'assistant_open' | 'assistant_question' | 'assistant_complete' | 'assistant_exit';
+
+export function trackAssistant(event: AssistantEvent, params: { placement: 'landing' | 'demo'; topic?: string; source?: 'chip' | 'texto'; step?: number }): void {
+  const p: Record<string, string | number> = { placement: params.placement, language: pageLanguage() };
+  if (params.topic) p['topic'] = params.topic;
+  if (params.source) p['source'] = params.source;
+  if (params.step !== undefined) p['step'] = params.step;
+  gaEvent(event, p);
+}

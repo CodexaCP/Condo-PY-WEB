@@ -3,7 +3,7 @@ import { ChangeDetectionStrategy, Component, DestroyRef, ElementRef, afterNextRe
 import { RouterLink } from '@angular/router';
 import { LangService } from '../../../core/i18n/lang.service';
 import { salesWhatsAppUrlFor } from '../../../config/sales.config';
-import { trackWhatsAppClick } from '../../../core/analytics';
+import { trackAssistant, trackWhatsAppClick } from '../../../core/analytics';
 import { LOGIN_TX } from '../../auth/login.i18n';
 import { GuideFigureComponent } from './guide-figure.component';
 import { GuideScreenComponent } from './guide-screen.component';
@@ -427,6 +427,7 @@ export class GuideSceneComponent {
       }
       this.playing.set(false);
       this.finished.set(true);
+      this.markComplete();
     } catch (e) {
       if (e !== CANCEL) throw e;
     }
@@ -519,7 +520,16 @@ export class GuideSceneComponent {
     void this.playFrom(0);
   }
 
+  private completed = false;
+
+  private markComplete(): void {
+    if (this.completed) return;
+    this.completed = true;
+    trackAssistant('assistant_complete', { placement: this.showDemoLink() ? 'landing' : 'demo', topic: this.topic() });
+  }
+
   close(): void {
+    if (!this.completed) trackAssistant('assistant_exit', { placement: this.showDemoLink() ? 'landing' : 'demo', topic: this.topic(), step: this.index() + 1 });
     this.run++;
     this.closed.emit();
   }

@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, DestroyRef, afterNextRender, computed, inject, input, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { LangService } from '../../../core/i18n/lang.service';
+import { trackAssistant } from '../../../core/analytics';
 import { GuideFigureComponent } from './guide-figure.component';
 import { GuideSceneComponent } from './guide-scene.component';
 import { GUIDE_TX } from './guide.i18n';
@@ -32,11 +33,11 @@ import { GuideTopic, matchGuideTopic } from './guide.script';
             <button type="button" class="eg-x" [attr.aria-label]="tx().close" (click)="panelOpen.set(false)"><i class="pi pi-times"></i></button>
           </div>
           <div class="eg-msg bot">{{ tx().ask }}</div>
-          <button type="button" class="eg-chip hot" (click)="start('custom-need')"><i class="pi pi-lightbulb"></i> {{ tx().topicCustom }}</button>
-          <button type="button" class="eg-chip" (click)="start('create-period')"><i class="pi pi-calendar-plus"></i> {{ tx().topicCreatePeriod }}</button>
-          <button type="button" class="eg-chip" (click)="start('clone-period')"><i class="pi pi-copy"></i> {{ tx().topicClonePeriod }}</button>
-          <button type="button" class="eg-chip" (click)="start('approve-payment')"><i class="pi pi-wallet"></i> {{ tx().topicPayment }}</button>
-          <button type="button" class="eg-chip" (click)="start('settlement-flow')"><i class="pi pi-calculator"></i> {{ tx().topicSettlement }}</button>
+          <button type="button" class="eg-chip hot" (click)="start('custom-need', 'chip')"><i class="pi pi-lightbulb"></i> {{ tx().topicCustom }}</button>
+          <button type="button" class="eg-chip" (click)="start('create-period', 'chip')"><i class="pi pi-calendar-plus"></i> {{ tx().topicCreatePeriod }}</button>
+          <button type="button" class="eg-chip" (click)="start('clone-period', 'chip')"><i class="pi pi-copy"></i> {{ tx().topicClonePeriod }}</button>
+          <button type="button" class="eg-chip" (click)="start('approve-payment', 'chip')"><i class="pi pi-wallet"></i> {{ tx().topicPayment }}</button>
+          <button type="button" class="eg-chip" (click)="start('settlement-flow', 'chip')"><i class="pi pi-calculator"></i> {{ tx().topicSettlement }}</button>
           @for (m of messages(); track $index) {
             <div class="eg-msg" [class.bot]="m.from === 'bot'" [class.user]="m.from === 'user'">{{ m.text }}</div>
           }
@@ -147,10 +148,18 @@ export class ExpensesGuideComponent {
 
   togglePanel(): void {
     this.panelOpen.update((v) => !v);
-    if (this.panelOpen()) this.teaser.set(false);
+    if (this.panelOpen()) {
+      this.teaser.set(false);
+      trackAssistant('assistant_open', { placement: this.placement() });
+    }
   }
 
-  start(t: GuideTopic): void {
+  private placement(): 'landing' | 'demo' {
+    return this.showDemoLink() ? 'landing' : 'demo';
+  }
+
+  start(t: GuideTopic, source: 'chip' | 'texto'): void {
+    trackAssistant('assistant_question', { placement: this.placement(), topic: t, source });
     this.panelOpen.set(false);
     this.topic.set(t);
   }
@@ -162,8 +171,11 @@ export class ExpensesGuideComponent {
     this.messages.update((m) => [...m, { from: 'user', text: q }]);
     this.question = '';
     const m = matchGuideTopic(q);
-    if (m) this.start(m);
-    else this.messages.update((list) => [...list, { from: 'bot', text: this.tx().unknown }]);
+    if (m) this.start(m, 'texto');
+    else {
+      trackAssistant('assistant_question', { placement: this.placement(), topic: 'sin-reconocer', source: 'texto' });
+      this.messages.update((list) => [...list, { from: 'bot', text: this.tx().unknown }]);
+    }
   }
 
   onEscape(): void {
