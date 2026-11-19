@@ -9,6 +9,7 @@ import { SeoService } from '../../core/seo.service';
 import { DemoCountry } from './demo.country';
 import { DemoMenuComponent } from './demo-menu.component';
 import { DemoContactKind, DemoStore } from './demo.store';
+import { ExpensesGuideComponent } from './guide/expenses-guide.component';
 
 // Marco de la demostración pública (mismo layout que el panel real): barra superior, menú lateral, misiones con progreso y el cierre comercial
 // (paso 4 del embudo: diagnóstico; paso 5: contacto). Todo es ficticio y vive solo en el navegador.
@@ -16,7 +17,7 @@ import { DemoContactKind, DemoStore } from './demo.store';
   standalone: true,
   selector: 'app-demo-shell',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterOutlet, RouterLink, LangSwitcherComponent, DemoMenuComponent],
+  imports: [RouterOutlet, RouterLink, LangSwitcherComponent, DemoMenuComponent, ExpensesGuideComponent],
   template: `
     <div class="layout-wrapper layout-static" [class.layout-mobile-active]="layout.layoutState().mobileMenuActive">
       <div class="layout-topbar">
@@ -88,6 +89,9 @@ import { DemoContactKind, DemoStore } from './demo.store';
       </div>
       <div class="layout-mask" (click)="closeMenu()"></div>
 
+      @defer (on idle) {
+        <app-expenses-guide corner="right" />
+      }
       @if (showFinish()) {
         <div class="dm-overlay" (click)="showFinish.set(false)">
           <div class="dm-modal" role="dialog" aria-modal="true" aria-labelledby="dm-fin-title" (click)="$event.stopPropagation()">
