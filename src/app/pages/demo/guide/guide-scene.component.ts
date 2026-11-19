@@ -12,7 +12,7 @@ import { GUIDE_ICONS, GUIDE_INITIAL_UI, GUIDE_TONES, GuideField, GuidePose, Guid
 
 const CANCEL = Symbol('cancel');
 
-const emptyFields = (): Record<GuideField, string> => ({ url: '', user: '', pass: '', building: '', year: '', month: '', name: '', start: '', end: '', due: '', amount: '' });
+const emptyFields = (): Record<GuideField, string> => ({ url: '', user: '', pass: '', building: '', year: '', month: '', name: '', start: '', end: '', due: '', amount: '', payAmount: '' });
 
 interface GuideCursor { x: number; y: number; visible: boolean; clicking: boolean; }
 
@@ -236,7 +236,7 @@ export class GuideSceneComponent {
   readonly tx = computed(() => GUIDE_TX[this.lang.lang()]);
   readonly loginTx = computed(() => LOGIN_TX[this.lang.lang()]);
   readonly steps = computed(() => STEPS_BY_TOPIC[this.topic()]);
-  readonly title = computed(() => (this.topic() === 'clone-period' ? this.tx().sceneTitleClone : this.topic() === 'custom-need' ? this.tx().sceneTitleCustom : this.tx().sceneTitle));
+  readonly title = computed(() => (this.topic() === 'clone-period' ? this.tx().sceneTitleClone : this.topic() === 'custom-need' ? this.tx().sceneTitleCustom : this.topic() === 'approve-payment' ? this.tx().sceneTitlePayment : this.tx().sceneTitle));
   readonly talkMode = computed(() => this.topic() === 'custom-need'); // primer plano sin PC
   readonly snap = signal(false); // coloca al personaje sin deslizarlo
   readonly waUrl = computed(() => salesWhatsAppUrlFor(this.tx().customWa));

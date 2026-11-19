@@ -1,5 +1,5 @@
 import { GUIDE_TX } from './guide.i18n';
-import { CLONE_PERIOD_STEPS, CREATE_PERIOD_STEPS, CUSTOM_NEED_STEPS, GUIDE_ICONS, GUIDE_TONES, matchGuideTopic } from './guide.script';
+import { APPROVE_PAYMENT_STEPS, CLONE_PERIOD_STEPS, CREATE_PERIOD_STEPS, CUSTOM_NEED_STEPS, GUIDE_ICONS, GUIDE_TONES, matchGuideTopic } from './guide.script';
 
 describe('guía animada: guion y reconocimiento de preguntas', () => {
   it('reconoce «crear periodo» en los tres idiomas', () => {
@@ -44,6 +44,27 @@ describe('guía animada: guion y reconocimiento de preguntas', () => {
     expect(GUIDE_TONES.length).toBe(6);
   });
 
+  it('reconoce «aprobar pago / emitir factura» en los tres idiomas', () => {
+    expect(matchGuideTopic('¿Cómo apruebo el pago de un propietario?')).toBe('approve-payment');
+    expect(matchGuideTopic('how do I issue the invoice')).toBe('approve-payment');
+    expect(matchGuideTopic('como emitir a fatura do pagamento')).toBe('approve-payment');
+    expect(matchGuideTopic('¿Cómo creo un PERÍODO?')).toBe('create-period');
+    expect(matchGuideTopic('¿Cómo clono el periodo del mes anterior?')).toBe('clone-period');
+    expect(matchGuideTopic('necesito una funcionalidad a medida')).toBe('custom-need');
+  });
+
+  it('el guion de aprobar el pago tiene 14 pasos, empieza apagado y termina con la factura emitida', () => {
+    expect(APPROVE_PAYMENT_STEPS.length).toBe(14);
+    expect(APPROVE_PAYMENT_STEPS[0].ui.screen).toBe('off');
+    const last = APPROVE_PAYMENT_STEPS[APPROVE_PAYMENT_STEPS.length - 1];
+    expect(last.ui.issued).toBeTrue();
+    expect(last.ui.pay).toBe('approved');
+  });
+
+  it('cada idioma tiene el número de factura del tema de aprobar el pago', () => {
+    for (const lang of ['es', 'pt', 'en'] as const) expect(GUIDE_TX[lang].web.pay.invNumber.length).toBeGreaterThan(0);
+  });
+
   it('devuelve null para otras preguntas', () => {
     expect(matchGuideTopic('cómo cargo un gasto')).toBeNull();
   });
@@ -64,8 +85,9 @@ describe('guía animada: guion y reconocimiento de preguntas', () => {
 
   it('todas las acciones apuntan a elementos conocidos de la pantalla simulada', () => {
     const known = ['url', 'user', 'pass', 'login-btn', 'menu-cobros', 'menu-periodos', 'btn-nuevo', 'f-building', 'f-year', 'f-month', 'f-name', 'f-start', 'f-end', 'f-due', 'f-latefee', 'btn-crear',
-      'card-nov', 'btn-clone', 'btn-confirm', 'btn-ledger', 'row-power', 'btn-edit-power', 'f-amount', 'btn-save', 'btn-attach-power'];
-    for (const step of [...CREATE_PERIOD_STEPS, ...CLONE_PERIOD_STEPS]) {
+      'card-nov', 'btn-clone', 'btn-confirm', 'btn-ledger', 'row-power', 'btn-edit-power', 'f-amount', 'btn-save', 'btn-attach-power',
+      'alert-toast', 'menu-pagos', 'row-pay', 'proof', 'f-payamount', 'btn-review', 'btn-approve', 'btn-inv-open', 'f-series', 'btn-emit'];
+    for (const step of [...CREATE_PERIOD_STEPS, ...CLONE_PERIOD_STEPS, ...APPROVE_PAYMENT_STEPS]) {
       for (const a of step.actions) {
         if (a.kind !== 'pause') expect(known).toContain(a.target);
       }
@@ -74,7 +96,7 @@ describe('guía animada: guion y reconocimiento de preguntas', () => {
 
   it('cada idioma tiene el texto de todos los pasos', () => {
     for (const lang of ['es', 'pt', 'en'] as const) {
-      for (const step of [...CREATE_PERIOD_STEPS, ...CLONE_PERIOD_STEPS, ...CUSTOM_NEED_STEPS]) {
+      for (const step of [...CREATE_PERIOD_STEPS, ...CLONE_PERIOD_STEPS, ...APPROVE_PAYMENT_STEPS, ...CUSTOM_NEED_STEPS]) {
         expect(GUIDE_TX[lang].say[step.say]?.length).toBeGreaterThan(0);
       }
     }

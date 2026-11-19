@@ -1,14 +1,16 @@
 export type GuidePose = 'idle' | 'wave' | 'walk' | 'sit' | 'type' | 'point' | 'thumbs' | 'acknowledge' | 'emphasize' | 'lean' | 'invite';
-export type GuideScreen = 'off' | 'browser' | 'login' | 'panel' | 'periods' | 'form' | 'done' | 'ledger';
-export type GuideField = 'url' | 'user' | 'pass' | 'building' | 'year' | 'month' | 'name' | 'start' | 'end' | 'due' | 'amount';
-export type GuideTopic = 'create-period' | 'clone-period' | 'custom-need';
+export type GuideScreen = 'off' | 'browser' | 'login' | 'panel' | 'periods' | 'form' | 'done' | 'ledger' | 'payments' | 'payment';
+export type GuideField = 'url' | 'user' | 'pass' | 'building' | 'year' | 'month' | 'name' | 'start' | 'end' | 'due' | 'amount' | 'payAmount';
+export type GuideTopic = 'create-period' | 'clone-period' | 'custom-need' | 'approve-payment';
 export type GuideSayKey = 'hello' | 'openWeb' | 'user' | 'pass' | 'panel' | 'periods' | 'newPeriod' | 'building' | 'yearMonth' | 'dates' | 'lateFee' | 'create' | 'done'
   | 'cloneHello' | 'cloneIntro' | 'cloneFind' | 'cloneClick' | 'cloneConfirm' | 'cloneCopied' | 'cloneOpenLedger' | 'cloneRows' | 'cloneEdit' | 'cloneAmount' | 'cloneAttach' | 'cloneBenefits' | 'cloneDone'
-  | 'customReact' | 'customValueA' | 'customValueB' | 'customClose' | 'customAsk';
+  | 'customReact' | 'customValueA' | 'customValueB' | 'customClose' | 'customAsk'
+  | 'payHello' | 'payAlert' | 'payMenu' | 'payList' | 'payProof' | 'payAmount' | 'payResolve' | 'payApproved' | 'payInvoice' | 'payEmit' | 'payDone';
 
 export interface GuideUiState {
   screen: GuideScreen; menuOpen: boolean; formOpen: boolean; created: boolean;
   confirm: boolean; cloned: boolean; toast: boolean; editOpen: boolean; edited: boolean; attached: boolean; benefits: boolean;
+  alert: boolean; pay: 'pending' | 'review' | 'approved'; invOpen: boolean; series: boolean; issued: boolean; note: 'none' | 'approved' | 'issued';
 }
 
 export type GuideAction =
@@ -31,7 +33,10 @@ export interface GuideStep {
   actions: GuideAction[];
 }
 
-const NO_FLAGS = { confirm: false, cloned: false, toast: false, editOpen: false, edited: false, attached: false, benefits: false };
+const NO_FLAGS: Omit<GuideUiState, 'screen' | 'menuOpen' | 'formOpen' | 'created'> = {
+  confirm: false, cloned: false, toast: false, editOpen: false, edited: false, attached: false, benefits: false,
+  alert: false, pay: 'pending', invOpen: false, series: false, issued: false, note: 'none'
+};
 // Estado de la pantalla simulada; los indicadores extra (confirm, cloned…) arrancan apagados salvo que se indiquen.
 const ui = (screen: GuideScreen, menuOpen: boolean, formOpen: boolean, created: boolean, extra: Partial<GuideUiState> = {}): GuideUiState => ({ screen, menuOpen, formOpen, created, ...NO_FLAGS, ...extra });
 export const GUIDE_INITIAL_UI: GuideUiState = ui('off', false, false, false);
@@ -42,7 +47,9 @@ export const GUIDE_ICONS: Record<GuideSayKey, string> = {
   building: 'pi-building', yearMonth: 'pi-calendar-plus', dates: 'pi-clock', lateFee: 'pi-info-circle', create: 'pi-check-circle', done: 'pi-thumbs-up',
   cloneHello: 'pi-comments', cloneIntro: 'pi-calendar', cloneFind: 'pi-copy', cloneClick: 'pi-question-circle', cloneConfirm: 'pi-check-circle', cloneCopied: 'pi-clone',
   cloneOpenLedger: 'pi-list', cloneRows: 'pi-wallet', cloneEdit: 'pi-pencil', cloneAmount: 'pi-dollar', cloneAttach: 'pi-paperclip', cloneBenefits: 'pi-star', cloneDone: 'pi-thumbs-up',
-  customReact: 'pi-comments', customValueA: 'pi-sliders-h', customValueB: 'pi-lightbulb', customClose: 'pi-star', customAsk: 'pi-users'
+  customReact: 'pi-comments', customValueA: 'pi-sliders-h', customValueB: 'pi-lightbulb', customClose: 'pi-star', customAsk: 'pi-users',
+  payHello: 'pi-comments', payAlert: 'pi-bell', payMenu: 'pi-wallet', payList: 'pi-list', payProof: 'pi-image', payAmount: 'pi-dollar', payResolve: 'pi-check-square',
+  payApproved: 'pi-check-circle', payInvoice: 'pi-receipt', payEmit: 'pi-send', payDone: 'pi-thumbs-up'
 };
 // Colores del círculo de cada idea; se reparten por orden de paso salvo que el paso traiga `tone`.
 export const GUIDE_TONES = ['#1385b6', '#7c4dcc', '#f59e0b', '#16a34a', '#0ea5a4', '#e5675d'];
@@ -102,15 +109,44 @@ export const CUSTOM_NEED_STEPS: GuideStep[] = [
   { say: 'customAsk',    shot: 'wide', pose: 'invite',      figureX: 420, sitting: false, hold: 2500,  icon: 'pi-users', tone: '#0ea5a4', ui: ui('off', false, false, false), actions: [] }
 ];
 
-export const STEPS_BY_TOPIC: Record<GuideTopic, GuideStep[]> = { 'create-period': CREATE_PERIOD_STEPS, 'clone-period': CLONE_PERIOD_STEPS, 'custom-need': CUSTOM_NEED_STEPS };
+// Guion «aprobar el pago de un propietario y emitir la factura»: 14 pasos desde el login.
+export const APPROVE_PAYMENT_STEPS: GuideStep[] = [
+  { say: 'payHello', shot: 'wide', pose: 'wave', figureX: 190, sitting: false, ui: ui('off', false, false, false), actions: [] },
+  { say: 'openWeb', shot: 'wide', pose: 'type', figureX: 190, sitting: true, ui: ui('browser', false, false, false), actions: [
+    { kind: 'type', target: 'url', field: 'url' }, { kind: 'pause', ms: 300 }, { kind: 'click', target: 'url', then: { screen: 'login' } }] },
+  { say: 'user', shot: 'screen', pose: 'point', figureX: 190, sitting: true, ui: ui('login', false, false, false), actions: [{ kind: 'type', target: 'user', field: 'user' }] },
+  { say: 'pass', shot: 'screen', pose: 'point', figureX: 190, sitting: true, ui: ui('login', false, false, false), actions: [
+    { kind: 'type', target: 'pass', field: 'pass' }, { kind: 'click', target: 'login-btn', then: { screen: 'panel', alert: true } }] },
+  { say: 'payAlert', shot: 'screen', pose: 'point', figureX: 190, sitting: true, ui: ui('panel', false, false, false, { alert: true }), actions: [
+    { kind: 'move', target: 'alert-toast' }, { kind: 'pause', ms: 1200 }] },
+  { say: 'payMenu', shot: 'screen', pose: 'point', figureX: 190, sitting: true, ui: ui('panel', false, false, false, { alert: true }), actions: [
+    { kind: 'click', target: 'menu-pagos', then: { screen: 'payments', alert: false } }] },
+  { say: 'payList', shot: 'screen', pose: 'point', figureX: 190, sitting: true, ui: ui('payments', false, false, false), actions: [
+    { kind: 'move', target: 'row-pay' }, { kind: 'click', target: 'row-pay', then: { screen: 'payment' } }] },
+  { say: 'payProof', shot: 'screen', pose: 'point', figureX: 190, sitting: true, ui: ui('payment', false, false, false), actions: [{ kind: 'move', target: 'proof' }, { kind: 'pause', ms: 1400 }] },
+  { say: 'payAmount', shot: 'screen', pose: 'point', figureX: 190, sitting: true, ui: ui('payment', false, false, false), actions: [
+    { kind: 'type', target: 'f-payamount', field: 'payAmount' }, { kind: 'click', target: 'btn-review', then: { pay: 'review' } }] },
+  { say: 'payResolve', shot: 'screen', pose: 'point', figureX: 190, sitting: true, ui: ui('payment', false, false, false, { pay: 'review' }), actions: [
+    { kind: 'pause', ms: 600 }, { kind: 'click', target: 'btn-approve', then: { pay: 'approved', note: 'approved' } }] },
+  { say: 'payApproved', shot: 'screen', pose: 'point', figureX: 190, sitting: true, ui: ui('payment', false, false, false, { pay: 'approved', note: 'approved' }), actions: [{ kind: 'pause', ms: 1200 }] },
+  { say: 'payInvoice', shot: 'screen', pose: 'point', figureX: 190, sitting: true, ui: ui('payment', false, false, false, { pay: 'approved' }), actions: [
+    { kind: 'click', target: 'btn-inv-open', then: { invOpen: true } }] },
+  { say: 'payEmit', shot: 'screen', pose: 'point', figureX: 190, sitting: true, ui: ui('payment', false, false, false, { pay: 'approved', invOpen: true }), actions: [
+    { kind: 'click', target: 'f-series', then: { series: true } }, { kind: 'click', target: 'btn-emit', then: { issued: true, note: 'issued' } }] },
+  { say: 'payDone', shot: 'wide', pose: 'thumbs', figureX: 190, sitting: false, ui: ui('payment', false, false, false, { pay: 'approved', invOpen: true, series: true, issued: true }), actions: [] }
+];
 
-// Reconoce la pregunta escrita (sin tildes ni mayúsculas, en los 3 idiomas). «A medida» gana sobre «clonar», y esta sobre «crear periodo».
+export const STEPS_BY_TOPIC: Record<GuideTopic, GuideStep[]> = { 'create-period': CREATE_PERIOD_STEPS, 'clone-period': CLONE_PERIOD_STEPS, 'custom-need': CUSTOM_NEED_STEPS, 'approve-payment': APPROVE_PAYMENT_STEPS };
+
+// Reconoce la pregunta escrita (sin tildes ni mayúsculas, en los 3 idiomas). «A medida» gana sobre «clonar», luego «pago/factura», luego «crear periodo».
 export function matchGuideTopic(text: string): GuideTopic | null {
   const norm = text.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
   const custom = ['a medida', 'personaliz', 'funcionalidad', 'funcion que', 'no tiene', 'no existe', 'idea', 'sugerenc', 'mejora', 'sob medida', 'nao tem', 'funcionalidade', 'ideia', 'sugest', 'custom', 'feature', 'suggest', 'tailor', "doesn't have", 'need something', 'necesito algo'];
   if (custom.some((k) => norm.includes(k))) return 'custom-need';
   const clone = ['clon', 'copi', 'copy', 'duplic', 'repet', 'repit', 'repeat', 'mes anterior', 'mes pasado', 'mes passado', 'periodo anterior', 'previous', 'last month', 'mismos gastos', 'mesmas despesas', 'same expenses'];
   if (clone.some((k) => norm.includes(k))) return 'clone-period';
+  const pay = ['pago', 'aprob', 'factura', 'comprobante', 'cobr', 'timbrado', 'payment', 'approve', 'invoice', 'receipt', 'pagamento', 'aprov', 'fatura'];
+  if (pay.some((k) => norm.includes(k))) return 'approve-payment';
   const create = ['periodo', 'period', 'ciclo', 'cycle', 'liquidacion nueva', 'mes nuevo', 'new month'];
   return create.some((k) => norm.includes(k)) ? 'create-period' : null;
 }
