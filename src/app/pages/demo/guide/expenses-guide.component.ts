@@ -18,6 +18,7 @@ import { GuideTopic, matchGuideTopic } from './guide.script';
     @if (!topic()) {
       <button type="button" class="eg-fab" [class.left]="corner() === 'left'" [attr.aria-label]="tx().fabAria" [attr.aria-expanded]="panelOpen()" (click)="togglePanel()">
         <app-guide-figure [pose]="waving() ? 'wave' : 'idle'" />
+        @if (!panelOpen()) { <span class="eg-badge" aria-hidden="true">1</span> }
       </button>
       @if (teaser() && !panelOpen()) {
         <div class="eg-teaser" [class.left]="corner() === 'left'">
@@ -54,16 +55,22 @@ import { GuideTopic, matchGuideTopic } from './guide.script';
   `,
   styles: [
     `
-      .eg-fab { position: fixed; bottom: 12px; right: 16px; z-index: 40; width: 70px; background: none; border: 0; padding: 0; cursor: pointer; filter: drop-shadow(0 6px 10px rgba(17, 54, 74, 0.25)); transition: transform 0.2s; }
+      .eg-fab { position: fixed; bottom: 12px; right: 16px; z-index: 40; width: 100px; background: none; border: 0; padding: 0; cursor: pointer; filter: drop-shadow(0 6px 10px rgba(17, 54, 74, 0.25)); transition: transform 0.2s; }
       .eg-fab.left { right: auto; left: 16px; }
       .eg-fab:hover { transform: translateY(-3px) scale(1.04); }
-      .eg-teaser { position: fixed; bottom: 128px; right: 16px; z-index: 40; max-width: 220px; background: #fff; border-radius: 14px; box-shadow: 0 10px 28px rgba(17, 54, 74, 0.2); padding: 10px 30px 10px 12px; font-size: 0.85rem; color: #16324a; }
+      .eg-fab::before { content: ''; position: absolute; left: 50%; bottom: 8%; width: 130%; aspect-ratio: 1; transform: translateX(-50%); border-radius: 50%; background: radial-gradient(circle, rgba(26, 183, 175, 0.38) 0%, rgba(19, 133, 182, 0.16) 45%, transparent 70%); z-index: -1; animation: eg-glow 2.6s ease-in-out infinite; pointer-events: none; }
+      .eg-badge { position: absolute; top: 2px; right: 6px; min-width: 22px; height: 22px; border-radius: 11px; background: #ef4444; color: #fff; font: 800 0.75rem/22px 'Plus Jakarta Sans', system-ui, sans-serif; text-align: center; box-shadow: 0 0 0 3px #fff; animation: eg-badge 1.8s ease-in-out infinite; }
+      @keyframes eg-glow { 0%, 100% { transform: translateX(-50%) scale(0.85); opacity: 0.7; } 50% { transform: translateX(-50%) scale(1.1); opacity: 1; } }
+      @keyframes eg-badge { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.18); } }
+      @keyframes eg-pop { 0% { opacity: 0; transform: translateY(10px) scale(0.92); } 100% { opacity: 1; transform: none; } }
+      @keyframes eg-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+      .eg-teaser { position: fixed; bottom: 172px; right: 16px; z-index: 40; max-width: 250px; background: #fff; border: 2px solid #1ab7af; border-radius: 16px; box-shadow: 0 12px 32px rgba(17, 54, 74, 0.25); padding: 12px 30px 12px 14px; font-size: 0.95rem; font-weight: 600; line-height: 1.35; color: #16324a; animation: eg-pop 0.45s ease-out, eg-bob 3s ease-in-out 0.5s infinite; }
       .eg-teaser.left { right: auto; left: 16px; }
-      .eg-teaser::after { content: ''; position: absolute; bottom: -8px; right: 28px; border: 8px solid transparent; border-bottom: 0; border-top-color: #fff; }
-      .eg-teaser.left::after { right: auto; left: 28px; }
+      .eg-teaser::after { content: ''; position: absolute; bottom: -10px; right: 34px; border: 9px solid transparent; border-bottom: 0; border-top-color: #1ab7af; }
+      .eg-teaser.left::after { right: auto; left: 34px; }
       .eg-teaser-text { cursor: pointer; }
       .eg-teaser-x { position: absolute; top: 4px; right: 6px; border: 0; background: none; cursor: pointer; font-size: 1.1rem; line-height: 1; color: #5f7b88; }
-      .eg-panel { position: fixed; bottom: 124px; right: 16px; z-index: 41; width: 320px; max-width: calc(100vw - 32px); box-sizing: border-box; background: #fff; border-radius: 18px; box-shadow: 0 18px 48px rgba(17, 54, 74, 0.22); padding: 12px; display: flex; flex-direction: column; gap: 8px; color: #16324a; font-size: 0.88rem; max-height: calc(100vh - 150px); overflow-y: auto; }
+      .eg-panel { position: fixed; bottom: 168px; right: 16px; z-index: 41; width: 320px; max-width: calc(100vw - 32px); box-sizing: border-box; background: #fff; border-radius: 18px; box-shadow: 0 18px 48px rgba(17, 54, 74, 0.22); padding: 12px; display: flex; flex-direction: column; gap: 8px; color: #16324a; font-size: 0.88rem; max-height: calc(100vh - 190px); overflow-y: auto; }
       .eg-panel.left { right: auto; left: 16px; }
       .eg-head { display: flex; align-items: center; gap: 10px; }
       .eg-head > div { flex: 1; }
@@ -82,9 +89,13 @@ import { GuideTopic, matchGuideTopic } from './guide.script';
       .eg-form input { flex: 1; min-width: 0; font: inherit; padding: 8px 10px; border-radius: 10px; border: 1.5px solid #dbe6ef; }
       .eg-form button { width: 2.4rem; border: 0; border-radius: 10px; background: #1ab7af; color: #fff; cursor: pointer; }
       @media (max-width: 640px) {
-        .eg-fab { width: 54px; bottom: calc(10px + env(safe-area-inset-bottom)); }
-        .eg-teaser { bottom: 100px; }
-        .eg-panel { bottom: 96px; }
+        .eg-fab { width: 76px; bottom: calc(10px + env(safe-area-inset-bottom)); }
+        .eg-teaser { bottom: 136px; max-width: min(250px, calc(100vw - 32px)); }
+        .eg-panel { bottom: 130px; }
+        .eg-badge { top: 0; right: 2px; }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .eg-fab::before, .eg-badge, .eg-teaser { animation: none; }
       }
     `
   ]
@@ -107,23 +118,12 @@ export class ExpensesGuideComponent {
   constructor() {
     afterNextRender(() => {
       const timers: ReturnType<typeof setTimeout>[] = [];
-      let teased = false;
-      try {
-        teased = !!sessionStorage.getItem('expenses-guide-teased');
-      } catch {
-        teased = false;
-      }
-      if (!teased) {
-        timers.push(setTimeout(() => {
-          this.teaser.set(true);
-          try {
-            sessionStorage.setItem('expenses-guide-teased', '1');
-          } catch {
-            // sin almacenamiento: el globo puede repetirse, no es grave
-          }
-          timers.push(setTimeout(() => this.teaser.set(false), 9000));
-        }, 3500));
-      }
+      // El globo de invitación sale en cada visita (al segundo de abrir la página) y se queda un rato; si lo cierran, no vuelve.
+      timers.push(setTimeout(() => {
+        if (this.panelOpen() || this.topic()) return;
+        this.teaser.set(true);
+        timers.push(setTimeout(() => this.teaser.set(false), 15000));
+      }, 1200));
 
       let reduced = false;
       try {
@@ -137,7 +137,7 @@ export class ExpensesGuideComponent {
           if (this.panelOpen() || this.topic()) return;
           this.waving.set(true);
           timers.push(setTimeout(() => this.waving.set(false), 1600));
-        }, 9000);
+        }, 6000);
       }
       this.destroyRef.onDestroy(() => {
         timers.forEach((t) => clearTimeout(t));
