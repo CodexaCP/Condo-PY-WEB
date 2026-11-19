@@ -1,9 +1,10 @@
-export type GuidePose = 'idle' | 'wave' | 'walk' | 'sit' | 'type' | 'point' | 'thumbs';
+export type GuidePose = 'idle' | 'wave' | 'walk' | 'sit' | 'type' | 'point' | 'thumbs' | 'acknowledge' | 'emphasize' | 'lean' | 'invite';
 export type GuideScreen = 'off' | 'browser' | 'login' | 'panel' | 'periods' | 'form' | 'done' | 'ledger';
 export type GuideField = 'url' | 'user' | 'pass' | 'building' | 'year' | 'month' | 'name' | 'start' | 'end' | 'due' | 'amount';
-export type GuideTopic = 'create-period' | 'clone-period';
+export type GuideTopic = 'create-period' | 'clone-period' | 'custom-need';
 export type GuideSayKey = 'hello' | 'openWeb' | 'user' | 'pass' | 'panel' | 'periods' | 'newPeriod' | 'building' | 'yearMonth' | 'dates' | 'lateFee' | 'create' | 'done'
-  | 'cloneHello' | 'cloneIntro' | 'cloneFind' | 'cloneClick' | 'cloneConfirm' | 'cloneCopied' | 'cloneOpenLedger' | 'cloneRows' | 'cloneEdit' | 'cloneAmount' | 'cloneAttach' | 'cloneBenefits' | 'cloneDone';
+  | 'cloneHello' | 'cloneIntro' | 'cloneFind' | 'cloneClick' | 'cloneConfirm' | 'cloneCopied' | 'cloneOpenLedger' | 'cloneRows' | 'cloneEdit' | 'cloneAmount' | 'cloneAttach' | 'cloneBenefits' | 'cloneDone'
+  | 'customReact' | 'customValueA' | 'customValueB' | 'customClose' | 'customAsk';
 
 export interface GuideUiState {
   screen: GuideScreen; menuOpen: boolean; formOpen: boolean; created: boolean;
@@ -19,9 +20,13 @@ export type GuideAction =
 export interface GuideStep {
   say: GuideSayKey;
   shot: 'wide' | 'screen';
+  hold?: number;       // ms que el globo queda en pantalla tras el paso; reemplaza el tiempo de lectura automático
+  instant?: boolean;   // el personaje aparece ya en su lugar, sin caminar desde la izquierda
   pose: GuidePose;     // pose al terminar de caminar / durante el paso
   figureX: number;     // posición izquierda del personaje en la escena (px del mundo 960×540)
   sitting: boolean;
+  icon?: string;       // clase PrimeIcons del círculo de la burbuja y del chat (tema «a medida»)
+  tone?: string;       // color CSS del círculo (tema «a medida»)
   ui: GuideUiState;    // estado de la pantalla al EMPEZAR el paso
   actions: GuideAction[];
 }
@@ -30,6 +35,17 @@ const NO_FLAGS = { confirm: false, cloned: false, toast: false, editOpen: false,
 // Estado de la pantalla simulada; los indicadores extra (confirm, cloned…) arrancan apagados salvo que se indiquen.
 const ui = (screen: GuideScreen, menuOpen: boolean, formOpen: boolean, created: boolean, extra: Partial<GuideUiState> = {}): GuideUiState => ({ screen, menuOpen, formOpen, created, ...NO_FLAGS, ...extra });
 export const GUIDE_INITIAL_UI: GuideUiState = ui('off', false, false, false);
+
+// Icono (PrimeIcons) de cada idea en la burbuja y el chat; los pasos pueden traer el suyo con `icon`.
+export const GUIDE_ICONS: Record<GuideSayKey, string> = {
+  hello: 'pi-comments', openWeb: 'pi-globe', user: 'pi-user', pass: 'pi-lock', panel: 'pi-chart-pie', periods: 'pi-calendar', newPeriod: 'pi-plus-circle',
+  building: 'pi-building', yearMonth: 'pi-calendar-plus', dates: 'pi-clock', lateFee: 'pi-info-circle', create: 'pi-check-circle', done: 'pi-thumbs-up',
+  cloneHello: 'pi-comments', cloneIntro: 'pi-calendar', cloneFind: 'pi-copy', cloneClick: 'pi-question-circle', cloneConfirm: 'pi-check-circle', cloneCopied: 'pi-clone',
+  cloneOpenLedger: 'pi-list', cloneRows: 'pi-wallet', cloneEdit: 'pi-pencil', cloneAmount: 'pi-dollar', cloneAttach: 'pi-paperclip', cloneBenefits: 'pi-star', cloneDone: 'pi-thumbs-up',
+  customReact: 'pi-comments', customValueA: 'pi-sliders-h', customValueB: 'pi-lightbulb', customClose: 'pi-star', customAsk: 'pi-users'
+};
+// Colores del círculo de cada idea; se reparten por orden de paso salvo que el paso traiga `tone`.
+export const GUIDE_TONES = ['#1385b6', '#7c4dcc', '#f59e0b', '#16a34a', '#0ea5a4', '#e5675d'];
 
 // Guion de «crear un periodo»: 13 pasos, cada uno con su texto, su plano de cámara y las acciones del cursor.
 export const CREATE_PERIOD_STEPS: GuideStep[] = [
@@ -77,11 +93,22 @@ export const CLONE_PERIOD_STEPS: GuideStep[] = [
   { say: 'cloneDone', shot: 'wide', pose: 'thumbs', figureX: 190, sitting: false, ui: ui('ledger', true, false, false, { edited: true, attached: true }), actions: [] }
 ];
 
-export const STEPS_BY_TOPIC: Record<GuideTopic, GuideStep[]> = { 'create-period': CREATE_PERIOD_STEPS, 'clone-period': CLONE_PERIOD_STEPS };
+// Guion «a medida»: asesor comercial en primer plano, 5 globos con gestos y la pregunta final.
+export const CUSTOM_NEED_STEPS: GuideStep[] = [
+  { say: 'customReact',  shot: 'wide', pose: 'acknowledge', figureX: 420, sitting: false, instant: true, hold: 8500,  icon: 'pi-comments', tone: '#1385b6', ui: ui('off', false, false, false), actions: [] },
+  { say: 'customValueA', shot: 'wide', pose: 'emphasize',   figureX: 420, sitting: false, hold: 7500,  icon: 'pi-sliders-h', tone: '#7c4dcc', ui: ui('off', false, false, false), actions: [] },
+  { say: 'customValueB', shot: 'wide', pose: 'lean',        figureX: 420, sitting: false, hold: 10500, icon: 'pi-lightbulb', tone: '#f59e0b', ui: ui('off', false, false, false), actions: [] },
+  { say: 'customClose',  shot: 'wide', pose: 'invite',      figureX: 420, sitting: false, hold: 7000,  icon: 'pi-star', tone: '#16a34a', ui: ui('off', false, false, false), actions: [] },
+  { say: 'customAsk',    shot: 'wide', pose: 'invite',      figureX: 420, sitting: false, hold: 2500,  icon: 'pi-users', tone: '#0ea5a4', ui: ui('off', false, false, false), actions: [] }
+];
 
-// Reconoce la pregunta escrita (sin tildes ni mayúsculas, en los 3 idiomas). «Clonar/copiar» gana sobre «crear periodo».
+export const STEPS_BY_TOPIC: Record<GuideTopic, GuideStep[]> = { 'create-period': CREATE_PERIOD_STEPS, 'clone-period': CLONE_PERIOD_STEPS, 'custom-need': CUSTOM_NEED_STEPS };
+
+// Reconoce la pregunta escrita (sin tildes ni mayúsculas, en los 3 idiomas). «A medida» gana sobre «clonar», y esta sobre «crear periodo».
 export function matchGuideTopic(text: string): GuideTopic | null {
   const norm = text.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+  const custom = ['a medida', 'personaliz', 'funcionalidad', 'funcion que', 'no tiene', 'no existe', 'idea', 'sugerenc', 'mejora', 'sob medida', 'nao tem', 'funcionalidade', 'ideia', 'sugest', 'custom', 'feature', 'suggest', 'tailor', "doesn't have", 'need something', 'necesito algo'];
+  if (custom.some((k) => norm.includes(k))) return 'custom-need';
   const clone = ['clon', 'copi', 'copy', 'duplic', 'repet', 'repit', 'repeat', 'mes anterior', 'mes pasado', 'mes passado', 'periodo anterior', 'previous', 'last month', 'mismos gastos', 'mesmas despesas', 'same expenses'];
   if (clone.some((k) => norm.includes(k))) return 'clone-period';
   const create = ['periodo', 'period', 'ciclo', 'cycle', 'liquidacion nueva', 'mes nuevo', 'new month'];

@@ -8,6 +8,8 @@ export interface GuideTx {
   name: string; role: string;
   fabAria: string; teaser: string; ask: string; topicCreatePeriod: string; topicClonePeriod: string; inputPlaceholder: string; send: string; unknown: string; close: string;
   sceneTitle: string; sceneTitleClone: string; prev: string; next: string; pause: string; play: string; replay: string; stepOf: (i: number, n: number) => string; tryDemo: string;
+  topicCustom: string; sceneTitleCustom: string; customYes: string; customNo: string; customWa: string;
+  chatName: string; chatOnline: string; chatInput: string;
   say: Record<GuideSayKey, string>;
   values: GuideValues;
   web: {
@@ -33,6 +35,9 @@ const ES: GuideTx = {
   unknown: 'Por ahora sé mostrarte cómo crear un periodo de expensas o cómo clonar el del mes anterior. ¡Pronto aprendo más cosas!', close: 'Cerrar',
   sceneTitle: 'Cómo crear un periodo de expensas', sceneTitleClone: 'Cómo clonar el periodo del mes anterior', prev: 'Anterior', next: 'Siguiente', pause: 'Pausar', play: 'Seguir', replay: 'Ver de nuevo',
   stepOf: (i, n) => `Paso ${i} de ${n}`, tryDemo: 'Explorar la demostración',
+  topicCustom: '¿Y si necesito algo que Expenses todavía no tiene?', sceneTitleCustom: 'Expenses se adapta a ti', customYes: 'Sí, ponme en contacto', customNo: 'Ahora no',
+  customWa: 'Hola, estuve viendo Expenses y tengo una necesidad específica para mi administración. ¿Me pueden contactar para conversarlo?',
+  chatName: 'Expenses', chatOnline: 'en línea', chatInput: 'Escribe tu mensaje…',
   say: {
     hello: '¡Hola! Te muestro cómo crear un periodo de expensas. Acompáñame a la compu.',
     openWeb: 'Me siento y abro el navegador. Escribo expenses.com.py y entro.',
@@ -59,7 +64,12 @@ const ES: GuideTx = {
     cloneAmount: 'Cambio el monto y guardo. El resto queda igual y el total se actualiza solo.',
     cloneAttach: 'Ahora adjunto la factura nueva con el clip. Las facturas no se copian: cada mes subes las de ese mes.',
     cloneBenefits: 'Ventajas de clonar: ahorras la carga, las fechas y el saldo avanzan solos, y todo queda en Borrador para ajustar.',
-    cloneDone: '¡Listo! Clonas, editas lo que cambió, adjuntas las facturas nuevas y ya puedes calcular la liquidación.'
+    cloneDone: '¡Listo! Clonas, editas lo que cambió, adjuntas las facturas nuevas y ya puedes calcular la liquidación.',
+    customReact: '¡No pasa nada! En **Expenses** sabemos que cada administración es diferente y que cada cliente tiene sus propias necesidades.',
+    customValueA: 'Por eso, no queremos que tengas que adaptarte al software. Queremos que **el software se adapte a ti**.',
+    customValueB: 'Si tienes una idea, necesitas una funcionalidad específica o quieres mejorar algún proceso, estamos aquí para escucharte y buscar la mejor solución.',
+    customClose: '**Cada necesidad cuenta** y tu idea puede convertirse en **nuestra próxima mejora**.',
+    customAsk: '¿Quieres que ahora mismo te ponga en contacto con nuestro equipo para que puedas plantear tus necesidades y aclarar todas tus dudas?'
   },
   values: { url: 'expenses.com.py', user: 'demo@expenses.com.py', pass: '••••••••', building: 'Edificio Torre Mirador', year: '2026', month: '12', name: 'Diciembre 2026', start: '01/12/2026', end: '31/12/2026', due: '10/01/2027', amount: '2.120.000', amountOld: '1.850.000', invoiceFile: 'factura-ande-dic.pdf' },
   web: {
@@ -105,6 +115,9 @@ const PT: GuideTx = {
   unknown: 'Por enquanto sei mostrar como criar um período ou como clonar o do mês anterior. Logo aprendo mais coisas!', close: 'Fechar',
   sceneTitle: 'Como criar um período', sceneTitleClone: 'Como clonar o período do mês anterior', prev: 'Anterior', next: 'Próximo', pause: 'Pausar', play: 'Continuar', replay: 'Ver de novo',
   stepOf: (i, n) => `Passo ${i} de ${n}`, tryDemo: 'Explorar a demonstração',
+  topicCustom: 'E se eu precisar de algo que a Expenses ainda não tem?', sceneTitleCustom: 'A Expenses se adapta a você', customYes: 'Sim, me coloque em contato', customNo: 'Agora não',
+  customWa: 'Olá, estive vendo a Expenses e tenho uma necessidade específica para a minha administração. Podem entrar em contato para conversarmos?',
+  chatName: 'Expenses', chatOnline: 'online', chatInput: 'Escreva sua mensagem…',
   say: {
     hello: 'Olá! Vou mostrar como criar um período de condomínio. Venha comigo até o computador.',
     openWeb: 'Sento e abro o navegador. Digito expenses.com.py e entro.',
@@ -131,7 +144,12 @@ const PT: GuideTx = {
     cloneAmount: 'Mudo o valor e salvo. O resto fica igual e o total se atualiza sozinho.',
     cloneAttach: 'Agora anexo a fatura nova com o clipe. As faturas não são copiadas: todo mês você sobe as daquele mês.',
     cloneBenefits: 'Vantagens de clonar: você economiza o lançamento, as datas e o saldo avançam sozinhos, e tudo fica em Rascunho para ajustar.',
-    cloneDone: 'Pronto! Você clona, edita o que mudou, anexa as faturas novas e já pode calcular o rateio.'
+    cloneDone: 'Pronto! Você clona, edita o que mudou, anexa as faturas novas e já pode calcular o rateio.',
+    customReact: 'Sem problema! Na **Expenses** sabemos que cada administração é diferente e que cada cliente tem as suas próprias necessidades.',
+    customValueA: 'Por isso, não queremos que você tenha de se adaptar ao software. Queremos que **o software se adapte a você**.',
+    customValueB: 'Se você tem uma ideia, precisa de uma funcionalidade específica ou quer melhorar algum processo, estamos aqui para ouvir você e buscar a melhor solução.',
+    customClose: '**Cada necessidade conta** e a sua ideia pode se tornar a **nossa próxima melhoria**.',
+    customAsk: 'Quer que eu coloque você em contato agora mesmo com a nossa equipe para expor as suas necessidades e tirar todas as dúvidas?'
   },
   values: { url: 'expenses.com.py', user: 'demo@expenses.com.py', pass: '••••••••', building: 'Edifício Torre Mirador', year: '2026', month: '12', name: 'Dezembro 2026', start: '01/12/2026', end: '31/12/2026', due: '10/01/2027', amount: '2.120.000', amountOld: '1.850.000', invoiceFile: 'fatura-energia-dez.pdf' },
   web: {
@@ -177,6 +195,9 @@ const EN: GuideTx = {
   unknown: 'For now I can show you how to create a billing period or how to clone last month\'s. I\'ll learn more soon!', close: 'Close',
   sceneTitle: 'How to create a billing period', sceneTitleClone: 'How to clone last month\'s period', prev: 'Back', next: 'Next', pause: 'Pause', play: 'Resume', replay: 'Watch again',
   stepOf: (i, n) => `Step ${i} of ${n}`, tryDemo: 'Explore the demo',
+  topicCustom: 'What if I need something Expenses doesn\'t have yet?', sceneTitleCustom: 'Expenses adapts to you', customYes: 'Yes, put me in touch', customNo: 'Not now',
+  customWa: 'Hello, I have been looking at Expenses and I have a specific need for my management company. Could you contact me to talk about it?',
+  chatName: 'Expenses', chatOnline: 'online', chatInput: 'Type your message…',
   say: {
     hello: 'Hi! I\'ll show you how to create a billing period. Come with me to the computer.',
     openWeb: 'I sit down and open the browser. I type expenses.com.py and go in.',
@@ -203,7 +224,12 @@ const EN: GuideTx = {
     cloneAmount: 'I change the amount and save. Everything else stays the same and the total updates by itself.',
     cloneAttach: 'Now I attach the new invoice with the paperclip. Invoices aren\'t copied: each month you upload that month\'s.',
     cloneBenefits: 'Why cloning pays off: you skip the data entry, dates and balance carry forward by themselves, and it all stays a Draft to adjust.',
-    cloneDone: 'Done! You clone, edit what changed, attach the new invoices and you can calculate the settlement.'
+    cloneDone: 'Done! You clone, edit what changed, attach the new invoices and you can calculate the settlement.',
+    customReact: 'No worries! At **Expenses** we know every management company is different and every client has their own needs.',
+    customValueA: 'That\'s why we don\'t want you to adapt to the software. We want **the software to adapt to you**.',
+    customValueB: 'If you have an idea, need a specific feature or want to improve a process, we are here to listen and find the best solution.',
+    customClose: '**Every need counts** and your idea can become **our next improvement**.',
+    customAsk: 'Would you like me to put you in touch with our team right now, so you can share your needs and clear up any questions?'
   },
   values: { url: 'expenses.com.py', user: 'demo@expenses.com.py', pass: '••••••••', building: 'Torre Mirador Building', year: '2026', month: '12', name: 'December 2026', start: '12/01/2026', end: '12/31/2026', due: '01/10/2027', amount: '2,120,000', amountOld: '1,850,000', invoiceFile: 'invoice-power-dec.pdf' },
   web: {

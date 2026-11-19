@@ -32,6 +32,7 @@ import { GuideTopic, matchGuideTopic } from './guide.script';
             <button type="button" class="eg-x" [attr.aria-label]="tx().close" (click)="panelOpen.set(false)"><i class="pi pi-times"></i></button>
           </div>
           <div class="eg-msg bot">{{ tx().ask }}</div>
+          <button type="button" class="eg-chip hot" (click)="start('custom-need')"><i class="pi pi-lightbulb"></i> {{ tx().topicCustom }}</button>
           <button type="button" class="eg-chip" (click)="start('create-period')"><i class="pi pi-calendar-plus"></i> {{ tx().topicCreatePeriod }}</button>
           <button type="button" class="eg-chip" (click)="start('clone-period')"><i class="pi pi-copy"></i> {{ tx().topicClonePeriod }}</button>
           @for (m of messages(); track $index) {
@@ -72,6 +73,8 @@ import { GuideTopic, matchGuideTopic } from './guide.script';
       .eg-chip { display: flex; align-items: center; gap: 8px; text-align: left; cursor: pointer; font: inherit; font-weight: 700; padding: 9px 12px; border-radius: 12px; border: 1px solid #1385b6; background: #fff; color: #1385b6; }
       .eg-chip + .eg-chip { margin-top: 6px; }
       .eg-chip:hover { background: rgba(19, 133, 182, 0.08); }
+      .eg-chip.hot { background: linear-gradient(135deg, #1385b6, #1ab7af); border-color: transparent; color: #fff; }
+      .eg-chip.hot:hover { filter: brightness(1.06); background: linear-gradient(135deg, #1385b6, #1ab7af); }
       .eg-form { display: flex; gap: 6px; }
       .eg-form input { flex: 1; min-width: 0; font: inherit; padding: 8px 10px; border-radius: 10px; border: 1.5px solid #dbe6ef; }
       .eg-form button { width: 2.4rem; border: 0; border-radius: 10px; background: #1ab7af; color: #fff; cursor: pointer; }

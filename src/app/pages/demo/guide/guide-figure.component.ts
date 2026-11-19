@@ -39,8 +39,8 @@ import { GuidePose } from './guide.script';
           <rect x="36" y="18" width="48" height="44" rx="12" fill="#eec29b"/>
           <circle cx="43" cy="53" r="3.2" fill="#f19a8a" opacity="0.35"/><circle cx="77" cy="53" r="3.2" fill="#f19a8a" opacity="0.35"/>
           <g class="eyes"><circle cx="49.5" cy="42" r="2.6" fill="#1b1b1b"/><circle cx="70.5" cy="42" r="2.6" fill="#1b1b1b"/></g>
-          <path d="M44 33 Q50 29 56 33" fill="none" stroke="#3a2417" stroke-width="2.5" stroke-linecap="round"/>
-          <path d="M64 33 Q70 29 76 33" fill="none" stroke="#3a2417" stroke-width="2.5" stroke-linecap="round"/>
+          <path class="brow" d="M44 33 Q50 29 56 33" fill="none" stroke="#3a2417" stroke-width="2.5" stroke-linecap="round"/>
+          <path class="brow" d="M64 33 Q70 29 76 33" fill="none" stroke="#3a2417" stroke-width="2.5" stroke-linecap="round"/>
           <rect x="41" y="36" width="17" height="12" rx="4" fill="rgba(255,255,255,0.22)" stroke="#111" stroke-width="2.6"/>
           <rect x="62" y="36" width="17" height="12" rx="4" fill="rgba(255,255,255,0.22)" stroke="#111" stroke-width="2.6"/>
           <line x1="58" y1="41" x2="62" y2="41" stroke="#111" stroke-width="2.6"/>
@@ -55,7 +55,8 @@ import { GuidePose } from './guide.script';
     `
       :host { display: inline-block; line-height: 0; }
       svg { width: 100%; height: auto; overflow: visible; }
-      .arm, .leg, .head, .fig, .mouth, .eyes { transform-box: view-box; }
+      .arm, .leg, .head, .fig, .mouth, .eyes, .brow { transform-box: view-box; }
+      .brow { transition: transform 0.3s ease; }
       .arm-l { transform-origin: 38px 70px; }
       .arm-r { transform-origin: 82px 70px; }
       .leg-l { transform-origin: 45px 126px; }
@@ -82,6 +83,19 @@ import { GuidePose } from './guide.script';
       :host(.pose-point) .fig { animation: bob 2.4s ease-in-out infinite; }
       :host(.pose-thumbs) .arm-r { transform: rotate(-140deg); }
       :host(.pose-thumbs) .fig { animation: bob 2.4s ease-in-out infinite; }
+      :host(.pose-acknowledge) .head { animation: nodTwice 0.7s ease-in-out 2; }
+      :host(.pose-acknowledge) .arm-r { transform: rotate(-62deg); animation: palmSway 1.4s ease-in-out 0.4s infinite alternate; }
+      :host(.pose-acknowledge) .brow { transform: translateY(-1.2px); }
+      :host(.pose-emphasize) .arm-r { animation: gestR 0.9s ease-in-out infinite alternate; }
+      :host(.pose-emphasize) .arm-l { animation: gestL 0.9s ease-in-out 0.25s infinite alternate; }
+      :host(.pose-emphasize) .brow { transform: translateY(-1.5px); }
+      :host(.pose-lean) .fig { transform: scale(1.06); transform-origin: 60px 196px; }
+      :host(.pose-lean) .head { transform: translateY(2px) rotate(3deg); }
+      :host(.pose-lean) .arm-r { transform: rotate(-48deg); animation: palmSway 1.4s ease-in-out infinite alternate; }
+      :host(.pose-invite) .arm-l { transform: rotate(52deg); animation: openL 1.2s ease-in-out infinite alternate; }
+      :host(.pose-invite) .arm-r { transform: rotate(-52deg); animation: openR 1.2s ease-in-out infinite alternate; }
+      :host(.pose-invite) .head { transform: rotate(-4deg); }
+      :host(.pose-invite) .brow { transform: translateY(-1.5px); }
 
       :host(.sitting) .leg { transform: scaleY(0.45); }
       :host(.sitting) .shadow { display: none; }
@@ -96,8 +110,14 @@ import { GuidePose } from './guide.script';
       @keyframes talk { from { transform: scaleY(1); } to { transform: scaleY(0.45); } }
       @keyframes bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-2px); } }
       @keyframes blink { 0%, 92%, 100% { transform: scaleY(1); } 95% { transform: scaleY(0.1); } }
+      @keyframes nodTwice { 0%, 100% { transform: rotate(0); } 50% { transform: rotate(7deg) translateY(1.5px); } }
+      @keyframes palmSway { from { transform: rotate(-58deg); } to { transform: rotate(-68deg); } }
+      @keyframes gestR { from { transform: rotate(-40deg); } to { transform: rotate(-62deg); } }
+      @keyframes gestL { from { transform: rotate(30deg); } to { transform: rotate(52deg); } }
+      @keyframes openL { from { transform: rotate(48deg); } to { transform: rotate(58deg); } }
+      @keyframes openR { from { transform: rotate(-48deg); } to { transform: rotate(-58deg); } }
       @media (prefers-reduced-motion: reduce) {
-        .fig, .arm, .leg, .eyes, .mouth { animation: none !important; }
+        .fig, .arm, .leg, .head, .eyes, .mouth, .brow { animation: none !important; }
       }
     `
   ]
