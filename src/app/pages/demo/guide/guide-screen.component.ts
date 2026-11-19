@@ -12,6 +12,92 @@ import { GuideField, GuideUiState } from './guide.script';
     <div class="web">
       @if (ui().screen === 'off') {
         <div class="off"></div>
+      } @else if (ui().screen === 'phone') {
+        @let st = tx().web.stl;
+        <div class="pbg">
+          <span class="pchip"><i class="pi pi-mobile"></i> {{ st.appChip }}</span>
+          <div class="phone">
+            <div class="pscr" [class.lock]="isLock()">
+              <div class="pnotch"></div>
+              <div class="pstat" [class.blue]="!isLock()"><span>09:41</span><span class="pbat"><i></i></span></div>
+              @if (ui().ph === 'p-notif' || ui().ph === 'p-owner-notif') {
+                <div class="lockclock"><b>09:41</b></div>
+                <div class="ncard" [attr.data-guide]="ui().ph === 'p-notif' ? 'p-notif-card' : 'p-owner-card'" [class.hl]="highlight() === (ui().ph === 'p-notif' ? 'p-notif-card' : 'p-owner-card')">
+                  <div class="nhead"><img src="/brand/expenses-icon.svg" width="22" alt="" /><span>Expenses</span></div>
+                  <b>{{ ui().ph === 'p-notif' ? st.pn1Title : st.pn2Title }}</b>
+                  <span>{{ ui().ph === 'p-notif' ? st.pn1Body : st.pn2Body }}</span>
+                </div>
+              } @else if (isReview()) {
+                <div class="papp">
+                  <div class="pbar"><i class="pi pi-arrow-left"></i><span>{{ st.reviewTitle }}</span></div>
+                  <div class="pper"><b>{{ st.pName }}</b><small>{{ tx().values.building }}</small></div>
+                  <div class="pcard" data-guide="p-summary" [class.hl]="highlight() === 'p-summary'">
+                    <strong>{{ st.summary }}</strong>
+                    <div class="pr"><span>{{ st.rExp }}</span><span>{{ st.vExp }}</span></div>
+                    <div class="pr"><span>{{ st.rInc }}</span><span>{{ st.vInc }}</span></div>
+                    <div class="pr"><span>{{ st.rNet }}</span><b>{{ st.vNet }}</b></div>
+                  </div>
+                  <div class="pcard">
+                    <strong>{{ st.catsTitle }}</strong>
+                    <div class="pr"><span>{{ st.cat1 }}</span><span>{{ st.cat1v }}</span></div>
+                    <div class="pr"><span>{{ st.cat2 }}</span><span>{{ st.cat2v }}</span></div>
+                    <div class="pr"><span>{{ st.cat3 }}</span><span>{{ st.cat3v }}</span></div>
+                  </div>
+                  @if (ui().ph === 'p-signed') {
+                    <div class="ptoast">{{ st.signedToast }}</div>
+                  } @else {
+                    <div class="pbtns">
+                      <span class="pb ok" data-guide="p-approve" [class.hl]="highlight() === 'p-approve'">{{ st.btnPApprove }}</span>
+                      <span class="pb bad">{{ st.btnPReject }}</span>
+                    </div>
+                  }
+                </div>
+                @if (ui().ph === 'p-confirm') {
+                  <div class="pdim"></div>
+                  <div class="pdlg">
+                    <b>{{ st.confirmHeader }}</b>
+                    <p>{{ st.confirmMsg }}</p>
+                    <div class="pdb"><span class="gray">{{ st.btnCancel }}</span><span class="yes" data-guide="p-yes" [class.hl]="highlight() === 'p-yes'">{{ st.btnYes }}</span></div>
+                  </div>
+                }
+              } @else if (ui().ph === 'p-account') {
+                <div class="papp">
+                  <div class="pbar"><i class="pi pi-arrow-left"></i><span>{{ st.accTitle }}</span></div>
+                  <div class="pper"><small>{{ st.unitLine }}</small></div>
+                  <div class="pcard prd" data-guide="p-period" [class.hl]="highlight() === 'p-period'">
+                    <div class="pgrow"><b>{{ st.pName }}</b><small>{{ st.pTotal }} {{ st.pAmount }} · {{ st.pPaid }} Gs. 0</small></div>
+                    <div class="pamt"><b>{{ st.pAmount }}</b><small>{{ st.pPending }}</small></div>
+                    <i class="pi pi-chevron-right"></i>
+                  </div>
+                  <div class="pcard prd">
+                    <div class="pgrow"><b>{{ st.pOct }}</b></div>
+                    <div class="pamt okc"><b>{{ st.pOctOk }}</b></div>
+                  </div>
+                </div>
+              } @else if (ui().ph === 'p-detail') {
+                <div class="papp">
+                  <div class="pbar"><i class="pi pi-arrow-left"></i><span>{{ st.pName }}</span></div>
+                  <div class="pper"><small>{{ st.unitLine }}</small></div>
+                  <div class="phero">
+                    <small>{{ st.dHero }}</small>
+                    <b>{{ st.pAmount }}</b>
+                    <small>{{ st.dCharges }} {{ st.pAmount }} · {{ st.dPaid }} Gs. 0</small>
+                  </div>
+                  <div class="ppills">
+                    <span class="pill solid" data-guide="p-pdf" [class.hl]="highlight() === 'p-pdf'"><i class="pi pi-file"></i>{{ st.btnReceipt }}</span>
+                    <span class="pill line">{{ st.btnSettlement }}</span>
+                  </div>
+                  <div class="psec">{{ st.secCharges }}</div>
+                  <div class="pcard">
+                    <div class="pr"><span>{{ st.c1 }}</span><span>{{ st.c1v }}</span></div>
+                    <div class="pr"><span>{{ st.c2 }}</span><span>{{ st.c2v }}</span></div>
+                    <div class="pr"><span>{{ st.c3 }}</span><span>{{ st.c3v }}</span></div>
+                  </div>
+                </div>
+              }
+            </div>
+          </div>
+        </div>
       } @else {
         <div class="bar">
           <i class="dot" style="background:#ff5f57"></i><i class="dot" style="background:#febc2e"></i><i class="dot" style="background:#28c840"></i>
@@ -38,9 +124,9 @@ import { GuideField, GuideUiState } from './guide.script';
                   <h2>{{ login().formTitle }}</h2>
                   <p class="sub">{{ login().formSub }}</p>
                   <label>{{ login().userLabel }}</label>
-                  <div class="fld" data-guide="user" [class.hl]="highlight() === 'user'" [class.focus]="typing() === 'user'">
-                    @if (fields().user) { <span>{{ fields().user }}</span> } @else { <span class="ph">{{ login().userPlaceholder }}</span> }
-                    @if (typing() === 'user') { <span class="caret"></span> }
+                  <div class="fld" data-guide="user" [class.hl]="highlight() === 'user'" [class.focus]="userTyping()">
+                    @if (loginUser()) { <span>{{ loginUser() }}</span> } @else { <span class="ph">{{ login().userPlaceholder }}</span> }
+                    @if (userTyping()) { <span class="caret"></span> }
                   </div>
                   <label>{{ login().passLabel }}</label>
                   <div class="fld" data-guide="pass" [class.hl]="highlight() === 'pass'" [class.focus]="typing() === 'pass'">
@@ -56,8 +142,9 @@ import { GuideField, GuideUiState } from './guide.script';
                 <div class="top">
                   <div class="brand"><img src="/brand/expenses-icon.svg" width="30" alt="" /><b>Expenses</b></div>
                   <div class="right">
-                    <span class="bellw"><i class="pi pi-bell" [attr.aria-label]="tx().web.bell"></i>@if (ui().alert) { <span class="nb">1</span> }</span>
-                    <div class="chip"><span class="av">AD</span>{{ tx().web.user }}</div>
+                    <span class="bellw"><i class="pi pi-bell" [attr.aria-label]="tx().web.bell"></i>@if (ui().alert || ui().alert2) { <span class="nb">1</span> }</span>
+                    <div class="chip"><span class="av">{{ initials() }}</span>{{ tx().web.stl.who[ui().who] }}</div>
+                    <i class="pi pi-sign-out lo" data-guide="btn-logout" [class.hl]="highlight() === 'btn-logout'" [attr.aria-label]="tx().web.stl.logout"></i>
                   </div>
                 </div>
                 <div class="main">
@@ -266,6 +353,47 @@ import { GuideField, GuideUiState } from './guide.script';
                           </div>
                         }
                       </div>
+                    } @else if (ui().screen === 'settlement') {
+                      @let stl = tx().web.stl;
+                      <div class="panel sp">
+                        <div class="shead">
+                          <span class="sic"><i class="pi pi-calculator"></i></span>
+                          <div><strong>{{ stl.title }}</strong><small>{{ tx().web.cards[0].name }} · {{ tx().values.building }}</small></div>
+                        </div>
+                        <div class="sgrid">
+                          <div class="kpi sk"><small>{{ stl.stateLabel }}</small><b>{{ stl.pStatus[settlePeriod()] }}</b></div>
+                          <div class="kpi sk"><small>{{ stl.setLabel }}</small><b>{{ stl.sStatus[ui().sst] }}</b></div>
+                          <div class="kpi sk on"><small>{{ stl.totalExp }}</small><b>{{ stl.vExp }}</b></div>
+                          <div class="kpi sk"><small>{{ stl.totalInc }}</small><b>{{ stl.vInc }}</b></div>
+                          <div class="kpi sk on" data-guide="metric-net" [class.hl]="highlight() === 'metric-net'"><small>{{ stl.net }}</small><b>{{ stl.vNet }}</b></div>
+                          <div class="kpi sk"><small>{{ stl.reserve }}</small><b>{{ stl.vZero }}</b></div>
+                          <div class="kpi sk"><small>{{ stl.extra }}</small><b>{{ stl.vZero }}</b></div>
+                          <div class="kpi sk" data-guide="metric-charges" [class.hl]="highlight() === 'metric-charges'"><small>{{ stl.charges }}</small><b>{{ ui().sst === 'approved' || ui().sst === 'published' ? stl.vCharges : stl.vZero }}</b></div>
+                        </div>
+                        <div class="trail">
+                          @if (ui().sst === 'draft') { <span class="tc"><i class="pi pi-info-circle"></i>{{ stl.trailPrelim }}</span> }
+                          @else { <span class="tc"><i class="pi pi-check-circle"></i>{{ stl.trailCalc }}</span> }
+                          @if (ui().sst === 'approved' || ui().sst === 'published') { <span class="tc"><i class="pi pi-check-circle"></i>{{ stl.trailApproved }}</span> }
+                          @if (ui().sst === 'published') { <span class="tc"><i class="pi pi-check-circle"></i>{{ stl.trailPublished }}</span> }
+                        </div>
+                        <div class="srow">
+                          <span class="b1" data-guide="btn-calcular" [class.hl]="highlight() === 'btn-calcular'" [style.opacity]="ui().sst === 'approved' || ui().sst === 'published' ? 0.5 : 1"><i class="pi pi-calculator"></i>{{ ui().sst === 'draft' ? stl.btnCalc : stl.btnRecalc }}</span>
+                          @if (ui().who === 'manager') {
+                            <span class="b1 bl" data-guide="btn-aprobar" [class.hl]="highlight() === 'btn-aprobar'" [style.opacity]="ui().sst === 'calculated' ? 1 : 0.5"><i class="pi pi-check"></i>{{ stl.btnApprove }}</span>
+                          }
+                          @if (ui().who === 'admin') {
+                            <span class="b1 dk" data-guide="btn-publicar" [class.hl]="highlight() === 'btn-publicar'" [style.opacity]="ui().sst === 'approved' ? 1 : 0.5"><i class="pi pi-send"></i>{{ stl.btnPublish }}</span>
+                            <span class="b2 bad"><i class="pi pi-times"></i>{{ stl.btnReject }}</span>
+                          }
+                          @if (ui().sst !== 'draft') { <span class="b2"><i class="pi pi-file-pdf"></i>{{ stl.btnPdf }}</span> }
+                        </div>
+                        @if (ui().note === 'calc' || ui().note === 'sapprove' || ui().note === 'publish') {
+                          <div class="toast">
+                            <i class="pi pi-check-circle"></i>
+                            <span><b>{{ tx().web.toastTitle }}</b> {{ ui().note === 'calc' ? stl.tCalc : ui().note === 'sapprove' ? stl.tApprove : stl.tPublish }}</span>
+                          </div>
+                        }
+                      </div>
                     } @else {
                       <div class="panel">
                         <div class="phead">
@@ -373,11 +501,11 @@ import { GuideField, GuideUiState } from './guide.script';
                           }
                           @for (c of tx().web.cards; track c.name; let i = $index) {
                             <div class="pc" [attr.data-guide]="i === 0 ? 'card-nov' : null" [class.hl]="i === 0 && highlight() === 'card-nov'">
-                              <div class="prow"><b>{{ c.name }}</b><span class="st" [class]="c.status">{{ statusLabel(c.status) }}</span></div>
+                              <div class="prow"><b>{{ c.name }}</b>@if (i === 0 && ui().sp !== 'none') { <span class="st" [class]="settlePeriod()">{{ tx().web.stl.pStatus[settlePeriod()] }}</span> } @else { <span class="st" [class]="c.status">{{ statusLabel(c.status) }}</span> }</div>
                               <div class="pline"><i class="pi pi-building"></i> {{ tx().values.building }}</div>
                               <div class="pdates">{{ c.dates }}</div>
                               <div class="pacts">
-                                <i class="pi pi-calculator"></i>
+                                <i class="pi pi-calculator" [attr.data-guide]="i === 0 ? 'btn-calc' : null" [class.hl]="i === 0 && highlight() === 'btn-calc'"></i>
                                 <i class="pi pi-list"></i>
                                 <i class="pi pi-copy" [attr.data-guide]="i === 0 ? 'btn-clone' : null" [class.hl]="i === 0 && highlight() === 'btn-clone'"></i>
                                 <i class="pi pi-pencil"></i>
@@ -405,6 +533,12 @@ import { GuideField, GuideUiState } from './guide.script';
                   <div class="atoast" data-guide="alert-toast" [class.hl]="highlight() === 'alert-toast'">
                     <span class="aic"><i class="pi pi-inbox"></i></span>
                     <span class="atx"><b>{{ tx().web.pay.alertTitle }}</b><span>{{ tx().web.pay.alertBody }}</span></span>
+                  </div>
+                }
+                @if (ui().alert2) {
+                  <div class="atoast ok" data-guide="alert2-toast" [class.hl]="highlight() === 'alert2-toast'">
+                    <span class="aic ok"><i class="pi pi-check-circle"></i></span>
+                    <span class="atx"><b>{{ tx().web.stl.alert2Title }}</b><span>{{ tx().web.stl.alert2Body }}</span></span>
                   </div>
                 }
               </div>
@@ -587,6 +721,75 @@ import { GuideField, GuideUiState } from './guide.script';
       .bt .pi { color: #f59e0b; }
       .bi { display: flex; gap: 10px; align-items: flex-start; padding: 6px 0; font-size: 13px; line-height: 1.4; }
       .bi .pi { color: #22c55e; margin-top: 2px; }
+      .lo { font-size: 15px; color: #5f7b88; padding: 6px; border-radius: 8px; }
+      .atoast.ok { border-left-color: #16a34a; }
+      .aic.ok { background: #16a34a; }
+      .sp { padding: 12px 14px; }
+      .shead { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+      .shead small { display: block; color: #5f7b88; font-size: 11px; }
+      .sic { width: 32px; height: 32px; border-radius: 50%; background: rgba(19, 133, 182, 0.12); color: #1385b6; display: flex; align-items: center; justify-content: center; }
+      .sgrid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+      .kpi.sk { padding: 8px 10px; border: 1px solid #e6eef4; box-shadow: none; }
+      .kpi.sk.on { border-color: #bfe0ee; background: #f5fbfe; }
+      .kpi.sk small { font-size: 10px; }
+      .kpi.sk b { font-size: 13px; font-weight: 800; }
+      .trail { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0; }
+      .tc { display: inline-flex; align-items: center; gap: 5px; font-size: 10px; padding: 3px 8px; border-radius: 999px; background: #eef6fb; color: #3b4a5c; }
+      .tc .pi { color: #22a55a; font-size: 10px; }
+      .srow { display: flex; flex-wrap: wrap; gap: 8px; }
+      .b1.bl { background: #0f6e96; }
+      .b1.dk { background: #16324a; }
+      .pbg { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #dbe8f9, #eef4fb); }
+      .pchip { position: absolute; left: 20px; top: 16px; display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 999px; background: #fff; color: #1385b6; font-weight: 700; font-size: 12px; box-shadow: 0 4px 12px rgba(17, 54, 74, 0.12); }
+      .phone { width: 270px; height: 500px; border: 8px solid #16212d; border-radius: 38px; box-sizing: border-box; background: #16212d; box-shadow: 0 18px 40px rgba(17, 54, 74, 0.3); }
+      .pscr { position: relative; width: 100%; height: 100%; border-radius: 30px; overflow: hidden; background: #fff; color: #16324a; font-size: 11px; }
+      .pscr.lock { background: linear-gradient(160deg, #10284f, #1d3f7a); color: #fff; }
+      .pnotch { position: absolute; left: 50%; top: 0; width: 70px; height: 16px; margin-left: -35px; background: #16212d; border-radius: 0 0 10px 10px; z-index: 3; }
+      .pstat { position: relative; height: 26px; display: flex; align-items: center; justify-content: space-between; padding: 4px 18px 0; box-sizing: border-box; font-size: 10px; font-weight: 700; }
+      .pstat.blue { background: #1385b6; color: #fff; }
+      .pbat { display: inline-block; width: 18px; height: 9px; border: 1.5px solid currentColor; border-radius: 3px; box-sizing: border-box; padding: 1px; }
+      .pbat i { display: block; width: 100%; height: 100%; background: currentColor; border-radius: 1px; }
+      .lockclock { text-align: center; margin-top: 44px; }
+      .lockclock b { font-size: 44px; font-weight: 300; }
+      .ncard { margin: 56px 12px 0; padding: 10px 12px; border-radius: 16px; background: rgba(255, 255, 255, 0.9); color: #16324a; display: flex; flex-direction: column; gap: 3px; }
+      .ncard .nhead { display: flex; align-items: center; gap: 6px; font-size: 10px; font-weight: 700; color: #5f7b88; }
+      .ncard b { font-size: 12px; }
+      .ncard span { font-size: 11px; line-height: 1.35; }
+      .papp { background: #f4f8fb; height: calc(100% - 26px); overflow: hidden; padding-bottom: 8px; }
+      .pbar { display: flex; align-items: center; gap: 10px; height: 38px; padding: 0 12px; background: #1385b6; color: #fff; font-weight: 700; font-size: 13px; }
+      .pper { display: flex; flex-direction: column; padding: 8px 12px 2px; }
+      .pper small { color: #5f7b88; }
+      .pcard { margin: 6px 10px 0; padding: 8px 10px; border-radius: 12px; background: #fff; border: 1px solid #e3ecf5; }
+      .pcard > strong { display: block; margin-bottom: 3px; font-size: 11px; }
+      .pr { display: flex; justify-content: space-between; gap: 8px; padding: 3px 0; border-top: 1px solid #f0f4f8; }
+      .pr span:first-child { color: #5f7b88; }
+      .pbtns { display: flex; gap: 8px; margin: 10px 10px 0; }
+      .pb { flex: 1; text-align: center; padding: 9px 0; border-radius: 10px; font-weight: 700; color: #fff; }
+      .pb.ok { background: #22a55a; }
+      .pb.bad { background: rgba(239, 68, 68, 0.14); color: #c0392b; }
+      .ptoast { margin: 10px 10px 0; padding: 9px 10px; border-radius: 10px; background: #2f7a1b; color: #fff; font-weight: 600; line-height: 1.35; }
+      .pdim { position: absolute; inset: 0; background: rgba(0, 0, 0, 0.45); z-index: 2; }
+      .pdlg { position: absolute; left: 16px; right: 16px; top: 160px; z-index: 3; background: #fff; border-radius: 14px; padding: 14px; box-shadow: 0 14px 30px rgba(0, 0, 0, 0.3); }
+      .pdlg b { font-size: 13px; }
+      .pdlg p { margin: 8px 0 12px; line-height: 1.4; color: #3b4a5c; }
+      .pdb { display: flex; justify-content: flex-end; gap: 16px; font-weight: 700; }
+      .pdb .gray { color: #8a99a6; }
+      .pdb .yes { color: #1385b6; }
+      .prd { display: flex; align-items: center; gap: 8px; }
+      .pgrow { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+      .pgrow small { color: #5f7b88; font-size: 10px; }
+      .pamt { display: flex; flex-direction: column; align-items: flex-end; color: #cf4b3f; }
+      .pamt small { font-size: 10px; }
+      .pamt.okc { color: #2f7a1b; }
+      .prd > .pi { color: #8a99a6; font-size: 11px; }
+      .phero { margin: 8px 10px 0; padding: 10px; border-radius: 12px; background: #fdecea; text-align: center; display: flex; flex-direction: column; gap: 2px; }
+      .phero small { color: #5f7b88; }
+      .phero b { font-size: 22px; color: #cf4b3f; }
+      .ppills { display: flex; gap: 6px; margin: 8px 10px 0; }
+      .pill { flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 4px; padding: 7px 4px; border-radius: 999px; font-weight: 700; font-size: 10px; white-space: nowrap; }
+      .pill.solid { background: #1385b6; color: #fff; }
+      .pill.line { border: 1.5px solid #1385b6; color: #1385b6; box-sizing: border-box; }
+      .psec { margin: 10px 12px 0; font-weight: 800; font-size: 11px; }
       .dim { position: absolute; inset: 0; background: rgba(0, 0, 0, 0.28); z-index: 4; }
       .confirm { position: absolute; left: 250px; top: 110px; width: 460px; background: #fff; border-radius: 10px; box-shadow: 0 14px 40px rgba(0, 0, 0, 0.35); padding: 16px 18px; z-index: 4; box-sizing: border-box; }
       .chost { font-size: 13px; }
@@ -614,7 +817,22 @@ export class GuideScreenComponent {
 
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   readonly bars = [55, 70, 62, 80, 74, 88];
-  readonly isPeriodsScreen = computed(() => ['periods', 'form', 'done'].includes(this.ui().screen));
+  readonly isPeriodsScreen = computed(() => ['periods', 'form', 'done', 'settlement'].includes(this.ui().screen));
+  // Usuario visible en el login: el del rol que está entrando (o el genérico de los otros temas).
+  readonly loginUser = computed(() => this.fields().userOp || this.fields().userMgr || this.fields().userAdm || this.fields().user);
+  readonly userTyping = computed(() => {
+    const t = this.typing();
+    return t === 'user' || t === 'userOp' || t === 'userMgr' || t === 'userAdm';
+  });
+  // Estado del periodo en la liquidación (sin periodo marcado se ve como borrador).
+  readonly settlePeriod = computed<'draft' | 'closed' | 'published'>(() => {
+    const s = this.ui().sp;
+    return s === 'none' ? 'draft' : s;
+  });
+  readonly isLock = computed(() => ['p-notif', 'p-owner-notif'].includes(this.ui().ph));
+  readonly isReview = computed(() => ['p-review', 'p-confirm', 'p-signed'].includes(this.ui().ph));
+  // Iniciales del avatar: AD fijo con el usuario de demostración; con los demás, las dos primeras letras del nombre.
+  readonly initials = computed(() => (this.ui().who === 'demo' ? 'AD' : this.tx().web.stl.who[this.ui().who].slice(0, 2).toUpperCase()));
 
   // Etiqueta del estado de un periodo en el idioma activo.
   statusLabel(s: GuideCard['status']): string {

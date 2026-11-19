@@ -12,7 +12,7 @@ import { GUIDE_ICONS, GUIDE_INITIAL_UI, GUIDE_TONES, GuideField, GuidePose, Guid
 
 const CANCEL = Symbol('cancel');
 
-const emptyFields = (): Record<GuideField, string> => ({ url: '', user: '', pass: '', building: '', year: '', month: '', name: '', start: '', end: '', due: '', amount: '', payAmount: '' });
+const emptyFields = (): Record<GuideField, string> => ({ url: '', user: '', pass: '', building: '', year: '', month: '', name: '', start: '', end: '', due: '', amount: '', payAmount: '', userOp: '', userMgr: '', userAdm: '' });
 
 interface GuideCursor { x: number; y: number; visible: boolean; clicking: boolean; }
 
@@ -236,7 +236,7 @@ export class GuideSceneComponent {
   readonly tx = computed(() => GUIDE_TX[this.lang.lang()]);
   readonly loginTx = computed(() => LOGIN_TX[this.lang.lang()]);
   readonly steps = computed(() => STEPS_BY_TOPIC[this.topic()]);
-  readonly title = computed(() => (this.topic() === 'clone-period' ? this.tx().sceneTitleClone : this.topic() === 'custom-need' ? this.tx().sceneTitleCustom : this.topic() === 'approve-payment' ? this.tx().sceneTitlePayment : this.tx().sceneTitle));
+  readonly title = computed(() => (this.topic() === 'clone-period' ? this.tx().sceneTitleClone : this.topic() === 'custom-need' ? this.tx().sceneTitleCustom : this.topic() === 'approve-payment' ? this.tx().sceneTitlePayment : this.topic() === 'settlement-flow' ? this.tx().sceneTitleSettlement : this.tx().sceneTitle));
   readonly talkMode = computed(() => this.topic() === 'custom-need'); // primer plano sin PC
   readonly snap = signal(false); // coloca al personaje sin deslizarlo
   readonly waUrl = computed(() => salesWhatsAppUrlFor(this.tx().customWa));
@@ -399,6 +399,13 @@ export class GuideSceneComponent {
           this.typing.set(null);
           this.highlight.set(null);
           await this.wait(250, token);
+        } else if (a.kind === 'reset') {
+          this.fields.update((f) => {
+            const n = { ...f };
+            for (const k of a.fields) n[k] = '';
+            return n;
+          });
+          await this.wait(150, token);
         } else {
           await this.wait(a.ms, token);
         }
@@ -435,6 +442,7 @@ export class GuideSceneComponent {
       for (const a of this.steps()[j].actions) {
         if (a.kind === 'click' && a.then) ui = { ...ui, ...a.then };
         if (a.kind === 'type') fields[a.field] = values[a.field];
+        if (a.kind === 'reset') for (const k of a.fields) fields[k] = '';
       }
     }
     const s = this.steps()[i];

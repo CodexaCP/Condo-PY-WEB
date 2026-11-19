@@ -36,6 +36,7 @@ import { GuideTopic, matchGuideTopic } from './guide.script';
           <button type="button" class="eg-chip" (click)="start('create-period')"><i class="pi pi-calendar-plus"></i> {{ tx().topicCreatePeriod }}</button>
           <button type="button" class="eg-chip" (click)="start('clone-period')"><i class="pi pi-copy"></i> {{ tx().topicClonePeriod }}</button>
           <button type="button" class="eg-chip" (click)="start('approve-payment')"><i class="pi pi-wallet"></i> {{ tx().topicPayment }}</button>
+          <button type="button" class="eg-chip" (click)="start('settlement-flow')"><i class="pi pi-calculator"></i> {{ tx().topicSettlement }}</button>
           @for (m of messages(); track $index) {
             <div class="eg-msg" [class.bot]="m.from === 'bot'" [class.user]="m.from === 'user'">{{ m.text }}</div>
           }

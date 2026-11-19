@@ -1,17 +1,31 @@
 import { Dict } from '../../../core/i18n/lang.service';
 import { GuideSayKey } from './guide.script';
 
-export interface GuideValues { url: string; user: string; pass: string; building: string; year: string; month: string; name: string; start: string; end: string; due: string; amount: string; amountOld: string; invoiceFile: string; payAmount: string; }
+export interface GuideValues { url: string; user: string; pass: string; building: string; year: string; month: string; name: string; start: string; end: string; due: string; amount: string; amountOld: string; invoiceFile: string; payAmount: string; userOp: string; userMgr: string; userAdm: string; }
 export interface GuideRow { id: 'staff' | 'power' | 'cleaning' | 'insurance' | 'admin'; desc: string; supplier: string; amount: string; }
 export interface GuideCard { name: string; status: 'draft' | 'published' | 'closed'; dates: string; }
 export interface GuidePayWeb {
   alertTitle: string; alertBody: string; listTitle: string; listSub: string; tabApp: string; tabAppBadge: string; tabSystem: string; fAll: string; fPending: string; fReview: string; fApproved: string; fRejected: string; colRef: string; colOwner: string; colDate: string; colAmount: string; colState: string; colSent: string; owner: string; ref: string; date: string; sent: string; declared: string; unit: string; detailTitle: string; secData: string; lOwner: string; lRef: string; lDate: string; lDeclared: string; lReviewed: string; lSent: string; secProof: string; proofTitle: string; proofLine1: string; proofLine2: string; proofLine3: string; secUnits: string; uCode: string; uBuilding: string; uAmount: string; secReview: string; reviewHint: string; lProofAmount: string; btnReview: string; secResolve: string; resolveHint: string; btnApprove: string; btnReject: string; stPending: string; stReview: string; stApproved: string; secBilling: string; billingHint: string; invCount: string; invTotal: string; invColInvoice: string; invColUnit: string; invColPeriod: string; invColState: string; invColAmount: string; draft: string; issued: string; btnEmitOpen: string; btnOptions: string; selSeries: string; series: string; btnEmitInvoice: string; invNumber: string; btnVoid: string; toastApprovedTitle: string; toastApprovedText: string; toastIssuedTitle: string; toastIssuedText: string;
+}
+export interface GuideStlWeb {
+  who: Record<'demo' | 'operator' | 'manager' | 'admin', string>;
+  logout: string; title: string; stateLabel: string; setLabel: string; totalExp: string; totalInc: string; net: string; reserve: string; extra: string; charges: string;
+  pStatus: Record<'draft' | 'closed' | 'published', string>;
+  sStatus: Record<'draft' | 'calculated' | 'approved' | 'published', string>;
+  vExp: string; vInc: string; vNet: string; vZero: string; vCharges: string; trailPrelim: string; trailCalc: string; trailApproved: string; trailPublished: string;
+  btnCalc: string; btnRecalc: string; btnApprove: string; btnPublish: string; btnReject: string; btnPdf: string; tCalc: string; tApprove: string; tPublish: string;
+  alert2Title: string; alert2Body: string; pn1Title: string; pn1Body: string; reviewTitle: string; summary: string; rExp: string; rInc: string; rNet: string; catsTitle: string;
+  cat1: string; cat1v: string; cat2: string; cat2v: string; cat3: string; cat3v: string; btnPApprove: string; btnPReject: string; confirmHeader: string; confirmMsg: string;
+  btnCancel: string; btnYes: string; signedToast: string; pn2Title: string; pn2Body: string; accTitle: string; unitLine: string; pName: string; pTotal: string; pPaid: string;
+  pPending: string; pAmount: string; pOct: string; pOctOk: string; dHero: string; dCharges: string; dPaid: string; btnReceipt: string; btnSettlement: string; secCharges: string;
+  c1: string; c1v: string; c2: string; c2v: string; c3: string; c3v: string; appChip: string;
 }
 export interface GuideTx {
   name: string; role: string;
   fabAria: string; teaser: string; ask: string; topicCreatePeriod: string; topicClonePeriod: string; inputPlaceholder: string; send: string; unknown: string; close: string;
   sceneTitle: string; sceneTitleClone: string; prev: string; next: string; pause: string; play: string; replay: string; stepOf: (i: number, n: number) => string; tryDemo: string;
   topicPayment: string; sceneTitlePayment: string;
+  topicSettlement: string; sceneTitleSettlement: string;
   topicCustom: string; sceneTitleCustom: string; customYes: string; customNo: string; customWa: string;
   chatName: string; chatOnline: string; chatInput: string;
   say: Record<GuideSayKey, string>;
@@ -29,6 +43,7 @@ export interface GuideTx {
     ledgerTitle: string; ledgerSub: string; colDesc: string; colDist: string; colAmount: string; colActions: string; expensesCount: (n: number) => string; distAll: string;
     totalBase: string; totalEdited: string; amountNew: string; editTitle: string; fAmount: string; save: string; rows: GuideRow[]; benefitsTitle: string; benefits: string[];
     pay: GuidePayWeb;
+    stl: GuideStlWeb;
   };
 }
 
@@ -41,6 +56,7 @@ const ES: GuideTx = {
   sceneTitle: 'Cómo crear un periodo de expensas', sceneTitleClone: 'Cómo clonar el periodo del mes anterior', prev: 'Anterior', next: 'Siguiente', pause: 'Pausar', play: 'Seguir', replay: 'Ver de nuevo',
   stepOf: (i, n) => `Paso ${i} de ${n}`, tryDemo: 'Explorar la demostración',
   topicPayment: '¿Cómo apruebo el pago de un propietario y emito la factura?', sceneTitlePayment: 'Cómo aprobar un pago y emitir la factura',
+  topicSettlement: '¿Cómo se manejan las liquidaciones en Expenses?', sceneTitleSettlement: 'Cómo se maneja una liquidación, paso a paso',
   topicCustom: '¿Y si necesito algo que Expenses todavía no tiene?', sceneTitleCustom: 'Expenses se adapta a ti', customYes: 'Sí, ponme en contacto', customNo: 'Ahora no',
   customWa: 'Hola, estuve viendo Expenses y tengo una necesidad específica para mi administración. ¿Me pueden contactar para conversarlo?',
   chatName: 'Expenses', chatOnline: 'en línea', chatInput: 'Escribe tu mensaje…',
@@ -86,9 +102,31 @@ const ES: GuideTx = {
     payApproved: 'Al aprobar, el sistema cobra los comprobantes del más antiguo al más nuevo, avisa al propietario y deja las facturas listas como borrador.',
     payInvoice: 'En «Facturación» está el borrador: una factura por comprobante. Toco «Emitir» para abrirla.',
     payEmit: 'Elijo el timbrado activo y toco «Emitir factura»: se numera y queda emitida.',
-    payDone: '¡Listo! Pago aprobado, factura emitida y el propietario avisado. Si hubiera un error, puedes anular la factura indicando el motivo.'
+    payDone: '¡Listo! Pago aprobado, factura emitida y el propietario avisado. Si hubiera un error, puedes anular la factura indicando el motivo.',
+    stHello: '¡Hola! Te cuento cómo se maneja una liquidación en Expenses: cada persona hace su parte, en orden, y nadie se salta pasos.',
+    stOpLogin: 'Empiezo como Operador. Él carga los gastos del mes y calcula la liquidación, pero no puede aprobarla.',
+    stOpMenu: 'Voy a «Períodos y cobros → Periodos». Noviembre está en Borrador, con todos sus gastos ya cargados.',
+    stOpCalc: 'Abro la «Liquidación» del periodo. Por ahora es solo un resumen preliminar.',
+    stOpCalc2: 'Toco «Calcular liquidación»: suma gastos e ingresos, separa fondo de reserva y extraordinarios y deja el neto común a repartir.',
+    stOpMetrics: 'Queda Calculada, con mi nombre y la fecha. Ahora le toca al Encargado de edificio: yo ya no puedo aprobar.',
+    stSwitchMgr: 'Cierro sesión y entro como Encargado de edificio, que es el único que puede aprobar la liquidación.',
+    stMgrLogin: 'Entro con el usuario del Encargado.',
+    stMgrOpen: 'Voy a la liquidación del periodo y veo los totales que dejó calculados el Operador.',
+    stMgrApprove: 'Si todo está bien, toco «Aprobar». En ese momento nacen los cargos de cada unidad y el periodo se cierra a cambios.',
+    stMgrAfter: 'Todavía no se publica: como este edificio tiene presidente de consorcio, ahora debe revisarla él. Le llega una notificación.',
+    stPresAlert: 'El presidente del consorcio, que es un propietario, recibe en su celular «Liquidación pendiente de tu revisión».',
+    stPresReview: 'Al tocarla se abre la «Revisión de liquidación»: el resumen, los totales por categoría y los comprobantes de cada gasto.',
+    stPresApprove: 'Si está conforme toca «Aprobar». La app le pide confirmar, porque con eso firma la liquidación.',
+    stPresSign: 'Con «Sí, aprobar» queda firmada y lista para publicar. Si la rechaza, escribe el motivo y el Encargado la corrige.',
+    stAdmLogin: 'Vuelvo a la web como Administrador de empresa. Le llega el aviso «Liquidación aprobada por el presidente: ya se puede publicar».',
+    stAdmOpen: 'Abro la liquidación. Solo el Administrador publica, y solo si antes la aprobó un Encargado y, cuando hay presidente, también él.',
+    stAdmPublish: 'Toco «Publicar comprobantes». Desde ahora propietarios y residentes ven el periodo y reciben un aviso. Si el edificio no tiene presidente, se publica directo tras el Encargado.',
+    stOwnAlert: 'Cada propietario recibe en su celular «Nuevo periodo de expensas publicado».',
+    stOwnAccount: 'En «Mi cuenta» ve el periodo con su total y el saldo pendiente de su unidad.',
+    stOwnDetail: 'Al abrirlo ve su comprobante individual en PDF, la liquidación del edificio y el detalle de sus cargos. Con el pago se emite la factura.',
+    stDone: '¡Listo! El Operador calcula, el Encargado aprueba, el presidente firma, el Administrador publica y cada propietario recibe su comprobante. Cada paso queda registrado con nombre y fecha.'
   },
-  values: { url: 'expenses.com.py', user: 'demo@expenses.com.py', pass: '••••••••', building: 'Edificio Torre Mirador', year: '2026', month: '12', name: 'Diciembre 2026', start: '01/12/2026', end: '31/12/2026', due: '10/01/2027', amount: '2.120.000', amountOld: '1.850.000', invoiceFile: 'factura-ande-dic.pdf', payAmount: '1.250.000' },
+  values: { url: 'expenses.com.py', user: 'demo@expenses.com.py', pass: '••••••••', building: 'Edificio Torre Mirador', year: '2026', month: '12', name: 'Diciembre 2026', start: '01/12/2026', end: '31/12/2026', due: '10/01/2027', amount: '2.120.000', amountOld: '1.850.000', invoiceFile: 'factura-ande-dic.pdf', payAmount: '1.250.000', userOp: 'operador@expenses.com.py', userMgr: 'encargado@expenses.com.py', userAdm: 'admin@expenses.com.py' },
   web: {
     slogan: 'Administrar también es crecer', menuMain: 'PRINCIPAL', menuManage: 'GESTIÓN', summary: 'Resumen', payments: 'Pagos', property: 'Inmuebles y personas',
     collections: 'Períodos y cobros', ledger: 'Gastos y cargos', periods: 'Periodos', statements: 'Estado de cuenta', morosity: 'Morosidad', reports: 'Reportes',
@@ -196,6 +234,31 @@ const ES: GuideTx = {
       toastApprovedText: 'La deuda fue liquidada y las facturas quedaron preparadas como borrador.',
       toastIssuedTitle: 'Emitida',
       toastIssuedText: 'Factura 001-001-0000123 emitida.'
+    },
+    stl: {
+      who: { demo: 'Ana Demo', operator: 'Luis (Operador)', manager: 'María (Encargada)', admin: 'Ana (Administradora)' },
+      logout: 'Cerrar sesión', title: 'Liquidación consolidada', stateLabel: 'Estado periodo', setLabel: 'Liquidación', totalExp: 'Total gastos', totalInc: 'Total ingresos', net: 'Neto común',
+      reserve: 'Fondo reserva', extra: 'Extraordinarios', charges: 'Cargos emitidos',
+      pStatus: { draft: 'Borrador', closed: 'Cerrado', published: 'Publicado' },
+      sStatus: { draft: 'Sin calcular', calculated: 'Calculada', approved: 'Aprobada', published: 'Publicada' },
+      vExp: 'Gs. 11.300.000', vInc: 'Gs. 400.000', vNet: 'Gs. 10.900.000', vZero: 'Gs. 0', vCharges: '24',
+      trailPrelim: 'Resumen preliminar — sin liquidación persistida aún.', trailCalc: 'Calculada: 19/11/2026 por Luis (Operador)',
+      trailApproved: 'Aprobada: 19/11/2026 por María (Encargada)', trailPublished: 'Publicada: 19/11/2026 por Ana (Administradora)',
+      btnCalc: 'Calcular liquidación', btnRecalc: 'Recalcular', btnApprove: 'Aprobar', btnPublish: 'Publicar comprobantes', btnReject: 'Rechazar', btnPdf: 'PDF',
+      tCalc: 'Liquidación calculada.', tApprove: 'Liquidación aprobada. Se emitieron 24 cargos, uno por unidad.', tPublish: 'Comprobantes publicados. Se avisó a propietarios y residentes.',
+      alert2Title: 'Liquidación aprobada por el presidente',
+      alert2Body: 'El presidente del consorcio aprobó la liquidación del período Noviembre 2026 de Edificio Torre Mirador. Ya se puede publicar.',
+      pn1Title: 'Liquidación pendiente de tu revisión',
+      pn1Body: 'Se emitió un nuevo período de expensas (Noviembre 2026) para Edificio Torre Mirador y se encuentra pendiente de tu revisión como presidente del consorcio.',
+      reviewTitle: 'Revisión de liquidación', summary: 'Resumen', rExp: 'Total gastos del edificio', rInc: 'Total ingresos del edificio', rNet: 'Monto neto a distribuir',
+      catsTitle: 'Gastos por categoría', cat1: 'Personal', cat1v: 'Gs. 4.500.000', cat2: 'Limpieza', cat2v: 'Gs. 2.300.000', cat3: 'Servicios', cat3v: 'Gs. 2.120.000',
+      btnPApprove: 'Aprobar', btnPReject: 'Rechazar', confirmHeader: 'Aprobar liquidación',
+      confirmMsg: 'Al aprobar, firmás la liquidación de este período. Quedará lista para que la empresa la publique.',
+      btnCancel: 'Cancelar', btnYes: 'Sí, aprobar', signedToast: 'Liquidación aprobada. Quedó firmada y lista para publicar.',
+      pn2Title: 'Nuevo periodo de expensas publicado', pn2Body: 'Noviembre 2026', accTitle: 'Mi cuenta', unitLine: 'Unidad 5B · Edificio Torre Mirador',
+      pName: 'Noviembre 2026', pTotal: 'Total:', pPaid: 'Pagado:', pPending: 'Pendiente', pAmount: 'Gs. 475.000', pOct: 'Octubre 2026', pOctOk: 'Al día',
+      dHero: 'Saldo pendiente', dCharges: 'Cargos:', dPaid: 'Pagado:', btnReceipt: 'Comprobante PDF', btnSettlement: 'Liquidación PDF', secCharges: 'Cargos del período',
+      c1: 'Expensa ordinaria', c1v: 'Gs. 410.000', c2: 'Fondo de reserva', c2v: 'Gs. 40.000', c3: 'Servicios comunes', c3v: 'Gs. 25.000', appChip: 'App Expenses'
     }
   }
 };
@@ -209,6 +272,7 @@ const PT: GuideTx = {
   sceneTitle: 'Como criar um período', sceneTitleClone: 'Como clonar o período do mês anterior', prev: 'Anterior', next: 'Próximo', pause: 'Pausar', play: 'Continuar', replay: 'Ver de novo',
   stepOf: (i, n) => `Passo ${i} de ${n}`, tryDemo: 'Explorar a demonstração',
   topicPayment: 'Como aprovo o pagamento de um proprietário e emito a fatura?', sceneTitlePayment: 'Como aprovar um pagamento e emitir a fatura',
+  topicSettlement: 'Como são tratados os rateios na Expenses?', sceneTitleSettlement: 'Como funciona um rateio, passo a passo',
   topicCustom: 'E se eu precisar de algo que a Expenses ainda não tem?', sceneTitleCustom: 'A Expenses se adapta a você', customYes: 'Sim, me coloque em contato', customNo: 'Agora não',
   customWa: 'Olá, estive vendo a Expenses e tenho uma necessidade específica para a minha administração. Podem entrar em contato para conversarmos?',
   chatName: 'Expenses', chatOnline: 'online', chatInput: 'Escreva sua mensagem…',
@@ -254,9 +318,31 @@ const PT: GuideTx = {
     payApproved: 'Ao aprovar, o sistema baixa os comprovantes do mais antigo ao mais novo, avisa o proprietário e deixa as faturas prontas como rascunho.',
     payInvoice: 'Em «Faturamento» está o rascunho: uma fatura por comprovante. Toco em «Emitir» para abri-la.',
     payEmit: 'Escolho o timbrado ativo e toco em «Emitir fatura»: ela é numerada e fica emitida.',
-    payDone: 'Pronto! Pagamento aprovado, fatura emitida e proprietário avisado. Se houver um erro, você pode anular a fatura informando o motivo.'
+    payDone: 'Pronto! Pagamento aprovado, fatura emitida e proprietário avisado. Se houver um erro, você pode anular a fatura informando o motivo.',
+    stHello: 'Olá! Vou contar como funciona um rateio na Expenses: cada pessoa faz a sua parte, em ordem, e ninguém pula etapas.',
+    stOpLogin: 'Começo como Operador. Ele lança as despesas do mês e calcula o rateio, mas não pode aprová-lo.',
+    stOpMenu: 'Vou em «Períodos e cobranças → Períodos». Novembro está em Rascunho, com todas as despesas já lançadas.',
+    stOpCalc: 'Abro o «Rateio» do período. Por enquanto é só um resumo preliminar.',
+    stOpCalc2: 'Toco em «Calcular rateio»: soma despesas e receitas, separa fundo de reserva e extraordinárias e deixa o líquido comum a dividir.',
+    stOpMetrics: 'Fica Calculado, com o meu nome e a data. Agora é a vez do Encarregado do edifício: eu já não posso aprovar.',
+    stSwitchMgr: 'Saio da sessão e entro como Encarregado do edifício, o único que pode aprovar o rateio.',
+    stMgrLogin: 'Entro com o usuário do Encarregado.',
+    stMgrOpen: 'Vou ao rateio do período e vejo os totais que o Operador deixou calculados.',
+    stMgrApprove: 'Se estiver tudo certo, toco em «Aprovar». Nesse momento nascem as cobranças de cada unidade e o período fecha para alterações.',
+    stMgrAfter: 'Ainda não é publicado: como este edifício tem presidente do condomínio, agora ele deve revisá-lo. Ele recebe uma notificação.',
+    stPresAlert: 'O presidente do condomínio, que é um proprietário, recebe no celular «Rateio pendente da sua revisão».',
+    stPresReview: 'Ao tocar, abre a «Revisão do rateio»: o resumo, os totais por categoria e os comprovantes de cada despesa.',
+    stPresApprove: 'Se estiver de acordo, toca em «Aprovar». O app pede confirmação, porque com isso ele assina o rateio.',
+    stPresSign: 'Com «Sim, aprovar» fica assinado e pronto para publicar. Se rejeitar, escreve o motivo e o Encarregado corrige.',
+    stAdmLogin: 'Volto à web como Administrador da empresa. Chega o aviso «Rateio aprovado pelo presidente: já pode ser publicado».',
+    stAdmOpen: 'Abro o rateio. Só o Administrador publica, e só se antes um Encarregado o aprovou e, quando há presidente, ele também.',
+    stAdmPublish: 'Toco em «Publicar comprovantes». Daqui em diante proprietários e moradores veem o período e recebem um aviso. Se o edifício não tem presidente, publica direto após o Encarregado.',
+    stOwnAlert: 'Cada proprietário recebe no celular «Novo período de taxas publicado».',
+    stOwnAccount: 'Em «Minha conta» ele vê o período com o total e o saldo pendente da sua unidade.',
+    stOwnDetail: 'Ao abrir, vê o seu comprovante individual em PDF, o rateio do edifício e o detalhe das suas cobranças. Com o pagamento, a fatura é emitida.',
+    stDone: 'Pronto! O Operador calcula, o Encarregado aprova, o presidente assina, o Administrador publica e cada proprietário recebe o seu comprovante. Cada passo fica registrado com nome e data.'
   },
-  values: { url: 'expenses.com.py', user: 'demo@expenses.com.py', pass: '••••••••', building: 'Edifício Torre Mirador', year: '2026', month: '12', name: 'Dezembro 2026', start: '01/12/2026', end: '31/12/2026', due: '10/01/2027', amount: '2.120.000', amountOld: '1.850.000', invoiceFile: 'fatura-energia-dez.pdf', payAmount: '1.250.000' },
+  values: { url: 'expenses.com.py', user: 'demo@expenses.com.py', pass: '••••••••', building: 'Edifício Torre Mirador', year: '2026', month: '12', name: 'Dezembro 2026', start: '01/12/2026', end: '31/12/2026', due: '10/01/2027', amount: '2.120.000', amountOld: '1.850.000', invoiceFile: 'fatura-energia-dez.pdf', payAmount: '1.250.000', userOp: 'operador@expenses.com.py', userMgr: 'encarregado@expenses.com.py', userAdm: 'admin@expenses.com.py' },
   web: {
     slogan: 'Administrar também é crescer', menuMain: 'PRINCIPAL', menuManage: 'GESTÃO', summary: 'Resumo', payments: 'Pagamentos', property: 'Imóveis e pessoas',
     collections: 'Períodos e cobranças', ledger: 'Despesas e cobranças', periods: 'Períodos', statements: 'Extrato', morosity: 'Inadimplência', reports: 'Relatórios',
@@ -364,6 +450,31 @@ const PT: GuideTx = {
       toastApprovedText: 'A dívida foi quitada e as faturas ficaram preparadas como rascunho.',
       toastIssuedTitle: 'Emitida',
       toastIssuedText: 'Fatura 001-001-0000123 emitida.'
+    },
+    stl: {
+      who: { demo: 'Ana Demo', operator: 'Luis (Operador)', manager: 'Maria (Encarregada)', admin: 'Ana (Administradora)' },
+      logout: 'Sair', title: 'Rateio consolidado', stateLabel: 'Status do período', setLabel: 'Rateio', totalExp: 'Total de despesas', totalInc: 'Total de receitas', net: 'Líquido comum',
+      reserve: 'Fundo de reserva', extra: 'Extraordinárias', charges: 'Cobranças emitidas',
+      pStatus: { draft: 'Rascunho', closed: 'Fechado', published: 'Publicado' },
+      sStatus: { draft: 'Não calculado', calculated: 'Calculado', approved: 'Aprovado', published: 'Publicado' },
+      vExp: 'Gs. 11.300.000', vInc: 'Gs. 400.000', vNet: 'Gs. 10.900.000', vZero: 'Gs. 0', vCharges: '24',
+      trailPrelim: 'Resumo preliminar — ainda sem rateio salvo.', trailCalc: 'Calculado: 19/11/2026 por Luis (Operador)',
+      trailApproved: 'Aprovado: 19/11/2026 por Maria (Encarregada)', trailPublished: 'Publicado: 19/11/2026 por Ana (Administradora)',
+      btnCalc: 'Calcular rateio', btnRecalc: 'Recalcular', btnApprove: 'Aprovar', btnPublish: 'Publicar comprovantes', btnReject: 'Rejeitar', btnPdf: 'PDF',
+      tCalc: 'Rateio calculado.', tApprove: 'Rateio aprovado. Foram emitidas 24 cobranças, uma por unidade.', tPublish: 'Comprovantes publicados. Proprietários e moradores foram avisados.',
+      alert2Title: 'Rateio aprovado pelo presidente',
+      alert2Body: 'O presidente do condomínio aprovou o rateio do período Novembro 2026 do Edifício Torre Mirador. Já pode ser publicado.',
+      pn1Title: 'Rateio pendente da sua revisão',
+      pn1Body: 'Foi emitido um novo período (Novembro 2026) para o Edifício Torre Mirador e ele aguarda a sua revisão como presidente do condomínio.',
+      reviewTitle: 'Revisão do rateio', summary: 'Resumo', rExp: 'Total de despesas do edifício', rInc: 'Total de receitas do edifício', rNet: 'Valor líquido a distribuir',
+      catsTitle: 'Despesas por categoria', cat1: 'Pessoal', cat1v: 'Gs. 4.500.000', cat2: 'Limpeza', cat2v: 'Gs. 2.300.000', cat3: 'Serviços', cat3v: 'Gs. 2.120.000',
+      btnPApprove: 'Aprovar', btnPReject: 'Rejeitar', confirmHeader: 'Aprovar rateio',
+      confirmMsg: 'Ao aprovar, você assina o rateio deste período. Ele ficará pronto para a empresa publicar.',
+      btnCancel: 'Cancelar', btnYes: 'Sim, aprovar', signedToast: 'Rateio aprovado. Ficou assinado e pronto para publicar.',
+      pn2Title: 'Novo período de taxas publicado', pn2Body: 'Novembro 2026', accTitle: 'Minha conta', unitLine: 'Unidade 5B · Edifício Torre Mirador',
+      pName: 'Novembro 2026', pTotal: 'Total:', pPaid: 'Pago:', pPending: 'Pendente', pAmount: 'Gs. 475.000', pOct: 'Outubro 2026', pOctOk: 'Em dia',
+      dHero: 'Saldo pendente', dCharges: 'Cobranças:', dPaid: 'Pago:', btnReceipt: 'Comprovante PDF', btnSettlement: 'Rateio PDF', secCharges: 'Cobranças do período',
+      c1: 'Taxa ordinária', c1v: 'Gs. 410.000', c2: 'Fundo de reserva', c2v: 'Gs. 40.000', c3: 'Serviços comuns', c3v: 'Gs. 25.000', appChip: 'App Expenses'
     }
   }
 };
@@ -377,6 +488,7 @@ const EN: GuideTx = {
   sceneTitle: 'How to create a billing period', sceneTitleClone: 'How to clone last month\'s period', prev: 'Back', next: 'Next', pause: 'Pause', play: 'Resume', replay: 'Watch again',
   stepOf: (i, n) => `Step ${i} of ${n}`, tryDemo: 'Explore the demo',
   topicPayment: 'How do I approve an owner\'s payment and issue the invoice?', sceneTitlePayment: 'How to approve a payment and issue the invoice',
+  topicSettlement: 'How are settlements handled in Expenses?', sceneTitleSettlement: 'How a settlement works, step by step',
   topicCustom: 'What if I need something Expenses doesn\'t have yet?', sceneTitleCustom: 'Expenses adapts to you', customYes: 'Yes, put me in touch', customNo: 'Not now',
   customWa: 'Hello, I have been looking at Expenses and I have a specific need for my management company. Could you contact me to talk about it?',
   chatName: 'Expenses', chatOnline: 'online', chatInput: 'Type your message…',
@@ -422,9 +534,31 @@ const EN: GuideTx = {
     payApproved: 'On approval, the system settles the charges from the oldest to the newest, notifies the owner and leaves the invoices ready as drafts.',
     payInvoice: 'Under “Billing” is the draft: one invoice per charge statement. I tap “Issue” to open it.',
     payEmit: 'I pick the active invoice series (“timbrado”) and tap “Issue invoice”: it gets numbered and issued.',
-    payDone: 'Done! Payment approved, invoice issued and the owner notified. If something is wrong, you can void the invoice with a reason.'
+    payDone: 'Done! Payment approved, invoice issued and the owner notified. If something is wrong, you can void the invoice with a reason.',
+    stHello: 'Hi! Let me show you how a settlement works in Expenses: everyone does their part, in order, and nobody skips steps.',
+    stOpLogin: "I start as the Operator. They load the month's expenses and calculate the settlement, but can't approve it.",
+    stOpMenu: 'I go to “Periods & billing → Periods”. November is a Draft, with all its expenses already loaded.',
+    stOpCalc: "I open the period's “Settlement”. For now it's just a preliminary summary.",
+    stOpCalc2: 'I tap “Calculate settlement”: it adds up expenses and income, separates the reserve fund and extraordinary items and leaves the net common amount to split.',
+    stOpMetrics: "It becomes Calculated, with my name and the date. Now it's the Building Manager's turn: I can no longer approve.",
+    stSwitchMgr: 'I log out and sign in as the Building Manager, the only one who can approve the settlement.',
+    stMgrLogin: "I sign in with the Manager's user.",
+    stMgrOpen: "I go to the period's settlement and see the totals the Operator calculated.",
+    stMgrApprove: "If everything looks right, I tap “Approve”. That's when each unit's charges are created and the period is locked against changes.",
+    stMgrAfter: "It's not published yet: since this building has a board president, they must review it now. They get a notification.",
+    stPresAlert: 'The board president, who is an owner, gets “Settlement pending your review” on their phone.',
+    stPresReview: 'Tapping it opens the “Settlement review”: the summary, totals by category and the receipts of each expense.',
+    stPresApprove: 'If they agree, they tap “Approve”. The app asks to confirm, because that signs the settlement.',
+    stPresSign: 'With “Yes, approve” it is signed and ready to publish. If they reject it, they write the reason and the Manager fixes it.',
+    stAdmLogin: "I'm back on the web as the Company Administrator. I get the alert “Settlement approved by the president: ready to publish”.",
+    stAdmOpen: "I open the settlement. Only the Administrator publishes, and only if a Manager approved it first and, when there's a president, they did too.",
+    stAdmPublish: 'I tap “Publish statements”. From now on owners and residents see the period and get a notice. If the building has no president, it publishes right after the Manager.',
+    stOwnAlert: 'Every owner gets “New expenses period published” on their phone.',
+    stOwnAccount: "Under “My account” they see the period with its total and their unit's pending balance.",
+    stOwnDetail: 'Opening it shows their individual PDF statement, the building settlement and the detail of their charges. When they pay, the invoice is issued.',
+    stDone: 'Done! The Operator calculates, the Manager approves, the president signs, the Administrator publishes and every owner receives their statement. Each step is recorded with name and date.'
   },
-  values: { url: 'expenses.com.py', user: 'demo@expenses.com.py', pass: '••••••••', building: 'Torre Mirador Building', year: '2026', month: '12', name: 'December 2026', start: '12/01/2026', end: '12/31/2026', due: '01/10/2027', amount: '2,120,000', amountOld: '1,850,000', invoiceFile: 'invoice-power-dec.pdf', payAmount: '1,250,000' },
+  values: { url: 'expenses.com.py', user: 'demo@expenses.com.py', pass: '••••••••', building: 'Torre Mirador Building', year: '2026', month: '12', name: 'December 2026', start: '12/01/2026', end: '12/31/2026', due: '01/10/2027', amount: '2,120,000', amountOld: '1,850,000', invoiceFile: 'invoice-power-dec.pdf', payAmount: '1,250,000', userOp: 'operator@expenses.com.py', userMgr: 'manager@expenses.com.py', userAdm: 'admin@expenses.com.py' },
   web: {
     slogan: 'Managing is growing too', menuMain: 'MAIN', menuManage: 'MANAGEMENT', summary: 'Summary', payments: 'Payments', property: 'Properties & people',
     collections: 'Periods & billing', ledger: 'Expenses & charges', periods: 'Periods', statements: 'Account statement', morosity: 'Arrears', reports: 'Reports',
@@ -532,6 +666,31 @@ const EN: GuideTx = {
       toastApprovedText: 'The debt was settled and the invoices were prepared as drafts.',
       toastIssuedTitle: 'Issued',
       toastIssuedText: 'Invoice 001-001-0000123 issued.'
+    },
+    stl: {
+      who: { demo: 'Ana Demo', operator: 'Luis (Operator)', manager: 'Maria (Manager)', admin: 'Ana (Administrator)' },
+      logout: 'Log out', title: 'Consolidated settlement', stateLabel: 'Period status', setLabel: 'Settlement', totalExp: 'Total expenses', totalInc: 'Total income', net: 'Net common',
+      reserve: 'Reserve fund', extra: 'Extraordinary', charges: 'Charges issued',
+      pStatus: { draft: 'Draft', closed: 'Closed', published: 'Published' },
+      sStatus: { draft: 'Not calculated', calculated: 'Calculated', approved: 'Approved', published: 'Published' },
+      vExp: 'Gs. 11,300,000', vInc: 'Gs. 400,000', vNet: 'Gs. 10,900,000', vZero: 'Gs. 0', vCharges: '24',
+      trailPrelim: 'Preliminary summary — no saved settlement yet.', trailCalc: 'Calculated: 11/19/2026 by Luis (Operator)',
+      trailApproved: 'Approved: 11/19/2026 by Maria (Manager)', trailPublished: 'Published: 11/19/2026 by Ana (Administrator)',
+      btnCalc: 'Calculate settlement', btnRecalc: 'Recalculate', btnApprove: 'Approve', btnPublish: 'Publish statements', btnReject: 'Reject', btnPdf: 'PDF',
+      tCalc: 'Settlement calculated.', tApprove: 'Settlement approved. 24 charges were issued, one per unit.', tPublish: 'Statements published. Owners and residents were notified.',
+      alert2Title: 'Settlement approved by the president',
+      alert2Body: 'The board president approved the settlement for period November 2026 of Torre Mirador Building. It can now be published.',
+      pn1Title: 'Settlement pending your review',
+      pn1Body: 'A new expenses period (November 2026) was issued for Torre Mirador Building and is waiting for your review as board president.',
+      reviewTitle: 'Settlement review', summary: 'Summary', rExp: 'Building total expenses', rInc: 'Building total income', rNet: 'Net amount to distribute',
+      catsTitle: 'Expenses by category', cat1: 'Staff', cat1v: 'Gs. 4,500,000', cat2: 'Cleaning', cat2v: 'Gs. 2,300,000', cat3: 'Utilities', cat3v: 'Gs. 2,120,000',
+      btnPApprove: 'Approve', btnPReject: 'Reject', confirmHeader: 'Approve settlement',
+      confirmMsg: "By approving, you sign this period's settlement. It will be ready for the company to publish.",
+      btnCancel: 'Cancel', btnYes: 'Yes, approve', signedToast: 'Settlement approved. It is signed and ready to publish.',
+      pn2Title: 'New expenses period published', pn2Body: 'November 2026', accTitle: 'My account', unitLine: 'Unit 5B · Torre Mirador Building',
+      pName: 'November 2026', pTotal: 'Total:', pPaid: 'Paid:', pPending: 'Pending', pAmount: 'Gs. 475,000', pOct: 'October 2026', pOctOk: 'Up to date',
+      dHero: 'Pending balance', dCharges: 'Charges:', dPaid: 'Paid:', btnReceipt: 'PDF statement', btnSettlement: 'Settlement PDF', secCharges: 'Period charges',
+      c1: 'Ordinary expense', c1v: 'Gs. 410,000', c2: 'Reserve fund', c2v: 'Gs. 40,000', c3: 'Common utilities', c3v: 'Gs. 25,000', appChip: 'Expenses app'
     }
   }
 };

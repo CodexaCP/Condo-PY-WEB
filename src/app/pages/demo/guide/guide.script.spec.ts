@@ -1,5 +1,5 @@
 import { GUIDE_TX } from './guide.i18n';
-import { APPROVE_PAYMENT_STEPS, CLONE_PERIOD_STEPS, CREATE_PERIOD_STEPS, CUSTOM_NEED_STEPS, GUIDE_ICONS, GUIDE_TONES, matchGuideTopic } from './guide.script';
+import { APPROVE_PAYMENT_STEPS, CLONE_PERIOD_STEPS, CREATE_PERIOD_STEPS, CUSTOM_NEED_STEPS, GUIDE_ICONS, GUIDE_TONES, SETTLEMENT_FLOW_STEPS, matchGuideTopic } from './guide.script';
 
 describe('guía animada: guion y reconocimiento de preguntas', () => {
   it('reconoce «crear periodo» en los tres idiomas', () => {
@@ -86,17 +86,51 @@ describe('guía animada: guion y reconocimiento de preguntas', () => {
   it('todas las acciones apuntan a elementos conocidos de la pantalla simulada', () => {
     const known = ['url', 'user', 'pass', 'login-btn', 'menu-cobros', 'menu-periodos', 'btn-nuevo', 'f-building', 'f-year', 'f-month', 'f-name', 'f-start', 'f-end', 'f-due', 'f-latefee', 'btn-crear',
       'card-nov', 'btn-clone', 'btn-confirm', 'btn-ledger', 'row-power', 'btn-edit-power', 'f-amount', 'btn-save', 'btn-attach-power',
-      'alert-toast', 'menu-pagos', 'row-pay', 'proof', 'f-payamount', 'btn-review', 'btn-approve', 'btn-inv-open', 'f-series', 'btn-emit'];
-    for (const step of [...CREATE_PERIOD_STEPS, ...CLONE_PERIOD_STEPS, ...APPROVE_PAYMENT_STEPS]) {
+      'alert-toast', 'menu-pagos', 'row-pay', 'proof', 'f-payamount', 'btn-review', 'btn-approve', 'btn-inv-open', 'f-series', 'btn-emit',
+      'btn-logout', 'btn-calc', 'btn-calcular', 'metric-net', 'metric-charges', 'btn-aprobar', 'btn-publicar', 'p-notif-card', 'p-summary', 'p-approve', 'p-yes', 'p-owner-card', 'p-period', 'p-pdf'];
+    for (const step of [...CREATE_PERIOD_STEPS, ...CLONE_PERIOD_STEPS, ...APPROVE_PAYMENT_STEPS, ...SETTLEMENT_FLOW_STEPS]) {
       for (const a of step.actions) {
-        if (a.kind !== 'pause') expect(known).toContain(a.target);
+        if (a.kind !== 'pause' && a.kind !== 'reset') expect(known).toContain(a.target);
+      }
+    }
+  });
+
+  it('reconoce «liquidaciones» en los tres idiomas sin pisar los demás temas', () => {
+    expect(matchGuideTopic('¿Cómo se manejan las liquidaciones en Expenses?')).toBe('settlement-flow');
+    expect(matchGuideTopic('how are settlements handled')).toBe('settlement-flow');
+    expect(matchGuideTopic('como funciona o rateio')).toBe('settlement-flow');
+    expect(matchGuideTopic('¿Cómo apruebo el pago de un propietario?')).toBe('approve-payment');
+    expect(matchGuideTopic('¿Cómo clono el periodo del mes anterior?')).toBe('clone-period');
+    expect(matchGuideTopic('necesito una funcionalidad a medida')).toBe('custom-need');
+    expect(matchGuideTopic('¿Cómo creo un PERÍODO?')).toBe('create-period');
+  });
+
+  it('el guion de liquidaciones tiene 23 pasos, empieza apagado y termina con la liquidación publicada y el detalle del propietario', () => {
+    expect(SETTLEMENT_FLOW_STEPS.length).toBe(23);
+    expect(SETTLEMENT_FLOW_STEPS[0].ui.screen).toBe('off');
+    const last = SETTLEMENT_FLOW_STEPS[SETTLEMENT_FLOW_STEPS.length - 1];
+    expect(last.ui.sst).toBe('published');
+    expect(last.ui.ph).toBe('p-detail');
+  });
+
+  it('cada idioma tiene los textos del tema de liquidaciones y los usuarios existen en los valores', () => {
+    for (const lang of ['es', 'pt', 'en'] as const) {
+      const t = GUIDE_TX[lang];
+      expect(t.web.stl.sStatus.published.length).toBeGreaterThan(0);
+      expect(t.web.stl.who.manager.length).toBeGreaterThan(0);
+      expect(t.values.userMgr.length).toBeGreaterThan(0);
+      expect(t.topicSettlement.length).toBeGreaterThan(0);
+      for (const step of SETTLEMENT_FLOW_STEPS) {
+        for (const a of step.actions) {
+          if (a.kind === 'type') expect(t.values[a.field].length).toBeGreaterThan(0);
+        }
       }
     }
   });
 
   it('cada idioma tiene el texto de todos los pasos', () => {
     for (const lang of ['es', 'pt', 'en'] as const) {
-      for (const step of [...CREATE_PERIOD_STEPS, ...CLONE_PERIOD_STEPS, ...APPROVE_PAYMENT_STEPS, ...CUSTOM_NEED_STEPS]) {
+      for (const step of [...CREATE_PERIOD_STEPS, ...CLONE_PERIOD_STEPS, ...APPROVE_PAYMENT_STEPS, ...CUSTOM_NEED_STEPS, ...SETTLEMENT_FLOW_STEPS]) {
         expect(GUIDE_TX[lang].say[step.say]?.length).toBeGreaterThan(0);
       }
     }
